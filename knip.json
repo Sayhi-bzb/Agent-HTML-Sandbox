@@ -1,0 +1,14 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "entry": ["index.html"],
+  "project": ["src/**/*.{ts,tsx}", "*.{ts,js}"],
+  "ignore": ["src/components/ui/**", "src/lib/utils.ts"],
+  "ignoreDependencies": [
+    "class-variance-authority",
+    "clsx",
+    "lucide-react",
+    "radix-ui",
+    "tailwind-merge",
+    "@tailwindcss/vite"
+  ]
+}

@@ -1,0 +1,12 @@
+dist
+build
+node_modules
+coverage
+.gitnexus
+.claude
+.agents
+ref
+demo
+AGENTS.md
+CLAUDE.md
+package-lock.json
