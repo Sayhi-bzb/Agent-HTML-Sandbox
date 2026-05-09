@@ -4,17 +4,25 @@
 
 ## Phase 0: App Foundation
 
-- [ ] Vite + React + TypeScript app runs in repo root.
-- [ ] shadcn/ui is initialized without introducing a monorepo.
-- [ ] MVP shadcn components exist under `src/components/ui/`.
-- [ ] `npm run build` succeeds.
+- [x] Vite + React + TypeScript app runs in repo root.
+- [x] shadcn/ui is initialized without introducing a monorepo.
+- [x] MVP shadcn components exist under `src/components/ui/`.
+- [x] `npm run build` succeeds.
 
 ## Phase 1: Public Types
 
-- [ ] `CatalogItem`, `CatalogProp`, `RenderConfig`, `SanitizedAgentHtml`, and `SanitizedNode` exist.
-- [ ] `RenderConfig` is finite enum based.
-- [ ] `SanitizedAgentHtml` models `meta + blocks`, not a cleaned HTML string.
+- [x] `CatalogItem`, `CatalogProp`, `RenderConfig`, `SanitizedAgentHtml`, and `SanitizedNode` exist.
+- [x] `RenderConfig` is finite enum based.
+- [x] `SanitizedAgentHtml` models `meta + blocks`, not a cleaned HTML string.
 - [ ] Renderer types do not accept raw agent output as the main input.
+
+Verification:
+
+- [x] `npx tsc -b` succeeds.
+- [x] `npm run lint` succeeds with existing shadcn fast-refresh warnings only.
+- [x] `npx prettier --check src/agent-html/types.ts src/agent-html/types.test.ts` succeeds.
+- [x] `npm run test:run` succeeds.
+- [x] `npm run build` succeeds.
 
 ## Phase 2: Base Catalog And Render Config
 
@@ -48,16 +56,16 @@
 
 ## Phase 6: Static Artifact
 
-- [ ] Vite static build produces a directory artifact.
-- [ ] Built artifact works through a static server.
-- [ ] Final artifact does not require the dev server.
-- [ ] No source map, CDN, remote font, or external runtime dependency is accidentally introduced.
+- [x] Vite static build produces a directory artifact.
+- [x] Built artifact works through a static server.
+- [x] Final artifact does not require the dev server.
+- [x] No source map, CDN, remote font, or external runtime dependency is accidentally introduced.
 
 ## Stop Conditions
 
-- [ ] No Tailwind class, CSS, `style`, or `className` is exposed to agent-html.
-- [ ] No shadcn props are passed directly through Catalog.
-- [ ] No raw agent HTML is rendered.
+- [x] No Tailwind class, CSS, `style`, or `className` is exposed to agent-html.
+- [x] No shadcn props are passed directly through Catalog.
+- [x] No raw agent HTML is rendered.
 - [ ] Portable output does not bypass parse / sanitize.
-- [ ] MVP does not require custom block generation.
-- [ ] MVP remains single-package, not monorepo.
+- [x] MVP does not require custom block generation.
+- [x] MVP remains single-package, not monorepo.
