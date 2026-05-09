@@ -1,0 +1,272 @@
+import {
+  FORBIDDEN_AGENT_FACING_PROP_NAMES,
+  getBaseCatalogItem,
+  getCatalogProp,
+  TEXT_CHILD,
+} from "../base-catalog"
+import { DEFAULT_RENDER_CONFIG, RenderConfigSchema } from "../render-config"
+import type { RenderConfig, SanitizedBlockNode, SanitizedNode } from "../types"
+import type {
+  AgentHtmlDiagnostic,
+  ParsedAgentHtml,
+  ParsedAgentHtmlElementNode,
+  ParsedAgentHtmlNode,
+} from "./parse-agent-html"
+
+type ValidatedAgentHtml = {
+  readonly meta: RenderConfig
+  readonly blocks: readonly SanitizedBlockNode[]
+  readonly diagnostics: readonly AgentHtmlDiagnostic[]
+}
+
+const FORBIDDEN_ATTR_NAMES = new Set(
+  FORBIDDEN_AGENT_FACING_PROP_NAMES.flatMap((name) => [
+    name,
+    name.toLowerCase(),
+  ]),
+)
+
+export function validateAgentHtml(parsed: ParsedAgentHtml): ValidatedAgentHtml {
+  const diagnostics = [...parsed.diagnostics]
+  const meta = validateRenderConfig(parsed.metaAttrs, diagnostics)
+  const blocks = validateRootNodes(parsed.nodes, diagnostics)
+
+  return {
+    meta,
+    blocks,
+    diagnostics,
+  }
+}
+
+function validateRenderConfig(
+  attrs: Readonly<Record<string, string>> | undefined,
+  diagnostics: AgentHtmlDiagnostic[],
+): RenderConfig {
+  if (!attrs) {
+    return DEFAULT_RENDER_CONFIG
+  }
+
+  const result = RenderConfigSchema.safeParse(attrs)
+
+  if (result.success) {
+    return result.data
+  }
+
+  diagnostics.push({
+    code: "invalid-render-config",
+    message:
+      "The <meta-agent /> header must use only registered render config enum values.",
+    path: "/meta-agent",
+    severity: "error",
+  })
+
+  return DEFAULT_RENDER_CONFIG
+}
+
+function validateRootNodes(
+  nodes: readonly ParsedAgentHtmlNode[],
+  diagnostics: AgentHtmlDiagnostic[],
+): readonly SanitizedBlockNode[] {
+  const elementNodes = nodes.filter(isParsedElementNode)
+
+  for (const node of nodes) {
+    if (node.type === "text") {
+      diagnostics.push({
+        code: "invalid-child",
+        message: "Top-level text is not allowed; agent-html must use <page>.",
+        path: node.path,
+        severity: "error",
+      })
+    }
+  }
+
+  if (elementNodes.length === 0) {
+    diagnostics.push({
+      code: "missing-root",
+      message: "agent-html requires a <page> root block.",
+      path: "/",
+      severity: "error",
+    })
+    return []
+  }
+
+  if (elementNodes.length > 1) {
+    diagnostics.push({
+      code: "multiple-roots",
+      message: "agent-html MVP supports exactly one root block.",
+      path: "/",
+      severity: "error",
+    })
+  }
+
+  const root = elementNodes[0]
+
+  if (root?.name !== "page") {
+    diagnostics.push({
+      code: "invalid-child",
+      message: "The root block must be <page>.",
+      path: root?.path ?? "/",
+      severity: "error",
+    })
+  }
+
+  if (!root) {
+    return []
+  }
+
+  const sanitizedRoot = validateElementNode(root, undefined, diagnostics)
+  return sanitizedRoot ? [sanitizedRoot] : []
+}
+
+function validateElementNode(
+  node: ParsedAgentHtmlElementNode,
+  parent: ParsedAgentHtmlElementNode | undefined,
+  diagnostics: AgentHtmlDiagnostic[],
+): SanitizedBlockNode | undefined {
+  const catalogItem = getBaseCatalogItem(node.name)
+
+  if (!catalogItem) {
+    diagnostics.push({
+      code: "unknown-block",
+      message: `Unknown block <${node.name}> is not registered in the MVP base catalog.`,
+      path: node.path,
+      severity: "error",
+    })
+    return undefined
+  }
+
+  if (
+    parent &&
+    !getBaseCatalogItem(parent.name)?.allowedChildren?.includes(node.name)
+  ) {
+    diagnostics.push({
+      code: "invalid-child",
+      message: `<${node.name}> is not allowed inside <${parent.name}>.`,
+      path: node.path,
+      severity: "error",
+    })
+  }
+
+  const attrs = validateAttrs(node, diagnostics)
+  const children = validateChildren(node, diagnostics)
+
+  return {
+    type: "block",
+    name: node.name,
+    attrs,
+    children,
+  }
+}
+
+function validateAttrs(
+  node: ParsedAgentHtmlElementNode,
+  diagnostics: AgentHtmlDiagnostic[],
+): Readonly<Record<string, string>> {
+  const catalogItem = getBaseCatalogItem(node.name)
+
+  if (!catalogItem) {
+    return {}
+  }
+
+  const sanitizedAttrs: Record<string, string> = {}
+
+  for (const prop of catalogItem.props) {
+    if (prop.required && !(prop.name in node.attrs)) {
+      diagnostics.push({
+        code: "missing-required-attr",
+        message: `<${node.name}> requires the "${prop.name}" attribute.`,
+        path: node.path,
+        severity: "error",
+      })
+    }
+  }
+
+  for (const [attrName, attrValue] of Object.entries(node.attrs)) {
+    const prop = getCatalogProp(catalogItem, attrName)
+
+    if (!prop || FORBIDDEN_ATTR_NAMES.has(attrName)) {
+      diagnostics.push({
+        code: "unknown-attr",
+        message: `"${attrName}" is not an allowed agent-facing attribute on <${node.name}>.`,
+        path: node.path,
+        severity: "error",
+      })
+      continue
+    }
+
+    if (prop.valueKind === "enum" && !prop.enumValues?.includes(attrValue)) {
+      diagnostics.push({
+        code: "unknown-attr",
+        message: `"${attrValue}" is not an allowed value for ${node.name}.${attrName}.`,
+        path: node.path,
+        severity: "error",
+      })
+      continue
+    }
+
+    sanitizedAttrs[attrName] = attrValue
+  }
+
+  return sanitizedAttrs
+}
+
+function validateChildren(
+  node: ParsedAgentHtmlElementNode,
+  diagnostics: AgentHtmlDiagnostic[],
+): readonly SanitizedNode[] {
+  const catalogItem = getBaseCatalogItem(node.name)
+
+  if (!catalogItem) {
+    return []
+  }
+
+  return node.children.flatMap((child): SanitizedNode[] => {
+    if (child.type === "text") {
+      if (!catalogItem.allowedChildren?.includes(TEXT_CHILD)) {
+        diagnostics.push({
+          code: "invalid-child",
+          message: `Text content is not allowed inside <${node.name}>.`,
+          path: child.path,
+          severity: "error",
+        })
+        return []
+      }
+
+      return [
+        {
+          type: "text",
+          value: child.value,
+        },
+      ]
+    }
+
+    if (!catalogItem.allowedChildren?.includes(child.name)) {
+      if (!getBaseCatalogItem(child.name)) {
+        diagnostics.push({
+          code: "unknown-block",
+          message: `Unknown block <${child.name}> is not registered in the MVP base catalog.`,
+          path: child.path,
+          severity: "error",
+        })
+        return []
+      }
+
+      diagnostics.push({
+        code: "invalid-child",
+        message: `<${child.name}> is not allowed inside <${node.name}>.`,
+        path: child.path,
+        severity: "error",
+      })
+      return []
+    }
+
+    const sanitizedChild = validateElementNode(child, node, diagnostics)
+    return sanitizedChild ? [sanitizedChild] : []
+  })
+}
+
+function isParsedElementNode(
+  node: ParsedAgentHtmlNode,
+): node is ParsedAgentHtmlElementNode {
+  return node.type === "element"
+}

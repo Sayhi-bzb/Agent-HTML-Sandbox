@@ -15,6 +15,7 @@
     "test:run": "vitest run",
     "test:e2e": "playwright test",
     "docs:lint": "markdownlint-cli2",
+    "catalog:prompt": "node scripts/generate-catalog-prompt.mjs",
     "check": "npm run format:check && npm run lint && npm run knip && npm run test:run && npm run build"
   },
   "dependencies": {
@@ -23,6 +24,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.14.0",
+    "parse5": "^8.0.1",
     "radix-ui": "^1.4.3",
     "react": "latest",
     "react-dom": "latest",

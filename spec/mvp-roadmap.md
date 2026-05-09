@@ -28,7 +28,7 @@ MVP includes:
 
 - Single Vite + React + TypeScript app.
 - shadcn/ui installed with `npx shadcn@latest add`.
-- Base blocks: `page`, `card`, `badge`, `table`, `row`, `list`, `item`.
+- Base blocks: `page`, `card`, `badge`, `table`, `row`, `cell`, `list`, `item`.
 - Render config header: `<meta-agent theme="" density="" tone="" width="" />`.
 - Finite render config enum validation.
 - Structured `SanitizedAgentHtml`.
@@ -138,7 +138,7 @@ Build:
   - `page`: layout wrapper.
   - `card`: shadcn Card.
   - `badge`: shadcn Badge.
-  - `table` / `row`: shadcn Table or semantic table wrapper.
+  - `table` / `row` / `cell`: shadcn Table or semantic table wrapper.
   - `list` / `item`: semantic list wrapper.
 - Apply `RenderConfig` through approved renderer profiles.
 
@@ -148,7 +148,7 @@ Build:
 
 - Add one representative `.agent.html` example.
 - Render it in the app.
-- Show parse diagnostics for invalid examples if practical.
+- Keep diagnostics in tests or developer tooling; the default app view should show the rendered artifact.
 
 ## Phase 6: Static Artifact
 

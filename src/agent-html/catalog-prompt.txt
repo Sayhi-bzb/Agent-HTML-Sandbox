@@ -1,0 +1,17 @@
+Write agent-html only.
+
+Header:
+<meta-agent theme="neutral" density="compact|comfortable" tone="report|dashboard|decision" width="article|dashboard|wide" />
+
+Blocks:
+page(title*) -> card/table/list
+card(title?) -> badge/table/list/text
+badge(tone?=neutral|success|warning|danger) -> text
+table -> row
+row(kind?=header|body) -> cell
+cell -> text
+list(variant?=ordered|unordered) -> item
+item -> text
+
+Forbidden:
+class/className/style/css/Tailwind/shadcn props/React props/script/onclick/events/external URLs/unknown tags/unknown attrs.

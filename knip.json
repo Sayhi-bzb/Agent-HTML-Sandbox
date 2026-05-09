@@ -1,14 +1,14 @@
 {
   "$schema": "https://unpkg.com/knip@latest/schema.json",
   "entry": ["index.html"],
-  "project": ["src/**/*.{ts,tsx}", "*.{ts,js}"],
-  "ignore": ["src/components/ui/**", "src/lib/utils.ts"],
-  "ignoreDependencies": [
-    "class-variance-authority",
-    "clsx",
-    "lucide-react",
-    "radix-ui",
-    "tailwind-merge",
-    "@tailwindcss/vite"
-  ]
+  "project": ["src/**/*.{ts,tsx}", "*.{ts,js}", "scripts/**/*.mjs"],
+  "ignore": [
+    "src/components/ui/alert.tsx",
+    "src/components/ui/button.tsx",
+    "src/components/ui/separator.tsx"
+  ],
+  "ignoreIssues": {
+    "src/components/ui/**": ["exports"]
+  },
+  "ignoreDependencies": ["lucide-react"]
 }

@@ -50,6 +50,7 @@ export default tseslint.config(
       "*.config.{js,ts}",
       "eslint.config.js",
       "playwright.config.ts",
+      "scripts/**/*.mjs",
       "vite.config.ts",
       "vitest.config.ts",
     ],

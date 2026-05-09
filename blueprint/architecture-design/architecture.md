@@ -54,6 +54,8 @@ agent 的主要输出是 agent-html。
 
 agent-html 是 HTML 形态的积木文档。agent 负责内容结构、信息关系和表达意图，不直接负责组件实现和样式细节。
 
+agent-html 是 Catalog 驱动的 HTML 子集；通用性来自 Catalog block 扩展，不来自语言特性扩展。
+
 ## 2. Catalog exposes building blocks
 
 agent 通过 Agent Component Catalog 了解可用积木。

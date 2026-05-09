@@ -1,14 +1,32 @@
+import paymentReviewSource from "@/agent-html/examples/payment-review.agent.html?raw"
+import { sanitizeAgentHtml } from "@/agent-html/parse/sanitize-agent-html"
+import { AgentHtmlRenderer } from "@/agent-html/renderer/AgentHtmlRenderer"
+
+const paymentReview = sanitizeAgentHtml(paymentReviewSource)
+
 export default function App() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-4 px-6 py-10">
-      <p className="text-muted-foreground text-sm">agent-html MVP</p>
-      <h1 className="text-3xl font-semibold tracking-tight">
-        Phase 0 App Foundation
-      </h1>
-      <p className="text-muted-foreground">
-        Vite, React, TypeScript, Tailwind, and shadcn/ui are ready for the base
-        block pipeline.
-      </p>
+    <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-6 py-10">
+      <header className="flex flex-col gap-2">
+        <p className="text-muted-foreground text-sm">agent-html MVP</p>
+        <h1 className="text-3xl font-semibold tracking-tight">
+          Payment Review
+        </h1>
+        <p className="text-muted-foreground max-w-3xl">
+          Rendered from agent-html through the MVP sanitize and renderer
+          pipeline.
+        </p>
+      </header>
+
+      <article className="bg-card text-card-foreground rounded-lg border">
+        {paymentReview.document ? (
+          <AgentHtmlRenderer document={paymentReview.document} />
+        ) : (
+          <p className="text-destructive p-6 text-sm">
+            The artifact could not be rendered.
+          </p>
+        )}
+      </article>
     </main>
   )
 }
