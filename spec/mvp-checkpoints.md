@@ -1,110 +1,61 @@
-# MVP Checkpoints
+# CLI MVP Checkpoints
 
-本文用于 coder 完成 MVP 施工后逐项勾选。只记录关键验收节点，不重复 roadmap 的施工说明。
+本文只记录 CLI MVP 的重点验收节点。详细施工顺序见 `spec/mvp-roadmap.md`。
 
-## Phase 0: App Foundation
+## Phase 0: CLI Foundation
 
-- [x] Vite + React + TypeScript app runs in repo root.
-- [x] shadcn/ui is initialized without introducing a monorepo.
-- [x] MVP shadcn components exist under `src/components/ui/`.
-- [x] `npm run build` succeeds.
+- [ ] `npm run agent -- <command>` routes to a local Node ESM CLI entrypoint.
+- [ ] CLI supports `schema`, `compose`, `build`, and `config`.
+- [ ] Unknown commands and invalid flags return non-zero exit codes.
+- [ ] CLI diagnostics are readable and do not expose renderer internals.
+- [ ] CLI modules stay outside React component code.
 
-## Phase 1: Public Types
+## Phase 1: Schema Command
 
-- [x] `CatalogItem`, `CatalogProp`, `RenderConfig`, `SanitizedAgentHtml`, and `SanitizedNode` exist.
-- [x] `RenderConfig` is finite enum based.
-- [x] `SanitizedAgentHtml` models `meta + blocks`, not a cleaned HTML string.
-- [x] Renderer types do not accept raw agent output as the main input.
+- [ ] `schema --format prompt` prints agent-facing prompt text.
+- [ ] `schema --format json` prints structured `CliSchemaOutput`.
+- [ ] `schema --out <path>` writes the selected output.
+- [ ] Schema output is derived from `ComponentSchema` and `RenderConfig`.
+- [ ] Schema output excludes shadcn props, Radix props, Tailwind class, `className`, `style`, script, event handlers, source paths, and renderer implementation details.
 
-Verification:
+## Phase 2: Compose Command
 
-- [x] `npx tsc -b` succeeds.
-- [x] `npm run lint` succeeds with existing shadcn fast-refresh warnings only.
-- [x] `npx prettier --check src/agent-html/types.ts src/agent-html/types.test.ts` succeeds.
-- [x] `npm run test:run` succeeds.
-- [x] `npm run build` succeeds.
+- [ ] `compose --input <path>` reads structured `CompositionInput`.
+- [ ] `compose --stdin` reads the same input shape from standard input.
+- [ ] `compose --out <path>` writes a standard `CompositionDocument`.
+- [ ] Compose defaults to `artifact.agent.html` when no output path is provided.
+- [ ] Generated documents pass parse / validate / sanitize.
+- [ ] Unknown components, unknown props, invalid children, invalid config, and blocked implementation fields are diagnosed before output is written.
 
-## Phase 2: Base Catalog And Render Config
+## Phase 3: Build Command
 
-- [x] MVP base catalog includes `page`, `card`, `badge`, `table`, `row`, `cell`, `list`, and `item`.
-- [x] Catalog exposes only agent-facing props.
-- [x] Render config schema covers `theme`, `density`, `tone`, and `width`.
-- [x] Catalog does not expose full shadcn props, Tailwind classes, `className`, `style`, CSS, script, or external URL passthrough.
+- [ ] `build --input <path>` reads a standard document.
+- [ ] Build runs parse / validate / sanitize before rendering.
+- [ ] Invalid documents fail before artifact generation.
+- [ ] Build reuses the existing React renderer and Vite static build path.
+- [ ] Build writes a directory artifact to `--out <dir>` or `dist/html`.
+- [ ] Static artifact opens without Vite dev server, HMR, or dev overlay.
 
-Verification:
+## Phase 4: Config Command
 
-- [x] `zod` is available as the runtime schema dependency.
-- [x] `npx tsc -b` succeeds.
-- [x] `npm run lint` succeeds with existing shadcn fast-refresh warnings only.
-- [x] `npx prettier --check src/agent-html/base-catalog.ts src/agent-html/base-catalog.test.ts src/agent-html/render-config.ts src/agent-html/render-config.test.ts spec/mvp-checkpoints.md` succeeds.
-- [x] `npm run test:run` succeeds.
-- [x] `npm run build` succeeds.
+- [ ] `config get` prints the effective `ArtifactConfig`.
+- [ ] `config set <key> <value>` writes only known keys and finite enum values.
+- [ ] Invalid config values return diagnostics and leave `agent-html.config.json` unchanged.
+- [ ] Config affects schema, compose, and build only through declared `ArtifactConfig`.
+- [ ] Config cannot map to arbitrary CSS, Tailwind class, inline style, script, HTML attribute passthrough, URL, or external resource.
 
-Follow-up:
+## Verification
 
-- [x] `CatalogPropSchema` should require `enumValues` when `valueKind` is `enum`.
-- [x] `BaseCatalogSchema` should validate `allowedChildren` references against registered block names or `TEXT_CHILD`.
-
-## Phase 3: Parse / Validate / Sanitize
-
-- [x] Valid MVP agent-html produces `SanitizedAgentHtml { meta, blocks }`.
-- [x] `<meta-agent />` is parsed and validated through the render config schema.
-- [x] Unknown blocks, unknown attrs, and invalid nesting are diagnosed.
-- [x] `script`, `onclick`, `style`, `class`, and CSS-like header values are rejected or diagnosed.
-- [x] Parser does not pass cleaned HTML directly to renderer.
-
-Verification:
-
-- [x] `parse5` is available as the parser dependency.
-- [x] `npx tsc -b` succeeds.
-- [x] `npm run lint` succeeds with existing shadcn fast-refresh warnings only.
-- [x] `npx prettier --check src/agent-html/parse/parse-agent-html.ts src/agent-html/parse/validate-agent-html.ts src/agent-html/parse/sanitize-agent-html.ts src/agent-html/parse/sanitize-agent-html.test.ts` succeeds.
-- [x] `npm run test:run` succeeds.
-- [x] `npm run build` succeeds.
-
-## Phase 4: Renderer Registry
-
-- [x] Renderer accepts only `SanitizedAgentHtml`.
-- [x] Base blocks render through a registry, not hardcoded raw HTML passthrough.
-- [x] shadcn components are used as internal renderer materials.
-- [x] Render profiles map to internal presets, not arbitrary user-provided CSS or class values.
-- [x] Unknown blocks cannot render.
-
-Verification:
-
-- [x] `npx tsc -b` succeeds.
-- [x] `npm run lint` succeeds with existing shadcn fast-refresh warnings only.
-- [x] `npx prettier --check src/agent-html/renderer/render-profile.ts src/agent-html/renderer/block-registry.tsx src/agent-html/renderer/AgentHtmlRenderer.tsx src/agent-html/renderer/AgentHtmlRenderer.test.tsx` succeeds.
-- [ ] `npm run test:run -- src/agent-html/renderer/AgentHtmlRenderer.test.tsx` is blocked by local `esbuild spawn EPERM` before tests execute.
-- [ ] `npm run build` is blocked by local `esbuild spawn EPERM` while loading Vite config.
-
-## Phase 5: End-to-End Demo
-
-- [x] A checked-in `.agent.html` example uses `<meta-agent />` and MVP base blocks.
-- [x] The example renders through parse / sanitize / renderer in the app.
-- [x] The app shows the rendered artifact by default, not source text or debug diagnostics.
-- [ ] `npm run build` succeeds after the demo is wired.
-
-Verification:
-
-- [x] `npx tsc -b` succeeds.
-- [x] `npm run lint` succeeds with existing shadcn fast-refresh warnings only.
-- [x] `npx prettier --check --ignore-unknown src/App.tsx src/App.test.tsx src/agent-html/examples/payment-review.agent.html` succeeds.
-- [ ] `npm run test:run -- src/App.test.tsx` is blocked by local `esbuild spawn EPERM` before tests execute.
-- [ ] `npm run build` is blocked by local `esbuild spawn EPERM` while loading Vite config.
-
-## Phase 6: Static Artifact
-
-- [x] Vite static build produces a directory artifact.
-- [x] Built artifact works through a static server.
-- [x] Final artifact does not require the dev server.
-- [x] No source map, CDN, remote font, or external runtime dependency is accidentally introduced.
+- [ ] CLI tests cover success paths for `schema`, `compose`, `build`, and `config`.
+- [ ] CLI tests cover invalid commands, invalid flags, invalid documents, and invalid config values.
+- [ ] Existing parse / sanitize / renderer tests still pass.
+- [ ] `npm run test:run` succeeds.
+- [ ] `npm run build` succeeds.
 
 ## Stop Conditions
 
-- [x] No Tailwind class, CSS, `style`, or `className` is exposed to agent-html.
-- [x] No shadcn props are passed directly through Catalog.
-- [x] No raw agent HTML is rendered.
-- [ ] Portable output does not bypass parse / sanitize.
-- [x] MVP does not require custom block generation.
-- [x] MVP remains single-package, not monorepo.
+- [ ] CLI does not bypass parse / validate / sanitize.
+- [ ] CLI does not directly render unchecked agent output.
+- [ ] CLI does not introduce an independent renderer.
+- [ ] CLI does not expose Tailwind class, CSS, `style`, `className`, event handler, Radix prop, full shadcn prop, script, or external resource passthrough.
+- [ ] `.agent.html` remains an inspectable intermediate, not the only required authoring interface.

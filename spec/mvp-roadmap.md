@@ -1,201 +1,147 @@
-# MVP Roadmap
+# CLI MVP Roadmap
 
-本文记录 agent-html MVP 的施工顺序。它服务于 coder 开工，不替代 `blueprint/` 中的架构边界。
+本文记录 agent-html CLI MVP 的施工顺序。它服务于代码实现，不替代 `blueprint/` 中的架构边界。
 
-重点验收节点见 `spec/mvp-checkpoints.md`。
+旧版 renderer-first MVP 计划已归档到 `spec/_archive/`。重点验收节点见 `spec/mvp-checkpoints.md`。
 
 ## MVP Goal
 
-MVP 证明一条最小闭环：
+MVP 证明一条以 CLI 为主入口的最小闭环：
 
 ```txt
-agent-html text with meta-agent header
+ComponentSchema + RenderConfig
+        ↓
+agent-html schema
+        ↓
+agent-html compose
+        ↓
+CompositionDocument / .agent.html
+        ↓
+agent-html build
         ↓
 parse / validate / sanitize
         ↓
-SanitizedAgentHtml { meta, blocks }
+SanitizedAgentHtml { meta, components }
         ↓
-React renderer
+existing React renderer + Vite static build
         ↓
-shadcn/ui based static artifact
+static artifact directory
 ```
 
-MVP 只使用 shadcn 已有组件和普通语义 HTML，不做 custom UI kit。
+CLI 只编排现有 engine。它不成为新的 schema、renderer、style system 或 artifact 生成旁路。
 
 ## Scope
 
 MVP includes:
 
-- Single Vite + React + TypeScript app.
-- shadcn/ui installed with `npx shadcn@latest add`.
-- Base blocks: `page`, `card`, `badge`, `table`, `row`, `cell`, `list`, `item`.
-- Render config header: `<meta-agent theme="" density="" tone="" width="" />`.
-- Finite render config enum validation.
-- Structured `SanitizedAgentHtml`.
-- Renderer block registry for MVP base blocks.
-- Vite static build.
+- Single-package Vite + React + TypeScript app in repo root.
+- Node ESM CLI script exposed through `npm run agent --`.
+- Commands: `schema`, `compose`, `build`, and `config`.
+- `schema` output from `ComponentSchema` and `RenderConfig`.
+- `compose` from structured `CompositionInput` to standard `CompositionDocument`.
+- `.agent.html` as the inspectable document file shape.
+- `build` through parse / validate / sanitize before rendering.
+- Existing React renderer and Vite static build as the artifact path.
+- Finite `ArtifactConfig` stored in `agent-html.config.json`.
 
 MVP excludes:
 
+- Published global npm package.
 - Monorepo.
-- Custom block generation.
-- TypeDoc / TSDoc pipeline.
-- Mermaid, Shiki, Recharts, TanStack Table, dnd-kit.
-- raw HTML escape hatch.
-- Single-file export.
-- Arbitrary CSS, Tailwind class, shadcn props, script, external resource passthrough.
+- Direct raw HTML rendering.
+- Independent CLI renderer.
+- Full shadcn props passthrough.
+- Tailwind class, `className`, `style`, CSS, script, event handler, Radix prop, or external resource passthrough.
+- General-purpose config mapped to arbitrary CSS, attributes, scripts, or URLs.
 
-## Recommended Root Layout
+## Command Surface
+
+Expose the local CLI through package scripts:
 
 ```txt
-Agent-HTML-Sandbox/
-  package.json
-  vite.config.ts
-  tsconfig.json
-  components.json
-
-  blueprint/
-  demo/
-  ref/
-  spec/
-
-  src/
-    main.tsx
-    App.tsx
-    index.css
-
-    agent-html/
-      types.ts
-      base-catalog.ts
-      render-config.ts
-
-      parse/
-        parse-agent-html.ts
-        validate-agent-html.ts
-        sanitize-agent-html.ts
-
-      renderer/
-        AgentHtmlRenderer.tsx
-        block-registry.tsx
-        render-profile.ts
-
-      examples/
-        payment-review.agent.html
-
-    components/
-      ui/
-
-    lib/
-      utils.ts
+npm run agent -- schema [--format prompt|json] [--out <path>]
+npm run agent -- compose --input <path>|--stdin [--out <path>]
+npm run agent -- build --input <path> [--out <dir>]
+npm run agent -- config get
+npm run agent -- config set <key> <value>
 ```
 
-## Phase 0: App Foundation
+Default paths:
+
+- Config file: `agent-html.config.json`
+- Composed document: `artifact.agent.html`
+- Build output: `dist/html`
+
+## Phase 0: CLI Foundation
 
 Build:
 
-- Initialize Vite React TypeScript app in the repo root.
-- Initialize shadcn/ui.
-- Add MVP components:
+- Add a local `agent` npm script that runs a Node ESM CLI entrypoint.
+- Keep CLI modules outside React component code.
+- Route commands explicitly and return non-zero exit codes for invalid input.
+- Print diagnostics in a human-readable format.
+- Keep all implementation props and renderer internals hidden from command output.
 
-```bash
-npx shadcn@latest add card badge table button separator alert
-```
-
-## Phase 1: Public Types
+## Phase 1: Schema Command
 
 Build:
 
-- Define `CatalogItem`, `CatalogProp`, `RenderConfig`, `SanitizedAgentHtml`, and `SanitizedNode`.
-- Keep types independent from React, shadcn props, Tailwind classes, and DOM nodes.
+- `schema --format prompt` prints agent-facing prompt text.
+- `schema --format json` prints structured `CliSchemaOutput`.
+- `schema --out <path>` writes the selected schema output.
+- Output must come from `ComponentSchema` and `RenderConfig`.
+- Output must not expose shadcn props, Radix props, Tailwind class, `className`, `style`, script, event handlers, source paths, or renderer implementation details.
 
-## Phase 2: Base Catalog And Render Config Schema
-
-Build:
-
-- Handwrite MVP base catalog.
-- Define allowed block props and nesting constraints.
-- Define render config schema:
-  - `theme`: `neutral`
-  - `density`: `compact`, `comfortable`
-  - `tone`: `report`, `dashboard`, `decision`
-  - `width`: `article`, `dashboard`, `wide`
-
-## Phase 3: Parse / Validate / Sanitize
+## Phase 2: Compose Command
 
 Build:
 
-- Parse agent-html text into an inspectable structure.
-- Extract and validate optional `<meta-agent />`.
-- Validate allowed blocks, attrs, text children, and nesting.
-- Emit `SanitizedAgentHtml { meta, blocks }`.
+- Accept `CompositionInput` from `--input <path>` or `--stdin`.
+- Emit a standard `CompositionDocument` to `--out <path>` or the default document path.
+- Keep generated document compatible with existing parse / validate / sanitize.
+- Support document-level render config through the existing finite config keys.
+- Diagnose unknown components, unknown props, invalid children, and blocked implementation fields before writing output.
 
-## Phase 4: Renderer Registry
-
-Build:
-
-- Implement `RendererBlock` registry.
-- Map base blocks to renderer adapters:
-  - `page`: layout wrapper.
-  - `card`: shadcn Card.
-  - `badge`: shadcn Badge.
-  - `table` / `row` / `cell`: shadcn Table or semantic table wrapper.
-  - `list` / `item`: semantic list wrapper.
-- Apply `RenderConfig` through approved renderer profiles.
-
-## Phase 5: End-to-End Demo
+## Phase 3: Build Command
 
 Build:
 
-- Add one representative `.agent.html` example.
-- Render it in the app.
-- Keep diagnostics in tests or developer tooling; the default app view should show the rendered artifact.
+- Accept a `CompositionDocument` path through `--input`.
+- Run parse / validate / sanitize before any rendering step.
+- Stop on diagnostics and do not produce a successful artifact for invalid input.
+- Reuse the existing React renderer and Vite build path.
+- Produce a directory artifact at `--out <dir>` or `dist/html`.
+- Keep the artifact openable as static output without the Vite dev server.
 
-## Phase 6: Static Artifact
+## Phase 4: Config Command
 
 Build:
 
-- Verify Vite static build output.
-- Keep default delivery as directory artifact.
+- `config get` prints the effective `ArtifactConfig`.
+- `config set <key> <value>` writes only known config keys and finite enum values.
+- Config participates in `schema`, `compose`, and `build` only through declared `ArtifactConfig`.
+- Invalid config values produce diagnostics and leave the config file unchanged.
 
 ## Stop Conditions
 
-Stop and revisit blueprint if any implementation requires:
+Stop and revisit blueprint if implementation requires:
 
-- Exposing Tailwind class, CSS, `style`, or `className` to agent-html.
-- Passing shadcn props directly through Catalog.
-- Rendering raw agent HTML.
-- Letting portable output bypass parse / sanitize.
-- Adding custom block generation to finish MVP.
-- Splitting into monorepo before the MVP loop runs.
-
-## Monorepo Trigger
-
-Do not use a monorepo for MVP.
-
-Consider splitting only when at least one is true:
-
-- `@agent-html/core` needs to be consumed by multiple apps.
-- React renderer needs to be published separately.
-- Catalog generation becomes an independent package.
-- A CLI or Vite plugin becomes a separate deliverable.
-- Tests and build boundaries become clearer as package boundaries than as folders.
-
-Likely future shape:
-
-```txt
-apps/demo/
-packages/core/
-packages/react-renderer/
-packages/catalog/
-packages/vite-output/
-```
+- CLI bypassing parse / validate / sanitize.
+- CLI directly rendering unchecked agent output.
+- CLI generating a separate renderer path.
+- Exposing style, CSS, Tailwind, `className`, event handlers, Radix props or full shadcn props.
+- Mapping config to arbitrary CSS, script, HTML attributes, URLs, or external resources.
+- Making `.agent.html` the only required authoring interface instead of an inspectable intermediate.
 
 ## Definition Of Done
 
-MVP is done when:
+CLI MVP is done when:
 
-- A checked-in agent-html example renders through the full pipeline.
-- `SanitizedAgentHtml { meta, blocks }` is visible as the renderer input.
-- shadcn components are used as internal renderer materials.
-- agent-facing examples contain no implementation leakage.
-- static build succeeds and produces a shareable directory artifact.
+- `schema`, `compose`, `build`, and `config` are available through `npm run agent --`.
+- `schema` can output both prompt and JSON forms without implementation leakage.
+- `compose` can create a valid standard document from structured input.
+- `build` can produce a static artifact from the composed document.
+- Invalid documents fail before rendering.
+- `config` accepts only finite declared values.
+- `npm run test:run` succeeds.
+- `npm run build` succeeds.

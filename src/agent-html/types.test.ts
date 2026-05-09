@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest"
 
-import type { CatalogItem, RenderConfig, SanitizedAgentHtml } from "./types"
+import type {
+  ComponentSchema,
+  ComponentSchemaOverlay,
+  GeneratedShadcnIntrospection,
+  RenderConfig,
+  SanitizedAgentHtml,
+} from "./types"
 
 describe("agent-html public types", () => {
-  it("models a finite render config and sanitized blocks", () => {
+  it("models a finite render config and sanitized components", () => {
     const meta = {
       theme: "neutral",
       density: "compact",
@@ -11,10 +17,9 @@ describe("agent-html public types", () => {
       width: "article",
     } satisfies RenderConfig
 
-    const pageCatalogItem = {
+    const pageComponentSchema = {
       name: "page",
-      kind: "base",
-      description: "Page root block.",
+      description: "Page root component.",
       props: [
         {
           name: "title",
@@ -23,15 +28,15 @@ describe("agent-html public types", () => {
         },
       ],
       allowedChildren: ["card", "table", "list"],
-    } satisfies CatalogItem
+    } satisfies ComponentSchema
 
     const document = {
       meta,
-      blocks: [
+      components: [
         {
-          type: "block",
+          type: "component",
           name: "page",
-          attrs: {
+          props: {
             title: "Payment Review",
           },
           children: [
@@ -44,8 +49,34 @@ describe("agent-html public types", () => {
       ],
     } satisfies SanitizedAgentHtml
 
-    expect(pageCatalogItem.kind).toBe("base")
+    expect(pageComponentSchema.name).toBe("page")
     expect(document.meta.density).toBe("compact")
-    expect(document.blocks[0]?.name).toBe("page")
+    expect(document.components[0]?.name).toBe("page")
+  })
+
+  it("models shadcn introspection and explicit schema overlay separately", () => {
+    const introspection = {
+      componentName: "Button",
+      slots: ["button"],
+      variantProps: {
+        variant: ["default", "secondary"],
+      },
+      blockedProps: ["className", "style", "asChild"],
+    } satisfies GeneratedShadcnIntrospection
+
+    const overlay = {
+      expose: true,
+      props: [
+        {
+          name: "intent",
+          valueKind: "enum",
+          enumValues: ["primary", "secondary"],
+        },
+      ],
+      hiddenProps: ["variant", "className", "style", "asChild"],
+    } satisfies ComponentSchemaOverlay
+
+    expect(introspection.variantProps?.variant).toContain("default")
+    expect(overlay.hiddenProps).toContain("className")
   })
 })

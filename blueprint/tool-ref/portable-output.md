@@ -23,8 +23,14 @@
 ```txt
 artifact/
   index.html
-  assets/
+  assets/*.js
+  assets/*.css
+  assets/*
 ```
+
+它是最终给人看的默认形态。它可以被静态服务器托管，也可以被归档和传输。
+
+dev preview 只是同一 renderer 的开发检查形态。dev preview 和 build artifact 必须共享同一视觉基线。
 
 `vite-plugin-singlefile` 适合显式导出：
 
@@ -35,6 +41,8 @@ artifact/
 ## Not For
 
 - 不把 `Vite preview` URL 当作 portable artifact。
+- 不让 dev preview 成为独立渲染路径。
+- 不让 final artifact 依赖 Vite dev server、HMR 或 dev overlay。
 - 不默认强制 single-file。
 - 不让 single-file 内联替代 parse / validate / sanitize。
 - 不隐式依赖 CDN、远程字体、外部 worker 或 dev server。
@@ -47,9 +55,21 @@ artifact/
 - dynamic imports、code splitting、workers、wasm、字体和大图片不应假设自动 portable。
 - directory artifact 更适合复杂交互和多资源 artifact，但不默认承诺 file URL 直接打开。
 - 输出前需要检查 source maps、绝对路径、外部 URL、CDN 和远程字体泄漏。
+- 远程字体、CDN、图片路径、asset base path 和 container width 会造成 dev preview 与 final artifact 视觉差异。
+- dev-only CSS 或 dev server 注入内容若参与视觉，会让 build artifact 与预览不一致。
+
+## Verification Matrix
+
+默认至少检查：
+
+- dev preview: 用于开发迭代和快速视觉检查。
+- built static server: 对 `npm run build` 的产物用静态服务器检查。
+- hosted static: 对未知部署路径、`base` 和 assets 引用做抽样检查。
+
+file URL 只属于显式 local-openable / single-file export 场景，不作为复杂 directory artifact 的默认保证。
 
 ## Follow-up
 
 - 定义 external resource policy。
 - 定义 single-file export 的体积阈值。
-- 建立 local-openable、static-server、hosted-static 三类验证矩阵。
+- 建立 dev preview、static-server、hosted-static 三类视觉一致性检查。

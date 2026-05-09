@@ -2,21 +2,34 @@ import { readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
 
 const root = process.cwd()
-const baseCatalogPath = path.join(root, "src", "agent-html", "base-catalog.ts")
+const componentSchemaPath = path.join(
+  root,
+  "src",
+  "agent-html",
+  "component-schema.ts",
+)
 const renderConfigPath = path.join(
   root,
   "src",
   "agent-html",
   "render-config.ts",
 )
-const outputPath = path.join(root, "src", "agent-html", "catalog-prompt.txt")
+const outputPath = path.join(
+  root,
+  "src",
+  "agent-html",
+  "component-schema-prompt.txt",
+)
 
-const [baseCatalogSource, renderConfigSource] = await Promise.all([
-  readFile(baseCatalogPath, "utf8"),
+const [componentSchemaSource, renderConfigSource] = await Promise.all([
+  readFile(componentSchemaPath, "utf8"),
   readFile(renderConfigPath, "utf8"),
 ])
 
-const catalog = extractArrayLiteral(baseCatalogSource, "MVP_BASE_CATALOG")
+const components = extractArrayLiteral(
+  componentSchemaSource,
+  "STANDARD_COMPONENT_SCHEMAS",
+)
 const renderValues = {
   theme: extractConstArray(renderConfigSource, "RENDER_THEME_VALUES"),
   density: extractConstArray(renderConfigSource, "RENDER_DENSITY_VALUES"),
@@ -30,11 +43,11 @@ const lines = [
   "Header:",
   `<meta-agent theme="${renderValues.theme.join("|")}" density="${renderValues.density.join("|")}" tone="${renderValues.tone.join("|")}" width="${renderValues.width.join("|")}" />`,
   "",
-  "Blocks:",
-  ...catalog.map(formatBlock),
+  "Standard components:",
+  ...components.map(formatComponent),
   "",
   "Forbidden:",
-  "class/className/style/css/Tailwind/shadcn props/React props/script/onclick/events/external URLs/unknown tags/unknown attrs.",
+  "class/className/style/css/Tailwind/shadcn props/Radix props/React props/script/onclick/events/external URLs/unknown tags/unknown attrs.",
 ]
 
 await writeFile(outputPath, `${lines.join("\n")}\n`)
@@ -109,14 +122,14 @@ function findMatchingBracket(source, start) {
   throw new Error("Unclosed array literal")
 }
 
-function formatBlock(block) {
-  const props = block.props.map(formatProp).join(" ")
+function formatComponent(component) {
+  const props = component.props.map(formatProp).join(" ")
   const propText = props ? `(${props})` : ""
-  const children = (block.allowedChildren ?? [])
+  const children = (component.allowedChildren ?? [])
     .map((child) => (child === "#text" ? "text" : child))
     .join("/")
 
-  return `${block.name}${propText} -> ${children || "none"}`
+  return `${component.name}${propText} -> ${children || "none"}`
 }
 
 function formatProp(prop) {

@@ -1,8 +1,14 @@
-import paymentReviewSource from "@/agent-html/examples/payment-review.agent.html?raw"
+import collaborationWorkbenchSource from "@/agent-html/examples/human-agent-collaboration-workbench.agent.html?raw"
 import { sanitizeAgentHtml } from "@/agent-html/parse/sanitize-agent-html"
 import { AgentHtmlRenderer } from "@/agent-html/renderer/AgentHtmlRenderer"
 
-const paymentReview = sanitizeAgentHtml(paymentReviewSource)
+const artifactSource = String(
+  import.meta.env.VITE_AGENT_HTML_SOURCE || collaborationWorkbenchSource,
+)
+const artifact = sanitizeAgentHtml(artifactSource)
+const artifactTitle =
+  artifact.document?.components[0]?.props.title ??
+  "Human Agent Collaboration Workbench"
 
 export default function App() {
   return (
@@ -10,17 +16,16 @@ export default function App() {
       <header className="flex flex-col gap-2">
         <p className="text-muted-foreground text-sm">agent-html MVP</p>
         <h1 className="text-3xl font-semibold tracking-tight">
-          Payment Review
+          {artifactTitle}
         </h1>
         <p className="text-muted-foreground max-w-3xl">
-          Rendered from agent-html through the MVP sanitize and renderer
-          pipeline.
+          A static artifact rendered through the sanitized agent-html pipeline.
         </p>
       </header>
 
       <article className="bg-card text-card-foreground rounded-lg border">
-        {paymentReview.document ? (
-          <AgentHtmlRenderer document={paymentReview.document} />
+        {artifact.document ? (
+          <AgentHtmlRenderer document={artifact.document} />
         ) : (
           <p className="text-destructive p-6 text-sm">
             The artifact could not be rendered.

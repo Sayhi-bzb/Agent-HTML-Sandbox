@@ -1,11 +1,11 @@
 import {
-  FORBIDDEN_AGENT_FACING_PROP_NAMES,
-  getBaseCatalogItem,
-  getCatalogProp,
+  BLOCKED_AGENT_FACING_PROP_NAMES,
+  getComponentPropSchema,
+  getComponentSchema,
   TEXT_CHILD,
-} from "../base-catalog"
+} from "../component-schema"
 import { DEFAULT_RENDER_CONFIG, RenderConfigSchema } from "../render-config"
-import type { RenderConfig, SanitizedBlockNode, SanitizedNode } from "../types"
+import type { RenderConfig, SanitizedNode, StandardAgentNode } from "../types"
 import type {
   AgentHtmlDiagnostic,
   ParsedAgentHtml,
@@ -15,25 +15,22 @@ import type {
 
 type ValidatedAgentHtml = {
   readonly meta: RenderConfig
-  readonly blocks: readonly SanitizedBlockNode[]
+  readonly components: readonly StandardAgentNode[]
   readonly diagnostics: readonly AgentHtmlDiagnostic[]
 }
 
 const FORBIDDEN_ATTR_NAMES = new Set(
-  FORBIDDEN_AGENT_FACING_PROP_NAMES.flatMap((name) => [
-    name,
-    name.toLowerCase(),
-  ]),
+  BLOCKED_AGENT_FACING_PROP_NAMES.flatMap((name) => [name, name.toLowerCase()]),
 )
 
 export function validateAgentHtml(parsed: ParsedAgentHtml): ValidatedAgentHtml {
   const diagnostics = [...parsed.diagnostics]
   const meta = validateRenderConfig(parsed.metaAttrs, diagnostics)
-  const blocks = validateRootNodes(parsed.nodes, diagnostics)
+  const components = validateRootNodes(parsed.nodes, diagnostics)
 
   return {
     meta,
-    blocks,
+    components,
     diagnostics,
   }
 }
@@ -66,7 +63,7 @@ function validateRenderConfig(
 function validateRootNodes(
   nodes: readonly ParsedAgentHtmlNode[],
   diagnostics: AgentHtmlDiagnostic[],
-): readonly SanitizedBlockNode[] {
+): readonly StandardAgentNode[] {
   const elementNodes = nodes.filter(isParsedElementNode)
 
   for (const node of nodes) {
@@ -83,7 +80,7 @@ function validateRootNodes(
   if (elementNodes.length === 0) {
     diagnostics.push({
       code: "missing-root",
-      message: "agent-html requires a <page> root block.",
+      message: "agent-html requires a <page> root component.",
       path: "/",
       severity: "error",
     })
@@ -93,7 +90,7 @@ function validateRootNodes(
   if (elementNodes.length > 1) {
     diagnostics.push({
       code: "multiple-roots",
-      message: "agent-html MVP supports exactly one root block.",
+      message: "agent-html supports exactly one root component.",
       path: "/",
       severity: "error",
     })
@@ -104,7 +101,7 @@ function validateRootNodes(
   if (root?.name !== "page") {
     diagnostics.push({
       code: "invalid-child",
-      message: "The root block must be <page>.",
+      message: "The root component must be <page>.",
       path: root?.path ?? "/",
       severity: "error",
     })
@@ -122,13 +119,13 @@ function validateElementNode(
   node: ParsedAgentHtmlElementNode,
   parent: ParsedAgentHtmlElementNode | undefined,
   diagnostics: AgentHtmlDiagnostic[],
-): SanitizedBlockNode | undefined {
-  const catalogItem = getBaseCatalogItem(node.name)
+): StandardAgentNode | undefined {
+  const componentSchema = getComponentSchema(node.name)
 
-  if (!catalogItem) {
+  if (!componentSchema) {
     diagnostics.push({
-      code: "unknown-block",
-      message: `Unknown block <${node.name}> is not registered in the MVP base catalog.`,
+      code: "unknown-component",
+      message: `Unknown component <${node.name}> is not registered in the standard component schema.`,
       path: node.path,
       severity: "error",
     })
@@ -137,7 +134,7 @@ function validateElementNode(
 
   if (
     parent &&
-    !getBaseCatalogItem(parent.name)?.allowedChildren?.includes(node.name)
+    !getComponentSchema(parent.name)?.allowedChildren?.includes(node.name)
   ) {
     diagnostics.push({
       code: "invalid-child",
@@ -151,9 +148,9 @@ function validateElementNode(
   const children = validateChildren(node, diagnostics)
 
   return {
-    type: "block",
+    type: "component",
     name: node.name,
-    attrs,
+    props: attrs,
     children,
   }
 }
@@ -162,15 +159,15 @@ function validateAttrs(
   node: ParsedAgentHtmlElementNode,
   diagnostics: AgentHtmlDiagnostic[],
 ): Readonly<Record<string, string>> {
-  const catalogItem = getBaseCatalogItem(node.name)
+  const componentSchema = getComponentSchema(node.name)
 
-  if (!catalogItem) {
+  if (!componentSchema) {
     return {}
   }
 
   const sanitizedAttrs: Record<string, string> = {}
 
-  for (const prop of catalogItem.props) {
+  for (const prop of componentSchema.props) {
     if (prop.required && !(prop.name in node.attrs)) {
       diagnostics.push({
         code: "missing-required-attr",
@@ -182,7 +179,7 @@ function validateAttrs(
   }
 
   for (const [attrName, attrValue] of Object.entries(node.attrs)) {
-    const prop = getCatalogProp(catalogItem, attrName)
+    const prop = getComponentPropSchema(componentSchema, attrName)
 
     if (!prop || FORBIDDEN_ATTR_NAMES.has(attrName)) {
       diagnostics.push({
@@ -214,15 +211,15 @@ function validateChildren(
   node: ParsedAgentHtmlElementNode,
   diagnostics: AgentHtmlDiagnostic[],
 ): readonly SanitizedNode[] {
-  const catalogItem = getBaseCatalogItem(node.name)
+  const componentSchema = getComponentSchema(node.name)
 
-  if (!catalogItem) {
+  if (!componentSchema) {
     return []
   }
 
   return node.children.flatMap((child): SanitizedNode[] => {
     if (child.type === "text") {
-      if (!catalogItem.allowedChildren?.includes(TEXT_CHILD)) {
+      if (!componentSchema.allowedChildren?.includes(TEXT_CHILD)) {
         diagnostics.push({
           code: "invalid-child",
           message: `Text content is not allowed inside <${node.name}>.`,
@@ -240,11 +237,11 @@ function validateChildren(
       ]
     }
 
-    if (!catalogItem.allowedChildren?.includes(child.name)) {
-      if (!getBaseCatalogItem(child.name)) {
+    if (!componentSchema.allowedChildren?.includes(child.name)) {
+      if (!getComponentSchema(child.name)) {
         diagnostics.push({
-          code: "unknown-block",
-          message: `Unknown block <${child.name}> is not registered in the MVP base catalog.`,
+          code: "unknown-component",
+          message: `Unknown component <${child.name}> is not registered in the standard component schema.`,
           path: child.path,
           severity: "error",
         })

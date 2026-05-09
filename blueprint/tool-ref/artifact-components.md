@@ -4,7 +4,7 @@
 
 ## Decision
 
-采购 artifact components 作为 RendererBlock 的内部表达材料。
+采购 artifact components 作为 RendererComponent 的内部表达材料。
 
 核心判断：
 
@@ -14,12 +14,12 @@ Mermaid supplies controlled diagram rendering.
 TanStack Table supplies structured table logic.
 dnd-kit supplies round-trip interaction.
 Recharts supplies common chart rendering.
-Agent Component Catalog exposes controlled blocks, not tool APIs.
+ComponentSchema exposes controlled components, not tool APIs.
 ```
 
 ## Fit
 
-按表达 block 需求采购：
+按表达组件需求采购：
 
 - `Shiki`: code / diff。
 - `Mermaid`: controlled diagram。
@@ -44,9 +44,9 @@ round-trip interaction:
 
 不把这些工具的 API 暴露给 agent。
 
-agent-facing 层应暴露受控 blocks，例如 code / diff、diagram、data table、chart、triage board。
+agent-facing 层应暴露受控标准组件，例如 code / diff、diagram、data table、chart、triage board。
 
-不让 Mermaid raw DSL、TanStack column definitions、dnd-kit hooks、Recharts props 或 Shiki HTML 输出结构成为 Catalog 表面。
+不让 Mermaid raw DSL、TanStack column definitions、dnd-kit hooks、Recharts props 或 Shiki HTML 输出结构成为 schema 表面。
 
 ## Specific Risks
 
@@ -58,8 +58,8 @@ agent-facing 层应暴露受控 blocks，例如 code / diff、diagram、data tab
 
 ## Follow-up
 
-实现前只需补查和首批表达 blocks 直接相关的细节：
+实现前只需补查和首批表达组件直接相关的细节：
 
-- code / diff block 的 Shiki transformer 边界。
-- diagram block 的 Mermaid 安全配置。
-- chart block 的最小受控 chart spec。
+- code / diff component 的 Shiki transformer 边界。
+- diagram component 的 Mermaid 安全配置。
+- chart component 的最小受控 chart spec。

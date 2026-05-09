@@ -4,91 +4,113 @@
 
 ## Change Rules
 
-- 公共类型表面变更必须同步 contracts、Catalog 和 tests。
+- 公共类型表面变更必须同步 contracts、schema 和 tests。
 - agent-facing 类型不得泄漏内部实现 props、Tailwind class 或源码结构。
 - 公共类型名称应保持稳定，避免用近义词创建平行概念。
 
-## 1. ComponentDeclaration
+## 1. GeneratedShadcnIntrospection
 
-Ownership: UI implementation layer
+Ownership: schema generation
 
-Purpose: 表示 custom blocks 的声明表面。
+Purpose: 表示从 shadcn registry、组件源码和 `components.json` 自动抽取的 schema 草稿材料。
 
-Consumers: Catalog generation
+Consumers: schema mapper, drift check
 
-Change rule: ComponentDeclaration 变化必须同步 CatalogItem 和 CatalogProp。
+Change rule: GeneratedShadcnIntrospection 不得直接成为 agent-facing 协议。
 
-Note: ComponentDeclaration 是 custom blocks 的显式 agent-facing 声明。它可由文档注释和声明抽取工具生成中间材料，但语义权威仍是声明本身，不是 renderer 组件 props。
+Note: 可包含 exports、`data-slot`、`cva` variants、literal union props、registry metadata、dependencies、docs links 和 blocked/internal prop candidates。它用于降低维护成本，不决定最终开放面。
 
-## 2. AgentHtmlDocument
+## 2. ComponentSchemaOverlay
 
-Ownership: agent-html authoring boundary
+Ownership: standardized component schema
 
-Purpose: 表示 agent 输出的完整 agent-html 文档。
+Purpose: 表示项目显式声明的 agent-facing 白名单。
 
-Consumers: parse / sanitize
+Consumers: schema mapper, parse / sanitize, renderer
 
-Note: renderer 不直接消费 AgentHtmlDocument；renderer 只消费 SanitizedAgentHtml。
+Change rule: overlay 变化必须同步示例、contract 和 tests。
 
-Change rule: 文档级结构变更必须同步 `agent-html-to-renderer` contract。
+Note: overlay 决定组件是否 expose、语义 prop 命名、允许 values、slot 合法结构、children 边界、隐藏 props 和 shadcn internal mapping。
 
-## 3. AgentHtmlNode
+## 3. ComponentSchema
 
-Ownership: agent-html authoring boundary
+Ownership: standardized component schema
 
-Purpose: 表示 agent-html 中的积木节点。
+Purpose: 表示一个 agent-facing 标准组件。
 
-Consumers: parse / sanitize
+Consumers: agent, parse / sanitize, renderer
 
-Note: renderer 不直接消费 AgentHtmlNode；节点通过 parse / sanitize 后进入 SanitizedAgentHtml。
+Change rule: 新增、删除或重命名 ComponentSchema 必须同步示例、contract 和 renderer 注册。
 
-Change rule: 节点能力变更必须同步 Catalog 和 renderer 注册规则。
+Note: ComponentSchema 由 GeneratedShadcnIntrospection 和 ComponentSchemaOverlay 合成。它描述组件用途、固定结构、允许语义 props、允许 slots 和使用禁忌。它不等于 shadcn/ui props，也不暴露 Tailwind class 或内部 React 实现。
 
-## 4. CatalogItem
+## 4. ComponentPropSchema
 
-Ownership: Agent Component Catalog
-
-Purpose: 表示一个 agent-facing 积木。
-
-Consumers: agent, agent-html authoring flow
-
-Change rule: 新增、删除或重命名 CatalogItem 必须同步示例和 contract。
-
-Note: CatalogItem 分为 base 和 custom。base 来自标准化 shadcn base catalog；custom 来自 ComponentDeclaration。
-
-## 5. CatalogProp
-
-Ownership: Agent Component Catalog
+Ownership: standardized component schema
 
 Purpose: 描述 agent 可填写的 props。
 
-Consumers: agent, catalog validation
+Consumers: agent, parse / sanitize
 
-Change rule: CatalogProp 不得暴露内部 props、Tailwind class 或完整 shadcn/ui props。
+Change rule: ComponentPropSchema 不得暴露内部 props、Tailwind class、`className`、Radix props 或完整 shadcn/ui props。
 
-## 6. RenderConfig
+## 5. ComponentToken
 
-Ownership: Agent Component Catalog / renderer
+Ownership: standardized component schema
+
+Purpose: 表示 agent 可阅读的组件语义 token。
+
+Consumers: agent
+
+Change rule: ComponentToken 应表达组件语义、内容角色和组合边界，不应表达内部样式实现。
+
+## 6. AgentHtmlDocument
+
+Ownership: agent-html authoring boundary
+
+Purpose: 表示 agent 输出的完整标准 agent-html 文档。
+
+Consumers: parse / sanitize
+
+Note: renderer 不直接消费 AgentHtmlDocument；renderer 只消费 sanitized structure。
+
+Change rule: 文档级结构变更必须同步 `agent-html-to-renderer` contract。
+
+## 7. StandardAgentNode
+
+Ownership: agent-html authoring boundary
+
+Purpose: 表示 agent-html 中的标准组件节点。
+
+Consumers: parse / sanitize
+
+Note: renderer 不直接消费 StandardAgentNode；节点通过 parse / sanitize 后进入 sanitized structure。
+
+Change rule: 节点能力变更必须同步 ComponentSchema 和 renderer 注册规则。
+
+## 8. RenderConfig
+
+Ownership: standardized component schema / renderer
 
 Purpose: 表示 agent 可选择的受控 presentation profile。
 
 Consumers: agent, parse / sanitize, renderer
 
-Change rule: RenderConfig key / value 变化必须同步 Catalog schema、sanitize schema、renderer profile 和 tests。
+Change rule: RenderConfig key / value 变化必须同步 schema、sanitize schema、renderer profile 和 tests。
 
 Note: RenderConfig 只能包含有限枚举，例如 theme、density、tone、width。它不是 CSS、style、className、Tailwind class、shadcn props、script 或外部资源入口。
 
-## 7. RendererBlock
+## 9. RendererComponent
 
 Ownership: renderer
 
-Purpose: 表示 renderer 可渲染的已注册积木。
+Purpose: 表示 renderer 可渲染的已注册标准组件。
 
 Consumers: renderer
 
-Change rule: RendererBlock 必须对应 CatalogItem，除非是内部保留块。
+Change rule: RendererComponent 必须对应 ComponentSchema，除非是内部保留组件。
 
-## 8. SanitizedAgentHtml
+## 10. SanitizedAgentHtml
 
 Ownership: parse / sanitize
 
@@ -98,16 +120,56 @@ Consumers: renderer
 
 Change rule: 任何进入 renderer 的 agent-html 必须先成为 SanitizedAgentHtml。
 
-Note: SanitizedAgentHtml 来自 parse / validate / sanitize 后的结构转换，不是 cleaned HTML string。未知标签、危险属性、未注册积木和非法 RenderConfig 不得进入该表面。
+Note: SanitizedAgentHtml 来自 parse / validate / sanitize 后的结构转换，不是 cleaned HTML string。未知标签、危险属性、未注册组件、非法 props、非法 slot 结构和非法 RenderConfig 不得进入该表面。
 
-## 9. PortableArtifact
+## 11. RenderedArtifact
 
-Ownership: portable output
+Ownership: renderer / portable output
 
-Purpose: 表示可打开、可分享、可归档的静态交付物。
+Purpose: 表示 renderer 产出的 React output 和 HTML output。
 
-Consumers: user, sharing flow
+Consumers: portable output, user, sharing flow
 
-Change rule: PortableArtifact 不得依赖未声明运行环境或绕过安全边界。
+Change rule: RenderedArtifact 不得依赖未声明运行环境或绕过安全边界。
 
-Note: PortableArtifact 可包含目录式 artifact 和显式单文件 export。目录式 artifact 是默认交付形态，单文件 export 不应成为隐式默认。
+Note: RenderedArtifact 可继续进入目录式 static artifact 或显式单文件 export。目录式 artifact 是默认交付形态，单文件 export 不应成为隐式默认。
+
+## 12. CliSchemaOutput
+
+Ownership: CLI / standardized component schema
+
+Purpose: 表示 `schema` 命令输出的脱水 agent-facing contract。
+
+Consumers: agent, compose
+
+Change rule: CliSchemaOutput 必须来自 ComponentSchema 和 RenderConfig，不得暴露 renderer props、Tailwind class、shadcn props 或源码结构。
+
+## 13. CompositionInput
+
+Ownership: CLI compose
+
+Purpose: 表示 `compose` 命令接收的内容输入。
+
+Consumers: compose
+
+Change rule: CompositionInput 不得绕过 ComponentSchema，也不得直接成为 renderer 输入。
+
+## 14. CompositionDocument
+
+Ownership: CLI compose / agent-html authoring boundary
+
+Purpose: 表示 `compose` 产出的标准 agent-html document。
+
+Consumers: parse / sanitize, build
+
+Change rule: CompositionDocument 必须进入 parse / validate / sanitize。`.agent.html` 是它的可检查文件形态。
+
+## 15. ArtifactConfig
+
+Ownership: CLI config / portable output
+
+Purpose: 表示 CLI 管理的有限 presentation / output 配置。
+
+Consumers: schema, compose, build
+
+Change rule: ArtifactConfig 不得映射为任意 CSS、Tailwind class、inline style、script、HTML attribute passthrough 或外部资源。

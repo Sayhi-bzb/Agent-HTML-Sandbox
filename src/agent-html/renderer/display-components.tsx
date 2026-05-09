@@ -1,7 +1,7 @@
-import type { ReactNode } from "react"
-
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
 import {
   Table,
   TableBody,
@@ -11,31 +11,18 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-import type { SanitizedBlockNode, SanitizedNode } from "../types"
-import type { RenderProfile } from "./render-profile"
+import type { SanitizedNode, StandardAgentNode } from "../types"
+import type { RendererComponent } from "./renderer-types"
 
-export type RendererContext = {
-  readonly profile: RenderProfile
-  readonly renderChildren: (children: readonly SanitizedNode[]) => ReactNode
-}
-
-type RendererBlock = {
-  readonly name: string
-  readonly render: (
-    node: SanitizedBlockNode,
-    context: RendererContext,
-  ) => ReactNode
-}
-
-const MVP_RENDERER_BLOCKS = {
+export const DISPLAY_RENDERER_COMPONENTS = {
   page: {
     name: "page",
     render: (node, context) => (
       <main className={context.profile.pageClassName}>
-        {node.attrs.title ? (
+        {node.props.title ? (
           <header className="mb-6">
             <h1 className="text-3xl font-semibold tracking-tight">
-              {node.attrs.title}
+              {node.props.title}
             </h1>
           </header>
         ) : null}
@@ -45,13 +32,24 @@ const MVP_RENDERER_BLOCKS = {
       </main>
     ),
   },
+  alert: {
+    name: "alert",
+    render: (node, context) => (
+      <Alert variant={node.props.tone === "danger" ? "destructive" : "default"}>
+        {node.props.title ? <AlertTitle>{node.props.title}</AlertTitle> : null}
+        <AlertDescription>
+          {context.renderChildren(node.children)}
+        </AlertDescription>
+      </Alert>
+    ),
+  },
   card: {
     name: "card",
     render: (node, context) => (
       <Card size={context.profile.cardSize}>
-        {node.attrs.title ? (
+        {node.props.title ? (
           <CardHeader>
-            <CardTitle>{node.attrs.title}</CardTitle>
+            <CardTitle>{node.props.title}</CardTitle>
           </CardHeader>
         ) : null}
         <CardContent className="flex flex-col gap-3">
@@ -63,17 +61,21 @@ const MVP_RENDERER_BLOCKS = {
   badge: {
     name: "badge",
     render: (node, context) => (
-      <Badge variant={getBadgeVariant(node.attrs.tone)}>
+      <Badge variant={getBadgeVariant(node.props.tone)}>
         {context.renderChildren(node.children)}
       </Badge>
     ),
   },
+  separator: {
+    name: "separator",
+    render: () => <Separator />,
+  },
   table: {
     name: "table",
     render: (node, context) => {
-      const rows = node.children.filter(isBlockNamed("row"))
-      const headerRows = rows.filter((row) => row.attrs.kind === "header")
-      const bodyRows = rows.filter((row) => row.attrs.kind !== "header")
+      const rows = node.children.filter(isComponentNamed("row"))
+      const headerRows = rows.filter((row) => row.props.kind === "header")
+      const bodyRows = rows.filter((row) => row.props.kind !== "header")
 
       return (
         <Table>
@@ -119,7 +121,7 @@ const MVP_RENDERER_BLOCKS = {
       const children = context.renderChildren(node.children)
       const className = context.profile.listClassName
 
-      return node.attrs.variant === "ordered" ? (
+      return node.props.variant === "ordered" ? (
         <ol className={`list-decimal ${className}`}>{children}</ol>
       ) : (
         <ul className={`list-disc ${className}`}>{children}</ul>
@@ -130,12 +132,7 @@ const MVP_RENDERER_BLOCKS = {
     name: "item",
     render: (node, context) => <li>{context.renderChildren(node.children)}</li>,
   },
-} satisfies Record<string, RendererBlock>
-
-export function getRendererBlock(name: string): RendererBlock | undefined {
-  const registry: Readonly<Record<string, RendererBlock>> = MVP_RENDERER_BLOCKS
-  return registry[name]
-}
+} satisfies Record<string, RendererComponent>
 
 function getBadgeVariant(tone: string | undefined) {
   switch (tone) {
@@ -151,11 +148,11 @@ function getBadgeVariant(tone: string | undefined) {
   }
 }
 
-function getRowCells(row: SanitizedBlockNode): readonly SanitizedBlockNode[] {
-  return row.children.filter(isBlockNamed("cell"))
+function getRowCells(row: StandardAgentNode): readonly StandardAgentNode[] {
+  return row.children.filter(isComponentNamed("cell"))
 }
 
-function isBlockNamed(name: string) {
-  return (node: SanitizedNode): node is SanitizedBlockNode =>
-    node.type === "block" && node.name === name
+function isComponentNamed(name: string) {
+  return (node: SanitizedNode): node is StandardAgentNode =>
+    node.type === "component" && node.name === name
 }

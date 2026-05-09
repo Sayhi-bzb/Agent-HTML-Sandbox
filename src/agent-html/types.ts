@@ -1,26 +1,38 @@
-export type CatalogBlockKind = "base" | "custom"
-
-export type CatalogPropValueKind =
+export type ComponentPropValueKind =
   | "boolean"
   | "enum"
   | "number"
   | "string"
   | "text"
 
-export type CatalogProp = {
+export type ComponentPropSchema = {
   readonly name: string
-  readonly valueKind: CatalogPropValueKind
+  readonly valueKind: ComponentPropValueKind
   readonly required?: boolean
   readonly description?: string
   readonly enumValues?: readonly string[]
 }
 
-export type CatalogItem = {
+export type ComponentSchema = {
   readonly name: string
-  readonly kind: CatalogBlockKind
   readonly description: string
-  readonly props: readonly CatalogProp[]
+  readonly props: readonly ComponentPropSchema[]
   readonly allowedChildren?: readonly string[]
+}
+
+export type ComponentSchemaOverlay = {
+  readonly expose: boolean
+  readonly props?: readonly ComponentPropSchema[]
+  readonly allowedChildren?: readonly string[]
+  readonly hiddenProps?: readonly string[]
+}
+
+export type GeneratedShadcnIntrospection = {
+  readonly componentName: string
+  readonly slots: readonly string[]
+  readonly variantProps?: Readonly<Record<string, readonly string[]>>
+  readonly unionProps?: Readonly<Record<string, readonly string[]>>
+  readonly blockedProps: readonly string[]
 }
 
 export type RenderTheme = "neutral"
@@ -43,16 +55,16 @@ export type SanitizedTextNode = {
   readonly value: string
 }
 
-export type SanitizedBlockNode = {
-  readonly type: "block"
+export type StandardAgentNode = {
+  readonly type: "component"
   readonly name: string
-  readonly attrs: Readonly<Record<string, string>>
+  readonly props: Readonly<Record<string, string>>
   readonly children: readonly SanitizedNode[]
 }
 
-export type SanitizedNode = SanitizedBlockNode | SanitizedTextNode
+export type SanitizedNode = StandardAgentNode | SanitizedTextNode
 
 export type SanitizedAgentHtml = {
   readonly meta: RenderConfig
-  readonly blocks: readonly SanitizedBlockNode[]
+  readonly components: readonly StandardAgentNode[]
 }

@@ -2,13 +2,14 @@
   "$schema": "https://unpkg.com/knip@latest/schema.json",
   "entry": ["index.html"],
   "project": ["src/**/*.{ts,tsx}", "*.{ts,js}", "scripts/**/*.mjs"],
-  "ignore": [
-    "src/components/ui/alert.tsx",
-    "src/components/ui/button.tsx",
-    "src/components/ui/separator.tsx"
-  ],
+  "ignore": ["src/components/ui/alert.tsx", "src/components/ui/button.tsx"],
   "ignoreIssues": {
     "src/components/ui/**": ["exports"]
   },
-  "ignoreDependencies": ["lucide-react"]
+  "ignoreDependencies": [
+    "@fontsource-variable/geist",
+    "lucide-react",
+    "shadcn",
+    "tw-animate-css"
+  ]
 }

@@ -7,7 +7,7 @@
 - `constitution.md`: 工具调研写作约束。
 - `shadcn.md`: shadcn/ui 工具采购参考。
 - `parse-sanitize.md`: parse / sanitize 工具采购参考。
-- `catalog-generation.md`: Catalog generation 工具采购参考。
+- `component-schema-generation.md`: component schema generation 工具采购参考。
 - `artifact-components.md`: artifact components 工具采购参考。
 - `portable-output.md`: portable output 工具采购参考。
 

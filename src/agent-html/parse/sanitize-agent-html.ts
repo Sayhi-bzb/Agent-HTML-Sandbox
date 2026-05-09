@@ -21,7 +21,7 @@ export function sanitizeAgentHtml(source: string): SanitizeAgentHtmlResult {
   return {
     document: {
       meta: validated.meta,
-      blocks: validated.blocks,
+      components: validated.components,
     },
     diagnostics: [],
   }

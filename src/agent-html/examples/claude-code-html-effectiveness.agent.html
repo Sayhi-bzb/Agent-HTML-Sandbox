@@ -1,0 +1,143 @@
+<meta-agent theme="neutral" density="comfortable" tone="report" width="wide" />
+
+<page title="Claude Code HTML Effectiveness">
+  <alert title="Thesis">
+    HTML is a better agent output target when the artifact must be read,
+    compared, shared, or turned into a focused editing surface.
+  </alert>
+
+  <card title="Executive Summary">
+    <badge tone="success">Readable</badge>
+    <badge tone="success">Shareable</badge>
+    <badge tone="warning">More expensive than markdown</badge>
+    <list>
+      <item
+        >Markdown is still good for short editable notes, but it collapses under
+        large plans and dense reviews.</item
+      >
+      <item
+        >HTML can combine narrative, tables, diagrams, visual hierarchy, and
+        purpose-built controls in one portable artifact.</item
+      >
+      <item
+        >The practical output should be a static HTML artifact that looks like
+        the dev preview, not a separate design surface.</item
+      >
+    </list>
+  </card>
+
+  <separator />
+
+  <table>
+    <row kind="header">
+      <cell>Use Case</cell>
+      <cell>HTML Advantage</cell>
+      <cell>Sandbox Component</cell>
+      <cell>Risk</cell>
+    </row>
+    <row>
+      <cell>Planning and exploration</cell>
+      <cell>Compare multiple options side by side with clear tradeoffs.</cell>
+      <cell>card, badge, table</cell>
+      <cell>Too much layout freedom if props are not locked.</cell>
+    </row>
+    <row>
+      <cell>Code review</cell>
+      <cell
+        >Show findings, evidence, severity, and next actions without GitHub diff
+        noise.</cell
+      >
+      <cell>alert, table, list</cell>
+      <cell>Needs strict sanitization before rendering model output.</cell>
+    </row>
+    <row>
+      <cell>Reports and research</cell>
+      <cell
+        >Turn long synthesis into scannable sections and decision tables.</cell
+      >
+      <cell>page, card, separator</cell>
+      <cell>Large files are harder to review in git.</cell>
+    </row>
+    <row>
+      <cell>Custom editing interfaces</cell>
+      <cell
+        >Expose sliders, buckets, and copy/export flows for two-way work.</cell
+      >
+      <cell>future form controls</cell>
+      <cell>Interactivity must be explicitly allowed and sandboxed.</cell>
+    </row>
+  </table>
+
+  <card title="Artifact Pipeline">
+    <list variant="ordered">
+      <item
+        >Agent reads component schema and tokens instead of raw shadcn
+        implementation details.</item
+      >
+      <item
+        >Agent emits locked agent-html syntax with semantic props only.</item
+      >
+      <item
+        >Parser converts markup into a typed document and rejects unknown
+        components or blocked attributes.</item
+      >
+      <item
+        >Renderer maps standard nodes to internal shadcn React components.</item
+      >
+      <item
+        >Build emits a local-openable dist/index.html so the artifact can be
+        reviewed without npm run preview.</item
+      >
+    </list>
+  </card>
+
+  <card title="Design Constraints">
+    <alert title="Locked Style">
+      Agents should never choose className, CSS, arbitrary colors, event
+      handlers, or implementation props. The allowed surface is component name,
+      children, and finite semantic props.
+    </alert>
+    <list>
+      <item
+        >Card spacing, title scale, border, and content rhythm are
+        renderer-owned.</item
+      >
+      <item>Badge tone maps to the approved shadcn variants.</item>
+      <item>Alert tone is limited to neutral or danger.</item>
+      <item
+        >Separator has no props because section rhythm should be
+        standardized.</item
+      >
+    </list>
+  </card>
+
+  <table>
+    <row kind="header">
+      <cell>Checkpoint</cell>
+      <cell>Expected Result</cell>
+      <cell>Status</cell>
+    </row>
+    <row>
+      <cell>Schema accepts complex document</cell>
+      <cell
+        >No diagnostics for alert, separator, nested lists, and tables.</cell
+      >
+      <cell>Target</cell>
+    </row>
+    <row>
+      <cell>Renderer uses shadcn base</cell>
+      <cell
+        >All visible UI comes from registered shadcn-backed components.</cell
+      >
+      <cell>Target</cell>
+    </row>
+    <row>
+      <cell>Local artifact opens</cell>
+      <cell
+        >dist/index.html renders without file:// CORS errors or JS text
+        leakage.</cell
+      >
+      <cell>Target</cell>
+    </row>
+  </table>
+</page>

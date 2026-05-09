@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest"
 
+import htmlEffectivenessSource from "../examples/claude-code-html-effectiveness.agent.html?raw"
+import collaborationWorkbenchSource from "../examples/human-agent-collaboration-workbench.agent.html?raw"
 import { sanitizeAgentHtml } from "./sanitize-agent-html"
 
 describe("sanitizeAgentHtml", () => {
@@ -36,25 +38,25 @@ describe("sanitizeAgentHtml", () => {
         tone: "report",
         width: "article",
       },
-      blocks: [
+      components: [
         {
-          type: "block",
+          type: "component",
           name: "page",
-          attrs: {
+          props: {
             title: "Payment Review",
           },
           children: [
             {
-              type: "block",
+              type: "component",
               name: "card",
-              attrs: {
+              props: {
                 title: "High Risk",
               },
               children: [
                 {
-                  type: "block",
+                  type: "component",
                   name: "badge",
-                  attrs: {
+                  props: {
                     tone: "danger",
                   },
                   children: [
@@ -65,14 +67,14 @@ describe("sanitizeAgentHtml", () => {
                   ],
                 },
                 {
-                  type: "block",
+                  type: "component",
                   name: "list",
-                  attrs: {},
+                  props: {},
                   children: [
                     {
-                      type: "block",
+                      type: "component",
                       name: "item",
-                      attrs: {},
+                      props: {},
                       children: [
                         {
                           type: "text",
@@ -85,46 +87,46 @@ describe("sanitizeAgentHtml", () => {
               ],
             },
             {
-              type: "block",
+              type: "component",
               name: "table",
-              attrs: {},
+              props: {},
               children: [
                 {
-                  type: "block",
+                  type: "component",
                   name: "row",
-                  attrs: {
+                  props: {
                     kind: "header",
                   },
                   children: [
                     {
-                      type: "block",
+                      type: "component",
                       name: "cell",
-                      attrs: {},
+                      props: {},
                       children: [{ type: "text", value: "file" }],
                     },
                     {
-                      type: "block",
+                      type: "component",
                       name: "cell",
-                      attrs: {},
+                      props: {},
                       children: [{ type: "text", value: "line" }],
                     },
                     {
-                      type: "block",
+                      type: "component",
                       name: "cell",
-                      attrs: {},
+                      props: {},
                       children: [{ type: "text", value: "evidence" }],
                     },
                   ],
                 },
                 {
-                  type: "block",
+                  type: "component",
                   name: "row",
-                  attrs: {},
+                  props: {},
                   children: [
                     {
-                      type: "block",
+                      type: "component",
                       name: "cell",
-                      attrs: {},
+                      props: {},
                       children: [
                         {
                           type: "text",
@@ -133,15 +135,15 @@ describe("sanitizeAgentHtml", () => {
                       ],
                     },
                     {
-                      type: "block",
+                      type: "component",
                       name: "cell",
-                      attrs: {},
+                      props: {},
                       children: [{ type: "text", value: "42" }],
                     },
                     {
-                      type: "block",
+                      type: "component",
                       name: "cell",
-                      attrs: {},
+                      props: {},
                       children: [
                         {
                           type: "text",
@@ -182,10 +184,10 @@ describe("sanitizeAgentHtml", () => {
     `)
 
     expect(result.diagnostics).toEqual([])
-    expect(result.document?.blocks[0]?.name).toBe("page")
+    expect(result.document?.components[0]?.name).toBe("page")
   })
 
-  it("keeps row blocks inside semantic agent-html tables", () => {
+  it("keeps row components inside semantic agent-html tables", () => {
     const result = sanitizeAgentHtml(`
       <page title="Payment Review">
         <table>
@@ -201,27 +203,27 @@ describe("sanitizeAgentHtml", () => {
       </page>
     `)
 
-    const table = result.document?.blocks[0]?.children[0]
+    const table = result.document?.components[0]?.children[0]
 
     expect(result.diagnostics).toEqual([])
-    expect(table?.type).toBe("block")
+    expect(table?.type).toBe("component")
 
-    if (table?.type !== "block") {
-      throw new Error("Expected table block.")
+    if (table?.type !== "component") {
+      throw new Error("Expected table component.")
     }
 
     const row = table.children[0]
 
     expect(table.name).toBe("table")
-    expect(row?.type).toBe("block")
+    expect(row?.type).toBe("component")
 
-    if (row?.type !== "block") {
-      throw new Error("Expected row block.")
+    if (row?.type !== "component") {
+      throw new Error("Expected row component.")
     }
 
     expect(row.name).toBe("row")
     expect(row.children[0]).toMatchObject({
-      type: "block",
+      type: "component",
       name: "cell",
     })
   })
@@ -237,21 +239,21 @@ describe("sanitizeAgentHtml", () => {
       </page>
     `)
 
-    const table = result.document?.blocks[0]?.children[0]
+    const table = result.document?.components[0]?.children[0]
 
     expect(result.diagnostics).toEqual([])
-    expect(table?.type).toBe("block")
+    expect(table?.type).toBe("component")
 
-    if (table?.type !== "block") {
-      throw new Error("Expected table block.")
+    if (table?.type !== "component") {
+      throw new Error("Expected table component.")
     }
 
     expect(table.children[0]).toMatchObject({
-      type: "block",
+      type: "component",
       name: "row",
       children: [
         {
-          type: "block",
+          type: "component",
           name: "cell",
           children: [
             {
@@ -264,7 +266,7 @@ describe("sanitizeAgentHtml", () => {
     })
   })
 
-  it("diagnoses unknown blocks, attrs, and invalid nesting", () => {
+  it("diagnoses unknown components, attrs, and invalid nesting", () => {
     const result = sanitizeAgentHtml(`
       <page title="Payment Review">
         <script>alert("x")</script>
@@ -276,7 +278,7 @@ describe("sanitizeAgentHtml", () => {
     expect(result.document).toBeUndefined()
     expect(result.diagnostics.map((diagnostic) => diagnostic.code)).toEqual(
       expect.arrayContaining([
-        "unknown-block",
+        "unknown-component",
         "unknown-attr",
         "invalid-child",
       ]),
@@ -303,7 +305,70 @@ describe("sanitizeAgentHtml", () => {
     `)
 
     expect(typeof result.document).toBe("object")
-    expect(result.document?.blocks[0]?.type).toBe("block")
-    expect(result.document?.blocks[0]?.children[0]?.type).toBe("block")
+    expect(result.document?.components[0]?.type).toBe("component")
+    expect(result.document?.components[0]?.children[0]?.type).toBe("component")
+  })
+
+  it("accepts the complex Claude Code HTML effectiveness example", () => {
+    const result = sanitizeAgentHtml(htmlEffectivenessSource)
+
+    expect(result.diagnostics).toEqual([])
+    expect(result.document?.components[0]).toMatchObject({
+      type: "component",
+      name: "page",
+      props: {
+        title: "Claude Code HTML Effectiveness",
+      },
+    })
+  })
+
+  it("accepts controlled interactive agent-html components", () => {
+    const result = sanitizeAgentHtml(`
+      <page title="Interactive Workbench">
+        <tabs default="decide">
+          <tab value="explore" label="Explore">
+            <accordion>
+              <accordion-item value="review" title="Review Console">
+                <list>
+                  <item>Inspect findings and choose a response.</item>
+                </list>
+              </accordion-item>
+            </accordion>
+          </tab>
+          <tab value="decide" label="Decide">
+            <choice-group title="Direction" mode="single" default="ship">
+              <choice value="ship" label="Ship">Use the current direction.</choice>
+              <choice value="revise" label="Revise">Ask for another pass.</choice>
+            </choice-group>
+            <slider-control label="Review strictness" value="70" min="0" max="100" step="5" unit="%">
+              Increase this when the artifact drives implementation.
+            </slider-control>
+            <feedback-box title="Export prompt" copy-label="Copy">
+              Implement the selected direction with the chosen strictness.
+            </feedback-box>
+            <progress-meter label="Decision confidence" value="82" detail="Enough signal to continue." />
+          </tab>
+        </tabs>
+      </page>
+    `)
+
+    expect(result.diagnostics).toEqual([])
+    expect(result.document?.components[0]?.children[0]).toMatchObject({
+      type: "component",
+      name: "tabs",
+    })
+  })
+
+  it("accepts the interactive collaboration workbench example", () => {
+    const result = sanitizeAgentHtml(collaborationWorkbenchSource)
+
+    expect(result.diagnostics).toEqual([])
+    expect(result.document?.components[0]).toMatchObject({
+      type: "component",
+      name: "page",
+      props: {
+        title: "Human Agent Collaboration Workbench",
+      },
+    })
   })
 })

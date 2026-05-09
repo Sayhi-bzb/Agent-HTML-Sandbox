@@ -2,11 +2,11 @@ import { Fragment, type ReactNode } from "react"
 
 import type {
   SanitizedAgentHtml,
-  SanitizedBlockNode,
   SanitizedNode,
+  StandardAgentNode,
 } from "../types"
-import { getRendererBlock } from "./block-registry"
-import type { RendererContext } from "./block-registry"
+import { getRendererComponent } from "./component-registry"
+import type { RendererContext } from "./renderer-types"
 import { getRenderProfile } from "./render-profile"
 
 type AgentHtmlRendererProps = {
@@ -26,8 +26,8 @@ export function AgentHtmlRenderer({ document }: AgentHtmlRendererProps) {
 
   return (
     <>
-      {document.blocks.map((block, index) =>
-        renderBlock(block, index, context),
+      {document.components.map((component, index) =>
+        renderComponent(component, index, context),
       )}
     </>
   )
@@ -42,23 +42,23 @@ function renderNode(
     return <span key={index}>{node.value}</span>
   }
 
-  return renderBlock(node, index, context)
+  return renderComponent(node, index, context)
 }
 
-function renderBlock(
-  node: SanitizedBlockNode,
+function renderComponent(
+  node: StandardAgentNode,
   index: number,
   context: RendererContext,
 ): ReactNode {
-  const rendererBlock = getRendererBlock(node.name)
+  const rendererComponent = getRendererComponent(node.name)
 
-  if (!rendererBlock) {
-    throw new Error(`No renderer registered for block "${node.name}".`)
+  if (!rendererComponent) {
+    throw new Error(`No renderer registered for component "${node.name}".`)
   }
 
   return (
     <Fragment key={`${node.name}-${index}`}>
-      {rendererBlock.render(node, context)}
+      {rendererComponent.render(node, context)}
     </Fragment>
   )
 }

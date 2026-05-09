@@ -1,6 +1,6 @@
 import { parseFragment, type DefaultTreeAdapterMap } from "parse5"
 
-import { BASE_BLOCK_NAMES } from "../base-catalog"
+import { STANDARD_COMPONENT_NAMES } from "../component-schema"
 
 export type AgentHtmlDiagnosticSeverity = "error"
 
@@ -14,7 +14,7 @@ export type AgentHtmlDiagnostic = {
     | "multiple-roots"
     | "unsupported-node"
     | "unknown-attr"
-    | "unknown-block"
+    | "unknown-component"
   readonly message: string
   readonly path: string
   readonly severity: AgentHtmlDiagnosticSeverity
@@ -44,15 +44,15 @@ export type ParsedAgentHtml = {
   readonly diagnostics: readonly AgentHtmlDiagnostic[]
 }
 
-const AGENT_BLOCK_NAME_PATTERN = BASE_BLOCK_NAMES.join("|")
-const AGENT_BLOCK_ALIAS_PREFIX = "agent-html-"
+const AGENT_COMPONENT_NAME_PATTERN = STANDARD_COMPONENT_NAMES.join("|")
+const AGENT_COMPONENT_ALIAS_PREFIX = "agent-html-"
 const SELF_CLOSING_META_AGENT_PATTERN = /<meta-agent\b([^>]*)\/>/gi
-const SELF_CLOSING_AGENT_BLOCK_PATTERN = new RegExp(
-  `<(${AGENT_BLOCK_NAME_PATTERN})\\b([^>]*)/>`,
+const SELF_CLOSING_AGENT_COMPONENT_PATTERN = new RegExp(
+  `<(${AGENT_COMPONENT_NAME_PATTERN})\\b([^>]*)/>`,
   "gi",
 )
-const AGENT_BLOCK_TAG_PATTERN = new RegExp(
-  `<(\\/?)(${AGENT_BLOCK_NAME_PATTERN})\\b`,
+const AGENT_COMPONENT_TAG_PATTERN = new RegExp(
+  `<(\\/?)(${AGENT_COMPONENT_NAME_PATTERN})\\b`,
   "gi",
 )
 
@@ -119,11 +119,14 @@ export function parseAgentHtml(source: string): ParsedAgentHtml {
 
 function normalizeAgentHtmlSource(source: string): string {
   // parse5 follows browser HTML rules: custom tags are not void elements and
-  // native table parsing can reorder children. Normalize MVP block syntax first.
+  // native table parsing can reorder children. Normalize standard component syntax first.
   return source
     .replace(SELF_CLOSING_META_AGENT_PATTERN, "<meta-agent$1></meta-agent>")
-    .replace(SELF_CLOSING_AGENT_BLOCK_PATTERN, "<$1$2></$1>")
-    .replace(AGENT_BLOCK_TAG_PATTERN, `<$1${AGENT_BLOCK_ALIAS_PREFIX}$2`)
+    .replace(SELF_CLOSING_AGENT_COMPONENT_PATTERN, "<$1$2></$1>")
+    .replace(
+      AGENT_COMPONENT_TAG_PATTERN,
+      `<$1${AGENT_COMPONENT_ALIAS_PREFIX}$2`,
+    )
 }
 
 function convertElementNode(
@@ -162,8 +165,8 @@ function convertElementNode(
 }
 
 function getAgentBlockName(node: Parse5Element): string {
-  return node.tagName.startsWith(AGENT_BLOCK_ALIAS_PREFIX)
-    ? node.tagName.slice(AGENT_BLOCK_ALIAS_PREFIX.length)
+  return node.tagName.startsWith(AGENT_COMPONENT_ALIAS_PREFIX)
+    ? node.tagName.slice(AGENT_COMPONENT_ALIAS_PREFIX.length)
     : node.tagName
 }
 
