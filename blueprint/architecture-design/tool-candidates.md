@@ -21,7 +21,8 @@
 
 定位：
 
-- shadcn/ui 可作为组件实现和 registry 基础设施。
+- shadcn/ui 可提供 base blocks 的能力来源、组件实现和 registry 基础设施。
+- shadcn-backed theme / density / layout preset 可作为 render config profile 来源。
 - Tailwind 可作为组件内部样式工具，不作为 agent-facing 主接口。
 - Radix UI 可承担可访问交互 primitive。
 - variant 和 class 合并逻辑应封装在组件内部。
@@ -38,7 +39,9 @@
 
 定位：
 
-- `.d.ts` 和 TSDoc 可作为 Catalog 信息来源。
+- shadcn base catalog 可作为 base blocks 信息来源。
+- render config schema 可作为 presentation profile 信息来源。
+- `.d.ts` 和 TSDoc 可作为 custom blocks 信息来源。
 - Catalog 只暴露用途、props、slots、组合关系和使用禁忌。
 - Storybook 可作为人类组件工作台，暂不作为 v1 主 Catalog。
 
@@ -54,6 +57,7 @@
 定位：
 
 - 解析 agent-html 为可检查结构。
+- 校验 render config header 为有限 key / value 枚举。
 - 限制不透明脚本、危险属性和不受控外部资源。
 - 支持必要 escape hatch，但默认收束自由度。
 

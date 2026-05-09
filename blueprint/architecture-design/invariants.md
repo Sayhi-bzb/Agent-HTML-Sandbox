@@ -12,11 +12,15 @@ agent 不以读取组件源码作为常规路径。
 
 Agent Component Catalog 是 agent-facing 组件能力入口。
 
+Catalog 包含 base blocks 和 custom blocks。
+
+Catalog 包含 render config schema。
+
 组件能力变化必须同步反映到 Catalog。
 
 ## 3. implementation props stay internal
 
-Tailwind class 和 shadcn/ui props 不作为 agent-facing 主接口。
+Tailwind class 和完整 shadcn/ui props 不作为 agent-facing 主接口。
 
 它们属于组件实现层。
 
@@ -40,7 +44,7 @@ dev preview 不应成为最终交付假设。
 
 ## 7. renderer uses registered blocks
 
-renderer 只渲染已注册语义积木。
+renderer 只渲染已注册积木。
 
 未知标签不得绕过安全边界执行。
 
@@ -61,3 +65,9 @@ agent-facing 示例不得泄漏组件内部实现。
 raw escape hatch 必须显式标记，并经过安全边界。
 
 自由 HTML 不应成为默认路径。
+
+## 11. render config selects profiles only
+
+render config header 只能选择已注册 presentation profile。
+
+它不得成为 CSS、Tailwind class、shadcn props、script、style 或外部资源的逃逸口。

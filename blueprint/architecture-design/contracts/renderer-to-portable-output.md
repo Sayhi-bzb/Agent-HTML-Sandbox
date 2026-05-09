@@ -4,11 +4,11 @@
 
 ## Provider
 
-renderer 提供已渲染 artifact。
+renderer 提供已渲染页面产物。
 
 ## Consumer
 
-portable output 层生成可打开、可分享、可归档的交付物。
+portable output 层消费 renderer 产物，并生成可打开、可分享、可归档的交付物。
 
 ## Rules
 

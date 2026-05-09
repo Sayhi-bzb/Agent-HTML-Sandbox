@@ -2,14 +2,19 @@
 
 本索引用于路由 agent-html 的 blueprint 上下文。
 
-## Rules
+## Documents
 
-读取 `blueprint_rule.md`，了解 blueprint 写作规则。
+- `constitution.md`: 项目原则。
+- `blueprint_rule.md`: blueprint 写作规则。
+- `architecture-design/index.md`: architecture 设计入口。
+- `tool-ref/index.md`: 工具采购参考入口。
 
-## Architecture
+## Reading Order
 
-读取 `architecture-design/index.md`，进入 architecture 设计上下文。
+项目原则：`constitution.md`。
 
-## Roadmap
+写作约束：`blueprint_rule.md`。
 
-读取 `roadmap.md`，了解 blueprint 交付清单。
+架构理解：`architecture-design/index.md`。
+
+工具调研：`tool-ref/index.md`。

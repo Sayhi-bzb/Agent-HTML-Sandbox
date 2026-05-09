@@ -1,0 +1,905 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>agent-html blueprint demo</title>
+    <style>
+      :root {
+        --ink: #171717;
+        --muted: #666;
+        --line: #c7c7c7;
+        --paper: #f7f7f4;
+        --panel: #fff;
+        --agent: #e9f2ff;
+        --gate: #fff2cc;
+        --internal: #eaf7ea;
+        --output: #f2eafd;
+        --danger: #b42318;
+        --ok: #067647;
+        --warn: #9a6700;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+        line-height: 1.45;
+      }
+
+      main {
+        width: min(1320px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 28px 0 48px;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 28px;
+        margin-bottom: 8px;
+      }
+
+      h2 {
+        font-size: 20px;
+        margin: 28px 0 12px;
+      }
+
+      h3 {
+        font-size: 15px;
+      }
+
+      h4 {
+        font-size: 13px;
+        margin-bottom: 8px;
+      }
+
+      .note,
+      .caption {
+        color: var(--muted);
+      }
+
+      .section,
+      .card,
+      .step,
+      .artifact-panel {
+        border: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .section {
+        padding: 16px;
+      }
+
+      .compare {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      .card {
+        min-width: 0;
+      }
+
+      .card header,
+      .step header {
+        border-bottom: 1px solid var(--line);
+        padding: 10px 12px;
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .tag {
+        border: 1px solid var(--line);
+        padding: 1px 6px;
+        color: var(--muted);
+        white-space: nowrap;
+        font-size: 12px;
+      }
+
+      pre {
+        margin: 0;
+        padding: 12px;
+        overflow-x: auto;
+        white-space: pre;
+        font-size: 12px;
+      }
+
+      .caption {
+        border-top: 1px solid var(--line);
+        padding: 8px 12px;
+        font-size: 12px;
+      }
+
+      .output-pair {
+        display: grid;
+        grid-template-rows: auto auto;
+      }
+
+      .render-box {
+        border-top: 1px solid var(--line);
+        padding: 12px;
+        background: #fff;
+        min-height: 240px;
+      }
+
+      .render-label {
+        color: var(--muted);
+        font-size: 12px;
+        margin-bottom: 8px;
+      }
+
+      .md-preview h4 {
+        font-size: 14px;
+        margin-bottom: 8px;
+      }
+
+      .md-preview ul {
+        margin: 8px 0;
+        padding-left: 18px;
+      }
+
+      .option-strip {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .option-card {
+        border: 1px solid var(--line);
+        padding: 8px;
+        background: #fafafa;
+        font-size: 12px;
+      }
+
+      .option-card.recommended {
+        border-color: var(--ok);
+        background: #f0fbf4;
+      }
+
+      .option-card.risky {
+        border-color: var(--warn);
+        background: #fff8e6;
+      }
+
+      .tiny-dependency {
+        margin-top: 10px;
+      }
+
+      .tiny-dependency svg {
+        width: 100%;
+        height: 88px;
+        border: 1px solid var(--line);
+        background: #fff;
+      }
+
+      .session {
+        display: grid;
+        gap: 12px;
+      }
+
+      .step {
+        display: grid;
+        grid-template-columns: 230px minmax(0, 1fr);
+      }
+
+      .step header {
+        border-bottom: 0;
+        border-right: 1px solid var(--line);
+        display: block;
+      }
+
+      .step header .tag {
+        display: inline-block;
+        margin-top: 8px;
+      }
+
+      .body {
+        padding: 12px;
+        min-width: 0;
+      }
+
+      .agent {
+        background: var(--agent);
+      }
+
+      .gate {
+        background: var(--gate);
+      }
+
+      .internal {
+        background: var(--internal);
+      }
+
+      .output {
+        background: var(--output);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+
+      th,
+      td {
+        border: 1px solid var(--line);
+        padding: 7px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      .artifact {
+        display: grid;
+        grid-template-columns: 1.1fr 1.2fr;
+        gap: 12px;
+      }
+
+      .artifact-panel {
+        padding: 12px;
+        min-width: 0;
+      }
+
+      .artifact-title {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        grid-column: 1 / -1;
+        border: 1px solid var(--line);
+        background: #fff;
+        padding: 12px;
+      }
+
+      .matrix {
+        display: grid;
+        grid-template-columns: 70px repeat(2, minmax(0, 1fr));
+        grid-template-rows: 32px repeat(2, 130px);
+        border: 1px solid var(--line);
+      }
+
+      .matrix > div {
+        border-right: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        padding: 8px;
+        min-width: 0;
+      }
+
+      .matrix > div:nth-child(3n) {
+        border-right: 0;
+      }
+
+      .matrix > div:nth-last-child(-n + 3) {
+        border-bottom: 0;
+      }
+
+      .axis {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .feature {
+        display: inline-block;
+        border: 1px solid var(--line);
+        background: #fff;
+        padding: 4px 6px;
+        margin: 0 4px 5px 0;
+        font-size: 12px;
+      }
+
+      .feature.now {
+        border-color: var(--ok);
+        color: var(--ok);
+      }
+
+      .feature.cut {
+        border-color: var(--danger);
+        color: var(--danger);
+      }
+
+      .board {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .column {
+        border: 1px solid var(--line);
+        background: #fafafa;
+        min-height: 210px;
+      }
+
+      .column h4 {
+        border-bottom: 1px solid var(--line);
+        padding: 8px;
+      }
+
+      .ticket {
+        margin: 8px;
+        border: 1px solid var(--line);
+        background: #fff;
+        padding: 8px;
+        font-size: 12px;
+      }
+
+      .ticket strong {
+        display: block;
+        margin-bottom: 5px;
+      }
+
+      .dependency svg {
+        width: 100%;
+        height: 220px;
+        border: 1px solid var(--line);
+        background: #fff;
+      }
+
+      .summary {
+        display: grid;
+        gap: 8px;
+      }
+
+      .summary-row {
+        border: 1px solid var(--line);
+        background: #fff;
+        padding: 8px;
+      }
+
+      .button-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        border: 1px solid var(--line);
+        background: #fff;
+        color: var(--ink);
+        padding: 8px 10px;
+        font: inherit;
+      }
+
+      .lane {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        border: 1px solid var(--line);
+        margin-top: 12px;
+      }
+
+      .lane div {
+        padding: 10px;
+        border-right: 1px solid var(--line);
+      }
+
+      .lane div:last-child {
+        border-right: 0;
+      }
+
+      @media (max-width: 960px) {
+        .compare,
+        .artifact,
+        .board,
+        .lane {
+          grid-template-columns: 1fr;
+        }
+
+        .artifact-title {
+          display: block;
+        }
+
+        .step {
+          grid-template-columns: 1fr;
+        }
+
+        .step header {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>agent-html blueprint demo</h1>
+      <p class="note">目标：agent 用 Catalog 里的 base/custom blocks 生成可视化 artifact，而不是只渲染文本。</p>
+
+      <h2>1. 同一请求，三种输出模式</h2>
+      <section class="section">
+        <p>
+          <strong>User:</strong>
+          帮我比较三个方案 A/B/C，展示推荐方案、风险和依赖。
+        </p>
+
+        <div class="compare" aria-label="md html agent-html output comparison">
+          <article class="card">
+            <header>
+              <h3>Markdown</h3>
+              <span class="tag">文本为主</span>
+            </header>
+            <div class="output-pair">
+              <div>
+                <pre><code>## Option Comparison
+
+| Option | Score | Risk |
+|---|---:|---|
+| A | 8 | Low |
+| B | 6 | Medium |
+| C | 4 | High |
+
+Recommendation: A
+
+Dependencies:
+- A needs API cleanup
+- B depends on new cache</code></pre>
+              </div>
+              <div class="render-box md-preview">
+                <p class="render-label">Rendered Output</p>
+                <h4>Option Comparison</h4>
+                <table>
+                  <tbody>
+                    <tr>
+                      <td>A</td>
+                      <td>8</td>
+                      <td>Low</td>
+                    </tr>
+                    <tr>
+                      <td>B</td>
+                      <td>6</td>
+                      <td>Medium</td>
+                    </tr>
+                    <tr>
+                      <td>C</td>
+                      <td>4</td>
+                      <td>High</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <ul>
+                  <li>Recommendation: A</li>
+                  <li>A needs API cleanup</li>
+                  <li>B depends on new cache</li>
+                </ul>
+              </div>
+            </div>
+            <p class="caption">内容完整，但主要还是线性文本和表格。</p>
+          </article>
+
+          <article class="card">
+            <header>
+              <h3>HTML</h3>
+              <span class="tag">自由实现</span>
+            </header>
+            <div class="output-pair">
+              <div>
+                <pre><code>&lt;div class="options" style="display:grid"&gt;
+  &lt;div class="green"&gt;A · recommended&lt;/div&gt;
+  &lt;div onclick="pick('B')"&gt;B · cache risk&lt;/div&gt;
+  &lt;div class="red"&gt;C · high risk&lt;/div&gt;
+&lt;/div&gt;
+&lt;svg onclick="selectEdge(event)"&gt;...&lt;/svg&gt;
+&lt;script&gt;
+  function pick(id) { /* arbitrary code */ }
+&lt;/script&gt;</code></pre>
+              </div>
+              <div class="render-box">
+                <p class="render-label">Rendered Output</p>
+                <div class="option-strip">
+                  <div class="option-card recommended"><strong>A</strong><br />8 · recommended</div>
+                  <div class="option-card risky"><strong>B</strong><br />6 · cache risk</div>
+                  <div class="option-card risky"><strong>C</strong><br />4 · high risk</div>
+                </div>
+                <div class="tiny-dependency">
+                  <svg viewBox="0 0 360 88" aria-label="html dependency example">
+                    <defs>
+                      <marker id="html-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                        <path d="M0,0 L8,4 L0,8 Z" fill="#666"></path>
+                      </marker>
+                    </defs>
+                    <rect x="18" y="26" width="90" height="32" fill="#fff" stroke="#c7c7c7"></rect>
+                    <text x="45" y="47" font-size="12">API</text>
+                    <rect x="236" y="26" width="100" height="32" fill="#fff" stroke="#c7c7c7"></rect>
+                    <text x="266" y="47" font-size="12">A</text>
+                    <line x1="108" y1="42" x2="236" y2="42" stroke="#666" marker-end="url(#html-arrow)"></line>
+                  </svg>
+                </div>
+                <div class="button-row" style="margin-top: 8px">
+                  <button type="button">pick A</button>
+                  <button type="button">copy</button>
+                </div>
+              </div>
+            </div>
+            <p class="caption">视觉表达强，但 output 混入 style、onclick、script 和任意实现。</p>
+          </article>
+
+          <article class="card">
+            <header>
+              <h3>agent-html</h3>
+              <span class="tag">Catalog blocks</span>
+            </header>
+            <div class="output-pair">
+              <div>
+                <pre><code>&lt;meta-agent theme="neutral" density="compact" tone="decision" width="dashboard" /&gt;
+
+&lt;page title="Option Comparison"&gt;
+  &lt;card title="Recommendation"&gt;
+    &lt;badge tone="success"&gt;A&lt;/badge&gt;
+    &lt;text&gt;Highest score, lowest risk&lt;/text&gt;
+  &lt;/card&gt;
+
+  &lt;table columns="option,score,risk"&gt;
+    &lt;row option="A" score="8" risk="low" /&gt;
+    &lt;row option="B" score="6" risk="medium" /&gt;
+    &lt;row option="C" score="4" risk="high" /&gt;
+  &lt;/table&gt;
+
+  &lt;svg-diagram label="Dependencies"&gt;
+    &lt;edge from="API cleanup" to="A" /&gt;
+  &lt;/svg-diagram&gt;
+
+  &lt;button action="copy-prompt" label="copy decision" /&gt;
+&lt;/page&gt;</code></pre>
+              </div>
+              <div class="render-box">
+                <p class="render-label">Rendered Output · neutral / compact / decision</p>
+                <div class="option-strip">
+                  <div class="option-card recommended"><strong>A</strong><br />8 · recommended</div>
+                  <div class="option-card risky"><strong>B</strong><br />6 · cache risk</div>
+                  <div class="option-card risky"><strong>C</strong><br />4 · high risk</div>
+                </div>
+                <div class="tiny-dependency">
+                  <svg viewBox="0 0 360 88" aria-label="agent-html dependency example">
+                    <defs>
+                      <marker id="agent-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                        <path d="M0,0 L8,4 L0,8 Z" fill="#666"></path>
+                      </marker>
+                    </defs>
+                    <rect x="18" y="26" width="90" height="32" fill="#fff" stroke="#c7c7c7"></rect>
+                    <text x="35" y="47" font-size="12">API cleanup</text>
+                    <rect x="236" y="26" width="100" height="32" fill="#fff" stroke="#c7c7c7"></rect>
+                    <text x="266" y="47" font-size="12">A</text>
+                    <line x1="108" y1="42" x2="236" y2="42" stroke="#666" marker-end="url(#agent-arrow)"></line>
+                  </svg>
+                </div>
+                <div class="summary-row" style="margin-top: 8px"><strong>Prompt back:</strong> choose A after API cleanup.</div>
+              </div>
+            </div>
+                <p class="caption">header 只选择已注册 presentation profile；base blocks 和实现由 renderer 生成。</p>
+          </article>
+        </div>
+      </section>
+
+      <h2>2. 完整 session：功能优先级决策面板</h2>
+      <section class="section">
+        <div class="session">
+          <article class="step">
+            <header>
+              <h3>1. User Question</h3>
+              <span class="tag">input</span>
+            </header>
+            <div class="body">
+              <pre><code>我有 6 个候选功能，要决定下个 sprint 做哪些。
+请做一个可视化页面：
+- 按影响力/成本展示
+- 分组优先级
+- 标出依赖关系
+- 给我一个可以带回 agent 的决策摘要</code></pre>
+            </div>
+          </article>
+
+          <article class="step agent">
+            <header>
+              <h3>2. Agent reads Catalog</h3>
+              <span class="tag">base + custom</span>
+            </header>
+            <div class="body">
+              <table>
+                <thead>
+                  <tr>
+                    <th>type</th>
+                    <th>CatalogItem</th>
+                    <th>用途</th>
+                    <th>可填信息</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>config</td>
+                    <td><code>render profile</code></td>
+                    <td>选择渲染预设</td>
+                    <td><code>theme</code>, <code>density</code>, <code>tone</code>, <code>width</code></td>
+                  </tr>
+                  <tr>
+                    <td>base</td>
+                    <td><code>card</code>, <code>table</code>, <code>badge</code>, <code>button</code></td>
+                    <td>基础布局和信息块</td>
+                    <td><code>title</code>, <code>tone</code>, <code>label</code></td>
+                  </tr>
+                  <tr>
+                    <td>custom</td>
+                    <td><code>priority-matrix</code></td>
+                    <td>影响力/成本二维图</td>
+                    <td><code>x</code>, <code>y</code>, <code>items</code></td>
+                  </tr>
+                  <tr>
+                    <td>custom</td>
+                    <td><code>decision-board</code></td>
+                    <td>Now / Next / Later / Cut 分组</td>
+                    <td><code>columns</code>, <code>items</code></td>
+                  </tr>
+                  <tr>
+                    <td>custom</td>
+                    <td><code>dependency-map</code></td>
+                    <td>依赖关系图</td>
+                    <td><code>nodes</code>, <code>edges</code></td>
+                  </tr>
+                  <tr>
+                    <td>custom</td>
+                    <td><code>decision-summary</code></td>
+                    <td>把人的选择带回 agent</td>
+                    <td><code>format</code>, <code>content</code></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="step agent">
+            <header>
+              <h3>3. Agent Output</h3>
+              <span class="tag">agent-html</span>
+            </header>
+            <div class="body">
+              <pre><code>&lt;meta-agent theme="neutral" density="compact" tone="dashboard" width="wide" /&gt;
+
+&lt;dashboard title="Sprint Priority Decision"&gt;
+  &lt;priority-matrix x="cost" y="impact"&gt;
+    &lt;item name="Checkout retry" impact="high" cost="low" /&gt;
+    &lt;item name="Billing export" impact="high" cost="medium" /&gt;
+    &lt;item name="Audit log" impact="medium" cost="medium" /&gt;
+    &lt;item name="Theme editor" impact="medium" cost="high" /&gt;
+    &lt;item name="Coupon rules" impact="low" cost="medium" /&gt;
+    &lt;item name="Social sharing" impact="low" cost="high" /&gt;
+  &lt;/priority-matrix&gt;
+
+  &lt;decision-board columns="now,next,later,cut"&gt;
+    &lt;card column="now" name="Checkout retry" reason="high impact / low cost" /&gt;
+    &lt;card column="now" name="Billing export" reason="enterprise blocker" /&gt;
+    &lt;card column="next" name="Audit log" reason="dependency for export" /&gt;
+    &lt;card column="later" name="Theme editor" reason="useful but expensive" /&gt;
+    &lt;card column="cut" name="Social sharing" reason="low impact / high cost" /&gt;
+  &lt;/decision-board&gt;
+
+  &lt;dependency-map&gt;
+    &lt;edge from="Audit log" to="Billing export" /&gt;
+    &lt;edge from="Checkout retry" to="Coupon rules" /&gt;
+  &lt;/dependency-map&gt;
+
+  &lt;decision-summary format="prompt" /&gt;
+&lt;/dashboard&gt;</code></pre>
+            </div>
+          </article>
+
+          <article class="step gate">
+            <header>
+              <h3>4. parse / validate / sanitize</h3>
+              <span class="tag">safety gate</span>
+            </header>
+            <div class="body">
+              <table>
+                <tbody>
+                  <tr>
+                    <td>allowed config</td>
+                    <td><code>theme=neutral</code>, <code>density=compact</code>, <code>tone=dashboard</code>, <code>width=wide</code></td>
+                  </tr>
+                  <tr>
+                    <td>allowed blocks</td>
+                    <td><code>dashboard</code>, <code>priority-matrix</code>, <code>decision-board</code>, <code>dependency-map</code>, <code>decision-summary</code>, <code>item</code>, <code>card</code>, <code>edge</code></td>
+                  </tr>
+                  <tr>
+                    <td>allowed attrs</td>
+                    <td><code>title</code>, <code>x</code>, <code>y</code>, <code>impact</code>, <code>cost</code>, <code>column</code>, <code>reason</code>, <code>from</code>, <code>to</code>, <code>format</code></td>
+                  </tr>
+                  <tr>
+                    <td>blocked</td>
+                    <td><code>script</code>, <code>onclick</code>, <code>style</code>, <code>class</code>, unknown tags, full shadcn props, CSS in header</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="step gate">
+            <header>
+              <h3>5. SanitizedAgentHtml</h3>
+              <span class="tag">checked structure</span>
+            </header>
+            <div class="body">
+              <pre><code>Dashboard {
+  title: "Sprint Priority Decision",
+  children: [
+    PriorityMatrix(items x 6),
+    DecisionBoard(columns x 4, cards x 5),
+    DependencyMap(edges x 2),
+    DecisionSummary(format: "prompt")
+  ]
+}</code></pre>
+            </div>
+          </article>
+
+          <article class="step internal">
+            <header>
+              <h3>6. renderer</h3>
+              <span class="tag">RendererBlock</span>
+            </header>
+            <div class="body">
+              <table>
+                <thead>
+                  <tr>
+                    <th>agent-html block</th>
+                    <th>RendererBlock</th>
+                    <th>实现材料</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>priority-matrix</code></td>
+                    <td><code>PriorityMatrixBlock</code></td>
+                    <td>CSS grid + badges</td>
+                  </tr>
+                  <tr>
+                    <td><code>decision-board</code></td>
+                    <td><code>DecisionBoardBlock</code></td>
+                    <td>card columns</td>
+                  </tr>
+                  <tr>
+                    <td><code>dependency-map</code></td>
+                    <td><code>DependencyMapBlock</code></td>
+                    <td>controlled SVG</td>
+                  </tr>
+                  <tr>
+                    <td><code>decision-summary</code></td>
+                    <td><code>DecisionSummaryBlock</code></td>
+                    <td>summary + copy affordance</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="step output">
+            <header>
+              <h3>7. Rendered Page</h3>
+              <span class="tag">static artifact</span>
+            </header>
+            <div class="body">
+              <div class="artifact">
+                <div class="artifact-title">
+                  <div>
+                    <h3>Sprint Priority Decision</h3>
+                    <p class="note">6 candidates · impact/cost matrix · dependency-aware grouping</p>
+                  </div>
+                  <div class="button-row">
+                    <button type="button">copy as prompt</button>
+                    <button type="button">export decision</button>
+                  </div>
+                </div>
+
+                <section class="artifact-panel">
+                  <h4>Impact / Cost Matrix</h4>
+                  <div class="matrix">
+                    <div></div>
+                    <div class="axis">Low cost</div>
+                    <div class="axis">High cost</div>
+                    <div class="axis">High impact</div>
+                    <div>
+                      <span class="feature now">Checkout retry</span>
+                      <span class="feature now">Billing export</span>
+                    </div>
+                    <div>
+                      <span class="feature">Theme editor</span>
+                    </div>
+                    <div class="axis">Low impact</div>
+                    <div>
+                      <span class="feature">Coupon rules</span>
+                    </div>
+                    <div>
+                      <span class="feature cut">Social sharing</span>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="artifact-panel">
+                  <h4>Decision Board</h4>
+                  <div class="board">
+                    <div class="column">
+                      <h4>Now</h4>
+                      <div class="ticket"><strong>Checkout retry</strong>High impact / low cost</div>
+                      <div class="ticket"><strong>Billing export</strong>Enterprise blocker</div>
+                    </div>
+                    <div class="column">
+                      <h4>Next</h4>
+                      <div class="ticket"><strong>Audit log</strong>Needed before export hardening</div>
+                    </div>
+                    <div class="column">
+                      <h4>Later</h4>
+                      <div class="ticket"><strong>Theme editor</strong>Useful, but expensive</div>
+                      <div class="ticket"><strong>Coupon rules</strong>Wait for retry behavior</div>
+                    </div>
+                    <div class="column">
+                      <h4>Cut</h4>
+                      <div class="ticket"><strong>Social sharing</strong>Low impact / high cost</div>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="artifact-panel dependency">
+                  <h4>Dependency Map</h4>
+                  <svg viewBox="0 0 520 220" role="img" aria-label="feature dependency map">
+                    <defs>
+                      <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                        <path d="M0,0 L8,4 L0,8 Z" fill="#666"></path>
+                      </marker>
+                    </defs>
+                    <rect x="28" y="34" width="130" height="38" fill="#fff" stroke="#c7c7c7"></rect>
+                    <text x="43" y="58" font-size="13">Audit log</text>
+                    <rect x="330" y="34" width="145" height="38" fill="#fff" stroke="#c7c7c7"></rect>
+                    <text x="345" y="58" font-size="13">Billing export</text>
+                    <line x1="158" y1="53" x2="330" y2="53" stroke="#666" marker-end="url(#arrow)"></line>
+
+                    <rect x="28" y="140" width="150" height="38" fill="#fff" stroke="#c7c7c7"></rect>
+                    <text x="43" y="164" font-size="13">Checkout retry</text>
+                    <rect x="330" y="140" width="145" height="38" fill="#fff" stroke="#c7c7c7"></rect>
+                    <text x="345" y="164" font-size="13">Coupon rules</text>
+                    <line x1="178" y1="159" x2="330" y2="159" stroke="#666" marker-end="url(#arrow)"></line>
+                  </svg>
+                </section>
+
+                <section class="artifact-panel">
+                  <h4>Decision Summary</h4>
+                  <div class="summary">
+                    <div class="summary-row"><strong>Do now:</strong> Checkout retry, Billing export</div>
+                    <div class="summary-row"><strong>Prepare:</strong> Audit log, because export depends on it</div>
+                    <div class="summary-row"><strong>Delay:</strong> Theme editor, Coupon rules</div>
+                    <div class="summary-row"><strong>Cut:</strong> Social sharing</div>
+                    <div class="summary-row"><strong>Prompt back:</strong> Implement Now items first; include audit-log prerequisite in sprint plan.</div>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div class="lane" aria-label="boundary lanes">
+          <div class="agent">
+            <strong>agent-facing</strong><br />
+            User Question / Catalog(base + custom) / agent-html
+          </div>
+          <div class="gate">
+            <strong>safety gate</strong><br />
+            parse / validate / sanitize / SanitizedAgentHtml
+          </div>
+          <div class="internal">
+            <strong>internal implementation</strong><br />
+            renderer / RendererBlock / SVG / shadcn
+          </div>
+          <div class="output">
+            <strong>output</strong><br />
+            matrix / board / dependency map / prompt export
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
