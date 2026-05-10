@@ -5,6 +5,7 @@ import { defineConfig } from "vite"
 
 export default defineConfig({
   base: "./",
+  root: import.meta.dirname,
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

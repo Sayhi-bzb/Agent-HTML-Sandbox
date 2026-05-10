@@ -135,7 +135,7 @@ function convertElementNode(
 ): ParsedAgentHtmlElementNode {
   return {
     type: "element",
-    name: getAgentBlockName(node),
+    name: getAgentComponentName(node),
     attrs: getAttrs(node),
     children: node.childNodes.flatMap<ParsedAgentHtmlNode>((child, index) => {
       const childPath = `${path}/${index}`
@@ -164,7 +164,7 @@ function convertElementNode(
   }
 }
 
-function getAgentBlockName(node: Parse5Element): string {
+function getAgentComponentName(node: Parse5Element): string {
   return node.tagName.startsWith(AGENT_COMPONENT_ALIAS_PREFIX)
     ? node.tagName.slice(AGENT_COMPONENT_ALIAS_PREFIX.length)
     : node.tagName

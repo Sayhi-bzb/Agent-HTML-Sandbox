@@ -14,3 +14,7 @@ export function getRendererComponent(
     STANDARD_RENDERER_COMPONENTS
   return registry[name]
 }
+
+export function getRendererComponentNames(): readonly string[] {
+  return Object.keys(STANDARD_RENDERER_COMPONENTS).sort()
+}

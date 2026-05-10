@@ -10,6 +10,13 @@ const RENDER_TONE_VALUES = ["report", "dashboard", "decision"] as const
 
 const RENDER_WIDTH_VALUES = ["article", "dashboard", "wide"] as const
 
+export const RENDER_CONFIG_VALUES = {
+  theme: RENDER_THEME_VALUES,
+  density: RENDER_DENSITY_VALUES,
+  tone: RENDER_TONE_VALUES,
+  width: RENDER_WIDTH_VALUES,
+} as const
+
 export const RenderConfigSchema = z
   .object({
     theme: z.enum(RENDER_THEME_VALUES),

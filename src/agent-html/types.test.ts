@@ -56,16 +56,24 @@ describe("agent-html public types", () => {
 
   it("models shadcn introspection and explicit schema overlay separately", () => {
     const introspection = {
+      registryName: "button",
+      sourceFile: "src/components/ui/button.tsx",
       componentName: "Button",
+      exports: ["Button", "buttonVariants"],
       slots: ["button"],
       variantProps: {
         variant: ["default", "secondary"],
       },
       blockedProps: ["className", "style", "asChild"],
+      dependencies: ["class-variance-authority", "radix-ui", "react"],
+      registryDependencies: [],
     } satisfies GeneratedShadcnIntrospection
 
     const overlay = {
+      name: "button",
+      description: "Semantic button action.",
       expose: true,
+      sourceComponents: ["Button"],
       props: [
         {
           name: "intent",

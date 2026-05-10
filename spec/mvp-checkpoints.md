@@ -1,61 +1,76 @@
-# CLI MVP Checkpoints
+# CLI Closed Loop MVP Checkpoints
 
-本文只记录 CLI MVP 的重点验收节点。详细施工顺序见 `spec/mvp-roadmap.md`。
+本文只记录 CLI 闭环阶段的重点验收节点。详细施工顺序见 `spec/mvp-roadmap.md`。
 
-## Phase 0: CLI Foundation
+## Phase 0: CLI Gap Audit
 
-- [ ] `npm run agent -- <command>` routes to a local Node ESM CLI entrypoint.
-- [ ] CLI supports `schema`, `compose`, `build`, and `config`.
-- [ ] Unknown commands and invalid flags return non-zero exit codes.
-- [ ] CLI diagnostics are readable and do not expose renderer internals.
-- [ ] CLI modules stay outside React component code.
+- [x] Current `schema`, `compose`, `build`, and `config` paths are mapped.
+- [x] Shared parse / validate / sanitize path is identified.
+- [x] `inspect` data sources are identified without relying on repository source files.
+- [x] `preview` can reuse built artifact output without a second renderer.
+- [x] Installed CLI command paths do not require dev shell files.
 
-## Phase 1: Schema Command
+## Phase 1: Validate
 
-- [ ] `schema --format prompt` prints agent-facing prompt text.
-- [ ] `schema --format json` prints structured `CliSchemaOutput`.
-- [ ] `schema --out <path>` writes the selected output.
-- [ ] Schema output is derived from `ComponentSchema` and `RenderConfig`.
-- [ ] Schema output excludes shadcn props, Radix props, Tailwind class, `className`, `style`, script, event handlers, source paths, and renderer implementation details.
+- [x] `ahtml validate --input <path>` succeeds for valid `.agent.html`.
+- [x] `ahtml validate --input <path>` fails for invalid documents.
+- [x] `validate` reports blocked implementation props.
+- [x] `validate` does not generate artifact output.
+- [x] `validate` and `build` use the same validation behavior.
 
-## Phase 2: Compose Command
+## Phase 2: Inspect
 
-- [ ] `compose --input <path>` reads structured `CompositionInput`.
-- [ ] `compose --stdin` reads the same input shape from standard input.
-- [ ] `compose --out <path>` writes a standard `CompositionDocument`.
-- [ ] Compose defaults to `artifact.agent.html` when no output path is provided.
-- [ ] Generated documents pass parse / validate / sanitize.
-- [ ] Unknown components, unknown props, invalid children, invalid config, and blocked implementation fields are diagnosed before output is written.
+- [x] `ahtml inspect --input <path>` reports effective config.
+- [x] `ahtml inspect --input <path>` reports component usage.
+- [x] `ahtml inspect --dir <dir>` works against built artifact output.
+- [x] `inspect` does not read repository source files.
+- [x] `inspect --format json` exists or the spec explicitly keeps JSON for a later phase.
 
-## Phase 3: Build Command
+## Phase 3: Doctor
 
-- [ ] `build --input <path>` reads a standard document.
-- [ ] Build runs parse / validate / sanitize before rendering.
-- [ ] Invalid documents fail before artifact generation.
-- [ ] Build reuses the existing React renderer and Vite static build path.
-- [ ] Build writes a directory artifact to `--out <dir>` or `dist/html`.
-- [ ] Static artifact opens without Vite dev server, HMR, or dev overlay.
+- [x] `ahtml doctor` checks package runtime paths.
+- [x] `ahtml doctor` checks Node availability.
+- [x] `ahtml doctor` checks package-local build dependencies.
+- [x] `ahtml doctor` checks config readability and finite values.
+- [x] `ahtml doctor` checks default output directory writability.
+- [x] `doctor` separates environment, config, and artifact diagnostics.
+- [x] `doctor` performs no network checks.
 
-## Phase 4: Config Command
+## Phase 4: Preview
 
-- [ ] `config get` prints the effective `ArtifactConfig`.
-- [ ] `config set <key> <value>` writes only known keys and finite enum values.
-- [ ] Invalid config values return diagnostics and leave `agent-html.config.json` unchanged.
-- [ ] Config affects schema, compose, and build only through declared `ArtifactConfig`.
-- [ ] Config cannot map to arbitrary CSS, Tailwind class, inline style, script, HTML attribute passthrough, URL, or external resource.
+- [x] `ahtml preview --input <path>` builds or refreshes artifact output.
+- [x] `preview` serves generated static output over local HTTP.
+- [x] `preview --port <port>` uses the requested port.
+- [x] `preview` fails clearly when the port is unavailable.
+- [x] `preview` does not introduce a dev-only render path.
+
+## Phase 5: Package Verification
+
+- [x] Local tarball install still succeeds in a clean temporary consumer directory.
+- [x] Installed `ahtml validate` succeeds and fails in expected cases.
+- [x] Installed `ahtml inspect --input` succeeds.
+- [x] Installed `ahtml inspect --dir` succeeds.
+- [x] Installed `ahtml doctor` succeeds in the clean consumer.
+- [x] Installed `ahtml preview` has a smoke test that does not leave a running process.
+- [x] README documents the closed-loop CLI workflow.
 
 ## Verification
 
-- [ ] CLI tests cover success paths for `schema`, `compose`, `build`, and `config`.
-- [ ] CLI tests cover invalid commands, invalid flags, invalid documents, and invalid config values.
-- [ ] Existing parse / sanitize / renderer tests still pass.
-- [ ] `npm run test:run` succeeds.
-- [ ] `npm run build` succeeds.
+- [x] Existing CLI tests still pass.
+- [x] Existing parse / sanitize / renderer tests still pass.
+- [x] Package verification tests cover the new commands.
+- [x] `npm run test:run` succeeds.
+- [x] `npm run build` succeeds.
+- [x] `npm run lint` succeeds or reports only known warnings.
+- [x] `npm run docs:lint` succeeds.
+- [x] `npm run verify:pack` succeeds.
 
 ## Stop Conditions
 
-- [ ] CLI does not bypass parse / validate / sanitize.
-- [ ] CLI does not directly render unchecked agent output.
-- [ ] CLI does not introduce an independent renderer.
-- [ ] CLI does not expose Tailwind class, CSS, `style`, `className`, event handler, Radix prop, full shadcn prop, script, or external resource passthrough.
-- [ ] `.agent.html` remains an inspectable intermediate, not the only required authoring interface.
+- [x] CLI does not read repository-local source files after package install.
+- [x] Package does not ship blueprint / spec / test files as runtime surface.
+- [x] No command bypasses parse / validate / sanitize.
+- [x] Preview does not create an independent renderer.
+- [x] `.agent.html` and artifact HTML are not treated as arbitrary HTML escape hatches.
+- [x] CLI does not expose Tailwind class, CSS, `style`, `className`, event handler, Radix prop, full shadcn prop, script, or external resource passthrough.
+- [x] Remote deploy remains outside this MVP.

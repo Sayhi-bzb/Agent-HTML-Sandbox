@@ -1,0 +1,37 @@
+{
+  "name": "docs-web",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "start": "serve out",
+    "types:check": "fumadocs-mdx && next typegen && tsc --noEmit",
+    "postinstall": "fumadocs-mdx",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@orama/orama": "^3.1.18",
+    "fumadocs-core": "16.8.8",
+    "fumadocs-mdx": "15.0.0",
+    "fumadocs-ui": "16.8.8",
+    "lucide-react": "^1.14.0",
+    "next": "16.2.4",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "tailwind-merge": "^3.5.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.4",
+    "@types/mdx": "^2.0.13",
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "16.2.4",
+    "postcss": "^8.5.13",
+    "serve": "^14.2.6",
+    "tailwindcss": "^4.2.4",
+    "typescript": "^6.0.3"
+  }
+}

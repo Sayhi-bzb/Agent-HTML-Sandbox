@@ -18,6 +18,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Local npm package shims
+/ahtml
+/ahtml.cmd
+
 # Tool caches and local indexes
 .gitnexus/
 .turbo/

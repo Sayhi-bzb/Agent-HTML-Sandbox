@@ -4,6 +4,7 @@ import {
   DEFAULT_RENDER_CONFIG,
   parseRenderConfig,
   RENDER_CONFIG_KEYS,
+  RENDER_CONFIG_VALUES,
   RenderConfigSchema,
 } from "./render-config"
 
@@ -54,5 +55,6 @@ describe("render config schema", () => {
 
   it("exposes only the public render config keys", () => {
     expect(RENDER_CONFIG_KEYS).toEqual(["theme", "density", "tone", "width"])
+    expect(Object.keys(RENDER_CONFIG_VALUES)).toEqual(RENDER_CONFIG_KEYS)
   })
 })

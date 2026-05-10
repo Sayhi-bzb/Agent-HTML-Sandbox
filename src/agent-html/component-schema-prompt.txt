@@ -25,4 +25,4 @@ feedback-box(title? placeholder? copy-label?) -> text
 progress-meter(label* value* detail?) -> none
 
 Forbidden:
-class/className/style/css/Tailwind/shadcn props/Radix props/React props/script/onclick/events/external URLs/unknown tags/unknown attrs.
+asChild/class/className/css/dangerouslySetInnerHTML/onClick/onclick/script/style/Tailwind/shadcn props/Radix props/React props/events/external URLs/unknown tags/unknown attrs

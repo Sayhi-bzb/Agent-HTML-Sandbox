@@ -1,14 +1,16 @@
-import collaborationWorkbenchSource from "@/agent-html/examples/human-agent-collaboration-workbench.agent.html?raw"
 import { sanitizeAgentHtml } from "@/agent-html/parse/sanitize-agent-html"
 import { AgentHtmlRenderer } from "@/agent-html/renderer/AgentHtmlRenderer"
 
+const fallbackArtifactSource = [
+  '<meta-agent theme="neutral" density="comfortable" tone="report" width="article" />',
+  '<page title="agent-html Artifact"><card title="Overview">This artifact was rendered through the sanitized agent-html pipeline.</card></page>',
+].join("\n")
 const artifactSource = String(
-  import.meta.env.VITE_AGENT_HTML_SOURCE || collaborationWorkbenchSource,
+  import.meta.env.VITE_AGENT_HTML_SOURCE || fallbackArtifactSource,
 )
 const artifact = sanitizeAgentHtml(artifactSource)
 const artifactTitle =
-  artifact.document?.components[0]?.props.title ??
-  "Human Agent Collaboration Workbench"
+  artifact.document?.components[0]?.props.title ?? "agent-html Artifact"
 
 export default function App() {
   return (

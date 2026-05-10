@@ -21,18 +21,26 @@ export type ComponentSchema = {
 }
 
 export type ComponentSchemaOverlay = {
+  readonly name: string
+  readonly description: string
   readonly expose: boolean
+  readonly sourceComponents: readonly string[]
   readonly props?: readonly ComponentPropSchema[]
   readonly allowedChildren?: readonly string[]
   readonly hiddenProps?: readonly string[]
 }
 
 export type GeneratedShadcnIntrospection = {
+  readonly registryName: string
+  readonly sourceFile: string
   readonly componentName: string
+  readonly exports: readonly string[]
   readonly slots: readonly string[]
   readonly variantProps?: Readonly<Record<string, readonly string[]>>
   readonly unionProps?: Readonly<Record<string, readonly string[]>>
   readonly blockedProps: readonly string[]
+  readonly dependencies?: readonly string[]
+  readonly registryDependencies?: readonly string[]
 }
 
 export type RenderTheme = "neutral"

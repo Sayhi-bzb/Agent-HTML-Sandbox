@@ -4,24 +4,21 @@ import { describe, expect, it } from "vitest"
 import App from "./App"
 
 describe("App", () => {
-  it("renders the end-to-end MVP demo", () => {
+  it("renders the package-safe fallback artifact", () => {
     render(<App />)
 
     expect(screen.getByText("agent-html MVP")).toBeInTheDocument()
     expect(
       screen.getAllByRole("heading", {
-        name: "Human Agent Collaboration Workbench",
+        name: "agent-html Artifact",
       }),
     ).toHaveLength(2)
 
     const renderedArtifact = screen.getByRole("article")
     expect(
       within(renderedArtifact).getByText(
-        "HTML artifacts should not stop at readable reports. A stronger artifact lets the human compare options, adjust preferences, write feedback, and export a precise next prompt without giving the agent raw script or styling access.",
+        "This artifact was rendered through the sanitized agent-html pipeline.",
       ),
     ).toBeInTheDocument()
-    expect(screen.getByRole("tab", { name: "Explore" })).toBeInTheDocument()
-    expect(screen.getByRole("tab", { name: "Decide" })).toBeInTheDocument()
-    expect(screen.getByText("Workbench readiness")).toBeInTheDocument()
   })
 })

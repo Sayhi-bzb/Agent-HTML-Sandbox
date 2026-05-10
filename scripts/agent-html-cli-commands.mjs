@@ -1,0 +1,184 @@
+import { cliDefaults, safetyHelpText } from "./agent-html-cli-contract.mjs"
+
+export const commandMetadata = {
+  schema: {
+    summary: "Print the agent-facing component and config contract.",
+    purpose: "Print the dehydrated agent-facing contract.",
+    usage: "ahtml schema [--format prompt|json] [--out <path>]",
+    options: [
+      {
+        name: "format",
+        description: "Output format. Defaults to prompt.",
+        value: true,
+      },
+      {
+        name: "out",
+        description: "Write output to a file instead of stdout.",
+        value: true,
+      },
+    ],
+    example: "ahtml schema --format prompt",
+  },
+  compose: {
+    summary: `Convert structured JSON content into ${cliDefaults.documentPath}.`,
+    purpose:
+      "Convert structured JSON content into a standard .agent.html document.",
+    usage: "ahtml compose --input <path>|--stdin [--out <path>]",
+    options: [
+      { name: "input", description: "Composition JSON file.", value: true },
+      {
+        name: "stdin",
+        description: "Read CompositionInput JSON from stdin.",
+        value: false,
+      },
+      {
+        name: "out",
+        description: `Output document path. Defaults to ${cliDefaults.documentPath}.`,
+        value: true,
+      },
+    ],
+    example: `ahtml compose --input composition.json --out ${cliDefaults.documentPath}`,
+  },
+  validate: {
+    summary: "Validate an agent-html document without writing output.",
+    purpose:
+      "Validate a standard .agent.html document without generating an artifact.",
+    usage: "ahtml validate --input <path>",
+    options: [
+      { name: "input", description: "Agent-html document path.", value: true },
+    ],
+    example: `ahtml validate --input ${cliDefaults.documentPath}`,
+  },
+  build: {
+    summary: "Build a sanitized static artifact directory.",
+    purpose: "Validate, sanitize, and build a static artifact directory.",
+    usage: "ahtml build --input <path> [--out <dir>]",
+    options: [
+      { name: "input", description: "Agent-html document path.", value: true },
+      {
+        name: "out",
+        description: `Output directory. Defaults to ${cliDefaults.outputDir}.`,
+        value: true,
+      },
+    ],
+    example: `ahtml build --input ${cliDefaults.documentPath} --out ${cliDefaults.outputDir}`,
+  },
+  inspect: {
+    summary: "Summarize config and component usage.",
+    purpose:
+      "Report effective config and component usage from a document or built artifact.",
+    usage: "ahtml inspect --input <path>|--dir <dir> [--format summary|json]",
+    options: [
+      { name: "input", description: "Agent-html document path.", value: true },
+      { name: "dir", description: "Built artifact directory.", value: true },
+      {
+        name: "format",
+        description: "Output format. Defaults to summary.",
+        value: true,
+      },
+    ],
+    example: `ahtml inspect --dir ${cliDefaults.outputDir}`,
+  },
+  preview: {
+    summary: "Build and serve the static artifact over local HTTP.",
+    purpose: "Build and serve the same static artifact output used by build.",
+    usage: "ahtml preview --input <path> [--out <dir>] [--port <port>]",
+    options: [
+      { name: "input", description: "Agent-html document path.", value: true },
+      {
+        name: "out",
+        description: `Output directory. Defaults to ${cliDefaults.outputDir}.`,
+        value: true,
+      },
+      {
+        name: "port",
+        description: `Local HTTP port. Defaults to ${cliDefaults.previewPort}.`,
+        value: true,
+      },
+    ],
+    example: `ahtml preview --input ${cliDefaults.documentPath} --out ${cliDefaults.outputDir} --port ${cliDefaults.previewPort}`,
+  },
+  doctor: {
+    summary: "Check local runtime, config, and output path.",
+    purpose:
+      "Check local runtime, config, package paths, and output path writability.",
+    usage: "ahtml doctor",
+    options: [],
+    example: "ahtml doctor",
+  },
+  config: {
+    summary: "Read or set finite render config values.",
+    purpose: "Read or set finite presentation and output config values.",
+    usage: "ahtml config get\nahtml config set <key> <value>",
+    options: [],
+    example: "ahtml config set density compact",
+  },
+}
+
+export function formatGlobalHelp() {
+  return `ahtml
+
+Sanitized agent-html artifact CLI.
+
+Commands:
+${formatCommandList()}
+
+Closed-loop workflow:
+  ahtml schema --format prompt
+  ahtml compose --input composition.json --out ${cliDefaults.documentPath}
+  ahtml validate --input ${cliDefaults.documentPath}
+  ahtml build --input ${cliDefaults.documentPath} --out ${cliDefaults.outputDir}
+  ahtml inspect --dir ${cliDefaults.outputDir}
+  ahtml preview --input ${cliDefaults.documentPath} --out ${cliDefaults.outputDir}
+  ahtml doctor
+
+Defaults:
+  config: ${cliDefaults.configPath}
+  document: ${cliDefaults.documentPath}
+  output: ${cliDefaults.outputDir}
+
+Safety:
+  ${safetyHelpText}
+
+Run "ahtml <command> --help" for command details.
+`
+}
+
+export function formatCommandHelp(commandName, definition) {
+  const sections = [
+    `ahtml ${commandName}`,
+    "",
+    "Purpose:",
+    `  ${definition.purpose}`,
+    "",
+    "Usage:",
+    ...definition.usage.split("\n").map((line) => `  ${line}`),
+  ]
+
+  if (definition.options.length > 0) {
+    sections.push(
+      "",
+      "Options:",
+      ...definition.options.map(
+        (option) => `  --${option.name.padEnd(7)} ${option.description}`,
+      ),
+    )
+  }
+
+  sections.push("", "Example:", `  ${definition.example}`)
+  return `${sections.join("\n")}\n`
+}
+
+export function isHelpCommand(value) {
+  return value === "--help" || value === "-h"
+}
+
+export function hasHelpFlag(commandArgs) {
+  return commandArgs.includes("--help") || commandArgs.includes("-h")
+}
+
+function formatCommandList() {
+  return Object.entries(commandMetadata)
+    .map(([name, definition]) => `  ${name.padEnd(10)} ${definition.summary}`)
+    .join("\n")
+}

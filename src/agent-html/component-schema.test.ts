@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   BLOCKED_AGENT_FACING_PROP_NAMES,
+  GENERATED_COMPONENT_SCHEMA_FACTS,
   getAllowedPropNames,
   getComponentPropSchema,
   getComponentSchema,
@@ -11,6 +12,7 @@ import {
   TEXT_CHILD,
   VALIDATED_STANDARD_COMPONENT_SCHEMAS,
 } from "./component-schema"
+import { getRendererComponentNames } from "./renderer/component-registry"
 
 describe("standard component schema", () => {
   it("includes exactly the MVP standard components", () => {
@@ -36,6 +38,27 @@ describe("standard component schema", () => {
       "progress-meter",
     ])
     expect(VALIDATED_STANDARD_COMPONENT_SCHEMAS).toHaveLength(19)
+  })
+
+  it("keeps the renderer registry synchronized with the schema registry", () => {
+    expect(getRendererComponentNames()).toEqual(
+      [...STANDARD_COMPONENT_NAMES].sort(),
+    )
+  })
+
+  it("keeps generated shadcn introspection available as draft facts", () => {
+    const buttonFacts = GENERATED_COMPONENT_SCHEMA_FACTS.find(
+      (item) => item.registryName === "button",
+    )
+    const cardFacts = GENERATED_COMPONENT_SCHEMA_FACTS.find(
+      (item) => item.registryName === "card",
+    )
+
+    expect(buttonFacts?.exports).toContain("Button")
+    expect(buttonFacts?.slots).toContain("button")
+    expect(buttonFacts?.variantProps?.variant).toContain("default")
+    expect(buttonFacts?.blockedProps).toContain("className")
+    expect(cardFacts?.slots).toContain("card-header")
   })
 
   it("describes agent-facing props without implementation leakage", () => {

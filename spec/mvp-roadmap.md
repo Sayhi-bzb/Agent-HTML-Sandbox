@@ -1,147 +1,176 @@
-# CLI MVP Roadmap
+# CLI Closed Loop MVP Roadmap
 
-本文记录 agent-html CLI MVP 的施工顺序。它服务于代码实现，不替代 `blueprint/` 中的架构边界。
+本文记录 `ahtml` 从 artifact builder 走向本地闭环 CLI 的施工顺序。它服务于代码实现，不替代 `blueprint/` 中的架构边界。
 
-旧版 renderer-first MVP 计划已归档到 `spec/_archive/`。重点验收节点见 `spec/mvp-checkpoints.md`。
+Package And Publish MVP 已归档到 `spec/_archive/package-publish-mvp-roadmap.md`。重点验收节点见 `spec/mvp-checkpoints.md`。
 
 ## MVP Goal
 
-MVP 证明一条以 CLI 为主入口的最小闭环：
+MVP 证明安装后的 `ahtml` 不需要用户阅读项目源码，也能完成内容生产、校验、构建、本地验收和基础调试：
 
 ```txt
-ComponentSchema + RenderConfig
-        ↓
-agent-html schema
-        ↓
-agent-html compose
-        ↓
-CompositionDocument / .agent.html
-        ↓
-agent-html build
-        ↓
-parse / validate / sanitize
-        ↓
-SanitizedAgentHtml { meta, components }
-        ↓
-existing React renderer + Vite static build
-        ↓
-static artifact directory
+schema
+  ↓
+compose
+  ↓
+validate
+  ↓
+build
+  ↓
+preview
+  ↓
+inspect / doctor
 ```
 
-CLI 只编排现有 engine。它不成为新的 schema、renderer、style system 或 artifact 生成旁路。
+本阶段目标不是远程部署，而是把本地 artifact 工作流闭合。远程部署应作为后续阶段显式设计。
 
 ## Scope
 
 MVP includes:
 
-- Single-package Vite + React + TypeScript app in repo root.
-- Node ESM CLI script exposed through `npm run agent --`.
-- Commands: `schema`, `compose`, `build`, and `config`.
-- `schema` output from `ComponentSchema` and `RenderConfig`.
-- `compose` from structured `CompositionInput` to standard `CompositionDocument`.
-- `.agent.html` as the inspectable document file shape.
-- `build` through parse / validate / sanitize before rendering.
-- Existing React renderer and Vite static build as the artifact path.
-- Finite `ArtifactConfig` stored in `agent-html.config.json`.
+- Keep repository shape single-package.
+- Keep `ahtml` as the only public bin.
+- Preserve existing `schema`, `compose`, `build`, and `config` behavior.
+- Add `validate` as standalone document validation.
+- Add `preview` as local artifact preview.
+- Add `inspect` as document / artifact summary.
+- Add `doctor` as environment and package runtime self-check.
+- Extend package verification so installed CLI covers the closed-loop commands.
 
 MVP excludes:
 
-- Published global npm package.
-- Monorepo.
-- Direct raw HTML rendering.
-- Independent CLI renderer.
-- Full shadcn props passthrough.
-- Tailwind class, `className`, `style`, CSS, script, event handler, Radix prop, or external resource passthrough.
-- General-purpose config mapped to arbitrary CSS, attributes, scripts, or URLs.
+- Public `npm publish`.
+- Remote deploy targets such as Vercel, S3, GitHub Pages, or custom servers.
+- Monorepo migration.
+- New renderer or alternate artifact pipeline.
+- Changing ComponentSchema, RenderConfig, parser, sanitizer, renderer, or artifact safety rules unless needed to expose existing information through CLI.
+- Exposing Tailwind class, `className`, style, script, event handlers, Radix props, full shadcn props, raw HTML attributes, or external resource passthrough.
 
-## Command Surface
+## Command Contract
 
-Expose the local CLI through package scripts:
+`ahtml validate --input <path>`:
 
-```txt
-npm run agent -- schema [--format prompt|json] [--out <path>]
-npm run agent -- compose --input <path>|--stdin [--out <path>]
-npm run agent -- build --input <path> [--out <dir>]
-npm run agent -- config get
-npm run agent -- config set <key> <value>
-```
+- Reads a standard `.agent.html` document.
+- Runs the same parse / validate / sanitize path used by `build`.
+- Emits diagnostics without generating artifact output.
+- Exits non-zero when diagnostics include errors.
 
-Default paths:
+`ahtml preview --input <path> [--out <dir>] [--port <port>]`:
 
-- Config file: `agent-html.config.json`
-- Composed document: `artifact.agent.html`
-- Build output: `dist/html`
+- Builds or refreshes the artifact through the same path used by `build`.
+- Serves the artifact directory over local HTTP.
+- Uses generated static output as the preview source.
+- Does not introduce a dev-only visual path.
 
-## Phase 0: CLI Foundation
+`ahtml inspect --input <path>|--dir <dir> [--format summary|json]`:
 
-Build:
+- Reads a document or built artifact.
+- Reports effective config and component usage.
+- Does not read repository source files.
+- Does not treat artifact HTML as an editable source format.
 
-- Add a local `agent` npm script that runs a Node ESM CLI entrypoint.
-- Keep CLI modules outside React component code.
-- Route commands explicitly and return non-zero exit codes for invalid input.
-- Print diagnostics in a human-readable format.
-- Keep all implementation props and renderer internals hidden from command output.
+`ahtml doctor`:
 
-## Phase 1: Schema Command
+- Checks the installed package runtime.
+- Checks Node availability and package-local build dependencies.
+- Checks config readability and finite config values.
+- Checks default output directory writability.
+- Separates environment, config, and artifact problems in the output.
 
-Build:
+Existing commands keep their current roles:
 
-- `schema --format prompt` prints agent-facing prompt text.
-- `schema --format json` prints structured `CliSchemaOutput`.
-- `schema --out <path>` writes the selected schema output.
-- Output must come from `ComponentSchema` and `RenderConfig`.
-- Output must not expose shadcn props, Radix props, Tailwind class, `className`, `style`, script, event handlers, source paths, or renderer implementation details.
+- `schema` outputs the agent-facing contract.
+- `compose` writes a standard document.
+- `build` validates, sanitizes, and renders static output.
+- `config` manages finite presentation / output values.
 
-## Phase 2: Compose Command
-
-Build:
-
-- Accept `CompositionInput` from `--input <path>` or `--stdin`.
-- Emit a standard `CompositionDocument` to `--out <path>` or the default document path.
-- Keep generated document compatible with existing parse / validate / sanitize.
-- Support document-level render config through the existing finite config keys.
-- Diagnose unknown components, unknown props, invalid children, and blocked implementation fields before writing output.
-
-## Phase 3: Build Command
+## Phase 0: CLI Gap Audit
 
 Build:
 
-- Accept a `CompositionDocument` path through `--input`.
-- Run parse / validate / sanitize before any rendering step.
-- Stop on diagnostics and do not produce a successful artifact for invalid input.
-- Reuse the existing React renderer and Vite build path.
-- Produce a directory artifact at `--out <dir>` or `dist/html`.
-- Keep the artifact openable as static output without the Vite dev server.
+- Map current `schema`, `compose`, `build`, and `config` paths.
+- Identify the shared validation path used by `compose` and `build`.
+- Identify what metadata `inspect` can derive without reading source files.
+- Identify how `preview` can serve built output without creating a second renderer.
 
-## Phase 4: Config Command
+Stop if any command requires bypassing sanitize or reading dev shell files after package install.
+
+## Phase 1: Validate
 
 Build:
 
-- `config get` prints the effective `ArtifactConfig`.
-- `config set <key> <value>` writes only known config keys and finite enum values.
-- Config participates in `schema`, `compose`, and `build` only through declared `ArtifactConfig`.
-- Invalid config values produce diagnostics and leave the config file unchanged.
+- Add `validate` command.
+- Reuse existing diagnostics formatting unless a structured output helper already exists.
+- Keep validation side-effect free.
+- Cover valid document, invalid document, blocked prop, and missing input.
+
+## Phase 2: Inspect
+
+Build:
+
+- Add document inspection from `.agent.html`.
+- Add artifact inspection from built output when metadata is available.
+- Report effective render config.
+- Report component usage by component name and count.
+- Support human summary first; JSON output is allowed when simple and stable.
+
+## Phase 3: Doctor
+
+Build:
+
+- Add runtime self-checks for package root, user root, Node, Vite availability, config, and output path.
+- Keep checks local and deterministic.
+- Use clear pass/fail diagnostics.
+- Avoid network checks.
+
+## Phase 4: Preview
+
+Build:
+
+- Add local preview command.
+- Build through the same artifact path as `build`.
+- Serve the output directory over HTTP.
+- Support explicit port.
+- Fail clearly when the port is unavailable.
+
+## Phase 5: Package Verification
+
+Build:
+
+- Extend local tarball verification to run installed `validate`, `inspect`, and `doctor`.
+- Smoke-test `preview` without leaving a long-running process.
+- Keep `npm run agent --` as repository fallback only.
+- Update README after command behavior is proven.
 
 ## Stop Conditions
 
 Stop and revisit blueprint if implementation requires:
 
-- CLI bypassing parse / validate / sanitize.
-- CLI directly rendering unchecked agent output.
-- CLI generating a separate renderer path.
-- Exposing style, CSS, Tailwind, `className`, event handlers, Radix props or full shadcn props.
-- Mapping config to arbitrary CSS, script, HTML attributes, URLs, or external resources.
-- Making `.agent.html` the only required authoring interface instead of an inspectable intermediate.
+- Reading repository-local source files from an installed package.
+- Shipping blueprint, spec, tests, fixtures, or dev-only exploration files as runtime surface.
+- Bypassing parse / validate / sanitize in any command.
+- Creating an independent renderer for preview.
+- Treating `.agent.html` or artifact HTML as arbitrary HTML input.
+- Exposing implementation props, CSS, script, event handlers, or external resource passthrough.
+- Adding remote deploy before local closed loop is complete.
 
 ## Definition Of Done
 
-CLI MVP is done when:
+CLI Closed Loop MVP is done when an installed package can run:
 
-- `schema`, `compose`, `build`, and `config` are available through `npm run agent --`.
-- `schema` can output both prompt and JSON forms without implementation leakage.
-- `compose` can create a valid standard document from structured input.
-- `build` can produce a static artifact from the composed document.
-- Invalid documents fail before rendering.
-- `config` accepts only finite declared values.
-- `npm run test:run` succeeds.
-- `npm run build` succeeds.
+```bash
+ahtml schema --format prompt
+ahtml compose --input composition.json --out artifact.agent.html
+ahtml validate --input artifact.agent.html
+ahtml build --input artifact.agent.html --out dist/html
+ahtml inspect --input artifact.agent.html
+ahtml inspect --dir dist/html
+ahtml doctor
+```
+
+And:
+
+- `preview` serves the same output that `build` generates.
+- Invalid documents fail through `validate` and `build`.
+- Packaged CLI covers the new commands in `npm run verify:pack`.
+- Existing tests and build still pass.

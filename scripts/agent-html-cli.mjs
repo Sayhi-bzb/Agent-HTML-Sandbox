@@ -1,64 +1,97 @@
 import { spawn } from "node:child_process"
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises"
+import { createRequire } from "node:module"
+import http from "node:http"
+import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises"
 import path from "node:path"
+import { fileURLToPath } from "node:url"
 
-import { parseFragment } from "parse5"
+import { cliDefaults } from "./agent-html-cli-contract.mjs"
+import {
+  commandMetadata,
+  formatCommandHelp,
+  formatGlobalHelp,
+  hasHelpFlag,
+  isHelpCommand,
+} from "./agent-html-cli-commands.mjs"
+import { formatPrompt, getCliSchemaOutput } from "./agent-html-cli-schema.mjs"
+import {
+  validateAgentHtmlSource,
+  validateRenderConfig,
+} from "./agent-html-cli-validate.mjs"
 
-const root = process.cwd()
-const componentSchemaPath = path.join(
-  root,
-  "src",
-  "agent-html",
-  "component-schema.ts",
+const require = createRequire(import.meta.url)
+const packageRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
 )
-const renderConfigPath = path.join(
-  root,
-  "src",
-  "agent-html",
-  "render-config.ts",
-)
-const defaultDocumentPath = path.join(root, "artifact.agent.html")
+const userRoot = process.cwd()
+const defaultDocumentPath = path.join(userRoot, cliDefaults.documentPath)
 const defaultConfigPath = path.resolve(
-  root,
-  process.env.AGENT_HTML_CONFIG_PATH ?? "agent-html.config.json",
+  userRoot,
+  process.env.AGENT_HTML_CONFIG_PATH ?? cliDefaults.configPath,
 )
-const defaultOutputDir = path.join(root, "dist", "html")
-const blockedFieldNames = new Set([
-  "asChild",
-  "class",
-  "className",
-  "css",
-  "dangerouslySetInnerHTML",
-  "onClick",
-  "onclick",
-  "script",
-  "style",
-])
-const textChild = "#text"
-
+const defaultOutputDir = path.join(
+  userRoot,
+  ...cliDefaults.outputDir.split("/"),
+)
 const command = process.argv[2]
 const args = process.argv.slice(3)
+const commandHandlers = {
+  schema: schemaCommand,
+  compose: composeCommand,
+  validate: validateCommand,
+  build: buildCommand,
+  inspect: inspectCommand,
+  preview: previewCommand,
+  doctor: doctorCommand,
+  config: configCommand,
+}
+const commandDefinitions = Object.fromEntries(
+  Object.entries(commandMetadata).map(([name, definition]) => [
+    name,
+    { ...definition, handler: commandHandlers[name] },
+  ]),
+)
 
 try {
-  if (command === "schema") {
-    await schemaCommand(args)
-  } else if (command === "compose") {
-    await composeCommand(args)
-  } else if (command === "build") {
-    await buildCommand(args)
-  } else if (command === "config") {
-    await configCommand(args)
+  if (!command || isHelpCommand(command)) {
+    printGlobalHelp()
+  } else if (command === "help") {
+    printCommandHelp(args[0])
+  } else if (hasHelpFlag(args)) {
+    printCommandHelp(command)
+  } else if (commandDefinitions[command]) {
+    await commandDefinitions[command].handler(args, commandDefinitions[command])
   } else {
-    fail(
-      `Unknown command "${command ?? ""}". Use schema, compose, build, or config.`,
-    )
+    fail(`Unknown command "${command}". Run "ahtml --help" for command list.`)
   }
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error))
 }
 
-async function schemaCommand(commandArgs) {
-  const options = parseOptions(commandArgs)
+function printGlobalHelp() {
+  process.stdout.write(formatGlobalHelp())
+}
+
+function printCommandHelp(commandName) {
+  if (!commandName) {
+    printGlobalHelp()
+    return
+  }
+
+  const commandDefinition = commandDefinitions[commandName]
+
+  if (!commandDefinition) {
+    fail(
+      `Unknown help topic "${commandName}". Run "ahtml --help" for command list.`,
+    )
+  }
+
+  process.stdout.write(formatCommandHelp(commandName, commandDefinition))
+}
+
+async function schemaCommand(commandArgs, definition) {
+  const options = parseOptions(commandArgs, definition)
   const format = options.format ?? "prompt"
 
   if (format !== "prompt" && format !== "json") {
@@ -74,8 +107,8 @@ async function schemaCommand(commandArgs) {
   await writeOrPrint(output, options.out)
 }
 
-async function composeCommand(commandArgs) {
-  const options = parseOptions(commandArgs)
+async function composeCommand(commandArgs, definition) {
+  const options = parseOptions(commandArgs, definition)
 
   if (options.input && options.stdin) {
     fail("compose accepts either --input or --stdin, not both.")
@@ -99,20 +132,31 @@ async function composeCommand(commandArgs) {
   }
 
   await writeTextFile(
-    path.resolve(root, options.out ?? defaultDocumentPath),
+    path.resolve(userRoot, options.out ?? defaultDocumentPath),
     document,
   )
 }
 
-async function buildCommand(commandArgs) {
-  const options = parseOptions(commandArgs)
+async function buildCommand(commandArgs, definition) {
+  const options = parseOptions(commandArgs, definition)
   const inputPath = options.input
 
   if (!inputPath) {
     fail("build requires --input <path>.")
   }
 
-  const source = await readFile(path.resolve(root, inputPath), "utf8")
+  await buildArtifact(inputPath, options.out)
+}
+
+async function validateCommand(commandArgs, definition) {
+  const options = parseOptions(commandArgs, definition)
+  const inputPath = options.input
+
+  if (!inputPath) {
+    fail("validate requires --input <path>.")
+  }
+
+  const source = await readFile(path.resolve(userRoot, inputPath), "utf8")
   const validation = await validateAgentHtmlSource(source)
 
   if (validation.diagnostics.length > 0) {
@@ -121,15 +165,302 @@ async function buildCommand(commandArgs) {
     return
   }
 
-  const outputDir = path.resolve(root, options.out ?? defaultOutputDir)
+  process.stdout.write("agent-html valid\n")
+}
+
+async function previewCommand(commandArgs, definition) {
+  const options = parseOptions(commandArgs, definition)
+  const inputPath = options.input
+
+  if (!inputPath) {
+    fail("preview requires --input <path>.")
+  }
+
+  const outputDir = await buildArtifact(inputPath, options.out)
+  if (!outputDir) {
+    return
+  }
+
+  const port = parsePort(options.port ?? cliDefaults.previewPort)
+  await serveDirectory(outputDir, port)
+}
+
+async function inspectCommand(commandArgs, definition) {
+  const options = parseOptions(commandArgs, definition)
+
+  if (options.input && options.dir) {
+    fail("inspect accepts either --input or --dir, not both.")
+  }
+
+  if (!options.input && !options.dir) {
+    fail("inspect requires --input <path> or --dir <dir>.")
+  }
+
+  const format = options.format ?? "summary"
+
+  if (format !== "summary" && format !== "json") {
+    fail('inspect --format must be "summary" or "json".')
+  }
+
+  const inspection = options.input
+    ? await inspectDocument(options.input)
+    : await inspectArtifactDir(options.dir)
+  const output =
+    format === "json"
+      ? `${JSON.stringify(inspection, null, 2)}\n`
+      : formatInspectionSummary(inspection)
+
+  process.stdout.write(output)
+}
+
+async function doctorCommand(commandArgs) {
+  if (commandArgs.length > 0) {
+    fail("doctor does not accept arguments.")
+  }
+
+  const checks = []
+
+  checks.push(
+    await runDoctorCheck("environment", "node", async () => {
+      return process.version
+    }),
+  )
+  checks.push(
+    await runDoctorCheck("environment", "package-root", async () => {
+      await stat(packageRoot)
+      return packageRoot
+    }),
+  )
+  checks.push(
+    await runDoctorCheck("environment", "vite", async () => {
+      return require.resolve("vite/package.json")
+    }),
+  )
+  checks.push(
+    await runDoctorCheck("config", "config", async () => {
+      const config = await readConfigForDoctor()
+      return JSON.stringify(config)
+    }),
+  )
+  checks.push(
+    await runDoctorCheck("artifact", "output-dir", async () => {
+      await mkdir(defaultOutputDir, { recursive: true })
+      const probePath = path.join(defaultOutputDir, ".ahtml-doctor")
+      await writeFile(probePath, "ok")
+      await rm(probePath, { force: true })
+      return defaultOutputDir
+    }),
+  )
+
+  for (const check of checks) {
+    process.stdout.write(
+      `${check.ok ? "ok" : "fail"} ${check.category}:${check.name} ${check.detail}\n`,
+    )
+  }
+
+  if (checks.some((check) => !check.ok)) {
+    process.exitCode = 1
+  }
+}
+
+async function buildArtifact(inputPath, outputPath) {
+  const source = await readFile(path.resolve(userRoot, inputPath), "utf8")
+  const validation = await validateAgentHtmlSource(source)
+
+  if (validation.diagnostics.length > 0) {
+    printDiagnostics(validation.diagnostics)
+    process.exitCode = 1
+    return undefined
+  }
+
+  const outputDir = path.resolve(userRoot, outputPath ?? defaultOutputDir)
   await rm(outputDir, { force: true, recursive: true })
-  await runNodeBin("typescript", ["-b"], {
-    VITE_AGENT_HTML_SOURCE: source,
-  })
-  await runNodeBin("vite", ["build", "--outDir", outputDir], {
-    VITE_AGENT_HTML_SOURCE: source,
-  })
+  await runNodeBin(
+    "vite",
+    [
+      "build",
+      "--config",
+      path.join(packageRoot, "vite.config.ts"),
+      "--outDir",
+      outputDir,
+      "--emptyOutDir",
+    ],
+    {
+      VITE_AGENT_HTML_SOURCE: source,
+    },
+  )
   await runScript("inline-dist-index.mjs", ["--dir", outputDir])
+  await writeJsonFile(
+    path.join(outputDir, "agent-html.inspect.json"),
+    createInspection(validation.document),
+  )
+  return outputDir
+}
+
+async function inspectDocument(inputPath) {
+  const source = await readFile(path.resolve(userRoot, inputPath), "utf8")
+  const validation = await validateAgentHtmlSource(source)
+
+  if (validation.diagnostics.length > 0) {
+    printDiagnostics(validation.diagnostics)
+    process.exit(1)
+  }
+
+  return createInspection(validation.document)
+}
+
+async function inspectArtifactDir(dirPath) {
+  const metadataPath = path.join(
+    path.resolve(userRoot, dirPath),
+    "agent-html.inspect.json",
+  )
+  const source = await readFile(metadataPath, "utf8")
+  return parseJson(source, "agent-html.inspect.json must be valid JSON.")
+}
+
+function createInspection(document) {
+  if (!document) {
+    fail("Cannot inspect an invalid agent-html document.")
+  }
+
+  return {
+    kind: "agent-html-inspection",
+    config: document.meta,
+    components: countComponents(document.components),
+  }
+}
+
+function countComponents(nodes, counts = {}) {
+  for (const node of nodes) {
+    if (node.type !== "component") {
+      continue
+    }
+
+    counts[node.name] = (counts[node.name] ?? 0) + 1
+    countComponents(node.children, counts)
+  }
+
+  return Object.entries(counts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((left, right) => left.name.localeCompare(right.name))
+}
+
+function formatInspectionSummary(inspection) {
+  const lines = [
+    "agent-html inspection",
+    ...Object.entries(inspection.config).map(
+      ([key, value]) => `${key}: ${value}`,
+    ),
+    "components:",
+  ]
+
+  if (inspection.components.length === 0) {
+    lines.push("- none")
+  } else {
+    for (const component of inspection.components) {
+      lines.push(`- ${component.name}: ${component.count}`)
+    }
+  }
+
+  return `${lines.join("\n")}\n`
+}
+
+async function runDoctorCheck(category, name, check) {
+  try {
+    const detail = await check()
+    return { category, name, ok: true, detail }
+  } catch (error) {
+    return {
+      category,
+      name,
+      ok: false,
+      detail: error instanceof Error ? error.message : String(error),
+    }
+  }
+}
+
+function parsePort(value) {
+  const port = Number(value)
+
+  if (!Number.isInteger(port) || port < 0 || port > 65535) {
+    fail("preview --port must be an integer from 0 to 65535.")
+  }
+
+  return port
+}
+
+async function serveDirectory(directory, port) {
+  const root = path.resolve(directory)
+  const server = http.createServer(async (request, response) => {
+    try {
+      const requestUrl = new URL(request.url ?? "/", "http://localhost")
+      const pathname = decodeURIComponent(requestUrl.pathname)
+      const requestedPath =
+        pathname === "/"
+          ? path.join(root, "index.html")
+          : path.join(root, pathname)
+      const resolvedPath = path.resolve(requestedPath)
+
+      if (
+        resolvedPath !== root &&
+        !resolvedPath.startsWith(`${root}${path.sep}`)
+      ) {
+        response.writeHead(403)
+        response.end("Forbidden")
+        return
+      }
+
+      const fileStat = await stat(resolvedPath)
+      const filePath = fileStat.isDirectory()
+        ? path.join(resolvedPath, "index.html")
+        : resolvedPath
+      const body = await readFile(filePath)
+
+      response.writeHead(200, {
+        "content-type": getContentType(filePath),
+      })
+      response.end(body)
+    } catch {
+      response.writeHead(404)
+      response.end("Not found")
+    }
+  })
+
+  await new Promise((resolve, reject) => {
+    server.once("error", reject)
+    server.listen(port, "127.0.0.1", resolve)
+  })
+
+  const address = server.address()
+  const actualPort =
+    typeof address === "object" && address ? address.port : port
+  process.stdout.write(`Preview: http://127.0.0.1:${actualPort}\n`)
+
+  await new Promise((resolve) => {
+    const close = () => server.close(resolve)
+    process.once("SIGINT", close)
+    process.once("SIGTERM", close)
+  })
+}
+
+function getContentType(filePath) {
+  if (filePath.endsWith(".html")) {
+    return "text/html; charset=utf-8"
+  }
+
+  if (filePath.endsWith(".css")) {
+    return "text/css; charset=utf-8"
+  }
+
+  if (filePath.endsWith(".js")) {
+    return "text/javascript; charset=utf-8"
+  }
+
+  if (filePath.endsWith(".json")) {
+    return "application/json; charset=utf-8"
+  }
+
+  return "application/octet-stream"
 }
 
 async function configCommand(commandArgs) {
@@ -174,8 +505,11 @@ async function composeDocument(input, fallbackConfig) {
     fail("CompositionInput must be a JSON object.")
   }
 
-  const meta = { ...fallbackConfig, ...(input.meta ?? {}) }
-  assertRenderConfig(meta)
+  const schema = await getCliSchemaOutput()
+  const meta = assertRenderConfig(
+    { ...fallbackConfig, ...(input.meta ?? {}) },
+    schema.renderConfig.values,
+  )
 
   const rootNode = input.document ?? input.root ?? input.components?.[0]
 
@@ -183,11 +517,11 @@ async function composeDocument(input, fallbackConfig) {
     fail("CompositionInput requires document, root, or components[0].")
   }
 
-  const body = renderCompositionNode(rootNode)
+  const body = renderCompositionNode(rootNode, schema.safetyPolicy)
   return `${renderMetaAgent(meta)}\n${body}\n`
 }
 
-function renderCompositionNode(node) {
+function renderCompositionNode(node, safetyPolicy) {
   if (typeof node === "string") {
     return escapeText(node)
   }
@@ -196,7 +530,7 @@ function renderCompositionNode(node) {
     fail("Composition nodes must be strings or objects.")
   }
 
-  if (blockedFieldNames.has(node.name)) {
+  if (isBlockedFieldName(node.name, safetyPolicy)) {
     fail(`Blocked component or field "${node.name}" is not allowed.`)
   }
 
@@ -211,378 +545,29 @@ function renderCompositionNode(node) {
   }
 
   for (const key of Object.keys(node)) {
-    if (blockedFieldNames.has(key)) {
+    if (isBlockedFieldName(key, safetyPolicy)) {
       fail(`Blocked implementation field "${key}" is not allowed.`)
     }
   }
 
   const attrs = Object.entries(props)
     .map(([key, value]) => {
-      if (blockedFieldNames.has(key)) {
+      if (isBlockedFieldName(key, safetyPolicy)) {
         fail(`Blocked implementation prop "${key}" is not allowed.`)
       }
 
       return ` ${key}="${escapeAttr(String(value))}"`
     })
     .join("")
-  const children = (node.children ?? []).map(renderCompositionNode).join("")
+  const children = (node.children ?? [])
+    .map((child) => renderCompositionNode(child, safetyPolicy))
+    .join("")
 
   if (children.length === 0) {
     return `<${name}${attrs} />`
   }
 
   return `<${name}${attrs}>${children}</${name}>`
-}
-
-async function validateAgentHtmlSource(source) {
-  const schema = await getCliSchemaOutput()
-  const componentNames = schema.components.map((item) => item.name)
-  const componentMap = new Map(
-    schema.components.map((item) => [item.name, item]),
-  )
-  const parsed = parseAgentHtml(source, componentNames)
-  const diagnostics = [...parsed.diagnostics]
-  const meta = parsed.metaAttrs ?? schema.renderConfig.defaults
-  const renderConfigResult = validateRenderConfig(
-    meta,
-    schema.renderConfig.values,
-  )
-
-  if (!renderConfigResult) {
-    diagnostics.push({
-      code: "invalid-render-config",
-      message:
-        "The <meta-agent /> header must use only registered render config enum values.",
-      path: "/meta-agent",
-      severity: "error",
-    })
-  }
-
-  validateRootNodes(parsed.nodes, componentMap, diagnostics)
-
-  return { diagnostics }
-}
-
-function parseAgentHtml(source, componentNames) {
-  const fragment = parseFragment(
-    normalizeAgentHtmlSource(source, componentNames),
-  )
-  const diagnostics = []
-  const nodes = []
-  let metaAttrs
-
-  fragment.childNodes.forEach((child, index) => {
-    const pathValue = `/${index}`
-
-    if (isIgnorableTextNode(child)) {
-      return
-    }
-
-    if (isTextNode(child)) {
-      nodes.push({
-        type: "text",
-        value: child.value.trim(),
-        path: pathValue,
-      })
-      return
-    }
-
-    if (!isElementNode(child)) {
-      diagnostics.push({
-        code: "unsupported-node",
-        message: "Only element and text nodes are supported in agent-html.",
-        path: pathValue,
-        severity: "error",
-      })
-      return
-    }
-
-    if (child.tagName === "meta-agent") {
-      if (metaAttrs) {
-        diagnostics.push({
-          code: "duplicate-meta-agent",
-          message: "Only one top-level <meta-agent /> header is allowed.",
-          path: pathValue,
-          severity: "error",
-        })
-        return
-      }
-
-      metaAttrs = getAttrs(child)
-      return
-    }
-
-    nodes.push(convertElementNode(child, pathValue))
-  })
-
-  return { diagnostics, metaAttrs, nodes }
-}
-
-function normalizeAgentHtmlSource(source, componentNames) {
-  const componentPattern = componentNames.join("|")
-
-  return source
-    .replace(/<meta-agent\b([^>]*)\/>/gi, "<meta-agent$1></meta-agent>")
-    .replace(
-      new RegExp(`<(${componentPattern})\\b([^>]*)/>`, "gi"),
-      "<$1$2></$1>",
-    )
-    .replace(
-      new RegExp(`<(\\/?)(${componentPattern})\\b`, "gi"),
-      "<$1agent-html-$2",
-    )
-}
-
-function convertElementNode(node, nodePath) {
-  return {
-    type: "element",
-    name: node.tagName.startsWith("agent-html-")
-      ? node.tagName.slice("agent-html-".length)
-      : node.tagName,
-    attrs: getAttrs(node),
-    children: node.childNodes.flatMap((child, index) => {
-      const childPath = `${nodePath}/${index}`
-
-      if (isIgnorableTextNode(child)) {
-        return []
-      }
-
-      if (isTextNode(child)) {
-        return [
-          {
-            type: "text",
-            value: child.value.trim(),
-            path: childPath,
-          },
-        ]
-      }
-
-      if (isElementNode(child)) {
-        return [convertElementNode(child, childPath)]
-      }
-
-      return []
-    }),
-    path: nodePath,
-  }
-}
-
-function validateRootNodes(nodes, componentMap, diagnostics) {
-  const elementNodes = nodes.filter((node) => node.type === "element")
-
-  for (const node of nodes) {
-    if (node.type === "text") {
-      diagnostics.push({
-        code: "invalid-child",
-        message: "Top-level text is not allowed; agent-html must use <page>.",
-        path: node.path,
-        severity: "error",
-      })
-    }
-  }
-
-  if (elementNodes.length === 0) {
-    diagnostics.push({
-      code: "missing-root",
-      message: "agent-html requires a <page> root component.",
-      path: "/",
-      severity: "error",
-    })
-    return
-  }
-
-  if (elementNodes.length > 1) {
-    diagnostics.push({
-      code: "multiple-roots",
-      message: "agent-html supports exactly one root component.",
-      path: "/",
-      severity: "error",
-    })
-  }
-
-  const rootNode = elementNodes[0]
-
-  if (rootNode.name !== "page") {
-    diagnostics.push({
-      code: "invalid-child",
-      message: "The root component must be <page>.",
-      path: rootNode.path,
-      severity: "error",
-    })
-  }
-
-  validateElementNode(rootNode, undefined, componentMap, diagnostics)
-}
-
-function validateElementNode(node, parent, componentMap, diagnostics) {
-  const componentSchema = componentMap.get(node.name)
-
-  if (!componentSchema) {
-    diagnostics.push({
-      code: "unknown-component",
-      message: `Unknown component <${node.name}> is not registered in the standard component schema.`,
-      path: node.path,
-      severity: "error",
-    })
-    return
-  }
-
-  if (
-    parent &&
-    !componentMap.get(parent.name)?.allowedChildren?.includes(node.name)
-  ) {
-    diagnostics.push({
-      code: "invalid-child",
-      message: `<${node.name}> is not allowed inside <${parent.name}>.`,
-      path: node.path,
-      severity: "error",
-    })
-  }
-
-  validateAttrs(node, componentSchema, diagnostics)
-
-  for (const child of node.children) {
-    if (child.type === "text") {
-      if (!componentSchema.allowedChildren?.includes(textChild)) {
-        diagnostics.push({
-          code: "invalid-child",
-          message: `Text content is not allowed inside <${node.name}>.`,
-          path: child.path,
-          severity: "error",
-        })
-      }
-      continue
-    }
-
-    if (!componentSchema.allowedChildren?.includes(child.name)) {
-      if (!componentMap.has(child.name)) {
-        diagnostics.push({
-          code: "unknown-component",
-          message: `Unknown component <${child.name}> is not registered in the standard component schema.`,
-          path: child.path,
-          severity: "error",
-        })
-        continue
-      }
-
-      diagnostics.push({
-        code: "invalid-child",
-        message: `<${child.name}> is not allowed inside <${node.name}>.`,
-        path: child.path,
-        severity: "error",
-      })
-      continue
-    }
-
-    validateElementNode(child, node, componentMap, diagnostics)
-  }
-}
-
-function validateAttrs(node, componentSchema, diagnostics) {
-  const propMap = new Map(
-    componentSchema.props.map((prop) => [prop.name, prop]),
-  )
-
-  for (const prop of componentSchema.props) {
-    if (prop.required && !(prop.name in node.attrs)) {
-      diagnostics.push({
-        code: "missing-required-attr",
-        message: `<${node.name}> requires the "${prop.name}" attribute.`,
-        path: node.path,
-        severity: "error",
-      })
-    }
-  }
-
-  for (const [attrName, attrValue] of Object.entries(node.attrs)) {
-    const prop = propMap.get(attrName)
-
-    if (!prop || blockedFieldNames.has(attrName)) {
-      diagnostics.push({
-        code: "unknown-attr",
-        message: `"${attrName}" is not an allowed agent-facing attribute on <${node.name}>.`,
-        path: node.path,
-        severity: "error",
-      })
-      continue
-    }
-
-    if (prop.valueKind === "enum" && !prop.enumValues?.includes(attrValue)) {
-      diagnostics.push({
-        code: "unknown-attr",
-        message: `"${attrValue}" is not an allowed value for ${node.name}.${attrName}.`,
-        path: node.path,
-        severity: "error",
-      })
-    }
-  }
-}
-
-async function getCliSchemaOutput() {
-  const [componentSchemaSource, renderConfigSource] = await Promise.all([
-    readFile(componentSchemaPath, "utf8"),
-    readFile(renderConfigPath, "utf8"),
-  ])
-  const components = extractArrayLiteral(
-    componentSchemaSource,
-    "STANDARD_COMPONENT_SCHEMAS",
-  )
-  const renderConfig = {
-    defaults: extractObjectLiteral(renderConfigSource, "DEFAULT_RENDER_CONFIG"),
-    values: {
-      theme: extractConstArray(renderConfigSource, "RENDER_THEME_VALUES"),
-      density: extractConstArray(renderConfigSource, "RENDER_DENSITY_VALUES"),
-      tone: extractConstArray(renderConfigSource, "RENDER_TONE_VALUES"),
-      width: extractConstArray(renderConfigSource, "RENDER_WIDTH_VALUES"),
-    },
-  }
-
-  return {
-    kind: "agent-html-cli-schema",
-    version: 1,
-    components,
-    renderConfig,
-    forbidden:
-      "class/className/style/css/Tailwind/shadcn props/Radix props/React props/script/onclick/events/external URLs/unknown tags/unknown attrs.",
-  }
-}
-
-function formatPrompt(schema) {
-  const lines = [
-    "Write agent-html only.",
-    "",
-    "Header:",
-    `<meta-agent theme="${schema.renderConfig.values.theme.join("|")}" density="${schema.renderConfig.values.density.join("|")}" tone="${schema.renderConfig.values.tone.join("|")}" width="${schema.renderConfig.values.width.join("|")}" />`,
-    "",
-    "Standard components:",
-    ...schema.components.map(formatComponent),
-    "",
-    "Forbidden:",
-    schema.forbidden,
-  ]
-
-  return lines.join("\n")
-}
-
-function formatComponent(component) {
-  const props = component.props.map(formatProp).join(" ")
-  const propText = props ? `(${props})` : ""
-  const children = (component.allowedChildren ?? [])
-    .map((child) => (child === textChild ? "text" : child))
-    .join("/")
-
-  return `${component.name}${propText} -> ${children || "none"}`
-}
-
-function formatProp(prop) {
-  const required = prop.required ? "*" : "?"
-  const name = `${prop.name}${required}`
-
-  if (prop.valueKind === "enum") {
-    return `${name}=${prop.enumValues.join("|")}`
-  }
-
-  return name
 }
 
 async function readEffectiveConfig() {
@@ -594,7 +579,10 @@ async function readEffectiveConfig() {
       source,
       "agent-html.config.json must be valid JSON.",
     )
-    return assertRenderConfig({ ...schema.renderConfig.defaults, ...config })
+    return assertRenderConfig(
+      { ...schema.renderConfig.defaults, ...config },
+      schema.renderConfig.values,
+    )
   } catch (error) {
     if (error?.code === "ENOENT") {
       return schema.renderConfig.defaults
@@ -604,144 +592,90 @@ async function readEffectiveConfig() {
   }
 }
 
-function validateRenderConfig(config, values) {
-  if (!config || typeof config !== "object" || Array.isArray(config)) {
-    return false
-  }
+async function readConfigForDoctor() {
+  const schema = await getCliSchemaOutput()
 
-  return Object.entries(values).every(
-    ([key, allowedValues]) =>
-      typeof config[key] === "string" && allowedValues.includes(config[key]),
-  )
+  try {
+    const source = await readFile(defaultConfigPath, "utf8")
+    const config = JSON.parse(source)
+
+    if (
+      !validateRenderConfig(
+        { ...schema.renderConfig.defaults, ...config },
+        schema.renderConfig.values,
+      )
+    ) {
+      throw new Error(
+        "agent-html.config.json contains an unknown key or invalid enum value.",
+      )
+    }
+
+    return { ...schema.renderConfig.defaults, ...config }
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return schema.renderConfig.defaults
+    }
+
+    if (error instanceof SyntaxError) {
+      throw new Error("agent-html.config.json must be valid JSON.")
+    }
+
+    throw error
+  }
 }
 
-function assertRenderConfig(config) {
-  const values = {
-    theme: ["neutral"],
-    density: ["compact", "comfortable"],
-    tone: ["report", "dashboard", "decision"],
-    width: ["article", "dashboard", "wide"],
-  }
-
+function assertRenderConfig(config, values) {
   if (!validateRenderConfig(config, values)) {
     fail("ArtifactConfig contains an unknown key or invalid enum value.")
   }
 
-  return {
-    theme: config.theme,
-    density: config.density,
-    tone: config.tone,
-    width: config.width,
-  }
+  return Object.fromEntries(
+    Object.keys(values).map((key) => [key, config[key]]),
+  )
 }
 
 function renderMetaAgent(meta) {
-  return `<meta-agent theme="${escapeAttr(meta.theme)}" density="${escapeAttr(meta.density)}" tone="${escapeAttr(meta.tone)}" width="${escapeAttr(meta.width)}" />`
+  const attrs = Object.entries(meta)
+    .map(([key, value]) => `${key}="${escapeAttr(String(value))}"`)
+    .join(" ")
+
+  return `<meta-agent ${attrs} />`
 }
 
-function extractArrayLiteral(source, exportName) {
-  const marker = `export const ${exportName} = `
-  const start = source.indexOf(marker)
-
-  if (start === -1) {
-    throw new Error(`Cannot find ${exportName}`)
-  }
-
-  const arrayStart = source.indexOf("[", start)
-  const arrayEnd = findMatchingBracket(source, arrayStart, "[", "]")
-  const literal = source
-    .slice(arrayStart, arrayEnd + 1)
-    .replaceAll("TEXT_CHILD", '"#text"')
-
-  return Function(`"use strict"; return (${literal});`)()
+function isBlockedFieldName(name, safetyPolicy) {
+  return (
+    safetyPolicy.blockedNames.includes(name) ||
+    safetyPolicy.blockedNames.includes(name.toLowerCase()) ||
+    /^on[a-z]/i.test(name)
+  )
 }
 
-function extractObjectLiteral(source, exportName) {
-  const marker = `export const ${exportName} = `
-  const start = source.indexOf(marker)
-
-  if (start === -1) {
-    throw new Error(`Cannot find ${exportName}`)
-  }
-
-  const objectStart = source.indexOf("{", start)
-  const objectEnd = findMatchingBracket(source, objectStart, "{", "}")
-  const literal = source.slice(objectStart, objectEnd + 1)
-
-  return Function(`"use strict"; return (${literal});`)()
-}
-
-function extractConstArray(source, exportName) {
-  const exportMarker = `export const ${exportName} = `
-  const constMarker = `const ${exportName} = `
-  const start = source.includes(exportMarker)
-    ? source.indexOf(exportMarker)
-    : source.indexOf(constMarker)
-
-  if (start === -1) {
-    throw new Error(`Cannot find ${exportName}`)
-  }
-
-  const arrayStart = source.indexOf("[", start)
-  const arrayEnd = findMatchingBracket(source, arrayStart, "[", "]")
-  const literal = source.slice(arrayStart, arrayEnd + 1)
-
-  return Function(`"use strict"; return (${literal});`)()
-}
-
-function findMatchingBracket(source, start, open, close) {
-  let depth = 0
-  let quote = null
-
-  for (let index = start; index < source.length; index++) {
-    const char = source[index]
-    const previous = source[index - 1]
-
-    if (quote) {
-      if (char === quote && previous !== "\\") {
-        quote = null
-      }
-      continue
-    }
-
-    if (char === '"' || char === "'") {
-      quote = char
-      continue
-    }
-
-    if (char === open) {
-      depth += 1
-    }
-
-    if (char === close) {
-      depth -= 1
-      if (depth === 0) {
-        return index
-      }
-    }
-  }
-
-  throw new Error(`Unclosed ${open}${close} literal`)
-}
-
-function parseOptions(commandArgs) {
+function parseOptions(commandArgs, definition) {
   const options = {}
+  const optionDefinitions = new Map(
+    definition.options.map((option) => [option.name, option]),
+  )
 
   for (let index = 0; index < commandArgs.length; index++) {
     const arg = commandArgs[index]
-
-    if (arg === "--stdin") {
-      options.stdin = true
-      continue
-    }
 
     if (!arg.startsWith("--")) {
       fail(`Unexpected argument "${arg}".`)
     }
 
     const key = arg.slice(2)
-    const value = commandArgs[index + 1]
+    const optionDefinition = optionDefinitions.get(key)
 
+    if (!optionDefinition) {
+      fail(`${definition.usage.split("\n")[0]} does not accept ${arg}.`)
+    }
+
+    if (!optionDefinition.value) {
+      options[key] = true
+      continue
+    }
+
+    const value = commandArgs[index + 1]
     if (!value || value.startsWith("--")) {
       fail(`${arg} requires a value.`)
     }
@@ -759,7 +693,7 @@ async function writeOrPrint(output, outputPath) {
     return
   }
 
-  await writeTextFile(path.resolve(root, outputPath), output)
+  await writeTextFile(path.resolve(userRoot, outputPath), output)
 }
 
 async function readRequiredFile(inputPath, message) {
@@ -767,7 +701,7 @@ async function readRequiredFile(inputPath, message) {
     fail(message)
   }
 
-  return readFile(path.resolve(root, inputPath), "utf8")
+  return readFile(path.resolve(userRoot, inputPath), "utf8")
 }
 
 async function writeJsonFile(filePath, value) {
@@ -806,31 +740,28 @@ function printDiagnostics(diagnostics) {
 }
 
 async function runNodeBin(packageName, commandArgs, extraEnv) {
-  const manifest = JSON.parse(
-    await readFile(
-      path.join(root, "node_modules", packageName, "package.json"),
-    ),
-  )
+  const manifestPath = require.resolve(`${packageName}/package.json`)
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"))
   const bin =
     typeof manifest.bin === "string"
       ? manifest.bin
       : Object.values(manifest.bin)[0]
   await runNodeFile(
-    path.join(root, "node_modules", packageName, bin),
+    path.join(path.dirname(manifestPath), bin),
     commandArgs,
     extraEnv,
   )
 }
 
 async function runScript(scriptName, commandArgs) {
-  await runNodeFile(path.join(root, "scripts", scriptName), commandArgs)
+  await runNodeFile(path.join(packageRoot, "scripts", scriptName), commandArgs)
 }
 
 async function runNodeFile(filePath, commandArgs, extraEnv = {}) {
   await mkdir(path.dirname(filePath), { recursive: true })
   await new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [filePath, ...commandArgs], {
-      cwd: root,
+      cwd: packageRoot,
       env: {
         ...process.env,
         ...extraEnv,
@@ -856,22 +787,6 @@ function requireString(value, message) {
   }
 
   return value
-}
-
-function getAttrs(node) {
-  return Object.fromEntries(node.attrs.map((attr) => [attr.name, attr.value]))
-}
-
-function isElementNode(node) {
-  return "tagName" in node
-}
-
-function isTextNode(node) {
-  return node.nodeName === "#text"
-}
-
-function isIgnorableTextNode(node) {
-  return isTextNode(node) && node.value.trim().length === 0
 }
 
 function escapeAttr(value) {
