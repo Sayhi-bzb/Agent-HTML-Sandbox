@@ -1,6 +1,6 @@
 {
   "name": "@agent-html/ahtml",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0-alpha.4",
   "description": "Sanitized agent-html artifact CLI.",
   "license": "MIT",
   "type": "module",
@@ -67,13 +67,7 @@
     "type": "git",
     "url": "git+https://github.com/Sayhi-bzb/Agent-HTML.git"
   },
-  "keywords": [
-    "agent-html",
-    "ahtml",
-    "cli",
-    "artifact",
-    "shadcn"
-  ],
+  "keywords": ["agent-html", "ahtml", "cli", "artifact", "shadcn"],
   "author": "",
   "bugs": {
     "url": "https://github.com/Sayhi-bzb/Agent-HTML/issues"
