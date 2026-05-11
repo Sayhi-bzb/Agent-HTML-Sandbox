@@ -72,6 +72,34 @@ git push origin main --tags
 
 Prerelease versions publish to the `alpha` dist-tag. Stable versions publish to `latest`. The publish workflow fails if the Git tag does not match `package.json` version.
 
+## Distribute the ahtml skill [#distribute-the-ahtml-skill]
+
+The `ahtml` agent skill lives at `.agents/skills/ahtml`. The open `skills` CLI discovers `.agents/skills/` automatically.
+
+List skills from this repository:
+
+```bash
+npx skills add Sayhi-bzb/Agent-HTML-Sandbox --list
+```
+
+Install the `ahtml` skill for Codex:
+
+```bash
+npx skills add Sayhi-bzb/Agent-HTML-Sandbox --skill ahtml -a codex
+```
+
+Install globally for Codex:
+
+```bash
+npx skills add Sayhi-bzb/Agent-HTML-Sandbox --skill ahtml -a codex -g
+```
+
+Test installation from a local checkout:
+
+```bash
+npx skills add . --skill ahtml -a codex --copy -y
+```
+
 ## Runtime architecture [#runtime-architecture]
 
 ```txt
@@ -82,6 +110,10 @@ installed ahtml package
 ```
 
 `ahtml build` must use the user-local integration. Do not restore a package-local Vite builder, package-local renderer, or package-local shadcn UI kit.
+
+## Maintenance checklist [#maintenance-checklist]
+
+Recurring repository checks live in `spec/maintenance-checklist.md`.
 
 ## Build the docs web [#build-the-docs-web]
 

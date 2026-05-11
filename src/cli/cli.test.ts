@@ -201,7 +201,7 @@ describe("agent-html CLI", () => {
         "--template",
         "vite",
         "--preset",
-        "base-nova",
+        "nova",
         "--components",
         "card,badge",
         "--out",
@@ -228,7 +228,7 @@ describe("agent-html CLI", () => {
       expect.objectContaining({ code: "missing-components-json" }),
     )
     expect(project.shadcn.commands.join("\n")).toContain(
-      "pnpm dlx shadcn@latest init --template vite --preset base-nova",
+      "pnpm dlx shadcn@latest init --template vite --preset nova",
     )
     await expect(readFile(outputPath, "utf8")).rejects.toMatchObject({
       code: "ENOENT",
@@ -367,7 +367,7 @@ describe("agent-html CLI", () => {
     )
 
     expect(stdout).toContain(
-      "Running: npx shadcn@latest init --template vite --preset base-nova",
+      "Running: npx shadcn@latest init --template vite --preset nova",
     )
     expect(stdout).toContain(
       "Running: npx shadcn@latest add accordion alert badge button card checkbox progress separator slider table tabs textarea toggle toggle-group tooltip",
@@ -427,6 +427,74 @@ describe("agent-html CLI", () => {
 
     expect(stdout).toContain("ok config:project-config")
     expect(stdout).toContain("ok setup:shadcn-components card, badge")
+    await rm(tempDir, { force: true, recursive: true })
+  })
+
+  it("recognizes shadcn components when the ui alias uses Windows separators", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
+
+    await writeFile(path.join(tempDir, "package.json"), JSON.stringify({}))
+    await writeFile(path.join(tempDir, "vite.config.ts"), "export default {}\n")
+    await writeFile(
+      path.join(tempDir, "components.json"),
+      JSON.stringify({
+        aliases: { ui: "@\\components\\ui" },
+        tailwind: { css: "src/index.css" },
+      }),
+    )
+    await runCli(["init", "--components", "card"], {}, tempDir)
+
+    const componentDir = path.join(tempDir, "src", "components", "ui")
+
+    await mkdir(componentDir, { recursive: true })
+    await writeFile(path.join(componentDir, "card.tsx"), "export {}\n")
+
+    const { stdout } = await runCli(["doctor"], {}, tempDir)
+    const status = await runCli(["status"], {}, tempDir)
+
+    expect(stdout).toContain("ok setup:shadcn-components card")
+    expect(status.stdout).toContain("ready: yes")
+    await rm(tempDir, { force: true, recursive: true })
+  })
+
+  it("recognizes components from a legacy project config with an alias-shaped componentDir", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
+    const componentDir = path.join(tempDir, "src", "components", "ui")
+
+    await mkdir(componentDir, { recursive: true })
+    await writeFile(path.join(tempDir, "package.json"), JSON.stringify({}))
+    await writeFile(path.join(tempDir, "vite.config.ts"), "export default {}\n")
+    await writeFile(
+      path.join(tempDir, "components.json"),
+      JSON.stringify({
+        aliases: { ui: "@\\components\\ui" },
+        tailwind: { css: "src/index.css" },
+      }),
+    )
+    await writeFile(path.join(componentDir, "card.tsx"), "export {}\n")
+    await writeFile(
+      path.join(tempDir, "agent-html.project.json"),
+      JSON.stringify({
+        kind: "agent-html-project",
+        integration: "vite-shadcn",
+        status: "configured",
+        paths: {
+          componentDir: "@\\components\\ui",
+          componentsJson: "components.json",
+          viteConfig: "vite.config.ts",
+        },
+        shadcn: {
+          detected: true,
+          components: ["card"],
+        },
+      }),
+    )
+
+    const { stdout } = await runCli(["doctor"], {}, tempDir)
+    const status = await runCli(["status"], {}, tempDir)
+
+    expect(stdout).toContain("ok setup:shadcn-components card")
+    expect(status.stdout).toContain("ready: yes")
     await rm(tempDir, { force: true, recursive: true })
   })
 

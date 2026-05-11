@@ -33,5 +33,6 @@ Load references only as needed:
 - Read `references/install.md` when installing, initializing, connecting shadcn/Vite, or choosing template/preset flags.
 - Read `references/usage.md` when producing content, composing `.agent.html`, building, previewing, or explaining the normal user flow.
 - Read `references/debug.md` when `status`, `doctor`, `build`, `preview`, shadcn setup, components, or project config fail.
+- Read `references/bug-reporting.md` when a reproducible `ahtml` product bug remains after normal debug checks.
 
 Prefer the default happy path (`ahtml init`) before advanced flags. Treat `ahtml init --scaffold` as a fallback, not the normal installation path.

@@ -133,7 +133,10 @@ export async function getMissingShadcnComponents({ userRoot, config }) {
   const configuredDir =
     typeof config?.paths?.componentDir === "string" &&
     config.paths.componentDir.length > 0
-      ? path.resolve(userRoot, config.paths.componentDir)
+      ? path.resolve(
+          userRoot,
+          resolveUserProjectPath(config.paths.componentDir),
+        )
       : resolveShadcnComponentDir(userRoot, undefined)
 
   return getMissingComponentNames(config.shadcn.components, configuredDir)
@@ -341,7 +344,21 @@ function resolveShadcnComponentDir(userRoot, componentsJson) {
     return path.join(userRoot, "src", "components", "ui")
   }
 
-  return path.resolve(userRoot, alias.replace(/^@\//, "src/"))
+  return path.resolve(userRoot, resolveUserProjectPath(alias))
+}
+
+function resolveUserProjectPath(value) {
+  const normalized = value.replaceAll("\\", "/")
+
+  if (normalized === "@") {
+    return "src"
+  }
+
+  if (normalized.startsWith("@/")) {
+    return path.join("src", ...normalized.slice(2).split("/"))
+  }
+
+  return path.normalize(normalized)
 }
 
 async function getMissingComponentNames(components, componentDir) {

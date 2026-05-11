@@ -21,7 +21,7 @@ export const cliDefaults = {
     "toggle-group",
     "tooltip",
   ],
-  shadcnPreset: "base-nova",
+  shadcnPreset: "nova",
   shadcnTemplate: "vite",
 }
 

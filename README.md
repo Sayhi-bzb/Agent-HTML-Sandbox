@@ -1,22 +1,8 @@
 # agent-html
 
-agent-html is a local CLI engine for producing sanitized static artifacts from a constrained agent-facing document format.
+agent-html is a local CLI engine for producing safe, inspectable static artifacts from a constrained agent-facing document format.
 
-The package owns three internal modules: `config`, `engine`, and `cli`. Vite, React, shadcn/ui, Tailwind, theme files, and UI components live in the user's local project generated or connected through `ahtml init`.
-
-Architecture notes live in `blueprint/`. Implementation scope and checkpoints live in `spec/`.
-
-For recurring development, release, and deployment checks, read `spec/maintenance-checklist.md`.
-
-## Documentation
-
-The public documentation site is deployed on Cloudflare Pages:
-
-```txt
-https://agent-html.pages.dev/docs
-```
-
-The Pages root path redirects to `/docs`.
+Docs: [agent-html.pages.dev/docs](https://agent-html.pages.dev/docs)
 
 ## Quick Start
 
@@ -30,24 +16,33 @@ npx ahtml doctor
 npx ahtml schema --format prompt
 ```
 
-For repository development, install dependencies and link the local CLI:
+Create `artifact.agent.html`:
 
-```bash
-npm install
-npm link
+```html
+<meta-agent theme="neutral" density="comfortable" tone="report" width="article" />
+
+<page title="Review">
+  <card title="Summary">
+    This artifact was written with standard agent-html components.
+  </card>
+</page>
 ```
 
-Then initialize a user-local Vite + shadcn project and inspect the agent-facing schema:
+Validate, build, preview, and inspect:
 
 ```bash
-ahtml --help
-ahtml init
-ahtml status
-ahtml doctor
-ahtml schema --format prompt
+npx ahtml validate --input artifact.agent.html
+npx ahtml build --input artifact.agent.html --out dist/html
+npx ahtml preview --input artifact.agent.html --out dist/html --port 4173
+npx ahtml inspect --input artifact.agent.html
+npx ahtml inspect --dir dist/html
 ```
 
-Create a structured composition input, for example `composition.json`:
+Open the preview URL printed by `ahtml preview` to review the output.
+
+## Compose From JSON
+
+Create `composition.json`:
 
 ```json
 {
@@ -75,126 +70,10 @@ Create a structured composition input, for example `composition.json`:
 }
 ```
 
-Compose it into an inspectable agent-html document:
+Compose it into the standard document format:
 
 ```bash
-ahtml compose --input composition.json --out artifact.agent.html
-```
-
-Build the static artifact:
-
-```bash
-ahtml build --input artifact.agent.html --out dist/html
-```
-
-Validate, inspect, and preview without reading project source:
-
-```bash
-ahtml validate --input artifact.agent.html
-ahtml inspect --input artifact.agent.html
-ahtml inspect --dir dist/html
-ahtml status
-ahtml doctor
-ahtml preview --input artifact.agent.html --out dist/html --port 4173
-```
-
-Open the preview URL printed by `ahtml preview` to review the output.
-
-## Local Package Verification
-
-The current published alpha is `@agent-html/ahtml@0.1.0-alpha.0`. Before future releases, verify the package with the local tarball workflow:
-
-```bash
-npm run verify:pack
-```
-
-That command runs `npm pack --dry-run`, builds a local tarball, installs it into a temporary consumer project, and verifies installed `ahtml init`, `schema`, `compose`, `build`, `doctor`, and `config`.
-
-To inspect the package file list directly:
-
-```bash
-npm pack --dry-run
-```
-
-To inspect the published registry metadata:
-
-```bash
-npm view @agent-html/ahtml dist-tags versions --json
-```
-
-## npm Release
-
-The npm package is published by GitHub Actions from Git tags. The package should use npm Trusted Publishing for GitHub Actions, not a long-lived `NPM_TOKEN` secret.
-
-Configure the trusted publisher in npm for `@agent-html/ahtml`:
-
-```txt
-Provider: GitHub Actions
-Owner: Sayhi-bzb
-Repository: Agent-HTML-Sandbox
-Workflow filename: publish-npm.yml
-```
-
-Release flow:
-
-```bash
-npm version 0.1.0-alpha.1 --no-git-tag-version
-git add package.json package-lock.json
-git commit -m "chore: release 0.1.0-alpha.1"
-git tag v0.1.0-alpha.1
-git push origin main --tags
-```
-
-Prerelease versions such as `0.1.0-alpha.1` publish to the npm `alpha` dist-tag. Stable versions such as `0.1.0` publish to `latest`. The workflow rejects tag pushes when the Git tag does not match `package.json` version.
-
-## Docs Deployment
-
-The docs site is a static Next export deployed to Cloudflare Pages with Wrangler Direct Upload. It does not require GitHub integration.
-
-Build and deploy:
-
-```bash
-npm run docs:web:build
-npx wrangler pages deploy docs-web/out --project-name agent-html --branch main
-```
-
-Cloudflare Pages project:
-
-```txt
-agent-html
-```
-
-Pages configuration files live under `docs-web/public/`:
-
-- `_redirects` redirects `/` to `/docs`.
-- `_headers` adds conservative security headers and long-lived caching for static assets.
-
-## Agent Skill Distribution
-
-This repository includes an `ahtml` agent skill at `.agents/skills/ahtml`. The open `skills` CLI discovers that path automatically.
-
-List available skills from this repository:
-
-```bash
-npx skills add Sayhi-bzb/Agent-HTML-Sandbox --list
-```
-
-Install only the `ahtml` skill for Codex:
-
-```bash
-npx skills add Sayhi-bzb/Agent-HTML-Sandbox --skill ahtml -a codex
-```
-
-Install globally for Codex:
-
-```bash
-npx skills add Sayhi-bzb/Agent-HTML-Sandbox --skill ahtml -a codex -g
-```
-
-Test installation from a local checkout:
-
-```bash
-npx skills add . --skill ahtml -a codex --copy -y
+npx ahtml compose --input composition.json --out artifact.agent.html
 ```
 
 ## CLI Commands
@@ -213,13 +92,6 @@ ahtml config get
 ahtml config set <key> <value>
 ```
 
-Local fallback:
-
-- Run `npm link` in this repository to make `ahtml` available on your PATH.
-- On Windows without linking, use `.\ahtml.cmd ...`.
-- On POSIX shells without linking, use `./ahtml ...`.
-- `npm run agent -- ...` remains available as a compatibility fallback.
-
 Defaults:
 
 - Config file: `agent-html.config.json`
@@ -227,19 +99,15 @@ Defaults:
 - Composed document: `artifact.agent.html`
 - Build output: `dist/html`
 
-## Workflow Notes
+## Rules
 
-- Package modules are intentionally narrow: `src/engine` owns the pure agent-html parser/schema/sanitizer, `src/config` owns finite defaults and user-project config, and `src/cli` owns command orchestration and local IO.
-- `schema` outputs the dehydrated agent-facing contract.
-- `init` is the recommended first-run path: by default it runs user-local shadcn setup, writes finite ahtml project config, and writes the ahtml renderer adapter files.
-- `init --apply` reruns shadcn setup in an existing project; `init --scaffold` is an advanced local fallback for writing a minimal Vite + shadcn scaffold without delegating to shadcn.
-- `status` is a read-only setup summary with a single next command.
-- `compose` writes a standard document. `.agent.html` is an inspectable intermediate, not a raw HTML escape hatch.
-- `validate` checks a standard document without writing an artifact.
-- `build` validates and sanitizes before handing `SanitizedAgentHtml` to the user-local Vite integration. Invalid documents fail before artifact generation.
-- `inspect` reports effective config and component usage from a document or built artifact metadata.
-- `doctor` runs local environment, config, user-local shadcn component, and output-path checks.
-- `preview` builds the same static artifact as `build` and serves it over local HTTP.
-- `config` accepts only finite presentation/output values.
-- The package does not ship a root Vite app, package-local renderer, or package-local shadcn UI kit. Vite + shadcn are user-local project concerns.
-- Agent-facing input cannot use Tailwind classes, `className`, `style`, CSS, scripts, event handlers, shadcn props, Radix props, arbitrary HTML attributes, or external resource passthrough.
+- Run `npx ahtml init` first.
+- Treat `npx ahtml schema --format prompt` as the source of truth.
+- Use only registered agent-html components, props, children, and render config values.
+- Do not write Tailwind classes, `className`, `style`, CSS, scripts, event handlers, shadcn props, Radix props, arbitrary HTML attributes, external resource passthrough, or raw HTML.
+
+## More
+
+- [Quick Start](https://agent-html.pages.dev/docs)
+- [Best Practice](https://agent-html.pages.dev/docs/best-practice)
+- [Examples](https://agent-html.pages.dev/docs/example)

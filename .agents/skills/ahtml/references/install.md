@@ -45,7 +45,7 @@ npx ahtml init
 Use a specific shadcn template or preset:
 
 ```bash
-npx ahtml init --template vite --preset base-nova
+npx ahtml init --template vite --preset nova
 ```
 
 Rerun shadcn setup in an existing project:
