@@ -31,6 +31,7 @@
     "lint": "eslint .",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
+    "format:check:source": "prettier package.json tsconfig.json tsconfig.node.json eslint.config.js vitest.config.ts knip.json README.md \".github/workflows/*.yml\" \"src/**/*.{ts,mjs}\" \"!src/engine/generated/**\" \"scripts/**/*.mjs\" \"docs-web/content/**/*.mdx\" --check",
     "knip": "knip",
     "test": "vitest",
     "test:run": "vitest run",
@@ -39,10 +40,12 @@
     "docs:web:dev": "npm --prefix docs-web run dev",
     "docs:web:lint": "npm --prefix docs-web run lint",
     "docs:web:preview": "npm --prefix docs-web run start",
+    "docs:web:check": "npm --prefix docs-web run types:check && npm run docs:web:lint && npm run docs:web:build",
     "agent": "node src/cli/index.mjs",
     "verify:pack": "node scripts/verify-packed-ahtml.mjs",
     "schema:prompt": "node scripts/generate-component-schema-prompt.mjs",
-    "check": "npm run format:check && npm run lint && npm run knip && npm run test:run && npm run build"
+    "ci:check": "npm run format:check:source && npm run lint && npm run knip && npm run test:run && npm run build",
+    "check": "npm run ci:check"
   },
   "dependencies": {
     "parse5": "^8.0.1",
@@ -59,5 +62,21 @@
     "prettier": "^3.7.4",
     "typescript-eslint": "^8.50.0",
     "vitest": "^4.0.17"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sayhi-bzb/Agent-HTML-Sandbox.git"
+  },
+  "keywords": [
+    "agent-html",
+    "ahtml",
+    "cli",
+    "artifact",
+    "shadcn"
+  ],
+  "author": "",
+  "bugs": {
+    "url": "https://github.com/Sayhi-bzb/Agent-HTML-Sandbox/issues"
+  },
+  "homepage": "https://agent-html.pages.dev/docs"
 }

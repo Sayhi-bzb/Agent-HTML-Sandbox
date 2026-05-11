@@ -1,0 +1,89 @@
+name: Publish npm
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Run publish checks without publishing
+        required: true
+        default: true
+        type: boolean
+
+concurrency:
+  group: publish-npm-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run package checks
+        run: npm run check
+
+      - name: Verify packed CLI
+        run: npm run verify:pack
+
+      - name: Determine release metadata
+        id: release
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          dist_tag="latest"
+
+          if [[ "$version" == *-* ]]; then
+            dist_tag="alpha"
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "dist_tag=$dist_tag" >> "$GITHUB_OUTPUT"
+          echo "Package version: $version"
+          echo "npm dist-tag: $dist_tag"
+
+      - name: Verify tag matches package version
+        if: ${{ github.event_name == 'push' }}
+        shell: bash
+        env:
+          PACKAGE_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+
+          if [[ "$tag_version" != "$PACKAGE_VERSION" ]]; then
+            echo "Tag version '$tag_version' does not match package.json version '$PACKAGE_VERSION'." >&2
+            exit 1
+          fi
+
+      - name: Dry-run publish
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        run: npm publish --access public --tag ${{ steps.release.outputs.dist_tag }} --dry-run
+
+      - name: Reject manual publish
+        if: ${{ github.event_name == 'workflow_dispatch' && !inputs.dry_run }}
+        run: |
+          echo "Manual publishing is disabled. Push a matching v* tag to publish." >&2
+          exit 1
+
+      - name: Publish package
+        if: ${{ github.event_name == 'push' }}
+        run: npm publish --access public --tag ${{ steps.release.outputs.dist_tag }}

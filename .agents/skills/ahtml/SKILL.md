@@ -23,6 +23,8 @@ ahtml schema --format prompt
 ahtml compose --input composition.json --out artifact.agent.html
 ahtml validate --input artifact.agent.html
 ahtml build --input artifact.agent.html --out dist/html
+ahtml inspect --input artifact.agent.html
+ahtml inspect --dir dist/html
 ahtml preview --input artifact.agent.html --out dist/html
 ```
 

@@ -18,7 +18,7 @@ Default `ahtml init` delegates user-local setup to shadcn, then writes ahtml int
 For a published package:
 
 ```bash
-npm install ahtml
+npm install @agent-html/ahtml@alpha
 npx ahtml init
 npx ahtml status
 npx ahtml doctor
@@ -39,31 +39,31 @@ ahtml doctor
 Use defaults first:
 
 ```bash
-ahtml init
+npx ahtml init
 ```
 
 Use a specific shadcn template or preset:
 
 ```bash
-ahtml init --template vite --preset base-nova
+npx ahtml init --template vite --preset base-nova
 ```
 
 Rerun shadcn setup in an existing project:
 
 ```bash
-ahtml init --apply
+npx ahtml init --apply
 ```
 
 Preview without writing:
 
 ```bash
-ahtml init --dry-run
+npx ahtml init --dry-run
 ```
 
 Fallback only, for environments where shadcn CLI cannot be used:
 
 ```bash
-ahtml init --scaffold
+npx ahtml init --scaffold
 ```
 
 Do not present `--scaffold` as the main path. It writes a minimal local Vite + shadcn scaffold without delegating to shadcn.
@@ -73,9 +73,9 @@ Do not present `--scaffold` as the main path. It writes a minimal local Vite + s
 Run:
 
 ```bash
-ahtml status
-ahtml doctor
-ahtml schema --format prompt
+npx ahtml status
+npx ahtml doctor
+npx ahtml schema --format prompt
 ```
 
 If `status` prints a `Next:` command, follow that command before building.

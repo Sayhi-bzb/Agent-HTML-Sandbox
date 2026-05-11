@@ -38,6 +38,40 @@ npm run verify:pack
 
 This packs the project, installs it into a temporary consumer project, and verifies installed `ahtml` commands.
 
+## Verify published alpha [#verify-published-alpha]
+
+```bash
+npm view @agent-html/ahtml dist-tags versions --json
+npm install @agent-html/ahtml@alpha
+```
+
+The public package is published under `@agent-html/ahtml`; the CLI bin remains `ahtml`.
+
+## Publish npm package [#publish-npm-package]
+
+Publishing is tag-driven through GitHub Actions and npm Trusted Publishing. Do not use a long-lived `NPM_TOKEN` for releases.
+
+Configure the npm trusted publisher for `@agent-html/ahtml`:
+
+```txt
+Provider: GitHub Actions
+Owner: Sayhi-bzb
+Repository: Agent-HTML-Sandbox
+Workflow filename: publish-npm.yml
+```
+
+Release an alpha:
+
+```bash
+npm version 0.1.0-alpha.1 --no-git-tag-version
+git add package.json package-lock.json
+git commit -m "chore: release 0.1.0-alpha.1"
+git tag v0.1.0-alpha.1
+git push origin main --tags
+```
+
+Prerelease versions publish to the `alpha` dist-tag. Stable versions publish to `latest`. The publish workflow fails if the Git tag does not match `package.json` version.
+
 ## Runtime architecture [#runtime-architecture]
 
 ```txt

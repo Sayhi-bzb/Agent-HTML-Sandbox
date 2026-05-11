@@ -48,6 +48,12 @@ npm run verify:pack
 npm pack --dry-run
 ```
 
+Need to update or verify the public docs site:
+
+- Edit docs content under `docs-web/content/docs`.
+- Build the static export with `npm run docs:web:build`.
+- Deploy or inspect the generated site from `docs-web/out`.
+
 Need to check an artifact before building:
 
 ```bash

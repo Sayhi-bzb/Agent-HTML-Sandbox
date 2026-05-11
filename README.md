@@ -6,9 +6,21 @@ The package owns three internal modules: `config`, `engine`, and `cli`. Vite, Re
 
 Architecture notes live in `blueprint/`. Implementation scope and checkpoints live in `spec/`.
 
+For recurring development, release, and deployment checks, read `spec/maintenance-checklist.md`.
+
+## Documentation
+
+The public documentation site is deployed on Cloudflare Pages:
+
+```txt
+https://agent-html.pages.dev/docs
+```
+
+The Pages root path redirects to `/docs`.
+
 ## Quick Start
 
-After the alpha package is published, install the CLI in a user project:
+Install the published alpha package in a user project:
 
 ```bash
 npm install @agent-html/ahtml@alpha
@@ -90,7 +102,7 @@ Open the preview URL printed by `ahtml preview` to review the output.
 
 ## Local Package Verification
 
-The package is prepared for the scoped alpha release `@agent-html/ahtml@0.1.0-alpha.0`. The current package bar remains local tarball install before publishing:
+The current published alpha is `@agent-html/ahtml@0.1.0-alpha.0`. Before future releases, verify the package with the local tarball workflow:
 
 ```bash
 npm run verify:pack
@@ -104,7 +116,86 @@ To inspect the package file list directly:
 npm pack --dry-run
 ```
 
-Public `npm publish` is a later step after the local tarball workflow stays stable.
+To inspect the published registry metadata:
+
+```bash
+npm view @agent-html/ahtml dist-tags versions --json
+```
+
+## npm Release
+
+The npm package is published by GitHub Actions from Git tags. The package should use npm Trusted Publishing for GitHub Actions, not a long-lived `NPM_TOKEN` secret.
+
+Configure the trusted publisher in npm for `@agent-html/ahtml`:
+
+```txt
+Provider: GitHub Actions
+Owner: Sayhi-bzb
+Repository: Agent-HTML-Sandbox
+Workflow filename: publish-npm.yml
+```
+
+Release flow:
+
+```bash
+npm version 0.1.0-alpha.1 --no-git-tag-version
+git add package.json package-lock.json
+git commit -m "chore: release 0.1.0-alpha.1"
+git tag v0.1.0-alpha.1
+git push origin main --tags
+```
+
+Prerelease versions such as `0.1.0-alpha.1` publish to the npm `alpha` dist-tag. Stable versions such as `0.1.0` publish to `latest`. The workflow rejects tag pushes when the Git tag does not match `package.json` version.
+
+## Docs Deployment
+
+The docs site is a static Next export deployed to Cloudflare Pages with Wrangler Direct Upload. It does not require GitHub integration.
+
+Build and deploy:
+
+```bash
+npm run docs:web:build
+npx wrangler pages deploy docs-web/out --project-name agent-html --branch main
+```
+
+Cloudflare Pages project:
+
+```txt
+agent-html
+```
+
+Pages configuration files live under `docs-web/public/`:
+
+- `_redirects` redirects `/` to `/docs`.
+- `_headers` adds conservative security headers and long-lived caching for static assets.
+
+## Agent Skill Distribution
+
+This repository includes an `ahtml` agent skill at `.agents/skills/ahtml`. The open `skills` CLI discovers that path automatically.
+
+List available skills from this repository:
+
+```bash
+npx skills add Sayhi-bzb/Agent-HTML-Sandbox --list
+```
+
+Install only the `ahtml` skill for Codex:
+
+```bash
+npx skills add Sayhi-bzb/Agent-HTML-Sandbox --skill ahtml -a codex
+```
+
+Install globally for Codex:
+
+```bash
+npx skills add Sayhi-bzb/Agent-HTML-Sandbox --skill ahtml -a codex -g
+```
+
+Test installation from a local checkout:
+
+```bash
+npx skills add . --skill ahtml -a codex --copy -y
+```
 
 ## CLI Commands
 

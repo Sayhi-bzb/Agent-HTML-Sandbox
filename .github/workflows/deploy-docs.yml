@@ -1,0 +1,44 @@
+name: Deploy Docs
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-docs
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy docs to Cloudflare Pages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            docs-web/package-lock.json
+
+      - name: Install package dependencies
+        run: npm ci
+
+      - name: Install docs dependencies
+        run: npm --prefix docs-web ci
+
+      - name: Build docs web
+        run: npm run docs:web:build
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy docs-web/out --project-name agent-html --branch main
