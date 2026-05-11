@@ -2,36 +2,68 @@
 
 ## Purpose
 
-`AGENTS.md` is for repository usage, code boundaries, and agent workflow rules. Keep user-facing product instructions in `README.md` and `docs-web/content/`.
+`AGENTS.md` is the maintainer's relay to coding agents started by other developers and contributors. Treat it as the first-stop governance file for prompt guidance, contribution constraints, repo navigation, documentation ownership, verification expectations, issue handling, and GitNexus usage.
 
-## Routine Maintenance
+Keep end-user product instructions in `README.md` and `docs-web/content/`. Keep detailed recurring maintenance, release, and deployment procedures in `spec/maintenance-checklist.md`.
 
-Keep these three guidance surfaces aligned during normal maintenance:
+## Project Goal
 
-- `README.md`: user operation manual only.
-- `docs-web/content/`: public docs content.
-- `.agents/skills/ahtml/`: agent-facing workflow guidance for install, usage, debug, and bug-reporting behavior.
+`agent-html` produces safe, inspectable, portable static artifacts from a constrained agent-facing document format. The package should let agents express content structure without exposing low-value or high-risk implementation details.
 
-Do not update `spec/` or `blueprint/` as routine documentation maintenance. Change them only when scope, checkpoints, architecture principles, or product boundaries actually change.
+Architecture principles live under `blueprint/`; start at `blueprint/index.md`. The core direction is:
 
-## Reading Order
+- Agent-friendly authoring with less style and implementation noise.
+- Portable artifacts that are easy to open, share, and archive.
+- Lightweight generation focused on understanding and collaboration.
+- Human-readable output first.
+- Round-trippable artifacts that can feed human feedback back into agent workflows.
+- Constrained freedom: semantic expression without arbitrary CSS, script, or component internals.
+- Stable visual semantics across artifacts.
+- Inspectable and safe outputs.
 
-Before coding, read:
+## Repository Map
 
-- `blueprint/index.md`
-- `spec/maintenance-checklist.md`
+- `src/engine`: parse, validate, sanitize, ComponentSchema, render config, diagnostics, and shared agent-html types.
+- `src/config`: finite defaults and user project config detection.
+- `src/cli`: command orchestration, local IO, init/build/preview/inspect/status/doctor/config.
+- `docs-web/content/`: public documentation content.
+- `.agents/skills/ahtml/`: agent-facing skill guidance for install, usage, debug, and bug-reporting behavior.
+- `spec/maintenance-checklist.md`: recurring development, release, docs, and governance checks.
+- `blueprint/`: architecture principles, design boundaries, and tool decisions.
 
-For architecture or MVP scope questions, follow the indexes under `blueprint/` and `spec/`.
+## Agent Workflow
 
-## Repository Shape
+- Read relevant repo context before editing; do not guess boundaries that are documented in `blueprint/`, `spec/`, or this file.
+- Confirm the target layer before changing code: engine, config, CLI, docs, skill, spec, or blueprint.
+- Keep changes narrow and aligned with the package boundary.
+- Do not mix unrelated code, docs, spec, blueprint, release, or generated-output edits.
+- Do not silently expand scope when you find adjacent problems. Report the problem, then fix it only when it is required for the requested task or explicitly approved.
+- Use GitNexus for unfamiliar code paths, impact analysis, refactors, and pre-commit scope checks.
+- Before editing a function, class, or method, run GitNexus impact analysis on that symbol and review direct callers.
+- Before refactors or renames, use GitNexus context/rename flows instead of plain find-and-replace.
+- Before committing, run GitNexus `detect_changes` and confirm affected symbols and flows are expected.
+- Do not run bare `npx gitnexus analyze` in this repo; it rewrites `AGENTS.md` and `CLAUDE.md`.
+- Update the GitNexus index with `npm run gitnexus:analyze` or `npm run gitnexus:analyze:force`, which pass `--skip-agents-md`.
+
+## Issue And Suggestion Protocol
+
+- When you discover a bug, documentation mismatch, architecture-boundary conflict, or product improvement, capture it instead of burying it in unrelated edits.
+- Gather concise evidence: reproduction steps, expected behavior, actual behavior, affected files or commands, impact, and a suggested fix direction.
+- For `ahtml` product issues, follow `.agents/skills/ahtml/references/bug-reporting.md`.
+- Default to preparing an issue draft in the response. Only submit an issue, open a browser, or use network tooling when the user explicitly asks.
+- Redact secrets, tokens, private account names, private URLs, private local paths when not needed, and unrelated user content.
+
+## Package Boundary
 
 - Keep this repo as a single-package npm CLI package.
 - Keep package source focused on `src/cli`, `src/config`, and `src/engine`.
 - Keep Vite, React, Tailwind, shadcn/ui, themes, renderer adapters, and UI components in the user-local project generated or connected through `ahtml init`.
+- Do not restore a root Vite app, package-local Vite builder, package-local renderer, package-local shadcn UI kit, or root `src/components/ui/`.
 - Do not introduce a monorepo unless a spec explicitly changes that direction.
 
-## Code Style
+## Code Rules
 
+- Keep parser, validator, sanitizer, ComponentSchema, diagnostics, and shared types free of React component code.
 - Prefer small modules with clear ownership over broad utility files.
 - Use blueprint vocabulary for domain names.
 - Use `PascalCase` for exported types and React components.
@@ -39,130 +71,22 @@ For architecture or MVP scope questions, follow the indexes under `blueprint/` a
 - Use lowercase or kebab-case ids for agent-html blocks and config values.
 - Return structured results for expected validation errors.
 - Use comments sparingly, only for non-obvious constraints.
-
-## File Boundaries
-
-- Keep parser, validator, sanitizer, ComponentSchema, diagnostics, and shared types free of React component code.
-- Do not restore a root Vite app, package-local Vite builder, package-local renderer, or package-local shadcn UI kit.
 - Keep example inputs under an examples folder, and do not ship examples as package runtime unless `package.json.files` explicitly allows them.
-- Do not mix blueprint/spec edits with implementation edits unless the task explicitly asks for both.
 
-## shadcn Usage
+## Documentation Rules
 
-- Apply user-local shadcn setup through `ahtml init` or `ahtml init --apply`.
-- Do not add root package shadcn components under `src/components/ui/`.
-- Do not create a package-local custom UI kit.
+- `README.md`: user operation manual only. Do not add repository development, release, deployment, package verification, or skill distribution instructions there.
+- `docs-web/content/`: public docs content, including quick start, best practice, examples, and developer docs.
+- `.agents/skills/ahtml/`: agent workflow guidance for installing, using, debugging, and reporting bugs around `ahtml`.
+- `spec/` and `blueprint/`: not routine documentation surfaces. Update them only when scope, checkpoints, architecture principles, or product boundaries change.
+- Keep `README.md`, `docs-web/content/`, and `.agents/skills/ahtml/` aligned when user-facing commands or workflows change.
 
-## Verification
+## Commit And PR Norms
 
-- Use `spec/maintenance-checklist.md` for recurring development, release, and docs checks.
-- Use `spec/mvp-checkpoints.md` only when checking MVP completion state.
-- Run `npm run check` and `npm run verify:pack` before marking package implementation work complete.
-- Run docs checks when touching documentation or the docs site.
-- Run focused checks for changed files when a full check is not yet available.
-
-## GitNexus Block
-
-The section between `<!-- gitnexus:start -->` and `<!-- gitnexus:end -->` is generated by GitNexus. Do not hand-edit that block; update it with `npx gitnexus analyze --force` when needed.
-
-<!-- gitnexus:start -->
-# GitNexus — Code Intelligence
-
-This project is indexed by GitNexus as **Agent-HTML-Sandbox** (609 symbols, 1229 relationships, 46 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
-
-> If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
-
-## Always Do
-
-- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
-- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
-- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
-- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
-
-## When Debugging
-
-1. `gitnexus_query({query: "<error or symptom>"})` — find execution flows related to the issue
-2. `gitnexus_context({name: "<suspect function>"})` — see all callers, callees, and process participation
-3. `READ gitnexus://repo/Agent-HTML-Sandbox/process/{processName}` — trace the full execution flow step by step
-4. For regressions: `gitnexus_detect_changes({scope: "compare", base_ref: "main"})` — see what your branch changed
-
-## When Refactoring
-
-- **Renaming**: MUST use `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` first. Review the preview — graph edits are safe, text_search edits need manual review. Then run with `dry_run: false`.
-- **Extracting/Splitting**: MUST run `gitnexus_context({name: "target"})` to see all incoming/outgoing refs, then `gitnexus_impact({target: "target", direction: "upstream"})` to find all external callers before moving code.
-- After any refactor: run `gitnexus_detect_changes({scope: "all"})` to verify only expected files changed.
-
-## Never Do
-
-- NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
-- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
-- NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
-- NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
-
-## Tools Quick Reference
-
-| Tool | When to use | Command |
-|------|-------------|---------|
-| `query` | Find code by concept | `gitnexus_query({query: "auth validation"})` |
-| `context` | 360-degree view of one symbol | `gitnexus_context({name: "validateUser"})` |
-| `impact` | Blast radius before editing | `gitnexus_impact({target: "X", direction: "upstream"})` |
-| `detect_changes` | Pre-commit scope check | `gitnexus_detect_changes({scope: "staged"})` |
-| `rename` | Safe multi-file rename | `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` |
-| `cypher` | Custom graph queries | `gitnexus_cypher({query: "MATCH ..."})` |
-
-## Impact Risk Levels
-
-| Depth | Meaning | Action |
-|-------|---------|--------|
-| d=1 | WILL BREAK — direct callers/importers | MUST update these |
-| d=2 | LIKELY AFFECTED — indirect deps | Should test |
-| d=3 | MAY NEED TESTING — transitive | Test if critical path |
-
-## Resources
-
-| Resource | Use for |
-|----------|---------|
-| `gitnexus://repo/Agent-HTML-Sandbox/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/Agent-HTML-Sandbox/clusters` | All functional areas |
-| `gitnexus://repo/Agent-HTML-Sandbox/processes` | All execution flows |
-| `gitnexus://repo/Agent-HTML-Sandbox/process/{name}` | Step-by-step execution trace |
-
-## Self-Check Before Finishing
-
-Before completing any code modification task, verify:
-1. `gitnexus_impact` was run for all modified symbols
-2. No HIGH/CRITICAL risk warnings were ignored
-3. `gitnexus_detect_changes()` confirms changes match expected scope
-4. All d=1 (WILL BREAK) dependents were updated
-
-## Keeping the Index Fresh
-
-After committing code changes, the GitNexus index becomes stale. Re-run analyze to update it:
-
-```bash
-npx gitnexus analyze
-```
-
-If the index previously included embeddings, preserve them by adding `--embeddings`:
-
-```bash
-npx gitnexus analyze --embeddings
-```
-
-To check whether embeddings exist, inspect `.gitnexus/meta.json` — the `stats.embeddings` field shows the count (0 means no embeddings). **Running analyze without `--embeddings` will delete any previously generated embeddings.**
-
-> Claude Code users: A PostToolUse hook handles this automatically after `git commit` and `git merge`.
-
-## CLI
-
-| Task | Read this skill file |
-|------|---------------------|
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
-
-<!-- gitnexus:end -->
+- Keep commits scoped to one concern.
+- Do not include generated output unless it is required for the change.
+- Check `git status --short` before committing so unrelated worktree changes are not swept in.
+- For package implementation changes, run `npm run check:ready`.
+- For docs changes, run `npm run check:docs`.
+- For package-boundary changes, verify `package.json.files` and `scripts/verify-packed-ahtml.mjs` still agree.
+- Before committing, run GitNexus `detect_changes` and confirm affected symbols and flows are expected.

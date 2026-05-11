@@ -19,7 +19,12 @@ npx ahtml schema --format prompt
 Create `artifact.agent.html`:
 
 ```html
-<meta-agent theme="neutral" density="comfortable" tone="report" width="article" />
+<meta-agent
+  theme="neutral"
+  density="comfortable"
+  tone="report"
+  width="article"
+/>
 
 <page title="Review">
   <card title="Summary">
@@ -102,6 +107,7 @@ Defaults:
 ## Rules
 
 - Run `npx ahtml init` first.
+- In an empty or unsupported directory, use `npx ahtml init --scaffold`, then `npm install`, then `npx ahtml init --apply`.
 - Treat `npx ahtml schema --format prompt` as the source of truth.
 - Use only registered agent-html components, props, children, and render config values.
 - Do not write Tailwind classes, `className`, `style`, CSS, scripts, event handlers, shadcn props, Radix props, arbitrary HTML attributes, external resource passthrough, or raw HTML.

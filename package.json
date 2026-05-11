@@ -44,8 +44,14 @@
     "agent": "node src/cli/index.mjs",
     "verify:pack": "node scripts/verify-packed-ahtml.mjs",
     "schema:prompt": "node scripts/generate-component-schema-prompt.mjs",
-    "ci:check": "npm run format:check:source && npm run lint && npm run knip && npm run test:run && npm run build",
-    "check": "npm run ci:check"
+    "gitnexus:analyze": "npx gitnexus analyze --skip-agents-md",
+    "gitnexus:analyze:force": "npx gitnexus analyze --force --skip-agents-md",
+    "check:quick": "npm run format:check:source && npm run lint && npm run test:run",
+    "check:ready": "npm run check:quick && npm run knip && npm run build && npm run verify:pack && npm run docs:lint",
+    "check:docs": "npm run docs:lint && npm run docs:web:check",
+    "check:all": "npm run check:ready && npm run docs:web:check",
+    "ci:check": "npm run check:ready",
+    "check": "npm run check:ready"
   },
   "dependencies": {
     "parse5": "^8.0.1",
@@ -67,7 +73,13 @@
     "type": "git",
     "url": "git+https://github.com/Sayhi-bzb/Agent-HTML.git"
   },
-  "keywords": ["agent-html", "ahtml", "cli", "artifact", "shadcn"],
+  "keywords": [
+    "agent-html",
+    "ahtml",
+    "cli",
+    "artifact",
+    "shadcn"
+  ],
   "author": "",
   "bugs": {
     "url": "https://github.com/Sayhi-bzb/Agent-HTML/issues"

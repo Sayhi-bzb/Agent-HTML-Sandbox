@@ -33,8 +33,8 @@ jobs:
       - name: Install docs dependencies
         run: npm --prefix docs-web ci
 
-      - name: Build docs web
-        run: npm run docs:web:build
+      - name: Check docs web
+        run: npm run check:docs
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3

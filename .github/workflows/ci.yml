@@ -31,17 +31,8 @@ jobs:
       - name: Install package dependencies
         run: npm ci
 
-      - name: Run package checks
-        run: npm run check
-
-      - name: Verify packed CLI
-        run: npm run verify:pack
-
-      - name: Lint markdown docs
-        run: npm run docs:lint
-
       - name: Install docs dependencies
         run: npm --prefix docs-web ci
 
-      - name: Check docs web
-        run: npm run docs:web:check
+      - name: Run full checks
+        run: npm run check:all

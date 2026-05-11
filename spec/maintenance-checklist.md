@@ -4,16 +4,25 @@
 
 ## Daily Development
 
-Run the normal source gate before opening or merging a PR:
+Use the fastest local gate while editing source:
 
 ```bash
-npm run check
-npm run verify:pack
-npm run docs:lint
-npm run docs:web:check
+npm run check:quick
 ```
 
-Use `npm run check` as the main CI-equivalent source gate. Do not use `npm run format:check` as the daily gate because it checks the whole repository and can include generated output or historical formatting debt.
+Use `npm run check:ready` before opening or merging a PR:
+
+```bash
+npm run check:ready
+```
+
+Use `npm run check:all` when you need the same package + docs coverage as CI:
+
+```bash
+npm run check:all
+```
+
+Do not use `npm run format:check` as the daily gate because it checks the whole repository and can include generated output or historical formatting debt.
 
 When changing CLI, config, or engine code, preserve these boundaries:
 
@@ -35,11 +44,24 @@ git diff --check
 For package-boundary changes, verify the installed package workflow:
 
 ```bash
-npm run verify:pack
+npm run check:ready
 npm pack --dry-run
 ```
 
 The package tarball must not include blueprint, spec, tests, root app files, package-local renderer code, root shadcn UI files, build output, or generated docs output.
+
+## GitNexus Indexing
+
+Do not run bare `npx gitnexus analyze` in this repository because it rewrites `AGENTS.md` and `CLAUDE.md`.
+
+Use the repository scripts instead:
+
+```bash
+npm run gitnexus:analyze
+npm run gitnexus:analyze:force
+```
+
+Both scripts pass `--skip-agents-md`, so they update `.gitnexus/` without rewriting agent guidance files.
 
 ## Documentation
 
@@ -54,8 +76,7 @@ Keep the sidebar article order in `docs-web/content/docs/meta.json`.
 Before deploying docs:
 
 ```bash
-npm run docs:lint
-npm run docs:web:check
+npm run check:docs
 ```
 
 Deploy through Cloudflare Pages Direct Upload:
@@ -83,8 +104,7 @@ The package is published by GitHub Actions from matching `v*` tags.
 Before tagging:
 
 ```bash
-npm run check
-npm run verify:pack
+npm run check:ready
 npm pack --dry-run
 npm view @agent-html/ahtml dist-tags versions --json
 ```
@@ -118,9 +138,7 @@ After dependency upgrades:
 ```bash
 npm install
 npm --prefix docs-web install
-npm run check
-npm run verify:pack
-npm run docs:web:check
+npm run check:all
 ```
 
 When package boundaries change, update these together:
@@ -143,3 +161,4 @@ Keep workflow maintenance conservative:
 - Do not add automatic npm publishing from ordinary branch pushes.
 - Keep docs deployment manual until release cadence is stable.
 - Keep `verify:pack` in CI because it is the strongest package-boundary guard.
+- Keep `check:quick`, `check:ready`, `check:docs`, and `check:all` aligned with GitHub Actions so developers do not need to memorize workflow internals.

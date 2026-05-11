@@ -22,6 +22,17 @@ Repository fallback:
 npm run agent -- schema --format prompt
 ```
 
+Local check levels:
+
+```bash
+npm run check:quick
+npm run check:ready
+npm run check:docs
+npm run check:all
+```
+
+Use `check:quick` while editing, `check:ready` before merge or release, `check:docs` for documentation changes, and `check:all` for CI-equivalent coverage.
+
 ## Verify package boundary [#verify-package-boundary]
 
 ```bash
@@ -113,7 +124,7 @@ installed ahtml package
 
 ## Maintenance checklist [#maintenance-checklist]
 
-Recurring repository checks live in `spec/maintenance-checklist.md`.
+Recurring repository checks and release commands live in `spec/maintenance-checklist.md`.
 
 ## Build the docs web [#build-the-docs-web]
 
