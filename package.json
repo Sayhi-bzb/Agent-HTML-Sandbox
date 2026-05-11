@@ -1,12 +1,14 @@
 {
-  "name": "agent-html-sandbox",
-  "private": true,
-  "version": "0.0.0",
+  "name": "@agent-html/ahtml",
+  "version": "0.1.0-alpha.0",
   "description": "Sanitized agent-html artifact CLI.",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "bin": {
-    "ahtml": "./bin/ahtml.mjs"
+    "ahtml": "bin/ahtml.mjs"
   },
   "files": [
     "bin/",

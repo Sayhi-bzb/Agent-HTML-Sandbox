@@ -8,6 +8,16 @@ Architecture notes live in `blueprint/`. Implementation scope and checkpoints li
 
 ## Quick Start
 
+After the alpha package is published, install the CLI in a user project:
+
+```bash
+npm install @agent-html/ahtml@alpha
+npx ahtml init
+npx ahtml status
+npx ahtml doctor
+npx ahtml schema --format prompt
+```
+
 For repository development, install dependencies and link the local CLI:
 
 ```bash
@@ -15,7 +25,7 @@ npm install
 npm link
 ```
 
-Initialize a user-local Vite + shadcn project, then inspect the agent-facing schema:
+Then initialize a user-local Vite + shadcn project and inspect the agent-facing schema:
 
 ```bash
 ahtml --help
@@ -80,7 +90,7 @@ Open the preview URL printed by `ahtml preview` to review the output.
 
 ## Local Package Verification
 
-This project is not published to a public registry yet. The current package bar is local tarball install:
+The package is prepared for the scoped alpha release `@agent-html/ahtml@0.1.0-alpha.0`. The current package bar remains local tarball install before publishing:
 
 ```bash
 npm run verify:pack

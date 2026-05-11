@@ -43,14 +43,16 @@ try {
   ahtmlScriptPath = path.join(
     consumerDir,
     "node_modules",
-    "agent-html-sandbox",
+    "@agent-html",
+    "ahtml",
     "bin",
     "ahtml.mjs",
   )
   commandMetadataPath = path.join(
     consumerDir,
     "node_modules",
-    "agent-html-sandbox",
+    "@agent-html",
+    "ahtml",
     "src",
     "cli",
     "commands.mjs",
