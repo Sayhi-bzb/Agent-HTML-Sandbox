@@ -1,6 +1,6 @@
 {
   "name": "@agent-html/ahtml",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "description": "Sanitized agent-html artifact CLI.",
   "license": "MIT",
   "type": "module",
@@ -65,7 +65,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Sayhi-bzb/Agent-HTML-Sandbox.git"
+    "url": "git+https://github.com/Sayhi-bzb/Agent-HTML.git"
   },
   "keywords": [
     "agent-html",
@@ -76,7 +76,7 @@
   ],
   "author": "",
   "bugs": {
-    "url": "https://github.com/Sayhi-bzb/Agent-HTML-Sandbox/issues"
+    "url": "https://github.com/Sayhi-bzb/Agent-HTML/issues"
   },
   "homepage": "https://agent-html.pages.dev/docs"
 }
