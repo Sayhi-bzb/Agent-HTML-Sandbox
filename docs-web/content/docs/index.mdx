@@ -5,35 +5,26 @@ description: Learn the agent-html workflow for writing safe artifacts.
 
 # Getting Started with agent-html
 
-agent-html is a constrained document format for agents that need to produce safe, inspectable static artifacts.
+agent-html is a local CLI engine for agents that need to produce safe, inspectable static artifacts.
 
-Agents do not write arbitrary HTML, CSS, Tailwind classes, scripts, event handlers, React props, Radix props, or shadcn props. They read the schema, write standard agent-html, validate it, and build a portable static artifact.
-
-<Cards>
-  <Card title="Quick Start" href="#quick-start">
-    Run the minimum command loop from schema to preview.
-  </Card>
-
-  <Card title="Best Practice" href="#best-practice">
-    Follow the writing rules agents should use by default.
-  </Card>
-
-  <Card title="Example" href="#example">
-    Copy small artifact patterns and adapt their content.
-  </Card>
-
-  <Card title="Dev Docs" href="#dev-docs">
-    Verify the package boundary and deploy this docs site.
-  </Card>
-</Cards>
+The `ahtml` package owns config, engine, and CLI. Vite, React, Tailwind, shadcn/ui, theme files, and UI components live in your local project. Agents do not write arbitrary HTML, CSS, Tailwind classes, scripts, event handlers, React props, Radix props, or shadcn props.
 
 <Callout title="Primary rule">
-  Treat the schema as the source of truth. Do not guess component names, prop names, children, or render config values.
+  Run `ahtml init` first. Then treat the schema as the source of truth for
+  component names, props, children, and render config values.
 </Callout>
 
-## Quick Start [#quick-start]
+## 1. Initialize the local integration [#initialize-the-local-integration]
 
-### 1. Read the schema [#read-the-schema]
+```bash
+ahtml init
+ahtml status
+ahtml doctor
+```
+
+`ahtml init` delegates Vite + shadcn setup to your local project, then writes the ahtml integration config and renderer adapter files.
+
+## 2. Read the schema [#read-the-schema]
 
 ```bash
 ahtml schema --format prompt
@@ -41,12 +32,17 @@ ahtml schema --format prompt
 
 Use the schema output to learn the registered components, allowed props, allowed children, and finite render config values.
 
-### 2. Write a document [#write-a-document]
+## 3. Write a document [#write-a-document]
 
 A valid document needs a `<page>` root.
 
 ```html title="artifact.agent.html"
-<meta-agent theme="neutral" density="comfortable" tone="report" width="article" />
+<meta-agent
+  theme="neutral"
+  density="comfortable"
+  tone="report"
+  width="article"
+/>
 
 <page title="Review">
   <card title="Summary">
@@ -55,7 +51,7 @@ A valid document needs a `<page>` root.
 </page>
 ```
 
-### 3. Validate before building [#validate-before-building]
+## 4. Validate before building [#validate-before-building]
 
 ```bash
 ahtml validate --input artifact.agent.html
@@ -63,7 +59,7 @@ ahtml validate --input artifact.agent.html
 
 Validation catches unknown components, unknown props, blocked implementation details, invalid children, and invalid render config values before artifact generation.
 
-### 4. Build the artifact [#build-the-artifact]
+## 5. Build the artifact [#build-the-artifact]
 
 ```bash
 ahtml build --input artifact.agent.html --out dist/html
@@ -71,7 +67,7 @@ ahtml build --input artifact.agent.html --out dist/html
 
 The output is a static artifact directory that can be opened, shared, deployed, or archived.
 
-### 5. Preview locally [#preview-locally]
+## 6. Preview locally [#preview-locally]
 
 ```bash
 ahtml preview --input artifact.agent.html --out dist/html --port 4173
@@ -79,209 +75,11 @@ ahtml preview --input artifact.agent.html --out dist/html --port 4173
 
 Preview serves the same static output produced by `build`. It does not use a separate renderer.
 
-## Best Practice [#best-practice]
-
-### Read schema first [#read-schema-first]
-
-Start every generation task with `ahtml schema --format prompt`. The schema is the only public contract for components and config.
-
-### Use semantic components [#use-semantic-components]
-
-Choose components by meaning:
-
-- `card` for grouped content.
-- `alert` for important notes.
-- `table` for structured evidence.
-- `list` for ordered or unordered points.
-- `choice-group` and `feedback-box` when the artifact needs controlled user input.
-
-### Keep structure simple [#keep-structure-simple]
-
-Prefer a clear hierarchy:
-
-```txt
-page
-  card
-    table / list / alert / text
-```
-
-Use deeper structures only when the content genuinely needs sections, tabs, or expandable groups.
-
-### Do not write implementation details [#do-not-write-implementation-details]
-
-Never use these in agent-facing documents:
-
-```txt
-class
-className
-style
-css
-Tailwind classes
-script
-onclick
-event handlers
-Radix props
-shadcn props
-external URLs
-unknown HTML attributes
-```
-
-agent-html is not a raw HTML escape hatch.
-
-### Repair validation errors [#repair-validation-errors]
-
-If validation fails, fix the document instead of bypassing the error.
-
-- Unknown component: use a registered standard component.
-- Unknown attr: remove the prop or use the schema name.
-- Invalid child: move the component into an allowed parent.
-- Invalid render config: use only listed enum values.
-- Missing root: wrap content in `<page title="...">`.
-
-## Example [#example]
-
-### Minimal artifact [#minimal-artifact]
-
-```html title="artifact.agent.html"
-<meta-agent theme="neutral" density="comfortable" tone="report" width="article" />
-
-<page title="Minimal Artifact">
-  <card title="Overview">
-    A compact artifact with one card.
-  </card>
-</page>
-```
-
-### Report artifact [#report-artifact]
-
-```html title="report.agent.html"
-<meta-agent theme="neutral" density="comfortable" tone="report" width="article" />
-
-<page title="Quarterly Review">
-  <card title="Executive Summary">
-    Revenue improved while support volume remained stable.
-  </card>
-
-  <card title="Key Evidence">
-    <list variant="unordered">
-      <item>Activation increased in the first two weeks.</item>
-      <item>Churn risk is concentrated in unmanaged accounts.</item>
-      <item>Support tickets stayed within normal range.</item>
-    </list>
-  </card>
-</page>
-```
-
-### Decision artifact [#decision-artifact]
-
-```html title="decision.agent.html"
-<meta-agent theme="neutral" density="compact" tone="decision" width="dashboard" />
-
-<page title="Vendor Decision">
-  <alert title="Recommendation" tone="neutral">
-    Choose Vendor A for the initial rollout.
-  </alert>
-
-  <table>
-    <row kind="header">
-      <cell>Option</cell>
-      <cell>Strength</cell>
-      <cell>Risk</cell>
-    </row>
-    <row kind="body">
-      <cell>Vendor A</cell>
-      <cell>Fastest integration</cell>
-      <cell>Higher contract cost</cell>
-    </row>
-    <row kind="body">
-      <cell>Vendor B</cell>
-      <cell>Lower price</cell>
-      <cell>Longer setup time</cell>
-    </row>
-  </table>
-</page>
-```
-
-### Feedback artifact [#feedback-artifact]
-
-```html title="feedback.agent.html"
-<meta-agent theme="neutral" density="comfortable" tone="dashboard" width="wide" />
-
-<page title="Review Workspace">
-  <choice-group title="Decision" mode="single" default="approve">
-    <choice value="approve" label="Approve">
-      Ready to proceed.
-    </choice>
-    <choice value="revise" label="Revise">
-      Needs another pass.
-    </choice>
-  </choice-group>
-
-  <feedback-box title="Reviewer Notes" placeholder="Add notes for the agent..." copy-label="Copy notes">
-    Summarize what should change before the next iteration.
-  </feedback-box>
-</page>
-```
-
-## Dev Docs [#dev-docs]
-
-### Repository development [#repository-development]
+## Inspect the result [#inspect-the-result]
 
 ```bash
-npm install
-npm link
-ahtml schema --format prompt
+ahtml inspect --input artifact.agent.html
+ahtml inspect --dir dist/html
 ```
 
-Repository fallback:
-
-```bash
-npm run agent -- schema --format prompt
-```
-
-### Verify package boundary [#verify-package-boundary]
-
-```bash
-npm pack --dry-run
-```
-
-The package should include only the CLI/runtime surface. Docs web files are not part of the `ahtml` package.
-
-### Verify installed CLI behavior [#verify-installed-cli-behavior]
-
-```bash
-npm run verify:pack
-```
-
-This packs the project, installs it into a temporary consumer project, and verifies installed `ahtml` commands.
-
-### Build the artifact renderer [#build-the-artifact-renderer]
-
-```bash
-npm run build
-```
-
-This verifies the main artifact app and renderer path.
-
-### Build the docs web [#build-the-docs-web]
-
-```bash
-npm run docs:web:build
-```
-
-Docs web output:
-
-```txt
-docs-web/out
-```
-
-### Deploy docs to Cloudflare Pages [#deploy-docs-to-cloudflare-pages]
-
-Use these Cloudflare Pages settings:
-
-```txt
-Build command: npm run docs:web:build
-Output directory: docs-web/out
-```
-
-The docs web is deployed separately from the `ahtml` package.
+Use `inspect` to review effective config and component usage without reading project source.

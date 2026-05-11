@@ -24,11 +24,55 @@ inspect / doctor
 
 本阶段目标不是远程部署，而是把本地 artifact 工作流闭合。远程部署应作为后续阶段显式设计。
 
+## Current Code Alignment
+
+当前代码已从 package-local Vite app 收敛为 config + engine + CLI + user-local integration。代码现状是：
+
+```txt
+installed ahtml package
+        ↓
+src/cli schema / compose / validate / build / preview / inspect / doctor
+        ↓
+src/config finite defaults + user project config
+        ↓
+src/engine ComponentSchema + parser + sanitizer
+        ↓
+user-local Vite + shadcn renderer adapter
+        ↓
+static artifact directory
+```
+
+已完成：
+
+- `ahtml` bin 入口和 installed package smoke verification。
+- `schema`、`compose`、`validate`、`build`、`preview`、`inspect`、`status`、`doctor`、`config`。
+- ComponentSchema + explicit overlay 取代旧 base catalog。
+- parse / validate / sanitize 仍作为 renderer 前安全边界。
+- package verification 覆盖 installed CLI closed loop。
+- `ahtml init` 写入有限的 `agent-html.project.json`。
+- 默认 `ahtml init` 通过用户本地 shadcn CLI 创建或连接 `vite-shadcn` 底座，并写入 ahtml 集成文件。
+- `ahtml init --scaffold` 保留为高级 fallback，用于不调用 shadcn CLI 时写入最小本地骨架。
+- 推荐首次使用路径收敛为 `ahtml init`，再运行 `ahtml status` / `ahtml doctor`。
+- 用户可以选择 shadcn template / preset。
+- `ahtml init --apply` 通过 shadcn CLI 执行 template / preset 初始化和组件安装命令。
+- `doctor` / setup config 会报告缺失的 user-local shadcn components。
+- core package 与 Vite、React、shadcn/ui、Tailwind 的依赖分离。
+- 单包内代码边界拆成 `src/config`、`src/engine`、`src/cli`。
+- renderer adapter 作为用户项目侧 template / generated code。
+
+已清理的技术分叉：
+
+- root Vite app 不再是仓库产品本体。
+- package-local Vite builder 已从 `build` 主路径移除。
+- package-local renderer 和 root `src/components/ui/` 不再进入 package runtime。
+- Vite / shadcn / React / Tailwind 留在用户项目 scaffold 和 adapter 边界。
+
 ## Scope
 
 MVP includes:
 
 - Keep repository shape single-package.
+- Keep internal package modules as `config`, `engine`, and `cli`.
 - Keep `ahtml` as the only public bin.
 - Preserve existing `schema`, `compose`, `build`, and `config` behavior.
 - Add `validate` as standalone document validation.
@@ -72,7 +116,7 @@ MVP excludes:
 `ahtml doctor`:
 
 - Checks the installed package runtime.
-- Checks Node availability and package-local build dependencies.
+- Checks Node availability and user-local integration readiness.
 - Checks config readability and finite config values.
 - Checks default output directory writability.
 - Separates environment, config, and artifact problems in the output.
@@ -174,3 +218,62 @@ And:
 - Invalid documents fail through `validate` and `build`.
 - Packaged CLI covers the new commands in `npm run verify:pack`.
 - Existing tests and build still pass.
+
+## Next Roadmap: User-local shadcn Integration
+
+下一阶段已经把 CLI closed loop 从 package-local builder 演进为用户本地 shadcn 项目集成：
+
+```txt
+user installs ahtml
+        ↓
+ahtml init
+        ↓
+choose shadcn template / preset
+        ↓
+delegate shadcn setup and write user-local ahtml renderer adapter
+        ↓
+ahtml doctor verifies setup
+        ↓
+ahtml build / preview uses the user project integration
+        ↓
+static artifact
+```
+
+### Phase A: Init And Project Detection
+
+Build:
+
+- Add `ahtml init` as the setup command.
+- Detect whether the current directory already has `components.json`, Vite config, package manager, Tailwind CSS file, and shadcn aliases.
+- If no supported project exists, delegate default `vite-shadcn` project setup to shadcn CLI.
+- Keep `ahtml init --scaffold` only as an advanced fallback for a minimal local scaffold.
+- Store only finite ahtml project config; do not store Tailwind classes, arbitrary CSS, or shadcn props as agent-facing config.
+
+### Phase B: shadcn Template / Preset Selection
+
+Build:
+
+- Let the user choose a supported shadcn template / preset during `ahtml init`.
+- Apply the selected template / preset through shadcn CLI.
+- Install required shadcn components for the current ComponentSchema.
+- Add a check that reports missing user-local shadcn components without silently falling back to package-local UI.
+
+### Phase C: Renderer Adapter Boundary
+
+Build:
+
+- Define the renderer adapter input as `SanitizedAgentHtml`.
+- Generate or install a user-local React shadcn renderer adapter.
+- Keep ComponentSchema and renderer registration synchronized.
+- Keep package-local renderer out of the package runtime path.
+
+### Phase D: Core Extraction
+
+Build:
+
+- Separate core parse / validate / sanitize, ComponentSchema, RenderConfig and diagnostics from Vite/React/shadcn/Tailwind dependencies.
+- Keep CLI orchestration in its own layer.
+- Move Vite/shadcn requirements to template / adapter packaging.
+- Update package verification to prove core commands do not require package-local Vite when using a user-local adapter.
+
+Stop if this requires exposing Tailwind class, `className`, full shadcn props, arbitrary CSS, script, event handlers, or raw HTML passthrough to agent-facing input.

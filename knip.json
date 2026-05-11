@@ -1,14 +1,5 @@
 {
   "$schema": "https://unpkg.com/knip@latest/schema.json",
-  "entry": ["index.html", "src/agent-html/schema-overlays.ts"],
-  "project": ["src/**/*.{ts,tsx}", "*.{ts,js}", "scripts/**/*.mjs"],
-  "ignore": ["src/components/ui/alert.tsx", "src/components/ui/button.tsx"],
-  "ignoreIssues": {
-    "src/components/ui/**": ["exports"]
-  },
-  "ignoreDependencies": [
-    "@fontsource-variable/geist",
-    "shadcn",
-    "tw-animate-css"
-  ]
+  "entry": ["src/engine/core.ts", "src/engine/schema-overlays.ts"],
+  "project": ["src/**/*.ts", "*.{ts,js}", "scripts/**/*.mjs"]
 }

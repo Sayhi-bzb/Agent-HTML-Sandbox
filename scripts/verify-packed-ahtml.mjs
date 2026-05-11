@@ -51,8 +51,9 @@ try {
     consumerDir,
     "node_modules",
     "agent-html-sandbox",
-    "scripts",
-    "agent-html-cli-commands.mjs",
+    "src",
+    "cli",
+    "commands.mjs",
   )
   const { commandMetadata } = await import(
     pathToFileURL(commandMetadataPath).href
@@ -71,6 +72,31 @@ try {
     ahtmlCommand,
     ["schema", "--format", "json"],
     '"components"',
+  )
+  await expectStdout(
+    ahtmlCommand,
+    ["init", "--dry-run", "--components", "card,badge"],
+    '"integration": "vite-shadcn"',
+  )
+  await expectStdout(
+    ahtmlCommand,
+    ["init", "--dry-run", "--components", "card,badge"],
+    '"missingComponents"',
+  )
+  await expectStdout(ahtmlCommand, ["init", "--dry-run"], '"wouldApply": true')
+  const scaffoldDir = path.join(tempRoot, "scaffold")
+  await mkdir(scaffoldDir, { recursive: true })
+  await expectStdout(
+    ahtmlCommand,
+    ["init", "--scaffold", "--components", "card"],
+    "Next: ahtml init --apply",
+    scaffoldDir,
+  )
+  await expectFile(path.join(scaffoldDir, "components.json"), "@/components/ui")
+  await expectFile(path.join(scaffoldDir, "src", "lib", "utils.ts"), "twMerge")
+  await expectFile(
+    path.join(scaffoldDir, "src", "agent-html", "renderer-adapter.tsx"),
+    "SanitizedAgentHtml",
   )
 
   const inputPath = path.join(consumerDir, "composition.json")
@@ -115,6 +141,14 @@ try {
   )
   await expectFile(path.join(consumerDir, "stdin.agent.html"), "Packed Stdin")
 
+  await setupFakeUserLocalVite(consumerDir, "Built from an installed package.")
+  await runAhtml(["init", "--components", "card"])
+  await expectStdout(ahtmlCommand, ["status"], "ready: yes")
+  await expectStdout(
+    ahtmlCommand,
+    ["status"],
+    "Next: ahtml preview --input artifact.agent.html",
+  )
   await runAhtml(["build", "--input", documentPath, "--out", outputDir])
   await expectFile(
     path.join(outputDir, "index.html"),
@@ -137,6 +171,8 @@ try {
   )
   await expectStdout(ahtmlCommand, ["inspect", "--dir", outputDir], "card: 1")
   await expectStdout(ahtmlCommand, ["doctor"], "ok environment:node")
+  await expectStdout(ahtmlCommand, ["doctor"], "ok config:project-config")
+  await expectStdout(ahtmlCommand, ["doctor"], "ok setup:shadcn-components")
   await expectPreview(documentPath, path.join(consumerDir, "dist", "preview"))
 
   await expectStdout(ahtmlCommand, ["config", "get"], '"density"')
@@ -218,6 +254,10 @@ function assertPackBoundary(files) {
     "blueprint/",
     "spec/",
     "tests/",
+    "src/components/ui/",
+    "src/agent-html/renderer/",
+    "src/engine/examples/",
+    "scripts/agent-html-cli",
     ".gitnexus/",
     "dist/",
     "build/",
@@ -227,22 +267,19 @@ function assertPackBoundary(files) {
   const forbiddenSuffixes = [".test.ts", ".test.tsx"]
   const requiredFiles = [
     "bin/ahtml.mjs",
-    "scripts/agent-html-cli-contract.mjs",
-    "scripts/agent-html-cli-commands.mjs",
-    "scripts/agent-html-cli.mjs",
-    "scripts/agent-html-cli-schema.mjs",
-    "scripts/agent-html-cli-validate.mjs",
-    "scripts/inline-dist-index.mjs",
-    "src/App.tsx",
-    "src/main.tsx",
-    "src/index.css",
-    "src/agent-html/component-schema.ts",
-    "src/agent-html/generated/component-schema.generated.ts",
-    "src/agent-html/render-config.ts",
-    "src/agent-html/parse/parse-agent-html.ts",
-    "src/agent-html/renderer/AgentHtmlRenderer.tsx",
-    "index.html",
-    "vite.config.ts",
+    "src/config/defaults.mjs",
+    "src/config/project.mjs",
+    "src/cli/commands.mjs",
+    "src/cli/index.mjs",
+    "src/cli/module-loader.mjs",
+    "src/cli/scaffold.mjs",
+    "src/cli/schema.mjs",
+    "src/cli/validate.mjs",
+    "src/engine/component-schema.ts",
+    "src/engine/core.ts",
+    "src/engine/generated/component-schema.generated.ts",
+    "src/engine/render-config.ts",
+    "src/engine/parse/parse-agent-html.ts",
     "package.json",
     "README.md",
   ]
@@ -268,9 +305,41 @@ function assertPackBoundary(files) {
   }
 }
 
-async function expectStdout(command, args, expected) {
+async function setupFakeUserLocalVite(directory, html) {
+  const viteDir = path.join(directory, "node_modules", "vite")
+  const componentDir = path.join(directory, "src", "components", "ui")
+
+  await mkdir(path.join(viteDir, "bin"), { recursive: true })
+  await mkdir(componentDir, { recursive: true })
+  await writeFile(path.join(directory, "vite.config.ts"), "export default {}\n")
+  await writeFile(path.join(componentDir, "card.tsx"), "export {}\n")
+  await writeFile(
+    path.join(directory, "components.json"),
+    JSON.stringify({
+      aliases: { ui: "@/components/ui" },
+      tailwind: { css: "src/index.css" },
+    }),
+  )
+  await writeFile(
+    path.join(viteDir, "package.json"),
+    JSON.stringify({ bin: { vite: "bin/vite.mjs" } }),
+  )
+  await writeFile(
+    path.join(viteDir, "bin", "vite.mjs"),
+    [
+      'import { mkdir, writeFile } from "node:fs/promises"',
+      'import path from "node:path"',
+      'const outDir = process.argv[process.argv.indexOf("--outDir") + 1]',
+      "await mkdir(outDir, { recursive: true })",
+      `await writeFile(path.join(outDir, "index.html"), ${JSON.stringify(html)})`,
+      "",
+    ].join("\n"),
+  )
+}
+
+async function expectStdout(command, args, expected, cwd = consumerDir) {
   const result = await execFileAsync(command, args, {
-    cwd: consumerDir,
+    cwd,
     ...windowsShellOptions,
   })
 

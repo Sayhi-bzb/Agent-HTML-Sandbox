@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//d D:/codes/tests/**)",
+      "Bash(node bin/ahtml.mjs status)",
+      "Bash(cd /d \"D:\\\\codes\\\\tests\\\\ahtml\")",
+      "Bash(node *)"
+    ]
+  }
+}

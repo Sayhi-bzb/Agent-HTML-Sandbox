@@ -1,0 +1,89 @@
+---
+title: Best Practice
+description: Follow the writing rules agents should use by default.
+---
+
+# Best Practice
+
+## Initialize local setup first [#initialize-local-setup-first]
+
+Start from the user-local integration:
+
+```bash
+ahtml init
+ahtml status
+ahtml doctor
+```
+
+Vite, React, Tailwind, and shadcn/ui belong to the user's local project. The `ahtml` package stays focused on config, engine, and CLI.
+
+## Read schema first [#read-schema-first]
+
+Start every generation task with `ahtml schema --format prompt`. The schema is the only public contract for components and config.
+
+## Use semantic components [#use-semantic-components]
+
+Choose components by meaning:
+
+- `card` for grouped content.
+- `alert` for important notes.
+- `table` for structured evidence.
+- `list` for ordered or unordered points.
+- `choice-group` and `feedback-box` when the artifact needs controlled user input.
+
+## Keep structure simple [#keep-structure-simple]
+
+Prefer a clear hierarchy:
+
+```txt
+page
+  card
+    table / list / alert / text
+```
+
+Use deeper structures only when the content genuinely needs sections, tabs, or expandable groups.
+
+## Do not write implementation details [#do-not-write-implementation-details]
+
+Never use these in agent-facing documents:
+
+```txt
+class
+className
+style
+css
+Tailwind classes
+script
+onclick
+event handlers
+Radix props
+shadcn props
+external URLs
+raw HTML passthrough
+unknown HTML attributes
+```
+
+agent-html is not a raw HTML escape hatch.
+
+## Repair validation errors [#repair-validation-errors]
+
+If validation fails, fix the document instead of bypassing the error.
+
+- Unknown component: use a registered standard component.
+- Unknown attr: remove the prop or use the schema name.
+- Invalid child: move the component into an allowed parent.
+- Invalid render config: use only listed enum values.
+- Missing root: wrap content in `<page title="...">`.
+
+## Debug setup before editing artifacts [#debug-setup-before-editing-artifacts]
+
+Use setup checks before changing documents:
+
+```bash
+ahtml status
+ahtml doctor
+```
+
+- If the project is not initialized, run `ahtml init`.
+- If shadcn components are missing, run `ahtml init --apply`.
+- If validation fails, repair the agent-html document instead of changing the local renderer.

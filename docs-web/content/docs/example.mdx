@@ -1,0 +1,172 @@
+---
+title: Example
+description: Copy small artifact patterns and adapt their content.
+---
+
+# Example
+
+Run setup once before using these examples:
+
+```bash
+ahtml init
+ahtml status
+ahtml doctor
+```
+
+## Composition input [#composition-input]
+
+Use structured JSON when an agent or app wants to generate the standard `.agent.html` document through `ahtml compose`.
+
+```json title="composition.json"
+{
+  "meta": {
+    "theme": "neutral",
+    "density": "comfortable",
+    "tone": "report",
+    "width": "article"
+  },
+  "document": {
+    "name": "page",
+    "props": {
+      "title": "Minimal Artifact"
+    },
+    "children": [
+      {
+        "name": "card",
+        "props": {
+          "title": "Overview"
+        },
+        "children": ["A compact artifact with one card."]
+      }
+    ]
+  }
+}
+```
+
+```bash
+ahtml compose --input composition.json --out artifact.agent.html
+ahtml validate --input artifact.agent.html
+ahtml build --input artifact.agent.html --out dist/html
+ahtml preview --input artifact.agent.html --out dist/html
+```
+
+## Minimal artifact [#minimal-artifact]
+
+```html title="artifact.agent.html"
+<meta-agent
+  theme="neutral"
+  density="comfortable"
+  tone="report"
+  width="article"
+/>
+
+<page title="Minimal Artifact">
+  <card title="Overview"> A compact artifact with one card. </card>
+</page>
+```
+
+```bash
+ahtml validate --input artifact.agent.html
+ahtml build --input artifact.agent.html --out dist/html
+```
+
+## Report artifact [#report-artifact]
+
+```html title="report.agent.html"
+<meta-agent
+  theme="neutral"
+  density="comfortable"
+  tone="report"
+  width="article"
+/>
+
+<page title="Quarterly Review">
+  <card title="Executive Summary">
+    Revenue improved while support volume remained stable.
+  </card>
+
+  <card title="Key Evidence">
+    <list variant="unordered">
+      <item>Activation increased in the first two weeks.</item>
+      <item>Churn risk is concentrated in unmanaged accounts.</item>
+      <item>Support tickets stayed within normal range.</item>
+    </list>
+  </card>
+</page>
+```
+
+```bash
+ahtml validate --input report.agent.html
+ahtml build --input report.agent.html --out dist/html
+```
+
+## Decision artifact [#decision-artifact]
+
+```html title="decision.agent.html"
+<meta-agent
+  theme="neutral"
+  density="compact"
+  tone="decision"
+  width="dashboard"
+/>
+
+<page title="Vendor Decision">
+  <alert title="Recommendation" tone="neutral">
+    Choose Vendor A for the initial rollout.
+  </alert>
+
+  <table>
+    <row kind="header">
+      <cell>Option</cell>
+      <cell>Strength</cell>
+      <cell>Risk</cell>
+    </row>
+    <row kind="body">
+      <cell>Vendor A</cell>
+      <cell>Fastest integration</cell>
+      <cell>Higher contract cost</cell>
+    </row>
+    <row kind="body">
+      <cell>Vendor B</cell>
+      <cell>Lower price</cell>
+      <cell>Longer setup time</cell>
+    </row>
+  </table>
+</page>
+```
+
+```bash
+ahtml validate --input decision.agent.html
+ahtml build --input decision.agent.html --out dist/html
+```
+
+## Feedback artifact [#feedback-artifact]
+
+```html title="feedback.agent.html"
+<meta-agent
+  theme="neutral"
+  density="comfortable"
+  tone="dashboard"
+  width="wide"
+/>
+
+<page title="Review Workspace">
+  <choice-group title="Decision" mode="single" default="approve">
+    <choice value="approve" label="Approve"> Ready to proceed. </choice>
+    <choice value="revise" label="Revise"> Needs another pass. </choice>
+  </choice-group>
+
+  <feedback-box
+    title="Reviewer Notes"
+    placeholder="Add notes for the agent..."
+    copy-label="Copy notes"
+  >
+    Summarize what should change before the next iteration.
+  </feedback-box>
+</page>
+```
+
+```bash
+ahtml validate --input feedback.agent.html
+ahtml build --input feedback.agent.html --out dist/html
+```

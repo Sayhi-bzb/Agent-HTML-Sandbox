@@ -1,13 +1,13 @@
 import { writeFile } from "node:fs/promises"
 import path from "node:path"
 
-import { formatPrompt, getCliSchemaOutput } from "./agent-html-cli-schema.mjs"
+import { formatPrompt, getCliSchemaOutput } from "../src/cli/schema.mjs"
 
 const root = process.cwd()
 const outputPath = path.join(
   root,
   "src",
-  "agent-html",
+  "engine",
   "component-schema-prompt.txt",
 )
 const schema = await getCliSchemaOutput(root)

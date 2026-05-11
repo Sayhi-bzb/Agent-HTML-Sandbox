@@ -1,8 +1,8 @@
 # agent-html
 
-agent-html is a local CLI MVP for producing sanitized static artifacts from a constrained agent-facing document format.
+agent-html is a local CLI engine for producing sanitized static artifacts from a constrained agent-facing document format.
 
-The project uses shadcn/ui as the implementation base, but agents do not write shadcn props, Tailwind classes, styles, scripts, event handlers, or raw HTML. They work through a standardized schema, compose a document, and build a static artifact.
+The package owns three internal modules: `config`, `engine`, and `cli`. Vite, React, shadcn/ui, Tailwind, theme files, and UI components live in the user's local project generated or connected through `ahtml init`.
 
 Architecture notes live in `blueprint/`. Implementation scope and checkpoints live in `spec/`.
 
@@ -15,10 +15,13 @@ npm install
 npm link
 ```
 
-Inspect the agent-facing schema:
+Initialize a user-local Vite + shadcn project, then inspect the agent-facing schema:
 
 ```bash
 ahtml --help
+ahtml init
+ahtml status
+ahtml doctor
 ahtml schema --format prompt
 ```
 
@@ -68,6 +71,7 @@ Validate, inspect, and preview without reading project source:
 ahtml validate --input artifact.agent.html
 ahtml inspect --input artifact.agent.html
 ahtml inspect --dir dist/html
+ahtml status
 ahtml doctor
 ahtml preview --input artifact.agent.html --out dist/html --port 4173
 ```
@@ -82,7 +86,7 @@ This project is not published to a public registry yet. The current package bar 
 npm run verify:pack
 ```
 
-That command runs `npm pack --dry-run`, builds a local tarball, installs it into a temporary consumer project, and verifies installed `ahtml schema`, `compose`, `build`, and `config`.
+That command runs `npm pack --dry-run`, builds a local tarball, installs it into a temporary consumer project, and verifies installed `ahtml init`, `schema`, `compose`, `build`, `doctor`, and `config`.
 
 To inspect the package file list directly:
 
@@ -95,11 +99,13 @@ Public `npm publish` is a later step after the local tarball workflow stays stab
 ## CLI Commands
 
 ```bash
+ahtml init [--template <name>] [--preset <name-or-code>] [--components <list>] [--out <path>] [--scaffold] [--apply] [--dry-run]
 ahtml schema [--format prompt|json] [--out <path>]
 ahtml compose --input <path>|--stdin [--out <path>]
 ahtml validate --input <path>
 ahtml build --input <path> [--out <dir>]
 ahtml inspect --input <path>|--dir <dir> [--format summary|json]
+ahtml status
 ahtml doctor
 ahtml preview --input <path> [--out <dir>] [--port <port>]
 ahtml config get
@@ -116,17 +122,23 @@ Local fallback:
 Defaults:
 
 - Config file: `agent-html.config.json`
+- Project integration file: `agent-html.project.json`
 - Composed document: `artifact.agent.html`
 - Build output: `dist/html`
 
 ## Workflow Notes
 
+- Package modules are intentionally narrow: `src/engine` owns the pure agent-html parser/schema/sanitizer, `src/config` owns finite defaults and user-project config, and `src/cli` owns command orchestration and local IO.
 - `schema` outputs the dehydrated agent-facing contract.
+- `init` is the recommended first-run path: by default it runs user-local shadcn setup, writes finite ahtml project config, and writes the ahtml renderer adapter files.
+- `init --apply` reruns shadcn setup in an existing project; `init --scaffold` is an advanced local fallback for writing a minimal Vite + shadcn scaffold without delegating to shadcn.
+- `status` is a read-only setup summary with a single next command.
 - `compose` writes a standard document. `.agent.html` is an inspectable intermediate, not a raw HTML escape hatch.
 - `validate` checks a standard document without writing an artifact.
-- `build` validates and sanitizes before rendering. Invalid documents fail before artifact generation.
+- `build` validates and sanitizes before handing `SanitizedAgentHtml` to the user-local Vite integration. Invalid documents fail before artifact generation.
 - `inspect` reports effective config and component usage from a document or built artifact metadata.
-- `doctor` runs local environment, config, and output-path checks.
+- `doctor` runs local environment, config, user-local shadcn component, and output-path checks.
 - `preview` builds the same static artifact as `build` and serves it over local HTTP.
 - `config` accepts only finite presentation/output values.
+- The package does not ship a root Vite app, package-local renderer, or package-local shadcn UI kit. Vite + shadcn are user-local project concerns.
 - Agent-facing input cannot use Tailwind classes, `className`, `style`, CSS, scripts, event handlers, shadcn props, Radix props, arbitrary HTML attributes, or external resource passthrough.

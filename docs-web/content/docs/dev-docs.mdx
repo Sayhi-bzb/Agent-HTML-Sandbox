@@ -1,0 +1,73 @@
+---
+title: Dev Docs
+description: Verify the package boundary and deploy this docs site.
+---
+
+# Dev Docs
+
+## Repository development [#repository-development]
+
+```bash
+npm install
+npm link
+ahtml init
+ahtml status
+ahtml doctor
+ahtml schema --format prompt
+```
+
+Repository fallback:
+
+```bash
+npm run agent -- schema --format prompt
+```
+
+## Verify package boundary [#verify-package-boundary]
+
+```bash
+npm pack --dry-run
+```
+
+The package should include only the config, engine, CLI, bin entry, TypeScript configs, and README. It should not include a root Vite app, package-local renderer, root shadcn UI files, docs web files, examples, specs, blueprints, or tests.
+
+## Verify installed CLI behavior [#verify-installed-cli-behavior]
+
+```bash
+npm run verify:pack
+```
+
+This packs the project, installs it into a temporary consumer project, and verifies installed `ahtml` commands.
+
+## Runtime architecture [#runtime-architecture]
+
+```txt
+installed ahtml package
+  -> config + engine + CLI
+  -> user-local Vite + shadcn integration
+  -> static artifact directory
+```
+
+`ahtml build` must use the user-local integration. Do not restore a package-local Vite builder, package-local renderer, or package-local shadcn UI kit.
+
+## Build the docs web [#build-the-docs-web]
+
+```bash
+npm run docs:web:build
+```
+
+Docs web output:
+
+```txt
+docs-web/out
+```
+
+## Deploy docs to Cloudflare Pages [#deploy-docs-to-cloudflare-pages]
+
+Use these Cloudflare Pages settings:
+
+```txt
+Build command: npm run docs:web:build
+Output directory: docs-web/out
+```
+
+The docs web is deployed separately from the `ahtml` package.

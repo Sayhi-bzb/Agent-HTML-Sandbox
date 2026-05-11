@@ -1,10 +1,10 @@
 # CLI to Artifact Contract
 
-本文规定 CLI 到 artifact 的边界。
+本文规定 CLI 到 agent-html、renderer adapter 和 artifact 的边界。
 
 ## Provider
 
-CLI 提供 `schema`、`compose`、`build`、`config`。
+CLI 提供 `schema`、`compose`、`validate`、`build`、`preview`、`inspect`、`doctor`、`config`。
 
 ## Consumer
 
@@ -14,12 +14,14 @@ agent、developer 和 artifact delivery flow 消费 CLI。
 
 - `schema` 只输出 agent-facing contract。
 - `compose` 只产出标准 document。
+- `validate` 必须经过 parse / validate / sanitize。
 - `build` 必须经过 parse / validate / sanitize。
-- `build` 必须复用 renderer 和 portable output。
+- `build` 必须复用 renderer adapter 和 portable output。
+- `preview` 必须复用 build artifact 或同一 renderer adapter。
 - `config` 只管理有限 presentation / output 配置。
 - `.agent.html` 只是可检查中间表示。
 - stdin、file 和 generated document 必须进入同一 sanitize path。
-- CLI 不改变 ComponentSchema、RenderConfig、renderer 和 artifact 的权威边界。
+- CLI 不改变 ComponentSchema、RenderConfig、renderer adapter 和 artifact 的权威边界。
 
 ## Forbidden
 

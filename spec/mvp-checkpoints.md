@@ -2,6 +2,23 @@
 
 本文只记录 CLI 闭环阶段的重点验收节点。详细施工顺序见 `spec/mvp-roadmap.md`。
 
+## Current Code Alignment
+
+- [x] Local branch is synced to `origin/main`.
+- [x] `ahtml` bin entry exists.
+- [x] CLI closed loop commands exist: `schema`, `compose`, `validate`, `build`, `preview`, `inspect`, `status`, `doctor`, `config`.
+- [x] ComponentSchema + overlay replaced the old base catalog path.
+- [x] parse / validate / sanitize remains the renderer safety gate.
+- [x] package verification covers installed CLI behavior.
+- [x] `ahtml init` exists.
+- [x] user can choose a shadcn template / preset during setup.
+- [x] shadcn components can be installed into the user project through `ahtml init --apply`.
+- [x] core code is separated from Vite, React, shadcn/ui and Tailwind dependencies.
+- [x] package code is organized into single-package `src/config`, `src/engine`, and `src/cli` modules.
+- [x] renderer adapter is generated or installed as user-local template code.
+- [x] package-local Vite builder has been removed from the package runtime path.
+- [x] `ahtml status` reports setup readiness and a single next command.
+
 ## Phase 0: CLI Gap Audit
 
 - [x] Current `schema`, `compose`, `build`, and `config` paths are mapped.
@@ -30,7 +47,7 @@
 
 - [x] `ahtml doctor` checks package runtime paths.
 - [x] `ahtml doctor` checks Node availability.
-- [x] `ahtml doctor` checks package-local build dependencies.
+- [x] `ahtml doctor` does not require package-local build dependencies.
 - [x] `ahtml doctor` checks config readability and finite values.
 - [x] `ahtml doctor` checks default output directory writability.
 - [x] `doctor` separates environment, config, and artifact diagnostics.
@@ -74,3 +91,35 @@
 - [x] `.agent.html` and artifact HTML are not treated as arbitrary HTML escape hatches.
 - [x] CLI does not expose Tailwind class, CSS, `style`, `className`, event handler, Radix prop, full shadcn prop, script, or external resource passthrough.
 - [x] Remote deploy remains outside this MVP.
+
+## Next Roadmap Checkpoints
+
+### Init And Project Detection
+
+- [x] `ahtml init` detects existing shadcn project config.
+- [x] `ahtml init` can scaffold the default `vite-shadcn` target.
+- [x] `ahtml init` writes finite ahtml project config only.
+- [x] setup diagnostics distinguish missing project config from unsupported project shape.
+
+### shadcn Template / Preset Selection
+
+- [x] user can select a supported shadcn template / preset.
+- [x] selected template / preset can be applied through shadcn CLI with `ahtml init --apply`.
+- [x] required shadcn components can be installed in the user project with `ahtml init --apply`.
+- [x] missing components are reported by `doctor` or a setup check.
+
+### Renderer Adapter Boundary
+
+- [x] renderer adapter consumes only `SanitizedAgentHtml`.
+- [x] adapter code lives in the user project or generated template.
+- [x] ComponentSchema and renderer registration are checked for drift.
+- [x] package-local renderer has been removed from the package runtime path.
+
+### Core Extraction
+
+- [x] core parse / validate / sanitize has no Vite dependency.
+- [x] core has no React dependency.
+- [x] core has no shadcn/ui dependency.
+- [x] core has no Tailwind dependency.
+- [x] engine stays pure and config / CLI responsibilities are separated.
+- [x] CLI can build through user-local integration without package-local Vite.
