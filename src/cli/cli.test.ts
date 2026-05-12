@@ -81,7 +81,7 @@ describe("agent-html CLI", () => {
 
     for (const result of [defaultHelp, longHelp, shortHelp, namedHelp]) {
       expect(result.stdout).toContain("Closed-loop workflow:")
-      expect(result.stdout).toContain("ahtml init")
+      expect(result.stdout).toContain("ahtml status")
       expect(result.stdout).toContain("ahtml build --input")
       expect(result.stdout).not.toContain("agent-html.project.json")
       expect(result.stdout).not.toContain("--scaffold")
@@ -141,7 +141,7 @@ describe("agent-html CLI", () => {
       tempDir,
     )
 
-    expect(initialized.stdout).toContain("Initialized managed runtime")
+    expect(initialized.stdout).toContain("Repaired managed runtime")
     await expectFile(
       path.join(runtimeHome, "config", "runtime.json"),
       "ahtml-managed-runtime",
@@ -151,7 +151,7 @@ describe("agent-html CLI", () => {
     await rm(tempDir, { force: true, recursive: true })
   })
 
-  it("reports managed runtime status without creating project scaffold files", async () => {
+  it("bootstraps managed runtime from status without creating project scaffold files", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
     const runtimeHome = path.join(tempDir, ".ahtml")
 
@@ -161,24 +161,18 @@ describe("agent-html CLI", () => {
       tempDir,
     )
 
-    expect(missingStatus.stdout).toContain("ready: no")
-    expect(missingStatus.stdout).toContain("runtime manifest: missing")
-    expect(missingStatus.stdout).toContain("Next: ahtml init")
+    expect(missingStatus.stdout).toContain("ready: yes")
+    expect(missingStatus.stdout).toContain("runtime manifest: ok")
+    expect(missingStatus.stdout).toContain(
+      "Next: ahtml build --input artifact.agent.html --out dist/html",
+    )
+    await expectFile(
+      path.join(runtimeHome, "config", "runtime.json"),
+      "ahtml-managed-runtime",
+    )
     await expectPathMissing(path.join(tempDir, "src"))
     await expectPathMissing(path.join(tempDir, "dist"))
     await expectPathMissing(path.join(tempDir, "dist", "html"))
-
-    await runCli(["init"], { AHTML_HOME: runtimeHome }, tempDir)
-    const readyStatus = await runCli(
-      ["status"],
-      { AHTML_HOME: runtimeHome },
-      tempDir,
-    )
-
-    expect(readyStatus.stdout).toContain("ready: yes")
-    expect(readyStatus.stdout).toContain(
-      "Next: ahtml build --input artifact.agent.html --out dist/html",
-    )
     await rm(tempDir, { force: true, recursive: true })
   })
 
@@ -307,12 +301,6 @@ describe("agent-html CLI", () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
     const runtimeHome = path.join(tempDir, ".ahtml")
 
-    await expectCliFailure(
-      runCli(["doctor"], { AHTML_HOME: runtimeHome }, tempDir),
-      "fail runtime:root",
-    )
-
-    await runCli(["init"], { AHTML_HOME: runtimeHome }, tempDir)
     const { stdout } = await runCli(
       ["doctor"],
       { AHTML_HOME: runtimeHome },
@@ -321,7 +309,10 @@ describe("agent-html CLI", () => {
 
     expect(stdout).toContain("ok environment:node")
     expect(stdout).toContain("ok runtime:root")
-    expect(stdout).toContain("ok runtime:manifest static-html")
+    expect(stdout).toContain("ok runtime:manifest shadcn-runtime")
+    expect(stdout).toContain("ok runtime:renderer-adapter")
+    expect(stdout).toContain("ok runtime:shadcn-card")
+    expect(stdout).toContain("ok runtime:vite-config")
     expect(stdout).toContain("ok config:config")
     expect(stdout).toContain("ok artifact:output-dir")
     expect(stdout).not.toContain("project-config")

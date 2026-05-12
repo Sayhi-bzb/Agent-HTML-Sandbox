@@ -69,8 +69,16 @@ try {
   }
   await expectStdout(["schema", "--format", "json"], '"components"')
 
-  await expectStdout(["status"], "ready: no")
-  await expectStdout(["status"], "Next: ahtml init")
+  await expectStdout(["status"], "ready: yes")
+  await expectStdout(["status"], "runtime manifest: ok")
+  await expectStdout(
+    ["status"],
+    "Next: ahtml build --input artifact.agent.html --out dist/html",
+  )
+  await expectFile(
+    path.join(runtimeHome, "config", "runtime.json"),
+    "ahtml-managed-runtime",
+  )
   await expectStdout(["init", "--dry-run"], '"kind": "ahtml-runtime-plan"')
   await runAhtml(["init"])
   await expectFile(

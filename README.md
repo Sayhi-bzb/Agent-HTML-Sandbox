@@ -10,7 +10,6 @@ Install the published CLI globally:
 
 ```bash
 npm install -g @agent-html/ahtml
-ahtml init
 ahtml status
 ahtml doctor
 ahtml schema --format prompt
@@ -99,7 +98,6 @@ ahtml compose --input composition.json --out artifact.agent.html
 ## CLI Commands
 
 ```bash
-ahtml init [--dry-run]
 ahtml schema [--format prompt|json] [--out <path>]
 ahtml compose --input <path>|--stdin [--out <path>]
 ahtml validate --input <path>
@@ -116,6 +114,7 @@ Defaults:
 
 - Config file: `agent-html.config.json`
 - Runtime home: `~/.ahtml` or `%USERPROFILE%\.ahtml`
+- Runtime renderer: internal shadcn-backed React/Vite renderer
 - Runtime override: `AHTML_HOME`
 - Composed document: `artifact.agent.html`
 - Build output: `dist/html`
@@ -124,8 +123,9 @@ Defaults:
 
 ## Rules
 
-- Run `ahtml init` once to initialize or repair the user-level managed runtime under `~/.ahtml` or `%USERPROFILE%\.ahtml`.
-- `ahtml build` also bootstraps the managed runtime when needed.
+- `ahtml status`, `ahtml doctor`, `ahtml build`, and `ahtml preview` bootstrap or repair the managed runtime automatically.
+- Use `ahtml init --dry-run` only when you need to inspect runtime repair without writing files.
+- shadcn/ui is an internal renderer implementation detail; do not initialize shadcn in the current project for normal `ahtml` use.
 - Treat `ahtml schema --format prompt` as the source of truth.
 - Use only registered agent-html components, props, children, and render config values.
 - Do not write Tailwind classes, `className`, `style`, CSS, scripts, event handlers, shadcn props, Radix props, arbitrary HTML attributes, external resource passthrough, or raw HTML.

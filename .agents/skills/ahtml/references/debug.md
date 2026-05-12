@@ -19,12 +19,13 @@ ahtml doctor
 
 - Node and package runtime
 - managed runtime root and manifest
+- runtime React renderer adapter, shadcn card component, and Vite config
 - `agent-html.config.json`
 - output directory writability
 
 ## Common Fixes
 
-Runtime not initialized:
+Force runtime repair:
 
 ```bash
 ahtml init
@@ -71,4 +72,4 @@ Preview fails:
 
 ## Architecture Boundaries
 
-Do not fix failures by restoring current-directory project integration, `agent-html.project.json`, `init --scaffold`, a package-local Vite app, or root shadcn UI files. The package should stay engine + config + CLI plus a user-level managed runtime under `~/.ahtml` or `%USERPROFILE%\.ahtml`.
+Do not fix failures by restoring current-directory project integration, `agent-html.project.json`, `init --scaffold`, a package-local Vite app, or root shadcn UI files. The package should stay engine + config + CLI plus a shadcn-backed user-level managed runtime under `~/.ahtml` or `%USERPROFILE%\.ahtml`.

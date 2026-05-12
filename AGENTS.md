@@ -86,7 +86,9 @@ Architecture principles live under `blueprint/`; start at `blueprint/index.md`. 
 - Keep commits scoped to one concern.
 - Do not include generated output unless it is required for the change.
 - Check `git status --short` before committing so unrelated worktree changes are not swept in.
-- For package implementation changes, run `npm run check:ready`.
-- For docs changes, run `npm run check:docs`.
+- For ordinary code or docs edits, run `npm run check:commit`.
+- For package-boundary, runtime, CLI build, release, or dependency changes, run `npm run check:ready`.
+- For docs-web site changes, run `npm run check:docs`.
+- Before release or after broad cross-layer changes, run `npm run check:all`.
 - For package-boundary changes, verify `package.json.files` and `scripts/verify-packed-ahtml.mjs` still agree.
 - Before committing, run GitNexus `detect_changes` and confirm affected symbols and flows are expected.

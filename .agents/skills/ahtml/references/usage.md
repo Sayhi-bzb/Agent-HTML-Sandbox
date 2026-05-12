@@ -9,7 +9,7 @@ user asks
   -> agent reads ahtml schema
   -> agent outputs structured composition or .agent.html
   -> ahtml validates and sanitizes
-  -> managed runtime renders
+  -> shadcn-backed managed runtime renders
   -> static artifact directory
 ```
 

@@ -2,9 +2,10 @@ import { cliDefaults, safetyHelpText } from "../config/defaults.mjs"
 
 export const commandMetadata = {
   init: {
-    summary: "Initialize or repair the managed ahtml runtime.",
+    hidden: true,
+    summary: "Repair the managed ahtml runtime.",
     purpose:
-      "Create the user-level managed runtime used to render artifacts without writing project scaffold files.",
+      "Repair the user-level managed runtime. Normal build, preview, status, and doctor commands bootstrap it automatically.",
     usage: "ahtml init [--dry-run]",
     options: [
       {
@@ -13,7 +14,7 @@ export const commandMetadata = {
         value: false,
       },
     ],
-    example: "ahtml init",
+    example: "ahtml init --dry-run",
   },
   schema: {
     summary: "Print the agent-facing component and config contract.",
@@ -146,7 +147,6 @@ Commands:
 ${formatCommandList()}
 
 Closed-loop workflow:
-  ahtml init
   ahtml status
   ahtml schema --format prompt
   ahtml compose --input composition.json --out ${cliDefaults.documentPath}
@@ -203,6 +203,7 @@ export function hasHelpFlag(commandArgs) {
 
 function formatCommandList() {
   return Object.entries(commandMetadata)
+    .filter(([, definition]) => !definition.hidden)
     .map(([name, definition]) => `  ${name.padEnd(10)} ${definition.summary}`)
     .join("\n")
 }

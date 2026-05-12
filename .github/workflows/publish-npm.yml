@@ -36,14 +36,14 @@ jobs:
           registry-url: https://registry.npmjs.org
 
       - name: Run package release checks
-        run: npm run check:ready
+        run: npm run release:check:ci
 
       - name: Determine release metadata
         id: release
         shell: bash
         run: |
-          version="$(node -p "require('./package.json').version")"
-          dist_tag="latest"
+          version="$(npm run --silent release:metadata version)"
+          dist_tag="$(npm run --silent release:metadata distTag)"
 
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "dist_tag=$dist_tag" >> "$GITHUB_OUTPUT"

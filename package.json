@@ -1,6 +1,6 @@
 {
   "name": "@agent-html/ahtml",
-  "version": "0.1.0-alpha.6",
+  "version": "0.1.0-alpha.7",
   "description": "Sanitized agent-html artifact CLI.",
   "license": "MIT",
   "type": "module",
@@ -29,6 +29,7 @@
   "scripts": {
     "build": "tsc -b",
     "lint": "eslint .",
+    "lint:cache": "eslint . --cache --cache-location .cache/eslint",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "format:check:source": "prettier package.json tsconfig.json tsconfig.node.json eslint.config.js vitest.config.ts knip.json README.md \".github/workflows/*.yml\" \".github/actions/**/*.yml\" \"src/**/*.{ts,mjs}\" \"!src/engine/generated/**\" \"scripts/**/*.mjs\" \"docs-web/content/**/*.mdx\" --check",
@@ -43,10 +44,18 @@
     "docs:web:check": "npm --prefix docs-web run types:check && npm run docs:web:lint && npm run docs:web:build",
     "agent": "node src/cli/index.mjs",
     "verify:pack": "node scripts/verify-packed-ahtml.mjs",
+    "version:alpha": "node scripts/version-next-alpha.mjs",
+    "dev:check": "npm run check:commit",
+    "release:alpha": "npm run version:alpha",
+    "release:metadata": "node scripts/release-metadata.mjs",
+    "release:check": "prettier package.json tsconfig.json tsconfig.node.json eslint.config.js vitest.config.ts knip.json README.md \".github/workflows/*.yml\" \".github/actions/**/*.yml\" \"src/**/*.{ts,mjs}\" \"!src/engine/generated/**\" \"scripts/**/*.mjs\" \"docs-web/content/**/*.mdx\" --check && eslint . && vitest run && knip && tsc -b && node scripts/verify-packed-ahtml.mjs && markdownlint-cli2 && npm --prefix docs-web run types:check && npm --prefix docs-web run lint && npm --prefix docs-web run build && npm publish --access public --tag alpha --dry-run",
+    "release:check:ci": "npm run check:ready",
+    "release:tag": "node scripts/release-tag.mjs",
     "schema:prompt": "node scripts/generate-component-schema-prompt.mjs",
     "gitnexus:analyze": "npx gitnexus analyze --skip-agents-md",
     "gitnexus:analyze:force": "npx gitnexus analyze --force --skip-agents-md",
     "check:quick": "npm run format:check:source && npm run lint && npm run test:run",
+    "check:commit": "npm run check:quick",
     "check:ready": "npm run check:quick && npm run knip && npm run build && npm run verify:pack && npm run docs:lint",
     "check:docs": "npm run docs:lint && npm run docs:web:check",
     "check:all": "npm run check:ready && npm run docs:web:check",
@@ -54,8 +63,13 @@
     "check": "npm run check:ready"
   },
   "dependencies": {
+    "clsx": "^2.1.1",
     "parse5": "^8.0.1",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "tailwind-merge": "^3.4.0",
     "typescript": "latest",
+    "vite": "^7.3.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -78,7 +92,7 @@
     "ahtml",
     "cli",
     "artifact",
-    "static-html"
+    "shadcn"
   ],
   "author": "",
   "bugs": {

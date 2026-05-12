@@ -7,32 +7,67 @@ description: Learn the agent-html workflow for writing safe artifacts.
 
 agent-html is a local CLI engine for agents that need to produce safe, inspectable static artifacts.
 
-The `ahtml` package owns the config, engine, CLI, and managed artifact runtime. Runtime files live under `~/.ahtml` or `%USERPROFILE%\.ahtml` by default, with `AHTML_HOME` as an override. Agents do not write arbitrary HTML, CSS, Tailwind classes, scripts, event handlers, React props, Radix props, or shadcn props.
+The `ahtml` package owns the config, engine, CLI, and shadcn-backed managed artifact runtime. Runtime files live under `~/.ahtml` or `%USERPROFILE%\.ahtml` by default, with `AHTML_HOME` as an override. Agents do not write arbitrary HTML, CSS, Tailwind classes, scripts, event handlers, React props, Radix props, or shadcn props.
 
 <Callout title="Primary rule">
-  Run `ahtml init` first. Then treat the schema as the source of truth for
-  component names, props, children, and render config values.
+  Install `ahtml`, then treat the schema as the source of truth for component
+  names, props, children, and render config values. Runtime setup is automatic.
 </Callout>
 
-## 1. Initialize the managed runtime [#initialize-the-managed-runtime]
+## 1. Install the CLI [#install-the-cli]
+
+`@agent-html/ahtml` is published once to npmjs.com. Pick your package manager:
+
+<CodeBlockTabs defaultValue="npm">
+  <CodeBlockTabsList>
+    <CodeBlockTabsTrigger value="npm">npm</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="pnpm">pnpm</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="yarn">yarn</CodeBlockTabsTrigger>
+    <CodeBlockTabsTrigger value="bun">bun</CodeBlockTabsTrigger>
+  </CodeBlockTabsList>
+
+  <CodeBlockTab value="npm">
 
 ```bash
 npm install -g @agent-html/ahtml
-ahtml init
 ahtml status
 ahtml doctor
 ```
 
-`@agent-html/ahtml` is published once to npmjs.com. Use the equivalent install command for your package manager:
+  </CodeBlockTab>
 
-| Package manager | Install                             | Run `ahtml` |
-| --------------- | ----------------------------------- | ----------- |
-| npm             | `npm install -g @agent-html/ahtml`  | `ahtml`     |
-| pnpm            | `pnpm add -g @agent-html/ahtml`     | `ahtml`     |
-| yarn            | `yarn global add @agent-html/ahtml` | `ahtml`     |
-| bun             | `bun add -g @agent-html/ahtml`      | `ahtml`     |
+  <CodeBlockTab value="pnpm">
 
-`ahtml init` initializes or repairs the managed runtime. It does not write `src/`, `components.json`, `vite.config.ts`, or `agent-html.project.json` into the current repository.
+```bash
+pnpm add -g @agent-html/ahtml
+ahtml status
+ahtml doctor
+```
+
+  </CodeBlockTab>
+
+  <CodeBlockTab value="yarn">
+
+```bash
+yarn global add @agent-html/ahtml
+ahtml status
+ahtml doctor
+```
+
+  </CodeBlockTab>
+
+  <CodeBlockTab value="bun">
+
+```bash
+bun add -g @agent-html/ahtml
+ahtml status
+ahtml doctor
+```
+
+  </CodeBlockTab>
+</CodeBlockTabs>
+
+`ahtml status`, `ahtml doctor`, `ahtml build`, and `ahtml preview` initialize or repair the managed runtime automatically, including the internal shadcn-backed renderer. They do not write `src/`, `components.json`, `vite.config.ts`, or `agent-html.project.json` into the current repository.
 
 `ahtml status` and `ahtml doctor` can show a non-blocking package update hint. Set `AHTML_NO_UPDATE_CHECK=1` to disable that check.
 

@@ -5,12 +5,11 @@ description: Follow the writing rules agents should use by default.
 
 # Best Practice
 
-## Initialize the managed runtime first [#initialize-the-managed-runtime-first]
+## Check the managed runtime [#check-the-managed-runtime]
 
-Start from the user-level managed runtime:
+Normal commands bootstrap the user-level managed runtime automatically. Use checks before debugging:
 
 ```bash
-ahtml init
 ahtml status
 ahtml doctor
 ```
@@ -84,6 +83,6 @@ ahtml status
 ahtml doctor
 ```
 
-- If the runtime is not initialized, run `ahtml init`.
+- If runtime checks fail, rerun `ahtml status` or `ahtml doctor`; they repair the managed runtime automatically.
 - If the package is outdated, follow the update command printed by `status` or `doctor`.
 - If validation fails, repair the agent-html document instead of bypassing validation or changing runtime behavior.

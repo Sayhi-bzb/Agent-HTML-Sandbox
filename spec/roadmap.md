@@ -103,13 +103,14 @@ AHTML_HOME
 工作项：
 
 - runtime bootstrap 生成 runtime manifest、runtime directories 和 generated document 文件。
-- `ahtml init` 默认初始化或修复 managed runtime。
+- `status` / `doctor` / `build` / `preview` 默认自动初始化或修复 managed runtime。
+- `ahtml init` 仅作为显式 repair / debug 命令保留，不属于默认 happy path。
 - `build` / `preview` 首次运行可以自动 bootstrap。
 - bootstrap 失败时输出明确修复命令。
 
 验收：
 
-- 空 repo 中运行 `ahtml init` 不生成 `src/`、`components.json`、`vite.config.ts`。
+- 空 repo 中运行 `ahtml status` 不生成 `src/`、`components.json`、`vite.config.ts`。
 - 空 repo 中运行 `ahtml build --input artifact.agent.html --out dist/html` 不生成项目 scaffold 文件。
 - runtime 文件只出现在 `.ahtml` 下。
 
@@ -182,7 +183,7 @@ ahtml build --input artifact.agent.html --out dist/html
 
 `ahtml init`：
 
-- 新默认语义：初始化或修复 managed runtime。
+- 新默认语义：可选修复 managed runtime，不属于默认 happy path。
 - 不默认写当前工作目录。
 
 `ahtml status`：

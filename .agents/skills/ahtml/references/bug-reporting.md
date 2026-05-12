@@ -25,9 +25,8 @@ File a bug when the failure is reproducible and fits one of these cases:
 Do not file a bug for:
 
 - Invalid agent-facing input rejected by the schema.
-- Missing `ahtml init` when `status` clearly says the runtime is not ready.
 - Network, npm auth, GitHub auth, or Cloudflare auth failures.
-- Failures fixed by documented `status`, `doctor`, `init`, update, or validation guidance.
+- Failures fixed by documented `status`, `doctor`, update, or validation guidance.
 
 ## Collect Evidence
 

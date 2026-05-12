@@ -10,7 +10,6 @@ description: Verify the package boundary and deploy this docs site.
 ```bash
 npm install
 npm link
-ahtml init
 ahtml status
 ahtml doctor
 ahtml schema --format prompt
@@ -25,13 +24,14 @@ npm run agent -- schema --format prompt
 Local check levels:
 
 ```bash
+npm run dev:check
 npm run check:quick
 npm run check:ready
 npm run check:docs
 npm run check:all
 ```
 
-Use `check:quick` while editing, `check:ready` before merge or release, `check:docs` for documentation changes, and `check:all` for CI-equivalent coverage.
+Use `dev:check` while editing. Keep `check:quick`, `check:ready`, `check:docs`, and `check:all` as lower-level compatibility commands.
 
 ## Verify package boundary [#verify-package-boundary]
 
@@ -39,7 +39,7 @@ Use `check:quick` while editing, `check:ready` before merge or release, `check:d
 npm pack --dry-run
 ```
 
-The package should include only the config, engine, CLI, bin entry, TypeScript configs, and README. It should not include a root Vite app, package-local renderer, root shadcn UI files, docs web files, examples, specs, blueprints, or tests.
+The package should include only the config, engine, CLI, bin entry, managed runtime template logic, TypeScript configs, and README. It should not include a root Vite app, root shadcn UI files, docs web files, examples, specs, blueprints, or tests.
 
 ## Verify installed CLI behavior [#verify-installed-cli-behavior]
 
@@ -74,14 +74,15 @@ Workflow filename: publish-npm.yml
 Release a package version:
 
 ```bash
-npm version <version> --no-git-tag-version
-git add package.json package-lock.json
+npm run release:alpha
+npm run release:check
+git add -A
 git commit -m "chore: release <version>"
-git tag v<version>
+npm run release:tag
 git push origin main --tags
 ```
 
-Tagged releases publish to the `latest` dist-tag. The publish workflow fails if the Git tag does not match `package.json` version.
+Tagged prereleases publish to the matching prerelease dist-tag, such as `alpha`. Stable releases publish to `latest`. The publish workflow fails if the Git tag does not match `package.json` version.
 
 ## Distribute the ahtml skill [#distribute-the-ahtml-skill]
 
@@ -110,11 +111,11 @@ npx skills add . --skill ahtml -a codex --copy -y
 ```txt
 installed ahtml package
   -> config + engine + CLI
-  -> managed runtime under ~/.ahtml or AHTML_HOME
+  -> shadcn-backed managed runtime under ~/.ahtml or AHTML_HOME
   -> static artifact directory
 ```
 
-`ahtml build` must use the managed runtime. Do not restore current-directory project integration, `agent-html.project.json`, `init --scaffold`, package-local Vite apps, package-local renderer apps, or root shadcn UI files.
+`ahtml build` must use the managed runtime. The runtime may contain Vite, React, and shadcn-backed renderer files under `~/.ahtml/runtime`, but the current project must not receive that scaffold. Do not restore current-directory project integration, `agent-html.project.json`, `init --scaffold`, package-local Vite apps, package-local renderer apps, or root shadcn UI files.
 
 ## Maintenance checklist [#maintenance-checklist]
 

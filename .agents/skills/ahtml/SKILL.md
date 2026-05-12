@@ -10,14 +10,13 @@ Use this skill for `ahtml`, a local CLI engine that turns constrained agent-faci
 Core model:
 
 - `ahtml` package owns `config`, `engine`, and `cli`.
-- `ahtml` renders through a managed runtime under `~/.ahtml` or `%USERPROFILE%\.ahtml`; set `AHTML_HOME` only for isolation.
+- `ahtml` renders through a shadcn-backed managed runtime under `~/.ahtml` or `%USERPROFILE%\.ahtml`; set `AHTML_HOME` only for isolation.
 - The current repository should only contain the user's input files and chosen artifact output, not a generated frontend project.
 - Agent-facing input must not expose Tailwind classes, `className`, `style`, scripts, event handlers, shadcn props, Radix props, arbitrary HTML attributes, or raw HTML passthrough.
 
 Default workflow:
 
 ```bash
-ahtml init
 ahtml status
 ahtml doctor
 ahtml schema --format prompt
@@ -31,9 +30,9 @@ ahtml inspect --dir dist/html
 
 Load references only as needed:
 
-- Read `references/install.md` when installing, initializing, or isolating the managed runtime.
+- Read `references/install.md` when installing, checking, repairing, or isolating the managed runtime.
 - Read `references/usage.md` when producing content, composing `.agent.html`, building, previewing, or explaining the normal user flow.
 - Read `references/debug.md` when `status`, `doctor`, `build`, `preview`, runtime setup, components, or config fail.
 - Read `references/bug-reporting.md` when a reproducible `ahtml` product bug remains after normal debug checks.
 
-Prefer the default happy path (`ahtml init`) before advanced environment overrides. Do not use old project-local scaffold flags.
+Prefer automatic runtime bootstrap through `ahtml status`, `ahtml doctor`, `ahtml build`, or `ahtml preview`. Do not use old project-local scaffold flags.

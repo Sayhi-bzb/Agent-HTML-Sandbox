@@ -21,11 +21,11 @@ import {
 import { formatPrompt, getCliSchemaOutput } from "./schema.mjs"
 import { checkForPackageUpdate } from "./update-check.mjs"
 import {
+  buildRuntimeArtifact,
   bootstrapManagedRuntime,
   getRuntimePaths,
   getRuntimeStatus,
   readRuntimeManifest,
-  renderStaticArtifact,
   writeGeneratedDocument,
 } from "./runtime.mjs"
 import { validateAgentHtmlSource, validateRenderConfig } from "./validate.mjs"
@@ -132,9 +132,13 @@ async function initCommand(commandArgs, definition) {
     return
   }
 
-  await bootstrapManagedRuntime({ packageVersion, paths: runtimePaths })
+  await bootstrapManagedRuntime({
+    packageRoot,
+    packageVersion,
+    paths: runtimePaths,
+  })
   process.stdout.write(
-    `Initialized managed runtime: ${runtimePaths.runtimeRoot}\n`,
+    `Repaired managed runtime: ${runtimePaths.runtimeRoot}\n`,
   )
   process.stdout.write("Next: ahtml status\n")
 }
@@ -266,6 +270,7 @@ async function doctorCommand(commandArgs) {
   }
 
   const packageVersion = await readPackageVersion()
+  await ensureManagedRuntime(packageVersion)
   const checks = []
 
   checks.push(
@@ -287,6 +292,27 @@ async function doctorCommand(commandArgs) {
     await runDoctorCheck("runtime", "manifest", async () => {
       const manifest = await readRuntimeManifest(runtimePaths)
       return `${manifest.renderer} v${manifest.version}`
+    }),
+  )
+  checks.push(
+    await runDoctorCheck("runtime", "renderer-adapter", async () => {
+      await stat(path.join(runtimePaths.runtimeSrcDir, "app.tsx"))
+      await stat(path.join(runtimePaths.runtimeSrcDir, "main.tsx"))
+      await stat(path.join(runtimePaths.runtimeSrcDir, "ssr.tsx"))
+      return "React adapter ready"
+    }),
+  )
+  checks.push(
+    await runDoctorCheck("runtime", "shadcn-card", async () => {
+      const cardPath = path.join(runtimePaths.runtimeComponentsDir, "card.tsx")
+      await stat(cardPath)
+      return cardPath
+    }),
+  )
+  checks.push(
+    await runDoctorCheck("runtime", "vite-config", async () => {
+      await stat(runtimePaths.runtimeViteConfigPath)
+      return runtimePaths.runtimeViteConfigPath
     }),
   )
   checks.push(
@@ -321,6 +347,7 @@ async function statusCommand(commandArgs) {
   }
 
   const packageVersion = await readPackageVersion()
+  await ensureManagedRuntime(packageVersion)
   const status = await getRuntimeStatus({
     packageVersion,
     outputDir: defaultOutputDir,
@@ -339,7 +366,7 @@ function formatRuntimeStatus(status, update) {
     `runtime renderer: ${status.manifest?.renderer ?? "missing"}`,
     `artifact output: ${cliDefaults.outputDir}`,
     `output writable: ${status.checks.outputWritable ? "yes" : "no"}`,
-    `Next: ${status.ready ? `ahtml build --input ${cliDefaults.documentPath} --out ${cliDefaults.outputDir}` : "ahtml init"}`,
+    `Next: ahtml build --input ${cliDefaults.documentPath} --out ${cliDefaults.outputDir}`,
   ]
 
   if (!status.ready && status.manifestError) {
@@ -366,16 +393,38 @@ async function buildArtifact(inputPath, outputPath) {
   }
 
   const packageVersion = await readPackageVersion()
-  await bootstrapManagedRuntime({ packageVersion, paths: runtimePaths })
+  await ensureManagedRuntime(packageVersion)
   await writeGeneratedDocument(validation.document, runtimePaths)
 
   const outputDir = path.resolve(userRoot, outputPath ?? defaultOutputDir)
-  await renderStaticArtifact(validation.document, outputDir)
+  await buildRuntimeArtifact({
+    outputDir,
+    packageRoot,
+    paths: runtimePaths,
+  })
   await writeJsonFile(
     path.join(outputDir, "agent-html.inspect.json"),
     createInspection(validation.document),
   )
   return outputDir
+}
+
+async function ensureManagedRuntime(packageVersion) {
+  const status = await getRuntimeStatus({
+    packageVersion,
+    outputDir: defaultOutputDir,
+    paths: runtimePaths,
+  })
+
+  if (status.ready) {
+    return
+  }
+
+  await bootstrapManagedRuntime({
+    packageRoot,
+    packageVersion,
+    paths: runtimePaths,
+  })
 }
 
 async function inspectDocument(inputPath) {

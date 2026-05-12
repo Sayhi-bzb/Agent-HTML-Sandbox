@@ -1,10 +1,10 @@
-# ahtml Install And Init
+# ahtml Install And Runtime
 
-Use this when the user asks to install, initialize, or isolate `ahtml`.
+Use this when the user asks to install, check, repair, or isolate `ahtml`.
 
 ## Mental Model
 
-`ahtml` is an agent artifact runtime. It validates agent-html input and renders portable static output through a managed runtime.
+`ahtml` is an agent artifact runtime. It validates agent-html input and renders portable static output through a shadcn-backed managed runtime.
 
 Default runtime home:
 
@@ -26,7 +26,6 @@ For a published package:
 
 ```bash
 npm install -g @agent-html/ahtml
-ahtml init
 ahtml status
 ahtml doctor
 ```
@@ -44,14 +43,13 @@ For local repository development:
 ```bash
 npm install
 npm link
-ahtml init
 ahtml status
 ahtml doctor
 ```
 
-## Init Options
+## Runtime Repair
 
-Use defaults first:
+Runtime setup is automatic for normal commands. Force repair only when debugging:
 
 ```bash
 ahtml init
@@ -65,7 +63,7 @@ ahtml init --dry-run
 
 Do not use old project-local flags such as `--template`, `--preset`, `--components`, `--apply`, or `--scaffold`.
 
-## After Init
+## After Install
 
 Run:
 
