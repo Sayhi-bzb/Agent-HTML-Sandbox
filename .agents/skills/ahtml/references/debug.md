@@ -20,7 +20,6 @@ ahtml doctor
 - Node and package runtime
 - managed runtime root and manifest
 - runtime React renderer adapter, shadcn card component, and Vite config
-- `agent-html.config.json`
 - output directory writability
 
 ## Common Fixes

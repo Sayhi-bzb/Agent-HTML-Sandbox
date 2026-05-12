@@ -1,5 +1,4 @@
 export const cliDefaults = {
-  configPath: "agent-html.config.json",
   documentPath: "artifact.agent.html",
   outputDir: "dist/html",
   previewPort: "4173",

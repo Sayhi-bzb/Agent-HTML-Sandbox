@@ -135,11 +135,12 @@ export const commandMetadata = {
     example: "ahtml status",
   },
   config: {
-    summary: "Read or set finite render config values.",
-    purpose: "Read or set finite presentation and output config values.",
-    usage: "ahtml config get\nahtml config set <key> <value>",
+    summary: "Read default finite render config values.",
+    purpose:
+      "Read the default finite presentation config values from the schema.",
+    usage: "ahtml config get",
     options: [],
-    example: "ahtml config set density compact",
+    example: "ahtml config get",
   },
 }
 
@@ -157,12 +158,11 @@ Closed-loop workflow:
   ahtml schema --format prompt
   ahtml validate --input ${cliDefaults.documentPath}
   ahtml build --input ${cliDefaults.documentPath} --out ${cliDefaults.outputDir}
-  ahtml inspect --dir ${cliDefaults.outputDir}
+  ahtml inspect --input ${cliDefaults.documentPath}
   ahtml preview --input ${cliDefaults.documentPath} --out ${cliDefaults.outputDir}
   ahtml doctor
 
 Defaults:
-  config: ${cliDefaults.configPath}
   document: ${cliDefaults.documentPath}
   output: ${cliDefaults.outputDir}
 

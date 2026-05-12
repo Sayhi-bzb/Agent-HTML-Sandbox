@@ -158,6 +158,19 @@ describe("agent-html CLI", () => {
     await rm(tempDir, { force: true, recursive: true })
   })
 
+  it("prints first-run guidance without bootstrapping in non-interactive help", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
+    const runtimeHome = path.join(tempDir, ".ahtml")
+
+    const help = await runCli([], { AHTML_HOME: runtimeHome }, tempDir)
+
+    expect(help.stdout).toContain("Closed-loop workflow:")
+    expect(help.stdout).toContain("Run ahtml setup for guided runtime setup.")
+    await expectPathMissing(path.join(runtimeHome, "config", "runtime.json"))
+    await expectPathMissing(path.join(tempDir, "src"))
+    await rm(tempDir, { force: true, recursive: true })
+  })
+
   it("sets up the managed shadcn runtime explicitly", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
     const runtimeHome = path.join(tempDir, ".ahtml")
@@ -249,7 +262,7 @@ describe("agent-html CLI", () => {
     await rm(tempDir, { force: true, recursive: true })
   })
 
-  it("validates, configures, and inspects artifacts", async () => {
+  it("validates, reads config defaults, and inspects artifacts", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
     const runtimeHome = path.join(tempDir, ".ahtml")
     const documentPath = path.join(tempDir, "artifact.agent.html")
@@ -292,17 +305,20 @@ describe("agent-html CLI", () => {
     expect(artifactInspection.stdout).toContain("density: compact")
     expect(artifactInspection.stdout).toContain("- card: 1")
 
-    await runCli(
-      ["config", "set", "density", "compact"],
-      { AHTML_HOME: runtimeHome },
-      tempDir,
-    )
     const config = await runCli(
       ["config", "get"],
       { AHTML_HOME: runtimeHome },
       tempDir,
     )
-    expect(config.stdout).toContain('"compact"')
+    expect(config.stdout).toContain('"comfortable"')
+    await expectCliFailure(
+      runCli(
+        ["config", "set", "density", "compact"],
+        { AHTML_HOME: runtimeHome },
+        tempDir,
+      ),
+      "config accepts only get",
+    )
     await rm(tempDir, { force: true, recursive: true })
   })
 
@@ -323,7 +339,6 @@ describe("agent-html CLI", () => {
     expect(stdout).toContain("ok runtime:shadcn-card")
     expect(stdout).toContain("ok runtime:prompt-ui-manifest")
     expect(stdout).toContain("ok runtime:vite-config")
-    expect(stdout).toContain("ok config:config")
     expect(stdout).toContain("ok artifact:output-dir")
     expect(stdout).not.toContain("project-config")
     expect(stdout).not.toContain("shadcn-components")

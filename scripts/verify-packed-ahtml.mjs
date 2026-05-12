@@ -136,9 +136,10 @@ try {
   await expectPreview(documentPath, path.join(consumerDir, "dist", "preview"))
 
   await expectStdout(["config", "get"], '"density"')
-  await runAhtml(["config", "set", "density", "compact"])
-  await expectStdout(["config", "get"], '"compact"')
-  await expectFailure(["config", "set", "density", "loose"], "Invalid value")
+  await expectFailure(
+    ["config", "set", "density", "compact"],
+    "config accepts only get",
+  )
   await expectFailure(
     ["schema", "--input", documentPath],
     "does not accept --input",
@@ -214,10 +215,10 @@ function assertPackBoundary(files) {
     "src/cli/commands.mjs",
     "src/cli/index.mjs",
     "src/cli/module-loader.mjs",
-    "src/cli/runtime-build.mjs",
     "src/cli/runtime-paths.mjs",
     "src/cli/runtime-setup.mjs",
     "src/cli/runtime-status.mjs",
+    "src/cli/runtime-build.mjs",
     "src/cli/runtime-template.mjs",
     "src/cli/runtime-template/src/app.tsx",
     "src/cli/schema.mjs",

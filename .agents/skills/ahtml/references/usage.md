@@ -41,18 +41,16 @@ Preview locally:
 ahtml preview --input artifact.agent.html --out dist/html --port 4173
 ```
 
-Inspect document or built artifact metadata:
+Inspect the source document:
 
 ```bash
 ahtml inspect --input artifact.agent.html
-ahtml inspect --dir dist/html
 ```
 
-Read or set finite render config:
+Read default finite render config:
 
 ```bash
 ahtml config get
-ahtml config set density compact
 ```
 
 ## Document Shape

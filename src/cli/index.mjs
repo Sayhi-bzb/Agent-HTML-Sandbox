@@ -1,4 +1,5 @@
 import http from "node:http"
+import { confirm, isCancel, cancel as cancelPrompt } from "@clack/prompts"
 import {
   access,
   constants,
@@ -22,14 +23,19 @@ import { formatPrompt, getCliSchemaOutput } from "./schema.mjs"
 import { checkForPackageUpdate } from "./update-check.mjs"
 import { buildRuntimeArtifact } from "./runtime-build.mjs"
 import { getRuntimePaths } from "./runtime-paths.mjs"
-import { bundledRuntimeSetup, resolveRuntimeSetup } from "./runtime-setup.mjs"
+import {
+  bundledRuntimeSetup,
+  isInteractiveRuntimeSetup,
+  resolveRuntimeSetup,
+  RuntimeSetupCancelledError,
+} from "./runtime-setup.mjs"
 import {
   bootstrapManagedRuntime,
   getRuntimeStatus,
   readRuntimeManifest,
   writeGeneratedDocument,
 } from "./runtime-status.mjs"
-import { validateAgentHtmlSource, validateRenderConfig } from "./validate.mjs"
+import { validateAgentHtmlSource } from "./validate.mjs"
 
 const packageRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -38,10 +44,6 @@ const packageRoot = path.resolve(
 )
 const userRoot = process.cwd()
 const runtimePaths = getRuntimePaths()
-const defaultConfigPath = path.resolve(
-  userRoot,
-  process.env.AGENT_HTML_CONFIG_PATH ?? cliDefaults.configPath,
-)
 const defaultOutputDir = path.join(
   userRoot,
   ...cliDefaults.outputDir.split("/"),
@@ -67,7 +69,9 @@ const commandDefinitions = Object.fromEntries(
 )
 
 try {
-  if (!command || isHelpCommand(command)) {
+  if (!command) {
+    await defaultCommand()
+  } else if (isHelpCommand(command)) {
     printGlobalHelp()
   } else if (command === "help") {
     printCommandHelp(args[0])
@@ -79,7 +83,47 @@ try {
     fail(`Unknown command "${command}". Run "ahtml --help" for command list.`)
   }
 } catch (error) {
+  if (error instanceof RuntimeSetupCancelledError) {
+    process.stdout.write("Run ahtml setup when you are ready.\n")
+    process.exit(0)
+  }
+
   fail(error instanceof Error ? error.message : String(error))
+}
+
+async function defaultCommand() {
+  const packageVersion = await readPackageVersion()
+  const status = await getRuntimeStatus({
+    packageVersion,
+    outputDir: defaultOutputDir,
+    paths: runtimePaths,
+  })
+
+  if (status.ready || !isInteractiveRuntimeSetup()) {
+    printGlobalHelp()
+    if (!status.ready) {
+      process.stdout.write("\nRun ahtml setup for guided runtime setup.\n")
+    }
+    return
+  }
+
+  const shouldSetup = await confirm({
+    message: "Managed runtime is not configured. Run guided setup now?",
+    active: "Yes",
+    inactive: "No",
+    initialValue: true,
+  })
+
+  if (isCancel(shouldSetup) || !shouldSetup) {
+    if (isCancel(shouldSetup)) {
+      cancelPrompt("Runtime setup skipped.")
+    }
+    printGlobalHelp()
+    process.stdout.write("\nRun ahtml setup when you are ready.\n")
+    return
+  }
+
+  await runSetup({})
 }
 
 function printGlobalHelp() {
@@ -137,6 +181,11 @@ async function setupCommand(commandArgs, definition) {
     return
   }
 
+  await runSetup(options)
+}
+
+async function runSetup(options) {
+  const packageVersion = await readPackageVersion()
   const setup = await resolveRuntimeSetup({ options })
   const schema = await getCliSchemaOutput()
   const manifest = await bootstrapManagedRuntime({
@@ -287,12 +336,6 @@ async function doctorCommand(commandArgs) {
     await runDoctorCheck("runtime", "vite-config", async () => {
       await stat(runtimePaths.runtimeViteConfigPath)
       return runtimePaths.runtimeViteConfigPath
-    }),
-  )
-  checks.push(
-    await runDoctorCheck("config", "config", async () => {
-      const config = await readConfigForDoctor()
-      return JSON.stringify(config)
     }),
   )
   checks.push(
@@ -612,104 +655,20 @@ function getContentType(filePath) {
 }
 
 async function configCommand(commandArgs) {
-  const [subcommand, key, value, ...rest] = commandArgs
+  const [subcommand, ...rest] = commandArgs
 
   if (rest.length > 0) {
-    fail("config accepts only get or set <key> <value>.")
+    fail("config accepts only get.")
   }
 
   if (subcommand === "get") {
-    const config = await readEffectiveConfig()
+    const schema = await getCliSchemaOutput()
+    const config = schema.renderConfig.defaults
     process.stdout.write(`${JSON.stringify(config, null, 2)}\n`)
     return
   }
 
-  if (subcommand !== "set") {
-    fail("config accepts only get or set <key> <value>.")
-  }
-
-  if (!key || value === undefined) {
-    fail("config set requires <key> <value>.")
-  }
-
-  const schema = await getCliSchemaOutput()
-  const allowedValues = schema.renderConfig.values[key]
-
-  if (!allowedValues) {
-    fail(`Unknown config key "${key}".`)
-  }
-
-  if (!allowedValues.includes(value)) {
-    fail(`Invalid value "${value}" for config key "${key}".`)
-  }
-
-  const current = await readEffectiveConfig()
-  const next = { ...current, [key]: value }
-  await writeJsonFile(defaultConfigPath, next)
-}
-
-async function readEffectiveConfig() {
-  const schema = await getCliSchemaOutput()
-
-  try {
-    const source = await readFile(defaultConfigPath, "utf8")
-    const config = parseJson(
-      source,
-      "agent-html.config.json must be valid JSON.",
-    )
-    return assertRenderConfig(
-      { ...schema.renderConfig.defaults, ...config },
-      schema.renderConfig.values,
-    )
-  } catch (error) {
-    if (error?.code === "ENOENT") {
-      return schema.renderConfig.defaults
-    }
-
-    throw error
-  }
-}
-
-async function readConfigForDoctor() {
-  const schema = await getCliSchemaOutput()
-
-  try {
-    const source = await readFile(defaultConfigPath, "utf8")
-    const config = JSON.parse(source)
-
-    if (
-      !validateRenderConfig(
-        { ...schema.renderConfig.defaults, ...config },
-        schema.renderConfig.values,
-      )
-    ) {
-      throw new Error(
-        "agent-html.config.json contains an unknown key or invalid enum value.",
-      )
-    }
-
-    return { ...schema.renderConfig.defaults, ...config }
-  } catch (error) {
-    if (error?.code === "ENOENT") {
-      return schema.renderConfig.defaults
-    }
-
-    if (error instanceof SyntaxError) {
-      throw new Error("agent-html.config.json must be valid JSON.")
-    }
-
-    throw error
-  }
-}
-
-function assertRenderConfig(config, values) {
-  if (!validateRenderConfig(config, values)) {
-    fail("ArtifactConfig contains an unknown key or invalid enum value.")
-  }
-
-  return Object.fromEntries(
-    Object.keys(values).map((key) => [key, config[key]]),
-  )
+  fail("config accepts only get.")
 }
 
 function parseOptions(commandArgs, definition) {

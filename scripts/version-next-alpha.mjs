@@ -5,6 +5,9 @@ import { promisify } from "node:util"
 
 const execFileAsync = promisify(execFile)
 const packageName = "@agent-html/ahtml"
+const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm"
+const windowsShellOptions =
+  process.platform === "win32" ? { shell: true } : undefined
 const packagePath = path.join(process.cwd(), "package.json")
 const lockPath = path.join(process.cwd(), "package-lock.json")
 
@@ -44,12 +47,11 @@ function getBaseVersion(version) {
 
 async function getPublishedVersions() {
   try {
-    const { stdout } = await execFileAsync("npm", [
-      "view",
-      packageName,
-      "versions",
-      "--json",
-    ])
+    const { stdout } = await execFileAsync(
+      npmCommand,
+      ["view", packageName, "versions", "--json"],
+      windowsShellOptions,
+    )
     const parsed = JSON.parse(stdout)
 
     return Array.isArray(parsed) ? parsed : [parsed]

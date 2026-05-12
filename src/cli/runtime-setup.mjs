@@ -1,8 +1,22 @@
 import { execFile } from "node:child_process"
-import readline from "node:readline/promises"
 import { promisify } from "node:util"
+import {
+  cancel,
+  intro,
+  isCancel,
+  multiselect,
+  outro,
+  select,
+} from "@clack/prompts"
 
 const execFileAsync = promisify(execFile)
+
+export class RuntimeSetupCancelledError extends Error {
+  constructor() {
+    super("Runtime setup cancelled.")
+    this.name = "RuntimeSetupCancelledError"
+  }
+}
 
 export const defaultRuntimeSetup = {
   uiLibrary: "shadcn",
@@ -33,7 +47,7 @@ export const supportedShadcnComponents = ["card"]
 
 export async function resolveRuntimeSetup({
   options = {},
-  interactive = process.stdin.isTTY && process.stdout.isTTY,
+  interactive = isInteractiveRuntimeSetup(),
 } = {}) {
   const explicitYes = Boolean(options.yes)
   const shouldPrompt = interactive && !explicitYes
@@ -78,6 +92,15 @@ export async function resolveRuntimeSetup({
     preset,
     components,
   }
+}
+
+export function isInteractiveRuntimeSetup() {
+  return (
+    process.stdin.isTTY &&
+    process.stdout.isTTY &&
+    process.env.CI !== "true" &&
+    process.env.AHTML_NO_INTERACTIVE !== "1"
+  )
 }
 
 export function createPromptUiManifest({
@@ -165,84 +188,79 @@ function assertRuntimeSetup({
 }
 
 async function promptForRuntimeSetup() {
-  const prompts = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
+  intro("ahtml managed runtime setup")
+
+  const uiLibrary = await chooseOption({
+    label: "UI library",
+    options: supportedUiLibraries,
+    defaultValue: defaultRuntimeSetup.uiLibrary,
+  })
+  const componentSource = await chooseOption({
+    label: "Component source",
+    options: supportedComponentSources,
+    defaultValue: defaultRuntimeSetup.componentSource,
+  })
+  const installMode = await chooseOption({
+    label: "Install mode",
+    options: ["preset", "custom"],
+    defaultValue: defaultRuntimeSetup.installMode,
+  })
+  const preset =
+    installMode === "preset"
+      ? await chooseOption({
+          label: "shadcn preset",
+          options: supportedShadcnPresets,
+          defaultValue: defaultRuntimeSetup.preset,
+        })
+      : "custom"
+  const componentCatalog = await getComponentCatalog(componentSource)
+  const components =
+    installMode === "custom"
+      ? await chooseComponents(componentCatalog)
+      : defaultRuntimeSetup.components
+
+  outro("Runtime setup choices captured.")
+
+  return {
+    uiLibrary,
+    componentSource,
+    installMode,
+    preset,
+    components,
+  }
+}
+
+async function chooseOption({ label, options, defaultValue }) {
+  const answer = await select({
+    message: label,
+    options: options.map((option) => ({ value: option, label: option })),
+    initialValue: defaultValue,
   })
 
-  try {
-    const uiLibrary = await chooseOption({
-      prompts,
-      label: "UI library",
-      options: supportedUiLibraries,
-      defaultValue: defaultRuntimeSetup.uiLibrary,
-    })
-    const componentSource = await chooseOption({
-      prompts,
-      label: "Component source",
-      options: supportedComponentSources,
-      defaultValue: defaultRuntimeSetup.componentSource,
-    })
-    const installMode = await chooseOption({
-      prompts,
-      label: "Install mode",
-      options: ["preset", "custom"],
-      defaultValue: defaultRuntimeSetup.installMode,
-    })
-    const preset =
-      installMode === "preset"
-        ? await chooseOption({
-            prompts,
-            label: "shadcn preset",
-            options: supportedShadcnPresets,
-            defaultValue: defaultRuntimeSetup.preset,
-          })
-        : "custom"
-    const componentCatalog = await getComponentCatalog(componentSource)
-    const components =
-      installMode === "custom"
-        ? await chooseComponents(prompts, componentCatalog)
-        : defaultRuntimeSetup.components
-
-    return {
-      uiLibrary,
-      componentSource,
-      installMode,
-      preset,
-      components,
-    }
-  } finally {
-    prompts.close()
-  }
+  return unwrapPromptValue(answer)
 }
 
-async function chooseOption({ prompts, label, options, defaultValue }) {
-  const renderedOptions = options
-    .map((option, index) => `${index + 1}) ${option}`)
-    .join("  ")
-  const answer = await prompts.question(
-    `${label} [${defaultValue}]\n${renderedOptions}\n> `,
-  )
-  const trimmed = answer.trim()
+async function chooseComponents(componentCatalog) {
+  const answer = await multiselect({
+    message: "shadcn components",
+    options: componentCatalog.map((component) => ({
+      value: component,
+      label: component,
+    })),
+    initialValues: componentCatalog,
+    required: true,
+  })
 
-  if (!trimmed) {
-    return defaultValue
-  }
-
-  const index = Number(trimmed)
-  if (Number.isInteger(index) && index >= 1 && index <= options.length) {
-    return options[index - 1]
-  }
-
-  return trimmed
+  return unwrapPromptValue(answer)
 }
 
-async function chooseComponents(prompts, componentCatalog) {
-  const answer = await prompts.question(
-    `shadcn components [all]\n${componentCatalog.map((component, index) => `${index + 1}) ${component}`).join("  ")}\n> `,
-  )
+function unwrapPromptValue(value) {
+  if (isCancel(value)) {
+    cancel("Runtime setup cancelled.")
+    throw new RuntimeSetupCancelledError()
+  }
 
-  return normalizeComponents(answer || "all", componentCatalog)
+  return value
 }
 
 function normalizeComponents(

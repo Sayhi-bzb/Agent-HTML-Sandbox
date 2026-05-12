@@ -55,7 +55,6 @@ ahtml validate --input artifact.agent.html
 ahtml build --input artifact.agent.html --out dist/html
 ahtml preview --input artifact.agent.html --out dist/html --port 4173
 ahtml inspect --input artifact.agent.html
-ahtml inspect --dir dist/html
 ```
 
 Open the preview URL printed by `ahtml preview` to review the output.
@@ -72,12 +71,10 @@ ahtml status
 ahtml doctor
 ahtml preview --input <path> [--out <dir>] [--port <port>]
 ahtml config get
-ahtml config set <key> <value>
 ```
 
 Defaults:
 
-- Config file: `agent-html.config.json`
 - Runtime home: `~/.ahtml` or `%USERPROFILE%\.ahtml`
 - Runtime renderer: internal shadcn-backed React/Vite renderer
 - Runtime setup: `ahtml setup` uses shadcn CLI by default; runtime-aware commands use bundled defaults when they must repair non-interactively

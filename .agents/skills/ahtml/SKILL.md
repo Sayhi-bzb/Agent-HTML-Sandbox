@@ -1,6 +1,6 @@
 ---
 name: ahtml
-description: Install, use, and debug ahtml agent-html artifact workflows. Use when working with ahtml CLI commands such as status, doctor, schema, validate, build, preview, inspect, or config; when using the managed ahtml runtime; or when explaining the ahtml engine/config/CLI architecture.
+description: Install, use, and debug ahtml agent-html artifact workflows. Use when working with ahtml CLI commands such as status, doctor, schema, validate, build, preview, inspect, or config; when using the managed ahtml runtime; or when explaining the ahtml engine and CLI architecture.
 ---
 
 # ahtml
@@ -25,7 +25,6 @@ ahtml validate --input artifact.agent.html
 ahtml build --input artifact.agent.html --out dist/html
 ahtml preview --input artifact.agent.html --out dist/html
 ahtml inspect --input artifact.agent.html
-ahtml inspect --dir dist/html
 ```
 
 Load references only as needed:
