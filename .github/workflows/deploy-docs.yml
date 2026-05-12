@@ -1,6 +1,17 @@
 name: Deploy Docs
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".agents/skills/ahtml/**"
+      - ".github/actions/setup-node-npm/**"
+      - ".github/workflows/deploy-docs.yml"
+      - "README.md"
+      - "docs-web/**"
+      - "package-lock.json"
+      - "package.json"
   workflow_dispatch:
 
 concurrency:
@@ -35,20 +46,10 @@ jobs:
             exit 1
           fi
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Setup Node and dependencies
+        uses: ./.github/actions/setup-node-npm
         with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            docs-web/package-lock.json
-
-      - name: Install package dependencies
-        run: npm ci
-
-      - name: Install docs dependencies
-        run: npm --prefix docs-web ci
+          install-docs: "true"
 
       - name: Check docs web
         run: npm run check:docs

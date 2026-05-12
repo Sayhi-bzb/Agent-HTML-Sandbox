@@ -31,7 +31,7 @@
     "lint": "eslint .",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "format:check:source": "prettier package.json tsconfig.json tsconfig.node.json eslint.config.js vitest.config.ts knip.json README.md \".github/workflows/*.yml\" \"src/**/*.{ts,mjs}\" \"!src/engine/generated/**\" \"scripts/**/*.mjs\" \"docs-web/content/**/*.mdx\" --check",
+    "format:check:source": "prettier package.json tsconfig.json tsconfig.node.json eslint.config.js vitest.config.ts knip.json README.md \".github/workflows/*.yml\" \".github/actions/**/*.yml\" \"src/**/*.{ts,mjs}\" \"!src/engine/generated/**\" \"scripts/**/*.mjs\" \"docs-web/content/**/*.mdx\" --check",
     "knip": "knip",
     "test": "vitest",
     "test:run": "vitest run",

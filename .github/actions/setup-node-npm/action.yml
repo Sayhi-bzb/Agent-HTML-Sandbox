@@ -1,0 +1,45 @@
+name: Setup Node and npm dependencies
+description: Configure Node 24 with npm cache and install repository dependencies.
+
+inputs:
+  install-docs:
+    description: Install docs-web dependencies.
+    required: false
+    default: "false"
+  registry-url:
+    description: Optional npm registry URL for publish workflows.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node
+      if: ${{ inputs.registry-url == '' }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: 24
+        cache: npm
+        cache-dependency-path: |
+          package-lock.json
+          docs-web/package-lock.json
+
+    - name: Setup Node with registry
+      if: ${{ inputs.registry-url != '' }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: 24
+        registry-url: ${{ inputs.registry-url }}
+        cache: npm
+        cache-dependency-path: |
+          package-lock.json
+          docs-web/package-lock.json
+
+    - name: Install package dependencies
+      shell: bash
+      run: npm ci
+
+    - name: Install docs dependencies
+      if: ${{ inputs.install-docs == 'true' }}
+      shell: bash
+      run: npm --prefix docs-web ci

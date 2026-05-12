@@ -21,20 +21,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Setup Node and dependencies
+        uses: ./.github/actions/setup-node-npm
         with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            docs-web/package-lock.json
-
-      - name: Install package dependencies
-        run: npm ci
-
-      - name: Install docs dependencies
-        run: npm --prefix docs-web ci
+          install-docs: "true"
 
       - name: Run full checks
         run: npm run check:all

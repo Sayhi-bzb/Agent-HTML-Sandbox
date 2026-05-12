@@ -23,36 +23,20 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Setup Node and dependencies
+        uses: ./.github/actions/setup-node-npm
         with:
-          node-version: 24
           registry-url: https://registry.npmjs.org
-          cache: npm
-          cache-dependency-path: package-lock.json
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Lint package
-        run: npm run lint
-
-      - name: Check package graph
-        run: npm run knip
-
-      - name: Run tests
-        run: npm run test:run
-
-      - name: Build package
-        run: npm run build
-
-      - name: Verify packed CLI
-        run: npm run verify:pack
+      - name: Run package release checks
+        run: npm run check:ready
 
       - name: Determine release metadata
         id: release
