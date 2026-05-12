@@ -24,6 +24,14 @@ npx ahtml status
 npx ahtml doctor
 ```
 
+Use the same npmjs.com package with other package managers:
+
+```bash
+pnpm add @agent-html/ahtml
+yarn add @agent-html/ahtml
+bun add @agent-html/ahtml
+```
+
 For local repository development:
 
 ```bash
@@ -64,7 +72,7 @@ Fallback only, for environments where shadcn CLI cannot be used:
 
 ```bash
 npx ahtml init --scaffold
-npm install
+<your-package-manager> install
 npx ahtml init --apply
 npx ahtml doctor
 ```

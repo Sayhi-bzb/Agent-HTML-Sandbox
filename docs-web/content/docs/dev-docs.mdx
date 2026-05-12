@@ -56,7 +56,7 @@ npm view @agent-html/ahtml dist-tags versions --json
 npm install @agent-html/ahtml
 ```
 
-The public package is published under `@agent-html/ahtml`; the CLI bin remains `ahtml`.
+The public package is published under `@agent-html/ahtml`; the CLI bin remains `ahtml`. Publish only to npmjs.com. pnpm, yarn, and bun consume the same npm registry package and do not need separate package releases.
 
 ## Publish npm package [#publish-npm-package]
 
@@ -67,7 +67,7 @@ Configure the npm trusted publisher for `@agent-html/ahtml`:
 ```txt
 Provider: GitHub Actions
 Owner: Sayhi-bzb
-Repository: Agent-HTML-Sandbox
+Repository: Agent-HTML
 Workflow filename: publish-npm.yml
 ```
 
@@ -90,19 +90,19 @@ The `ahtml` agent skill lives at `.agents/skills/ahtml`. The open `skills` CLI d
 List skills from this repository:
 
 ```bash
-npx skills add Sayhi-bzb/Agent-HTML-Sandbox --list
+npx skills add Sayhi-bzb/Agent-HTML --list
 ```
 
 Install the `ahtml` skill for Codex:
 
 ```bash
-npx skills add Sayhi-bzb/Agent-HTML-Sandbox --skill ahtml -a codex
+npx skills add Sayhi-bzb/Agent-HTML --skill ahtml -a codex
 ```
 
 Install globally for Codex:
 
 ```bash
-npx skills add Sayhi-bzb/Agent-HTML-Sandbox --skill ahtml -a codex -g
+npx skills add Sayhi-bzb/Agent-HTML --skill ahtml -a codex -g
 ```
 
 Test installation from a local checkout:

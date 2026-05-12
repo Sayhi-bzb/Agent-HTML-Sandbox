@@ -14,6 +14,7 @@ import {
 } from "./commands.mjs"
 import {
   detectUserProject,
+  getPackageInstallCommand,
   getMissingShadcnComponents,
   readProjectConfigForDoctor,
   readProjectConfigIfExists,
@@ -198,7 +199,9 @@ async function initCommand(commandArgs, definition) {
     process.stdout.write("Next: ahtml doctor\n")
   } else if (project.shadcn.commands.length > 0) {
     if (scaffold) {
-      process.stdout.write("Next: npm install\n")
+      process.stdout.write(
+        `Next: ${getPackageInstallCommand(project.packageManager)}\n`,
+      )
       process.stdout.write("Then: ahtml init --apply\n")
     } else {
       process.stdout.write("Next: ahtml init --apply\n")
@@ -408,7 +411,9 @@ async function statusCommand(commandArgs) {
   }
 
   const status = await getProjectStatus()
-  const update = await checkForPackageUpdate()
+  const update = await checkForPackageUpdate({
+    packageManager: status.config.packageManager,
+  })
   process.stdout.write(formatProjectStatus(status, update))
 }
 
@@ -625,7 +630,14 @@ async function runDoctorCheck(category, name, check) {
 }
 
 async function runDoctorUpdateCheck() {
-  const update = await checkForPackageUpdate()
+  const config = await readProjectConfigForDoctor({
+    userRoot,
+    projectConfigPath: defaultProjectConfigPath,
+    defaults: cliDefaults,
+  })
+  const update = await checkForPackageUpdate({
+    packageManager: config.packageManager,
+  })
 
   if (update.status === "available") {
     return {

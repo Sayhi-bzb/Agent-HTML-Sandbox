@@ -16,6 +16,23 @@ npx ahtml doctor
 npx ahtml schema --format prompt
 ```
 
+Use the same npmjs.com package with your package manager:
+
+| Package manager | Install                         | Run `ahtml`       |
+| --------------- | ------------------------------- | ----------------- |
+| npm             | `npm install @agent-html/ahtml` | `npx ahtml`       |
+| pnpm            | `pnpm add @agent-html/ahtml`    | `pnpm exec ahtml` |
+| yarn            | `yarn add @agent-html/ahtml`    | `yarn ahtml`      |
+| bun             | `bun add @agent-html/ahtml`     | `bunx ahtml`      |
+
+Install the Codex skill for agent guidance:
+
+```bash
+npx skills add Sayhi-bzb/Agent-HTML --skill ahtml -a codex -g
+```
+
+Without `-g`, the skill is installed for the current project.
+
 Create `artifact.agent.html`:
 
 ```html
@@ -109,7 +126,7 @@ Defaults:
 ## Rules
 
 - Run `npx ahtml init` first.
-- In an empty or unsupported directory, use `npx ahtml init --scaffold`, then `npm install`, then `npx ahtml init --apply`.
+- In an empty or unsupported directory, use `npx ahtml init --scaffold`, then install dependencies with your package manager, then run `npx ahtml init --apply`.
 - Treat `npx ahtml schema --format prompt` as the source of truth.
 - Use only registered agent-html components, props, children, and render config values.
 - Do not write Tailwind classes, `className`, `style`, CSS, scripts, event handlers, shadcn props, Radix props, arbitrary HTML attributes, external resource passthrough, or raw HTML.

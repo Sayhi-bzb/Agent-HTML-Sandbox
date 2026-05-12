@@ -3,12 +3,15 @@ import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
+import { getPackageAddCommand } from "../config/project.mjs"
+
 const packageName = "@agent-html/ahtml"
 const cacheTtlMs = 24 * 60 * 60 * 1000
 const requestTimeoutMs = 1500
 
 export async function checkForPackageUpdate({
   currentVersion,
+  packageManager,
   now = Date.now(),
 } = {}) {
   if (isUpdateCheckDisabled()) {
@@ -19,13 +22,17 @@ export async function checkForPackageUpdate({
   const cached = await readCachedUpdateCheck(now)
 
   if (cached) {
-    return createUpdateResult(installedVersion, cached.latestVersion)
+    return createUpdateResult(installedVersion, cached.latestVersion, {
+      packageManager,
+    })
   }
 
   try {
     const latestVersion = await fetchLatestVersion()
     await writeCachedUpdateCheck({ latestVersion, checkedAt: now })
-    return createUpdateResult(installedVersion, latestVersion)
+    return createUpdateResult(installedVersion, latestVersion, {
+      packageManager,
+    })
   } catch {
     return { status: "skipped", reason: "unavailable" }
   }
@@ -109,13 +116,13 @@ function getCachePath() {
   return path.join(cacheRoot, "ahtml", "update-check.json")
 }
 
-function createUpdateResult(currentVersion, latestVersion) {
+function createUpdateResult(currentVersion, latestVersion, { packageManager }) {
   if (compareSemver(latestVersion, currentVersion) > 0) {
     return {
       status: "available",
       currentVersion,
       latestVersion,
-      command: `npm install ${packageName}@latest`,
+      command: getPackageAddCommand(packageManager, `${packageName}@latest`),
     }
   }
 

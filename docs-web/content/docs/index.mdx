@@ -23,13 +23,22 @@ npx ahtml status
 npx ahtml doctor
 ```
 
+`@agent-html/ahtml` is published once to npmjs.com. Use the equivalent install command for your package manager:
+
+| Package manager | Install                         | Run `ahtml`       |
+| --------------- | ------------------------------- | ----------------- |
+| npm             | `npm install @agent-html/ahtml` | `npx ahtml`       |
+| pnpm            | `pnpm add @agent-html/ahtml`    | `pnpm exec ahtml` |
+| yarn            | `yarn add @agent-html/ahtml`    | `yarn ahtml`      |
+| bun             | `bun add @agent-html/ahtml`     | `bunx ahtml`      |
+
 `ahtml init` delegates Vite + shadcn setup to your local project, then writes the ahtml integration config and renderer adapter files.
 
 If the current directory is empty or shadcn cannot detect a supported framework, use the fallback scaffold:
 
 ```bash
 npx ahtml init --scaffold
-npm install
+<your-package-manager> install
 npx ahtml init --apply
 npx ahtml doctor
 ```

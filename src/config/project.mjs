@@ -142,6 +142,34 @@ export async function getMissingShadcnComponents({ userRoot, config }) {
   return getMissingComponentNames(config.shadcn.components, configuredDir)
 }
 
+export function getPackageInstallCommand(packageManager) {
+  switch (packageManager) {
+    case "pnpm":
+      return "pnpm install"
+    case "bun":
+      return "bun install"
+    case "yarn":
+      return "yarn install"
+    case "npm":
+    default:
+      return "npm install"
+  }
+}
+
+export function getPackageAddCommand(packageManager, packageName) {
+  switch (packageManager) {
+    case "pnpm":
+      return `pnpm add ${packageName}`
+    case "bun":
+      return `bun add ${packageName}`
+    case "yarn":
+      return `yarn add ${packageName}`
+    case "npm":
+    default:
+      return `npm install ${packageName}`
+  }
+}
+
 function assertProjectConfig(config) {
   if (
     config?.kind !== "agent-html-project" ||

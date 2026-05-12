@@ -384,6 +384,26 @@ describe("agent-html CLI", () => {
     await rm(tempDir, { force: true, recursive: true })
   })
 
+  it("prints scaffold install guidance for the detected package manager", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
+
+    await writeFile(path.join(tempDir, "pnpm-lock.yaml"), "")
+
+    const { stdout } = await runCli(
+      ["init", "--scaffold", "--components", "card"],
+      {},
+      tempDir,
+    )
+    const project = parseJson<AhtmlProjectConfigJson>(
+      await readFile(path.join(tempDir, "agent-html.project.json"), "utf8"),
+    )
+
+    expect(stdout).toContain("Next: pnpm install")
+    expect(stdout).toContain("Then: ahtml init --apply")
+    expect(project.packageManager).toBe("pnpm")
+    await rm(tempDir, { force: true, recursive: true })
+  })
+
   it("uses shadcn setup and writes adapter files as the default init path", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
     const fakeBinDir = await setupFakePackageRunner(tempDir)
@@ -577,6 +597,11 @@ describe("agent-html CLI", () => {
     const registry = await startPackageVersionServer("99.0.0")
 
     try {
+      await writeFile(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({ packageManager: "pnpm@9.0.0" }),
+      )
+
       const { stdout } = await runCli(
         ["status"],
         {
@@ -589,7 +614,7 @@ describe("agent-html CLI", () => {
       )
 
       expect(stdout).toContain(
-        "update: 99.0.0 available. Run: npm install @agent-html/ahtml@latest",
+        "update: 99.0.0 available. Run: pnpm add @agent-html/ahtml@latest",
       )
       expect(registry.requests()).toBe(1)
 
@@ -619,6 +644,11 @@ describe("agent-html CLI", () => {
     const registry = await startPackageVersionServer("99.0.0")
 
     try {
+      await writeFile(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({ packageManager: "yarn@4.0.0" }),
+      )
+
       const { stdout } = await runCli(
         ["doctor"],
         {
@@ -631,7 +661,7 @@ describe("agent-html CLI", () => {
       )
 
       expect(stdout).toContain(
-        "warn package:update latest is 99.0.0. Run: npm install @agent-html/ahtml@latest",
+        "warn package:update latest is 99.0.0. Run: yarn add @agent-html/ahtml@latest",
       )
     } finally {
       await registry.close()
