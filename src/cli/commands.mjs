@@ -1,21 +1,6 @@
 import { cliDefaults, safetyHelpText } from "../config/defaults.mjs"
 
 export const commandMetadata = {
-  init: {
-    hidden: true,
-    summary: "Repair the managed ahtml runtime.",
-    purpose:
-      "Repair the user-level managed runtime. Normal build, preview, status, and doctor commands bootstrap it automatically.",
-    usage: "ahtml init [--dry-run]",
-    options: [
-      {
-        name: "dry-run",
-        description: "Print the runtime plan without writing files.",
-        value: false,
-      },
-    ],
-    example: "ahtml init --dry-run",
-  },
   schema: {
     summary: "Print the agent-facing component and config contract.",
     purpose: "Print the dehydrated agent-facing contract.",

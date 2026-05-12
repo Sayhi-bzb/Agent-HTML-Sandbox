@@ -63,7 +63,6 @@ try {
 
   await expectStdout(["schema", "--format", "prompt"], "Write agent-html only.")
   await expectStdout(["--help"], "Closed-loop workflow:")
-  await expectStdout(["init", "--help"], "ahtml init [--dry-run]")
   for (const command of Object.keys(commandMetadata)) {
     await expectStdout([command, "--help"], `ahtml ${command}`)
   }
@@ -75,12 +74,6 @@ try {
     ["status"],
     "Next: ahtml build --input artifact.agent.html --out dist/html",
   )
-  await expectFile(
-    path.join(runtimeHome, "config", "runtime.json"),
-    "ahtml-managed-runtime",
-  )
-  await expectStdout(["init", "--dry-run"], '"kind": "ahtml-runtime-plan"')
-  await runAhtml(["init"])
   await expectFile(
     path.join(runtimeHome, "config", "runtime.json"),
     "ahtml-managed-runtime",
@@ -165,7 +158,7 @@ try {
     ["schema", "--input", documentPath],
     "does not accept --input",
   )
-  await expectFailure(["init", "--scaffold"], "does not accept --scaffold")
+  await expectFailure(["init"], 'Unknown command "init"')
 
   await expectFailure(
     [
@@ -254,7 +247,11 @@ function assertPackBoundary(files) {
     "src/cli/commands.mjs",
     "src/cli/index.mjs",
     "src/cli/module-loader.mjs",
-    "src/cli/runtime.mjs",
+    "src/cli/runtime-build.mjs",
+    "src/cli/runtime-paths.mjs",
+    "src/cli/runtime-status.mjs",
+    "src/cli/runtime-template.mjs",
+    "src/cli/runtime-template/src/app.tsx",
     "src/cli/schema.mjs",
     "src/cli/validate.mjs",
     "src/engine/component-schema.ts",

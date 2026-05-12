@@ -124,7 +124,6 @@ Defaults:
 ## Rules
 
 - `ahtml status`, `ahtml doctor`, `ahtml build`, and `ahtml preview` bootstrap or repair the managed runtime automatically.
-- Use `ahtml init --dry-run` only when you need to inspect runtime repair without writing files.
 - shadcn/ui is an internal renderer implementation detail; do not initialize shadcn in the current project for normal `ahtml` use.
 - Treat `ahtml schema --format prompt` as the source of truth.
 - Use only registered agent-html components, props, children, and render config values.

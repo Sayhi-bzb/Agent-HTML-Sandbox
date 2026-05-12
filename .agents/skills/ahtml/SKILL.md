@@ -1,6 +1,6 @@
 ---
 name: ahtml
-description: Install, initialize, use, and debug ahtml agent-html artifact workflows. Use when working with ahtml CLI commands such as init, status, doctor, schema, compose, validate, build, preview, inspect, or config; when using the managed ahtml runtime; or when explaining the ahtml engine/config/CLI architecture.
+description: Install, use, and debug ahtml agent-html artifact workflows. Use when working with ahtml CLI commands such as status, doctor, schema, compose, validate, build, preview, inspect, or config; when using the managed ahtml runtime; or when explaining the ahtml engine/config/CLI architecture.
 ---
 
 # ahtml
@@ -35,4 +35,4 @@ Load references only as needed:
 - Read `references/debug.md` when `status`, `doctor`, `build`, `preview`, runtime setup, components, or config fail.
 - Read `references/bug-reporting.md` when a reproducible `ahtml` product bug remains after normal debug checks.
 
-Prefer automatic runtime bootstrap through `ahtml status`, `ahtml doctor`, `ahtml build`, or `ahtml preview`. Do not use old project-local scaffold flags.
+Prefer automatic runtime bootstrap through `ahtml status`, `ahtml doctor`, `ahtml build`, or `ahtml preview`. Do not use removed project-local scaffold or init flows.

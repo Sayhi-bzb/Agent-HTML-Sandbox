@@ -10,6 +10,13 @@ import { describe, expect, it } from "vitest"
 const coreLoaderEntrypoints = ["src/cli/schema.mjs", "src/cli/validate.mjs"]
 
 const coreModuleLoaderPath = "src/cli/module-loader.mjs"
+const managedRuntimeSourcePaths = [
+  "src/cli/index.mjs",
+  "src/cli/runtime-build.mjs",
+  "src/cli/runtime-paths.mjs",
+  "src/cli/runtime-status.mjs",
+  "src/cli/runtime-template.mjs",
+]
 const forbiddenCoreLoaderBoundaryPatterns = [
   /from\s+["']vite["']/,
   /from\s+["']@vitejs\/plugin-react["']/,
@@ -48,22 +55,56 @@ describe("code governance sync blocks", () => {
     )) as {
       readonly commandMetadata: Record<string, { readonly usage: string }>
     }
-    const cliSource = await readFile(
-      path.join(process.cwd(), "src", "cli", "index.mjs"),
-      "utf8",
-    )
-    const runtimeSource = await readFile(
-      path.join(process.cwd(), "src", "cli", "runtime.mjs"),
-      "utf8",
-    )
+    const managedRuntimeSource = (
+      await Promise.all(
+        managedRuntimeSourcePaths.map((relativePath) =>
+          readFile(path.join(process.cwd(), relativePath), "utf8"),
+        ),
+      )
+    ).join("\n")
 
-    expect(commandModule.commandMetadata.init.usage).toBe(
-      "ahtml init [--dry-run]",
-    )
-    expect(`${cliSource}\n${runtimeSource}`).not.toContain(
-      "agent-html.project.json",
-    )
-    expect(`${cliSource}\n${runtimeSource}`).not.toContain("--local-project")
-    expect(`${cliSource}\n${runtimeSource}`).not.toContain("--scaffold")
+    expect(commandModule.commandMetadata).not.toHaveProperty("init")
+    expect(managedRuntimeSource).not.toContain("agent-html.project.json")
+    expect(managedRuntimeSource).not.toContain("--local-project")
+    expect(managedRuntimeSource).not.toContain("--scaffold")
+    expect(managedRuntimeSource).not.toContain("--apply")
+    expect(managedRuntimeSource).not.toContain("--template")
+    expect(managedRuntimeSource).not.toContain("--components")
+    expect(managedRuntimeSource).not.toContain("src/cli/scaffold.mjs")
+  })
+
+  it("keeps public docs off the removed init command", async () => {
+    const publicDocsPaths = [
+      "README.md",
+      ".agents/skills/ahtml/SKILL.md",
+      ".agents/skills/ahtml/references/install.md",
+      ".agents/skills/ahtml/references/debug.md",
+    ]
+    const publicDocsSource = (
+      await Promise.all(
+        publicDocsPaths.map((relativePath) =>
+          readFile(path.join(process.cwd(), relativePath), "utf8"),
+        ),
+      )
+    ).join("\n")
+
+    expect(publicDocsSource).not.toContain("ahtml init")
+    expect(publicDocsSource).not.toContain("init --dry-run")
+    expect(publicDocsSource).not.toContain("init --scaffold")
+  })
+
+  it("keeps runtime templates outside runtime orchestration modules", async () => {
+    const runtimeModuleSource = (
+      await Promise.all(
+        managedRuntimeSourcePaths.map((relativePath) =>
+          readFile(path.join(process.cwd(), relativePath), "utf8"),
+        ),
+      )
+    ).join("\n")
+
+    expect(runtimeModuleSource).not.toContain("const appTsxSource")
+    expect(runtimeModuleSource).not.toContain("const stylesSource")
+    expect(runtimeModuleSource).not.toContain("function Card(")
+    expect(runtimeModuleSource).toContain("runtime-template")
   })
 })

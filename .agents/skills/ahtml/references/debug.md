@@ -28,13 +28,8 @@ ahtml doctor
 Force runtime repair:
 
 ```bash
-ahtml init
-```
-
-Need to inspect current setup without writing:
-
-```bash
-ahtml init --dry-run
+ahtml status
+ahtml doctor
 ```
 
 Need to verify package boundary in this repository:
@@ -72,4 +67,4 @@ Preview fails:
 
 ## Architecture Boundaries
 
-Do not fix failures by restoring current-directory project integration, `agent-html.project.json`, `init --scaffold`, a package-local Vite app, or root shadcn UI files. The package should stay engine + config + CLI plus a shadcn-backed user-level managed runtime under `~/.ahtml` or `%USERPROFILE%\.ahtml`.
+Do not fix failures by restoring current-directory project integration, `agent-html.project.json`, init/scaffold flows, a package-local Vite app, or root shadcn UI files. The package should stay engine + config + CLI plus a shadcn-backed user-level managed runtime under `~/.ahtml` or `%USERPROFILE%\.ahtml`.

@@ -1,6 +1,6 @@
 {
   "name": "@agent-html/ahtml",
-  "version": "0.1.0-alpha.7",
+  "version": "0.1.0-alpha.8",
   "description": "Sanitized agent-html artifact CLI.",
   "license": "MIT",
   "type": "module",
@@ -48,7 +48,7 @@
     "dev:check": "npm run check:commit",
     "release:alpha": "npm run version:alpha",
     "release:metadata": "node scripts/release-metadata.mjs",
-    "release:check": "prettier package.json tsconfig.json tsconfig.node.json eslint.config.js vitest.config.ts knip.json README.md \".github/workflows/*.yml\" \".github/actions/**/*.yml\" \"src/**/*.{ts,mjs}\" \"!src/engine/generated/**\" \"scripts/**/*.mjs\" \"docs-web/content/**/*.mdx\" --check && eslint . && vitest run && knip && tsc -b && node scripts/verify-packed-ahtml.mjs && markdownlint-cli2 && npm --prefix docs-web run types:check && npm --prefix docs-web run lint && npm --prefix docs-web run build && npm publish --access public --tag alpha --dry-run",
+    "release:check": "npm run check:all && npm publish --access public --tag alpha --dry-run",
     "release:check:ci": "npm run check:ready",
     "release:tag": "node scripts/release-tag.mjs",
     "schema:prompt": "node scripts/generate-component-schema-prompt.mjs",

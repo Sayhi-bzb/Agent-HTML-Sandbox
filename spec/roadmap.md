@@ -104,7 +104,7 @@ AHTML_HOME
 
 - runtime bootstrap 生成 runtime manifest、runtime directories 和 generated document 文件。
 - `status` / `doctor` / `build` / `preview` 默认自动初始化或修复 managed runtime。
-- `ahtml init` 仅作为显式 repair / debug 命令保留，不属于默认 happy path。
+- 不保留 `ahtml init`；runtime repair 由 `status` / `doctor` / `build` / `preview` 自动触发。
 - `build` / `preview` 首次运行可以自动 bootstrap。
 - bootstrap 失败时输出明确修复命令。
 
@@ -180,11 +180,6 @@ ahtml build --input artifact.agent.html --out dist/html
 - docs 不再把 project-local setup 当作 happy path。
 
 ## Public Interface Changes
-
-`ahtml init`：
-
-- 新默认语义：可选修复 managed runtime，不属于默认 happy path。
-- 不默认写当前工作目录。
 
 `ahtml status`：
 

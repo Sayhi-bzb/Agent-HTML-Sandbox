@@ -49,19 +49,14 @@ ahtml doctor
 
 ## Runtime Repair
 
-Runtime setup is automatic for normal commands. Force repair only when debugging:
+Runtime setup is automatic for normal commands. To force repair, run a runtime-aware command with the desired `AHTML_HOME`:
 
 ```bash
-ahtml init
+ahtml status
+ahtml doctor
 ```
 
-Preview without writing:
-
-```bash
-ahtml init --dry-run
-```
-
-Do not use old project-local flags such as `--template`, `--preset`, `--components`, `--apply`, or `--scaffold`.
+Do not use removed project-local commands or flags such as `init`, `--template`, `--preset`, `--components`, `--apply`, or `--scaffold`.
 
 ## After Install
 

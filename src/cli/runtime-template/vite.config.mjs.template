@@ -1,0 +1,34 @@
+import path from "node:path"
+import { fileURLToPath } from "node:url"
+
+const runtimeRoot = path.dirname(fileURLToPath(import.meta.url))
+const dependencies = __AHTML_RUNTIME_DEPENDENCIES__
+
+export default {
+  root: runtimeRoot,
+  resolve: {
+    alias: {
+      "@": path.join(runtimeRoot, "src"),
+      react: dependencies.reactRoot,
+      "react/jsx-runtime": dependencies.reactJsxRuntime,
+      "react-dom": dependencies.reactDomRoot,
+      "react-dom/client": dependencies.reactDomClient,
+      "react-dom/server": dependencies.reactDomServer,
+      clsx: dependencies.clsxRoot,
+      "tailwind-merge": dependencies.tailwindMergeRoot,
+    },
+  },
+  ssr: {
+    noExternal: true,
+  },
+  build: {
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        entryFileNames: "assets/ahtml.js",
+        chunkFileNames: "assets/ahtml-[hash].js",
+        assetFileNames: "assets/ahtml.[ext]",
+      },
+    },
+  },
+}

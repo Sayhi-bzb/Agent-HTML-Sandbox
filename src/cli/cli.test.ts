@@ -94,11 +94,6 @@ describe("agent-html CLI", () => {
       expect(stdout).toContain(`ahtml ${command}`)
       expect(stdout).toContain("Usage:")
     }
-
-    const initHelp = await runCli(["init", "--help"])
-    expect(initHelp.stdout).toContain("managed runtime")
-    expect(initHelp.stdout).not.toContain("--template")
-    expect(initHelp.stdout).not.toContain("--components")
   }, 10000)
 
   it("prints agent-facing schema without implementation props", async () => {
@@ -114,40 +109,20 @@ describe("agent-html CLI", () => {
     expect(schema.forbidden).toBe(schema.safetyPolicy.forbidden)
   })
 
-  it("initializes only the managed runtime and honors AHTML_HOME", async () => {
+  it("rejects the removed init command without creating project files", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
     const runtimeHome = path.join(tempDir, ".custom-ahtml")
 
-    const dryRun = await runCli(
-      ["init", "--dry-run"],
-      { AHTML_HOME: runtimeHome },
-      tempDir,
+    await expectCliFailure(
+      runCli(["init"], { AHTML_HOME: runtimeHome }, tempDir),
+      'Unknown command "init"',
     )
-    const plan = parseJsonFromOutput<{
-      readonly kind: string
-      readonly runtimeRoot: string
-      readonly wouldBootstrap: boolean
-    }>(dryRun.stdout)
-
-    expect(plan.kind).toBe("ahtml-runtime-plan")
-    expect(plan.runtimeRoot).toBe(runtimeHome)
-    expect(plan.wouldBootstrap).toBe(true)
+    await expectCliFailure(
+      runCli(["init", "--dry-run"], { AHTML_HOME: runtimeHome }, tempDir),
+      'Unknown command "init"',
+    )
     await expectPathMissing(path.join(tempDir, "agent-html.project.json"))
     await expectPathMissing(path.join(tempDir, "src"))
-
-    const initialized = await runCli(
-      ["init"],
-      { AHTML_HOME: runtimeHome },
-      tempDir,
-    )
-
-    expect(initialized.stdout).toContain("Repaired managed runtime")
-    await expectFile(
-      path.join(runtimeHome, "config", "runtime.json"),
-      "ahtml-managed-runtime",
-    )
-    await expectPathMissing(path.join(tempDir, "components.json"))
-    await expectPathMissing(path.join(tempDir, "vite.config.ts"))
     await rm(tempDir, { force: true, recursive: true })
   })
 
@@ -327,7 +302,7 @@ describe("agent-html CLI", () => {
     const registry = await startPackageVersionServer("99.0.0")
 
     try {
-      await runCli(["init"], { AHTML_HOME: runtimeHome }, tempDir)
+      await runCli(["status"], { AHTML_HOME: runtimeHome }, tempDir)
 
       const status = await runCli(
         ["status"],
@@ -375,7 +350,7 @@ describe("agent-html CLI", () => {
     const registry = await startPackageVersionServer("99.0.0", 500)
 
     try {
-      await runCli(["init"], { AHTML_HOME: runtimeHome }, tempDir)
+      await runCli(["status"], { AHTML_HOME: runtimeHome }, tempDir)
 
       const disabled = await runCli(
         ["doctor"],
@@ -475,7 +450,7 @@ describe("agent-html CLI", () => {
     await expectCliFailure(runCli(["schema", "--format"]), "--format requires")
     await expectCliFailure(
       runCli(["init", "--scaffold"], {}, tempDir),
-      "does not accept --scaffold",
+      'Unknown command "init"',
     )
     await expectCliFailure(
       runCli(["schema", "--input", "artifact.agent.html"], {}, tempDir),
@@ -653,16 +628,6 @@ async function waitForProcessExit(child: ReturnType<typeof spawn>) {
 
 function parseJson<T>(source: string): T {
   return JSON.parse(source) as T
-}
-
-function parseJsonFromOutput<T>(source: string): T {
-  const start = source.indexOf("{")
-
-  if (start < 0) {
-    throw new Error("Expected CLI output to include JSON.")
-  }
-
-  return parseJson<T>(source.slice(start))
 }
 
 function normalizeNewlines(value: string): string {

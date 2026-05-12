@@ -20,14 +20,14 @@ import {
 } from "./commands.mjs"
 import { formatPrompt, getCliSchemaOutput } from "./schema.mjs"
 import { checkForPackageUpdate } from "./update-check.mjs"
+import { buildRuntimeArtifact } from "./runtime-build.mjs"
+import { getRuntimePaths } from "./runtime-paths.mjs"
 import {
-  buildRuntimeArtifact,
   bootstrapManagedRuntime,
-  getRuntimePaths,
   getRuntimeStatus,
   readRuntimeManifest,
   writeGeneratedDocument,
-} from "./runtime.mjs"
+} from "./runtime-status.mjs"
 import { validateAgentHtmlSource, validateRenderConfig } from "./validate.mjs"
 
 const packageRoot = path.resolve(
@@ -49,7 +49,6 @@ const defaultOutputDir = path.join(
 const command = process.argv[2]
 const args = process.argv.slice(3)
 const commandHandlers = {
-  init: initCommand,
   schema: schemaCommand,
   compose: composeCommand,
   validate: validateCommand,
@@ -102,45 +101,6 @@ function printCommandHelp(commandName) {
   }
 
   process.stdout.write(formatCommandHelp(commandName, commandDefinition))
-}
-
-async function initCommand(commandArgs, definition) {
-  const options = parseOptions(commandArgs, definition)
-  const packageVersion = await readPackageVersion()
-  const status = await getRuntimeStatus({
-    packageVersion,
-    outputDir: defaultOutputDir,
-    paths: runtimePaths,
-  })
-
-  if (options["dry-run"]) {
-    process.stdout.write("Dry run: no files written.\n")
-    process.stdout.write(
-      `${JSON.stringify(
-        {
-          kind: "ahtml-runtime-plan",
-          runtimeRoot: runtimePaths.runtimeRoot,
-          runtimeDir: runtimePaths.runtimeDir,
-          configDir: runtimePaths.configDir,
-          ready: status.ready,
-          wouldBootstrap: !status.ready,
-        },
-        null,
-        2,
-      )}\n`,
-    )
-    return
-  }
-
-  await bootstrapManagedRuntime({
-    packageRoot,
-    packageVersion,
-    paths: runtimePaths,
-  })
-  process.stdout.write(
-    `Repaired managed runtime: ${runtimePaths.runtimeRoot}\n`,
-  )
-  process.stdout.write("Next: ahtml status\n")
 }
 
 async function schemaCommand(commandArgs, definition) {
