@@ -1,5 +1,5 @@
 import { execFile, spawn } from "node:child_process"
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
@@ -13,9 +13,9 @@ const windowsShellOptions =
 const tempRoot = await mkdtemp(path.join(os.tmpdir(), "ahtml-pack-"))
 const packDir = path.join(tempRoot, "pack")
 const consumerDir = path.join(tempRoot, "consumer")
+const runtimeHome = path.join(tempRoot, "runtime-home")
 let ahtmlCommand
 let ahtmlScriptPath
-let commandMetadataPath
 
 try {
   await mkdir(packDir, { recursive: true })
@@ -48,7 +48,7 @@ try {
     "bin",
     "ahtml.mjs",
   )
-  commandMetadataPath = path.join(
+  const commandMetadataPath = path.join(
     consumerDir,
     "node_modules",
     "@agent-html",
@@ -61,59 +61,26 @@ try {
     pathToFileURL(commandMetadataPath).href
   )
 
-  await expectStdout(
-    ahtmlCommand,
-    ["schema", "--format", "prompt"],
-    "Write agent-html only.",
-  )
-  await expectStdout(ahtmlCommand, ["--help"], "Closed-loop workflow:")
+  await expectStdout(["schema", "--format", "prompt"], "Write agent-html only.")
+  await expectStdout(["--help"], "Closed-loop workflow:")
+  await expectStdout(["init", "--help"], "ahtml init [--dry-run]")
   for (const command of Object.keys(commandMetadata)) {
-    await expectStdout(ahtmlCommand, [command, "--help"], `ahtml ${command}`)
+    await expectStdout([command, "--help"], `ahtml ${command}`)
   }
-  await expectStdout(
-    ahtmlCommand,
-    ["schema", "--format", "json"],
-    '"components"',
-  )
-  await expectStdout(
-    ahtmlCommand,
-    ["init", "--dry-run", "--components", "card,badge"],
-    '"integration": "vite-shadcn"',
-  )
-  await expectStdout(
-    ahtmlCommand,
-    ["init", "--dry-run", "--components", "card,badge"],
-    '"missingComponents"',
-  )
-  await expectStdout(ahtmlCommand, ["init", "--dry-run"], '"wouldApply": true')
-  const scaffoldDir = path.join(tempRoot, "scaffold")
-  await mkdir(scaffoldDir, { recursive: true })
-  await expectStdout(
-    ahtmlCommand,
-    ["init", "--scaffold", "--components", "card"],
-    "Next: npm install",
-    scaffoldDir,
-  )
-  await expectStdout(
-    ahtmlCommand,
-    ["init", "--scaffold", "--components", "card", "--dry-run"],
-    '"wouldScaffold": true',
-    scaffoldDir,
-  )
-  await expectFile(path.join(scaffoldDir, "components.json"), "@/components/ui")
-  await expectFile(path.join(scaffoldDir, "tsconfig.json"), "@/*")
-  await expectFile(path.join(scaffoldDir, "src", "lib", "utils.ts"), "twMerge")
+  await expectStdout(["schema", "--format", "json"], '"components"')
+
+  await expectStdout(["status"], "ready: no")
+  await expectStdout(["status"], "Next: ahtml init")
+  await expectStdout(["init", "--dry-run"], '"kind": "ahtml-runtime-plan"')
+  await runAhtml(["init"])
   await expectFile(
-    path.join(scaffoldDir, "src", "vite-env.d.ts"),
-    "vite/client",
+    path.join(runtimeHome, "config", "runtime.json"),
+    "ahtml-managed-runtime",
   )
-  await expectFile(
-    path.join(scaffoldDir, "src", "agent-html", "document.generated.ts"),
-    "meta:",
-  )
-  await expectFile(
-    path.join(scaffoldDir, "src", "agent-html", "renderer-adapter.tsx"),
-    'node.name === "card"',
+  await expectStdout(["status"], "ready: yes")
+  await expectStdout(
+    ["status"],
+    "Next: ahtml build --input artifact.agent.html --out dist/html",
   )
 
   const inputPath = path.join(consumerDir, "composition.json")
@@ -146,7 +113,6 @@ try {
   await expectFile(documentPath, "Packed CLI")
 
   await execFileWithInput(
-    ahtmlCommand,
     ["compose", "--stdin", "--out", path.join(consumerDir, "stdin.agent.html")],
     JSON.stringify({
       document: {
@@ -158,56 +124,42 @@ try {
   )
   await expectFile(path.join(consumerDir, "stdin.agent.html"), "Packed Stdin")
 
-  await setupFakeUserLocalVite(consumerDir, "Built from an installed package.")
-  await runAhtml(["init", "--components", "card"])
-  await expectStdout(ahtmlCommand, ["status"], "ready: yes")
-  await expectStdout(
-    ahtmlCommand,
-    ["status"],
-    "Next: ahtml preview --input artifact.agent.html",
-  )
   await runAhtml(["build", "--input", documentPath, "--out", outputDir])
+  await expectFile(path.join(outputDir, "index.html"), "Packed CLI")
+  await expectFile(path.join(outputDir, "index.html"), "Overview")
   await expectFile(
     path.join(outputDir, "index.html"),
     "Built from an installed package.",
   )
+  await expectFile(path.join(outputDir, "assets", "ahtml.css"), "ahtml-card")
   await expectFile(
     path.join(outputDir, "agent-html.inspect.json"),
     "agent-html-inspection",
   )
+  await expectFile(
+    path.join(runtimeHome, "runtime", "document.generated.json"),
+    "Built from an installed package.",
+  )
+  await assertNoProjectScaffold(consumerDir)
 
-  await expectStdout(
-    ahtmlCommand,
-    ["validate", "--input", documentPath],
-    "agent-html valid",
-  )
-  await expectStdout(
-    ahtmlCommand,
-    ["inspect", "--input", documentPath],
-    "card: 1",
-  )
-  await expectStdout(ahtmlCommand, ["inspect", "--dir", outputDir], "card: 1")
-  await expectStdout(ahtmlCommand, ["doctor"], "ok environment:node")
-  await expectStdout(ahtmlCommand, ["doctor"], "ok config:project-config")
-  await expectStdout(ahtmlCommand, ["doctor"], "ok setup:shadcn-components")
+  await expectStdout(["validate", "--input", documentPath], "agent-html valid")
+  await expectStdout(["inspect", "--input", documentPath], "card: 1")
+  await expectStdout(["inspect", "--dir", outputDir], "card: 1")
+  await expectStdout(["doctor"], "ok environment:node")
+  await expectStdout(["doctor"], "ok runtime:manifest")
   await expectPreview(documentPath, path.join(consumerDir, "dist", "preview"))
 
-  await expectStdout(ahtmlCommand, ["config", "get"], '"density"')
+  await expectStdout(["config", "get"], '"density"')
   await runAhtml(["config", "set", "density", "compact"])
-  await expectStdout(ahtmlCommand, ["config", "get"], '"compact"')
+  await expectStdout(["config", "get"], '"compact"')
+  await expectFailure(["config", "set", "density", "loose"], "Invalid value")
   await expectFailure(
-    ahtmlCommand,
-    ["config", "set", "density", "loose"],
-    "Invalid value",
-  )
-  await expectFailure(
-    ahtmlCommand,
     ["schema", "--input", documentPath],
     "does not accept --input",
   )
+  await expectFailure(["init", "--scaffold"], "does not accept --scaffold")
 
   await expectFailure(
-    ahtmlCommand,
     [
       "build",
       "--input",
@@ -223,7 +175,6 @@ try {
   )
 
   await expectFailure(
-    ahtmlCommand,
     [
       "compose",
       "--input",
@@ -262,6 +213,7 @@ function runNpm(args, cwd) {
 function runAhtml(args) {
   return execFileAsync(ahtmlCommand, args, {
     cwd: consumerDir,
+    env: getAhtmlEnv(),
     ...windowsShellOptions,
   })
 }
@@ -280,16 +232,21 @@ function assertPackBoundary(files) {
     "build/",
     "coverage/",
   ]
-  const forbiddenFiles = ["agent-html.config.json", "artifact.agent.html"]
+  const forbiddenFiles = [
+    "agent-html.config.json",
+    "agent-html.project.json",
+    "artifact.agent.html",
+    "src/config/project.mjs",
+    "src/cli/scaffold.mjs",
+  ]
   const forbiddenSuffixes = [".test.ts", ".test.tsx"]
   const requiredFiles = [
     "bin/ahtml.mjs",
     "src/config/defaults.mjs",
-    "src/config/project.mjs",
     "src/cli/commands.mjs",
     "src/cli/index.mjs",
     "src/cli/module-loader.mjs",
-    "src/cli/scaffold.mjs",
+    "src/cli/runtime.mjs",
     "src/cli/schema.mjs",
     "src/cli/validate.mjs",
     "src/engine/component-schema.ts",
@@ -307,7 +264,7 @@ function assertPackBoundary(files) {
     }
 
     if (forbiddenFiles.includes(file)) {
-      throw new Error(`Local artifact/config file included: ${file}`)
+      throw new Error(`Forbidden package file included: ${file}`)
     }
 
     if (forbiddenSuffixes.some((suffix) => file.endsWith(suffix))) {
@@ -322,43 +279,8 @@ function assertPackBoundary(files) {
   }
 }
 
-async function setupFakeUserLocalVite(directory, html) {
-  const viteDir = path.join(directory, "node_modules", "vite")
-  const componentDir = path.join(directory, "src", "components", "ui")
-
-  await mkdir(path.join(viteDir, "bin"), { recursive: true })
-  await mkdir(componentDir, { recursive: true })
-  await writeFile(path.join(directory, "vite.config.ts"), "export default {}\n")
-  await writeFile(path.join(componentDir, "card.tsx"), "export {}\n")
-  await writeFile(
-    path.join(directory, "components.json"),
-    JSON.stringify({
-      aliases: { ui: "@/components/ui" },
-      tailwind: { css: "src/index.css" },
-    }),
-  )
-  await writeFile(
-    path.join(viteDir, "package.json"),
-    JSON.stringify({ bin: { vite: "bin/vite.mjs" } }),
-  )
-  await writeFile(
-    path.join(viteDir, "bin", "vite.mjs"),
-    [
-      'import { mkdir, writeFile } from "node:fs/promises"',
-      'import path from "node:path"',
-      'const outDir = process.argv[process.argv.indexOf("--outDir") + 1]',
-      "await mkdir(outDir, { recursive: true })",
-      `await writeFile(path.join(outDir, "index.html"), ${JSON.stringify(html)})`,
-      "",
-    ].join("\n"),
-  )
-}
-
-async function expectStdout(command, args, expected, cwd = consumerDir) {
-  const result = await execFileAsync(command, args, {
-    cwd,
-    ...windowsShellOptions,
-  })
+async function expectStdout(args, expected) {
+  const result = await runAhtml(args)
 
   if (!result.stdout.includes(expected)) {
     throw new Error(`Expected stdout to include "${expected}".`)
@@ -373,12 +295,30 @@ async function expectFile(filePath, expected) {
   }
 }
 
-async function expectFailure(command, args, expectedStderr) {
+async function expectPathMissing(filePath) {
   try {
-    await execFileAsync(command, args, {
-      cwd: consumerDir,
-      ...windowsShellOptions,
-    })
+    await stat(filePath)
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return
+    }
+
+    throw error
+  }
+
+  throw new Error(`Expected path to be absent: ${filePath}`)
+}
+
+async function assertNoProjectScaffold(directory) {
+  await expectPathMissing(path.join(directory, "src"))
+  await expectPathMissing(path.join(directory, "vite.config.ts"))
+  await expectPathMissing(path.join(directory, "components.json"))
+  await expectPathMissing(path.join(directory, "agent-html.project.json"))
+}
+
+async function expectFailure(args, expectedStderr) {
+  try {
+    await runAhtml(args)
   } catch (error) {
     if (String(error.stderr).includes(expectedStderr)) {
       return
@@ -390,11 +330,12 @@ async function expectFailure(command, args, expectedStderr) {
   throw new Error(`Expected command to fail with "${expectedStderr}".`)
 }
 
-async function execFileWithInput(command, args, input) {
+async function execFileWithInput(args, input) {
   await new Promise((resolve, reject) => {
     let stderr = ""
-    const child = spawn(command, args, {
+    const child = spawn(ahtmlCommand, args, {
       cwd: consumerDir,
+      env: getAhtmlEnv(),
       ...windowsShellOptions,
       stdio: ["pipe", "ignore", "pipe"],
     })
@@ -410,7 +351,7 @@ async function execFileWithInput(command, args, input) {
         return
       }
 
-      reject(new Error(stderr || `${command} exited with code ${code}`))
+      reject(new Error(stderr || `${ahtmlCommand} exited with code ${code}`))
     })
     child.stdin.end(input)
   })
@@ -431,6 +372,7 @@ async function expectPreview(inputPath, outputDir) {
     ],
     {
       cwd: consumerDir,
+      env: getAhtmlEnv(),
       stdio: ["ignore", "pipe", "pipe"],
     },
   )
@@ -498,4 +440,12 @@ async function writeTempFile(directory, name, source) {
   const filePath = path.join(directory, name)
   await writeFile(filePath, source)
   return filePath
+}
+
+function getAhtmlEnv() {
+  return {
+    ...process.env,
+    AHTML_HOME: runtimeHome,
+    AHTML_NO_UPDATE_CHECK: "1",
+  }
 }

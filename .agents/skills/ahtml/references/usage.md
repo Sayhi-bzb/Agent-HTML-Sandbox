@@ -9,7 +9,7 @@ user asks
   -> agent reads ahtml schema
   -> agent outputs structured composition or .agent.html
   -> ahtml validates and sanitizes
-  -> user-local Vite + shadcn renders
+  -> managed runtime renders
   -> static artifact directory
 ```
 

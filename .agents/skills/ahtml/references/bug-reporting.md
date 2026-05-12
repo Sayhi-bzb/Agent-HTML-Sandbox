@@ -17,18 +17,17 @@ File a bug when the failure is reproducible and fits one of these cases:
 - CLI crash or unhandled exception.
 - Incorrect validation, parsing, or sanitization behavior.
 - `status` or `doctor` gives wrong or contradictory guidance.
-- Build or preview fails despite a valid document and ready local integration.
-- Generated user-local adapter behavior contradicts the schema contract.
+- Build or preview fails despite a valid document and ready managed runtime.
+- Managed runtime output contradicts the schema contract.
 - Published docs or README describe commands that do not work.
-- Package boundary regression, such as requiring package-local Vite, React, Tailwind, shadcn/ui, or renderer files.
+- Package boundary regression, such as requiring current-directory Vite, React, Tailwind, shadcn/ui, `components.json`, `vite.config.ts`, or `agent-html.project.json`.
 
 Do not file a bug for:
 
 - Invalid agent-facing input rejected by the schema.
-- Missing `ahtml init`, missing `agent-html.project.json`, or missing shadcn components.
-- Unsupported local Vite/shadcn project shape.
+- Missing `ahtml init` when `status` clearly says the runtime is not ready.
 - Network, npm auth, GitHub auth, or Cloudflare auth failures.
-- Failures fixed by documented `status`, `doctor`, `init --apply`, or validation guidance.
+- Failures fixed by documented `status`, `doctor`, `init`, update, or validation guidance.
 
 ## Collect Evidence
 
@@ -41,6 +40,7 @@ Include only relevant, redacted information:
 - Minimal `.agent.html` or composition JSON that reproduces the issue.
 - Expected behavior and actual behavior.
 - Results from `ahtml status` and `ahtml doctor`.
+- Runtime home path and whether `AHTML_HOME` was set.
 - Whether `ahtml validate` passes or fails.
 
 Redact secrets, tokens, private account names, private URLs, and unrelated user content. Keep file paths only when they help reproduce the issue.

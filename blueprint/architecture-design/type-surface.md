@@ -6,7 +6,7 @@
 
 - 公共类型表面变更必须同步 contracts、schema 和 tests。
 - agent-facing 类型不得泄漏内部实现 props、Tailwind class 或源码结构。
-- core 类型不得依赖 Vite、React、shadcn/ui、Tailwind、renderer adapter 或用户项目构建配置。
+- core 类型不得依赖 Vite、React、shadcn/ui、Tailwind、renderer adapter 或 managed runtime 构建配置。
 - 公共类型名称应保持稳定，避免用近义词创建平行概念。
 
 ## 1. GeneratedShadcnIntrospection
@@ -101,17 +101,17 @@ Change rule: RenderConfig key / value 变化必须同步 schema、sanitize schem
 
 Note: RenderConfig 只能包含有限枚举，例如 theme、density、tone、width。它不是 CSS、style、className、Tailwind class、shadcn props、script 或外部资源入口。
 
-## 9. AhtmlProjectConfig
+## 9. AhtmlRuntimeConfig
 
-Ownership: CLI / project integration
+Ownership: CLI / managed runtime
 
-Purpose: 表示用户项目中的 ahtml 配置。
+Purpose: 表示用户级 managed runtime 的 ahtml 配置。
 
-Consumers: CLI, renderer adapter, generated project
+Consumers: CLI, renderer adapter, managed runtime
 
-Change rule: 配置变化必须同步 `cli-to-user-project` contract、CLI checks 和 templates。
+Change rule: 配置变化必须同步 `cli-to-managed-runtime` contract、CLI checks 和 templates。
 
-Note: `AhtmlProjectConfig` 可记录 renderer adapter、template target、ComponentSchema source 和 output target。它不得保存 agent-facing CSS、Tailwind class 或完整 shadcn props。
+Note: `AhtmlRuntimeConfig` 可记录 renderer adapter、runtime template target、ComponentSchema source 和 output target。它不得保存 agent-facing CSS、Tailwind class 或完整 shadcn props。project-local config 已删除，不属于兼容表面。
 
 ## 10. RendererAdapter
 
@@ -119,9 +119,9 @@ Ownership: renderer integration
 
 Purpose: 表示把 `SanitizedAgentHtml` 渲染为页面产物的 adapter 表面。
 
-Consumers: CLI, templates, user project
+Consumers: CLI, templates, managed runtime
 
-Change rule: RendererAdapter 变化必须同步 `engine-to-renderer-adapter` contract、templates 和 generated project checks。
+Change rule: RendererAdapter 变化必须同步 `engine-to-renderer-adapter` contract、templates 和 runtime checks。
 
 Note: RendererAdapter 可依赖 React、shadcn/ui、Tailwind 或 Vite template，但这些依赖不得反向进入 core。
 

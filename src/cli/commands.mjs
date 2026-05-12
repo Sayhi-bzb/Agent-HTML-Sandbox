@@ -2,48 +2,14 @@ import { cliDefaults, safetyHelpText } from "../config/defaults.mjs"
 
 export const commandMetadata = {
   init: {
-    summary: "Prepare a user-local shadcn integration.",
+    summary: "Initialize or repair the managed ahtml runtime.",
     purpose:
-      "Detect the user project, run shadcn setup by default, and write finite ahtml config plus adapter files.",
-    usage:
-      "ahtml init [--template <name>] [--preset <name-or-code>] [--components <list>] [--out <path>] [--scaffold] [--apply] [--dry-run]",
+      "Create the user-level managed runtime used to render artifacts without writing project scaffold files.",
+    usage: "ahtml init [--dry-run]",
     options: [
       {
-        name: "template",
-        description: `shadcn template. Defaults to ${cliDefaults.shadcnTemplate}.`,
-        value: true,
-      },
-      {
-        name: "preset",
-        description: `shadcn preset. Defaults to ${cliDefaults.shadcnPreset}.`,
-        value: true,
-      },
-      {
-        name: "components",
-        description:
-          "Comma-separated shadcn component requirements. Defaults to the current ComponentSchema set.",
-        value: true,
-      },
-      {
-        name: "out",
-        description: `Project config path. Defaults to ${cliDefaults.projectConfigPath}.`,
-        value: true,
-      },
-      {
-        name: "scaffold",
-        description:
-          "Advanced fallback: write a minimal local Vite + shadcn scaffold without running shadcn.",
-        value: false,
-      },
-      {
-        name: "apply",
-        description:
-          "Advanced: run the shadcn CLI setup commands in an existing project.",
-        value: false,
-      },
-      {
         name: "dry-run",
-        description: "Print the detected config without writing files.",
+        description: "Print the runtime plan without writing files.",
         value: false,
       },
     ],
@@ -157,7 +123,7 @@ export const commandMetadata = {
   status: {
     summary: "Show setup readiness and the next command.",
     purpose:
-      "Show user-local setup readiness and a single recommended next command.",
+      "Show managed runtime readiness, output writability, update status, and one recommended next command.",
     usage: "ahtml status",
     options: [],
     example: "ahtml status",
@@ -194,7 +160,6 @@ Defaults:
   config: ${cliDefaults.configPath}
   document: ${cliDefaults.documentPath}
   output: ${cliDefaults.outputDir}
-  project: ${cliDefaults.projectConfigPath}
 
 Safety:
   ${safetyHelpText}

@@ -1,6 +1,12 @@
-import { spawn } from "node:child_process"
 import http from "node:http"
-import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises"
+import {
+  access,
+  constants,
+  mkdir,
+  readFile,
+  stat,
+  writeFile,
+} from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -12,19 +18,16 @@ import {
   hasHelpFlag,
   isHelpCommand,
 } from "./commands.mjs"
-import {
-  detectUserProject,
-  getPackageInstallCommand,
-  getMissingShadcnComponents,
-  readProjectConfigForDoctor,
-  readProjectConfigIfExists,
-} from "../config/project.mjs"
 import { formatPrompt, getCliSchemaOutput } from "./schema.mjs"
-import {
-  scaffoldAgentHtmlIntegration,
-  scaffoldUserProject,
-} from "./scaffold.mjs"
 import { checkForPackageUpdate } from "./update-check.mjs"
+import {
+  bootstrapManagedRuntime,
+  getRuntimePaths,
+  getRuntimeStatus,
+  readRuntimeManifest,
+  renderStaticArtifact,
+  writeGeneratedDocument,
+} from "./runtime.mjs"
 import { validateAgentHtmlSource, validateRenderConfig } from "./validate.mjs"
 
 const packageRoot = path.resolve(
@@ -33,6 +36,7 @@ const packageRoot = path.resolve(
   "..",
 )
 const userRoot = process.cwd()
+const runtimePaths = getRuntimePaths()
 const defaultDocumentPath = path.join(userRoot, cliDefaults.documentPath)
 const defaultConfigPath = path.resolve(
   userRoot,
@@ -41,10 +45,6 @@ const defaultConfigPath = path.resolve(
 const defaultOutputDir = path.join(
   userRoot,
   ...cliDefaults.outputDir.split("/"),
-)
-const defaultProjectConfigPath = path.resolve(
-  userRoot,
-  cliDefaults.projectConfigPath,
 )
 const command = process.argv[2]
 const args = process.argv.slice(3)
@@ -104,6 +104,41 @@ function printCommandHelp(commandName) {
   process.stdout.write(formatCommandHelp(commandName, commandDefinition))
 }
 
+async function initCommand(commandArgs, definition) {
+  const options = parseOptions(commandArgs, definition)
+  const packageVersion = await readPackageVersion()
+  const status = await getRuntimeStatus({
+    packageVersion,
+    outputDir: defaultOutputDir,
+    paths: runtimePaths,
+  })
+
+  if (options["dry-run"]) {
+    process.stdout.write("Dry run: no files written.\n")
+    process.stdout.write(
+      `${JSON.stringify(
+        {
+          kind: "ahtml-runtime-plan",
+          runtimeRoot: runtimePaths.runtimeRoot,
+          runtimeDir: runtimePaths.runtimeDir,
+          configDir: runtimePaths.configDir,
+          ready: status.ready,
+          wouldBootstrap: !status.ready,
+        },
+        null,
+        2,
+      )}\n`,
+    )
+    return
+  }
+
+  await bootstrapManagedRuntime({ packageVersion, paths: runtimePaths })
+  process.stdout.write(
+    `Initialized managed runtime: ${runtimePaths.runtimeRoot}\n`,
+  )
+  process.stdout.write("Next: ahtml status\n")
+}
+
 async function schemaCommand(commandArgs, definition) {
   const options = parseOptions(commandArgs, definition)
   const format = options.format ?? "prompt"
@@ -119,101 +154,6 @@ async function schemaCommand(commandArgs, definition) {
       : `${formatPrompt(cliSchema)}\n`
 
   await writeOrPrint(output, options.out)
-}
-
-async function initCommand(commandArgs, definition) {
-  const options = parseOptions(commandArgs, definition)
-  const defaultInit =
-    commandArgs.length === 0 ||
-    (commandArgs.length === 1 && Boolean(options["dry-run"]))
-  const template = options.template ?? cliDefaults.shadcnTemplate
-  const preset = options.preset ?? cliDefaults.shadcnPreset
-  const components = parseComponentList(options.components)
-  const configPath = path.resolve(
-    userRoot,
-    options.out ?? cliDefaults.projectConfigPath,
-  )
-  const scaffold = Boolean(options.scaffold)
-  const apply = Boolean(options.apply) || defaultInit
-
-  if (scaffold && !options["dry-run"]) {
-    await scaffoldUserProject({ userRoot, template })
-  }
-
-  const project = await detectUserProject({
-    userRoot,
-    components,
-    preset,
-    template,
-  })
-
-  if (options["dry-run"]) {
-    const dryRunProject = {
-      ...project,
-      dryRun: true,
-      filesWritten: false,
-      wouldScaffold: scaffold,
-      wouldApply: apply,
-    }
-    process.stdout.write("Dry run: no files written.\n")
-    process.stdout.write(`${JSON.stringify(dryRunProject, null, 2)}\n`)
-    return
-  }
-
-  if (scaffold) {
-    process.stdout.write("Scaffolded user-local Vite + shadcn project files.\n")
-  }
-
-  let finalProject = project
-  let integrationWritten = false
-
-  if (apply) {
-    for (const step of project.shadcn.steps) {
-      process.stdout.write(`Running: ${step.command}\n`)
-      await runUserCommand(step.executable, step.args)
-    }
-    await scaffoldAgentHtmlIntegration({
-      userRoot,
-      overwriteEntry: defaultInit || scaffold,
-    })
-    integrationWritten = true
-    finalProject = await detectUserProject({
-      userRoot,
-      components,
-      preset,
-      template,
-    })
-  }
-
-  finalProject.scaffolded = scaffold
-  finalProject.applied = apply
-  finalProject.integrationFiles = integrationWritten
-  const output = `${JSON.stringify(finalProject, null, 2)}\n`
-
-  await writeTextFile(configPath, output)
-  process.stdout.write(`Wrote ${path.relative(userRoot, configPath)}\n`)
-
-  if (apply) {
-    process.stdout.write("Installed user-local shadcn setup.\n")
-    process.stdout.write("Wrote ahtml renderer adapter files.\n")
-    process.stdout.write("Next: ahtml doctor\n")
-  } else if (project.shadcn.commands.length > 0) {
-    if (scaffold) {
-      process.stdout.write(
-        `Next: ${getPackageInstallCommand(project.packageManager)}\n`,
-      )
-      process.stdout.write("Then: ahtml init --apply\n")
-    } else {
-      process.stdout.write("Next: ahtml init --apply\n")
-    }
-    process.stdout.write("Manual shadcn commands:\n")
-    for (const commandLine of project.shadcn.commands) {
-      process.stdout.write(`  ${commandLine}\n`)
-    }
-    process.stdout.write("Then: ahtml doctor\n")
-  } else {
-    process.stdout.write("Next: ahtml doctor\n")
-  }
 }
 
 async function composeCommand(commandArgs, definition) {
@@ -246,17 +186,6 @@ async function composeCommand(commandArgs, definition) {
   )
 }
 
-async function buildCommand(commandArgs, definition) {
-  const options = parseOptions(commandArgs, definition)
-  const inputPath = options.input
-
-  if (!inputPath) {
-    fail("build requires --input <path>.")
-  }
-
-  await buildArtifact(inputPath, options.out)
-}
-
 async function validateCommand(commandArgs, definition) {
   const options = parseOptions(commandArgs, definition)
   const inputPath = options.input
@@ -277,15 +206,24 @@ async function validateCommand(commandArgs, definition) {
   process.stdout.write("agent-html valid\n")
 }
 
+async function buildCommand(commandArgs, definition) {
+  const options = parseOptions(commandArgs, definition)
+
+  if (!options.input) {
+    fail("build requires --input <path>.")
+  }
+
+  await buildArtifact(options.input, options.out)
+}
+
 async function previewCommand(commandArgs, definition) {
   const options = parseOptions(commandArgs, definition)
-  const inputPath = options.input
 
-  if (!inputPath) {
+  if (!options.input) {
     fail("preview requires --input <path>.")
   }
 
-  const outputDir = await buildArtifact(inputPath, options.out)
+  const outputDir = await buildArtifact(options.input, options.out)
   if (!outputDir) {
     return
   }
@@ -327,17 +265,28 @@ async function doctorCommand(commandArgs) {
     fail("doctor does not accept arguments.")
   }
 
+  const packageVersion = await readPackageVersion()
   const checks = []
 
   checks.push(
-    await runDoctorCheck("environment", "node", async () => {
-      return process.version
-    }),
+    await runDoctorCheck("environment", "node", async () => process.version),
   )
   checks.push(
     await runDoctorCheck("environment", "package-root", async () => {
       await stat(packageRoot)
       return packageRoot
+    }),
+  )
+  checks.push(
+    await runDoctorCheck("runtime", "root", async () => {
+      await stat(runtimePaths.runtimeRoot)
+      return runtimePaths.runtimeRoot
+    }),
+  )
+  checks.push(
+    await runDoctorCheck("runtime", "manifest", async () => {
+      const manifest = await readRuntimeManifest(runtimePaths)
+      return `${manifest.renderer} v${manifest.version}`
     }),
   )
   checks.push(
@@ -347,52 +296,13 @@ async function doctorCommand(commandArgs) {
     }),
   )
   checks.push(
-    await runDoctorCheck("config", "project-config", async () => {
-      const config = await readProjectConfigForDoctor({
-        userRoot,
-        projectConfigPath: defaultProjectConfigPath,
-        defaults: cliDefaults,
-      })
-      return JSON.stringify({
-        integration: config.integration,
-        status: config.status,
-        shadcnProject: config.shadcn.detected,
-      })
-    }),
-  )
-  checks.push(
-    await runDoctorCheck("setup", "shadcn-components", async () => {
-      const config = await readProjectConfigForDoctor({
-        userRoot,
-        projectConfigPath: defaultProjectConfigPath,
-        defaults: cliDefaults,
-      })
-
-      if (config.status === "missing") {
-        return "agent-html.project.json not found; run ahtml init"
-      }
-
-      const missing = await getMissingShadcnComponents({ userRoot, config })
-
-      if (missing.length > 0) {
-        throw new Error(
-          `missing ${missing.join(", ")}. Run: ahtml init --apply`,
-        )
-      }
-
-      return config.shadcn.components.join(", ")
-    }),
-  )
-  checks.push(
     await runDoctorCheck("artifact", "output-dir", async () => {
       await mkdir(defaultOutputDir, { recursive: true })
-      const probePath = path.join(defaultOutputDir, ".ahtml-doctor")
-      await writeFile(probePath, "ok")
-      await rm(probePath, { force: true })
+      await access(defaultOutputDir, constants.W_OK)
       return defaultOutputDir
     }),
   )
-  checks.push(await runDoctorUpdateCheck())
+  checks.push(await runDoctorUpdateCheck(packageVersion))
 
   for (const check of checks) {
     process.stdout.write(
@@ -410,70 +320,31 @@ async function statusCommand(commandArgs) {
     fail("status does not accept arguments.")
   }
 
-  const status = await getProjectStatus()
-  const update = await checkForPackageUpdate({
-    packageManager: status.config.packageManager,
+  const packageVersion = await readPackageVersion()
+  const status = await getRuntimeStatus({
+    packageVersion,
+    outputDir: defaultOutputDir,
+    paths: runtimePaths,
   })
-  process.stdout.write(formatProjectStatus(status, update))
+  const update = await checkForPackageUpdate({ packageManager: "npm" })
+  process.stdout.write(formatRuntimeStatus(status, update))
 }
 
-async function getProjectStatus() {
-  const config = await readProjectConfigForDoctor({
-    userRoot,
-    projectConfigPath: defaultProjectConfigPath,
-    defaults: cliDefaults,
-  })
-  const missingComponents =
-    config.status === "missing"
-      ? config.shadcn.components
-      : await getMissingShadcnComponents({ userRoot, config })
-  const hasProjectConfig = config.status !== "missing"
-  const hasViteConfig =
-    typeof config.paths?.viteConfig === "string" &&
-    config.paths.viteConfig.length > 0
-  const hasComponentsJson =
-    typeof config.paths?.componentsJson === "string" &&
-    config.paths.componentsJson.length > 0
-  const ready =
-    hasProjectConfig &&
-    hasViteConfig &&
-    hasComponentsJson &&
-    missingComponents.length === 0
-  const next = ready
-    ? `ahtml preview --input ${cliDefaults.documentPath}`
-    : !hasProjectConfig
-      ? "ahtml init"
-      : missingComponents.length > 0
-        ? "ahtml init --apply"
-        : "ahtml init"
-
-  return {
-    ready,
-    next,
-    config,
-    hasProjectConfig,
-    hasViteConfig,
-    hasComponentsJson,
-    missingComponents,
-    outputDir: cliDefaults.outputDir,
-  }
-}
-
-function formatProjectStatus(status, update) {
+function formatRuntimeStatus(status, update) {
   const lines = [
     "ahtml status",
     `ready: ${status.ready ? "yes" : "no"}`,
-    `project config: ${status.hasProjectConfig ? "ok" : "missing"}`,
-    `vite config: ${status.hasViteConfig ? "ok" : "missing"}`,
-    `components.json: ${status.hasComponentsJson ? "ok" : "missing"}`,
-    `shadcn components: ${
-      status.missingComponents.length === 0
-        ? "ok"
-        : `missing ${status.missingComponents.join(", ")}`
-    }`,
-    `artifact output: ${status.outputDir}`,
-    `Next: ${status.next}`,
+    `runtime root: ${status.paths.runtimeRoot}`,
+    `runtime manifest: ${status.checks.manifest ? "ok" : "missing"}`,
+    `runtime renderer: ${status.manifest?.renderer ?? "missing"}`,
+    `artifact output: ${cliDefaults.outputDir}`,
+    `output writable: ${status.checks.outputWritable ? "yes" : "no"}`,
+    `Next: ${status.ready ? `ahtml build --input ${cliDefaults.documentPath} --out ${cliDefaults.outputDir}` : "ahtml init"}`,
   ]
+
+  if (!status.ready && status.manifestError) {
+    lines.push(`runtime detail: ${status.manifestError}`)
+  }
 
   if (update?.status === "available") {
     lines.push(
@@ -494,57 +365,17 @@ async function buildArtifact(inputPath, outputPath) {
     return undefined
   }
 
+  const packageVersion = await readPackageVersion()
+  await bootstrapManagedRuntime({ packageVersion, paths: runtimePaths })
+  await writeGeneratedDocument(validation.document, runtimePaths)
+
   const outputDir = path.resolve(userRoot, outputPath ?? defaultOutputDir)
-  await rm(outputDir, { force: true, recursive: true })
-
-  const projectConfig = await readProjectConfigIfExists({
-    projectConfigPath: defaultProjectConfigPath,
-  })
-
-  if (!projectConfig) {
-    fail(
-      "Project is not ready. Run: ahtml init. Then: ahtml build --input artifact.agent.html",
-    )
-  }
-
-  const missing = await getMissingShadcnComponents({
-    userRoot,
-    config: projectConfig,
-  })
-
-  if (missing.length > 0) {
-    fail(
-      `Project is missing shadcn components: ${missing.join(", ")}. Run: ahtml init --apply`,
-    )
-  }
-
-  await buildUserLocalArtifact(projectConfig, validation.document, outputDir)
+  await renderStaticArtifact(validation.document, outputDir)
   await writeJsonFile(
     path.join(outputDir, "agent-html.inspect.json"),
     createInspection(validation.document),
   )
   return outputDir
-}
-
-async function buildUserLocalArtifact(projectConfig, document, outputDir) {
-  const viteConfig = projectConfig.paths?.viteConfig
-
-  if (typeof viteConfig !== "string" || viteConfig.length === 0) {
-    fail("Project is not ready: missing Vite config. Run: ahtml init")
-  }
-
-  await writeTextFile(
-    path.join(userRoot, "src", "agent-html", "document.generated.ts"),
-    `export default ${JSON.stringify(document, null, 2)} as const\n`,
-  )
-  await runUserNodeBin("vite", [
-    "build",
-    "--config",
-    path.resolve(userRoot, viteConfig),
-    "--outDir",
-    outputDir,
-    "--emptyOutDir",
-  ])
 }
 
 async function inspectDocument(inputPath) {
@@ -629,15 +460,8 @@ async function runDoctorCheck(category, name, check) {
   }
 }
 
-async function runDoctorUpdateCheck() {
-  const config = await readProjectConfigForDoctor({
-    userRoot,
-    projectConfigPath: defaultProjectConfigPath,
-    defaults: cliDefaults,
-  })
-  const update = await checkForPackageUpdate({
-    packageManager: config.packageManager,
-  })
+async function runDoctorUpdateCheck(packageVersion) {
+  const update = await checkForPackageUpdate({ packageManager: "npm" })
 
   if (update.status === "available") {
     return {
@@ -653,7 +477,7 @@ async function runDoctorUpdateCheck() {
       category: "package",
       name: "update",
       status: "ok",
-      detail: "current",
+      detail: `current ${packageVersion}`,
     }
   }
 
@@ -973,23 +797,6 @@ function parseOptions(commandArgs, definition) {
   return options
 }
 
-function parseComponentList(value) {
-  if (!value) {
-    return cliDefaults.shadcnComponents
-  }
-
-  const components = value
-    .split(",")
-    .map((component) => component.trim())
-    .filter(Boolean)
-
-  if (components.length === 0) {
-    fail("--components must include at least one component name.")
-  }
-
-  return components
-}
-
 async function writeOrPrint(output, outputPath) {
   if (!outputPath) {
     process.stdout.write(output)
@@ -1026,6 +833,14 @@ async function readStdin() {
   return Buffer.concat(chunks).toString("utf8")
 }
 
+async function readPackageVersion() {
+  const manifest = parseJson(
+    await readFile(path.join(packageRoot, "package.json"), "utf8"),
+    "package.json must be valid JSON.",
+  )
+  return typeof manifest.version === "string" ? manifest.version : "0.0.0"
+}
+
 function parseJson(source, message) {
   try {
     return JSON.parse(source)
@@ -1040,86 +855,6 @@ function printDiagnostics(diagnostics) {
       `${diagnostic.severity}: ${diagnostic.code} at ${diagnostic.path}: ${diagnostic.message}`,
     )
   }
-}
-
-async function runNodeFile(
-  filePath,
-  commandArgs,
-  extraEnv = {},
-  cwd = packageRoot,
-) {
-  await mkdir(path.dirname(filePath), { recursive: true })
-  await new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [filePath, ...commandArgs], {
-      cwd,
-      env: {
-        ...process.env,
-        ...extraEnv,
-      },
-      stdio: "inherit",
-    })
-
-    child.on("error", reject)
-    child.on("exit", (code) => {
-      if (code === 0) {
-        resolve()
-        return
-      }
-
-      reject(new Error(`${path.basename(filePath)} exited with code ${code}`))
-    })
-  })
-}
-
-async function runUserCommand(executable, commandArgs) {
-  await new Promise((resolve, reject) => {
-    const child = spawn(executable, commandArgs, {
-      cwd: userRoot,
-      shell: process.platform === "win32",
-      stdio: "inherit",
-    })
-
-    child.on("error", reject)
-    child.on("exit", (code) => {
-      if (code === 0) {
-        resolve()
-        return
-      }
-
-      reject(new Error(`${executable} exited with code ${code}`))
-    })
-  })
-}
-
-async function runUserNodeBin(packageName, commandArgs, extraEnv = {}) {
-  const manifestPath = path.join(
-    userRoot,
-    "node_modules",
-    packageName,
-    "package.json",
-  )
-  const manifest = parseJson(
-    await readFile(manifestPath, "utf8"),
-    `${packageName}/package.json must be valid JSON.`,
-  )
-  const bin =
-    typeof manifest.bin === "string"
-      ? manifest.bin
-      : Object.values(manifest.bin)[0]
-
-  if (typeof bin !== "string" || bin.length === 0) {
-    fail(`${packageName} does not expose a bin entry.`)
-  }
-
-  await runNodeFile(
-    path.join(path.dirname(manifestPath), bin),
-    commandArgs,
-    {
-      ...extraEnv,
-      NODE_PATH: path.join(userRoot, "node_modules"),
-    },
-    userRoot,
-  )
 }
 
 function requireString(value, message) {

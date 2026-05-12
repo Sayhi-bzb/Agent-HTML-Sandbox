@@ -8,14 +8,14 @@ ahtml core 提供 `SanitizedAgentHtml`、RenderConfig、ComponentSchema 和 diag
 
 ## Consumer
 
-renderer adapter 消费 `SanitizedAgentHtml`，并使用用户项目中的 UI 实现生成页面。
+renderer adapter 消费 `SanitizedAgentHtml`，并使用 managed runtime 中的 UI 实现生成页面。
 
 ## Rules
 
 - `SanitizedAgentHtml` 是 renderer adapter 的输入权威。
 - renderer adapter 只能渲染已注册标准组件。
 - renderer adapter 只按已验证 RenderConfig 选择 presentation profile。
-- renderer adapter 可以依赖 React、shadcn/ui、Tailwind 或 Vite template。
+- renderer adapter 可以依赖 managed runtime 中的 React、shadcn/ui、Tailwind 或 Vite template。
 - core engine 不反向依赖 renderer adapter、React、shadcn/ui、Tailwind 或 Vite。
 - renderer component 必须对应 ComponentSchema，除非是内部保留组件。
 

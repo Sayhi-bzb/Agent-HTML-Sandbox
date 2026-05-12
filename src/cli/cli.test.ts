@@ -8,7 +8,7 @@ import {
   readFile,
   readdir,
   rm,
-  chmod,
+  stat,
   writeFile,
 } from "node:fs/promises"
 import { createServer } from "node:http"
@@ -24,12 +24,9 @@ const root = process.cwd()
 const cliPath = path.join(root, "bin", "ahtml.mjs")
 const examplesDir = path.join(root, "src", "engine", "examples")
 
-type CliSchemaJson = {
+type CliSchemaOutput = {
   readonly kind: string
   readonly components: readonly { readonly name: string }[]
-}
-
-type CliSchemaOutput = CliSchemaJson & {
   readonly forbidden: string
   readonly safetyPolicy: {
     readonly blockedNames: readonly string[]
@@ -38,39 +35,6 @@ type CliSchemaOutput = CliSchemaJson & {
   readonly renderConfig: {
     readonly keys: readonly string[]
     readonly values: Readonly<Record<string, readonly string[]>>
-  }
-}
-
-type ArtifactConfigJson = {
-  readonly density: string
-}
-
-type AhtmlProjectConfigJson = {
-  readonly kind: string
-  readonly integration: string
-  readonly packageManager: string
-  readonly preset: string
-  readonly dryRun?: boolean
-  readonly filesWritten?: boolean
-  readonly applied?: boolean
-  readonly integrationFiles?: boolean
-  readonly scaffolded?: boolean
-  readonly status: string
-  readonly template: string
-  readonly wouldApply?: boolean
-  readonly wouldScaffold?: boolean
-  readonly paths: {
-    readonly componentDir: string
-  }
-  readonly diagnostics: readonly {
-    readonly code: string
-    readonly severity: string
-  }[]
-  readonly shadcn: {
-    readonly detected: boolean
-    readonly components: readonly string[]
-    readonly missingComponents: readonly string[]
-    readonly commands: readonly string[]
   }
 }
 
@@ -101,63 +65,41 @@ describe("agent-html CLI", () => {
       schemaModuleUrl
     )) as SchemaModule
     const schema = await getCliSchemaOutput(root)
-    const promptPath = path.join(
-      root,
-      "src",
-      "engine",
-      "component-schema-prompt.txt",
+    const prompt = await readFile(
+      path.join(root, "src", "engine", "component-schema-prompt.txt"),
+      "utf8",
     )
-
-    const prompt = await readFile(promptPath, "utf8")
 
     expect(normalizeNewlines(prompt)).toBe(`${formatPrompt(schema)}\n`)
   })
 
-  it("exposes the ahtml bin entry", async () => {
-    const { stdout } = await runCli(["schema", "--format", "prompt"])
-
-    expect(stdout).toContain("Write agent-html only.")
-  })
-
-  it("prints global help from default and help flags", async () => {
+  it("prints global and command help for the managed runtime workflow", async () => {
     const defaultHelp = await runCli([])
     const longHelp = await runCli(["--help"])
     const shortHelp = await runCli(["-h"])
     const namedHelp = await runCli(["help"])
 
     for (const result of [defaultHelp, longHelp, shortHelp, namedHelp]) {
-      expect(result.stdout).toContain("Commands:")
       expect(result.stdout).toContain("Closed-loop workflow:")
       expect(result.stdout).toContain("ahtml init")
-      expect(result.stdout).toContain("ahtml status")
-      expect(result.stdout).toContain("ahtml schema --format prompt")
-      expect(result.stdout).toContain('Run "ahtml <command> --help"')
+      expect(result.stdout).toContain("ahtml build --input")
+      expect(result.stdout).not.toContain("agent-html.project.json")
+      expect(result.stdout).not.toContain("--scaffold")
     }
-  })
 
-  it("prints command help without entering option parsing", async () => {
     const commands = Object.keys(await importCommandMetadata())
-
     for (const command of commands) {
       const { stdout } = await runCli([command, "--help"])
 
       expect(stdout).toContain(`ahtml ${command}`)
-      expect(stdout).toContain("Purpose:")
       expect(stdout).toContain("Usage:")
     }
 
-    const shortHelp = await runCli(["schema", "-h"])
-    const { stdout } = await runCli(["help", "schema"])
-
-    expect(shortHelp.stdout).toContain("ahtml schema")
-    expect(stdout).toContain("ahtml schema")
-    expect(stdout).toContain("--format")
+    const initHelp = await runCli(["init", "--help"])
+    expect(initHelp.stdout).toContain("managed runtime")
+    expect(initHelp.stdout).not.toContain("--template")
+    expect(initHelp.stdout).not.toContain("--components")
   }, 10000)
-
-  it("points unknown commands to help", async () => {
-    await expectCliFailure(runCli(["missing"]), 'Run "ahtml --help"')
-    await expectCliFailure(runCli(["help", "missing"]), "Unknown help topic")
-  })
 
   it("prints agent-facing schema without implementation props", async () => {
     const { stdout } = await runCli(["schema", "--format", "json"])
@@ -165,594 +107,128 @@ describe("agent-html CLI", () => {
     const serializedComponents = JSON.stringify(schema.components)
 
     expect(schema.kind).toBe("agent-html-cli-schema")
-    expect(
-      schema.components.some((item: { name: string }) => item.name === "page"),
-    ).toBe(true)
+    expect(schema.components.some((item) => item.name === "page")).toBe(true)
     expect(serializedComponents).not.toContain('"className"')
     expect(serializedComponents).not.toContain('"style"')
     expect(schema.safetyPolicy.blockedNames).toContain("className")
     expect(schema.forbidden).toBe(schema.safetyPolicy.forbidden)
   })
 
-  it("writes schema output to a requested path", async () => {
+  it("initializes only the managed runtime and honors AHTML_HOME", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    const outputPath = path.join(tempDir, "schema.txt")
+    const runtimeHome = path.join(tempDir, ".custom-ahtml")
 
-    await runCli(["schema", "--format", "prompt", "--out", outputPath])
-
-    await expect(readFile(outputPath, "utf8")).resolves.toContain(
-      "Write agent-html only.",
-    )
-    await rm(tempDir, { force: true, recursive: true })
-  })
-
-  it("initializes finite project config without writing during dry-run", async () => {
-    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    const outputPath = path.join(tempDir, "agent-html.project.json")
-
-    await writeFile(
-      path.join(tempDir, "package.json"),
-      JSON.stringify({ name: "consumer", packageManager: "pnpm@9.0.0" }),
-    )
-
-    const { stdout } = await runCli(
-      [
-        "init",
-        "--template",
-        "vite",
-        "--preset",
-        "nova",
-        "--components",
-        "card,badge",
-        "--out",
-        outputPath,
-        "--dry-run",
-      ],
-      {},
+    const dryRun = await runCli(
+      ["init", "--dry-run"],
+      { AHTML_HOME: runtimeHome },
       tempDir,
     )
-    const project = parseJsonFromOutput<AhtmlProjectConfigJson>(stdout)
+    const plan = parseJsonFromOutput<{
+      readonly kind: string
+      readonly runtimeRoot: string
+      readonly wouldBootstrap: boolean
+    }>(dryRun.stdout)
 
-    expect(stdout).toContain("Dry run: no files written.")
-    expect(project.kind).toBe("agent-html-project")
-    expect(project.dryRun).toBe(true)
-    expect(project.filesWritten).toBe(false)
-    expect(project.wouldScaffold).toBe(false)
-    expect(project.wouldApply).toBe(false)
-    expect(project.integration).toBe("vite-shadcn")
-    expect(project.status).toBe("configured")
-    expect(project.packageManager).toBe("pnpm")
-    expect(project.shadcn.components).toEqual(["card", "badge"])
-    expect(project.shadcn.missingComponents).toEqual(["card", "badge"])
-    expect(project.diagnostics).toContainEqual(
-      expect.objectContaining({ code: "missing-components-json" }),
-    )
-    expect(project.shadcn.commands.join("\n")).toContain(
-      "pnpm dlx shadcn@latest init --template vite --preset nova",
-    )
-    await expect(readFile(outputPath, "utf8")).rejects.toMatchObject({
-      code: "ENOENT",
-    })
-    await rm(tempDir, { force: true, recursive: true })
-  })
+    expect(plan.kind).toBe("ahtml-runtime-plan")
+    expect(plan.runtimeRoot).toBe(runtimeHome)
+    expect(plan.wouldBootstrap).toBe(true)
+    await expectPathMissing(path.join(tempDir, "agent-html.project.json"))
+    await expectPathMissing(path.join(tempDir, "src"))
 
-  it("reports default init plan during dry-run", async () => {
-    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-
-    const { stdout } = await runCli(["init", "--dry-run"], {}, tempDir)
-    const project = parseJsonFromOutput<AhtmlProjectConfigJson>(stdout)
-
-    expect(project.dryRun).toBe(true)
-    expect(project.filesWritten).toBe(false)
-    expect(project.wouldScaffold).toBe(false)
-    expect(project.wouldApply).toBe(true)
-    await expect(
-      readFile(path.join(tempDir, "agent-html.project.json"), "utf8"),
-    ).rejects.toMatchObject({ code: "ENOENT" })
-    await rm(tempDir, { force: true, recursive: true })
-  })
-
-  it("reports planned scaffold without writing during dry-run", async () => {
-    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-
-    const { stdout } = await runCli(
-      ["init", "--scaffold", "--components", "card", "--dry-run"],
-      {},
-      tempDir,
-    )
-    const project = parseJsonFromOutput<AhtmlProjectConfigJson>(stdout)
-
-    expect(project.dryRun).toBe(true)
-    expect(project.filesWritten).toBe(false)
-    expect(project.wouldScaffold).toBe(true)
-    expect(project.scaffolded).toBeUndefined()
-    await expect(
-      readFile(path.join(tempDir, "agent-html.project.json"), "utf8"),
-    ).rejects.toMatchObject({ code: "ENOENT" })
-    await expect(
-      readFile(path.join(tempDir, "components.json"), "utf8"),
-    ).rejects.toMatchObject({ code: "ENOENT" })
-    await rm(tempDir, { force: true, recursive: true })
-  })
-
-  it("writes project config for an existing shadcn project", async () => {
-    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    const outputPath = path.join(tempDir, "agent-html.project.json")
-
-    await writeFile(path.join(tempDir, "package.json"), JSON.stringify({}))
-    await writeFile(
-      path.join(tempDir, "components.json"),
-      JSON.stringify({ tailwind: { css: "src/index.css" } }),
-    )
-
-    const { stdout } = await runCli(
-      ["init", "--components", "card", "--out", outputPath],
-      {},
-      tempDir,
-    )
-    const project = parseJson<AhtmlProjectConfigJson>(
-      await readFile(outputPath, "utf8"),
-    )
-
-    expect(stdout).toContain("Wrote agent-html.project.json")
-    expect(stdout).toContain("Next: ahtml init --apply")
-    expect(stdout).toContain("Manual shadcn commands:")
-    expect(stdout).toContain("Then: ahtml doctor")
-    expect(project.shadcn.detected).toBe(true)
-    expect(project.paths.componentDir).toBe(
-      path.join("src", "components", "ui"),
-    )
-    expect(project.shadcn.missingComponents).toEqual(["card"])
-    expect(project.shadcn.commands).toEqual(["npx shadcn@latest add card"])
-    await rm(tempDir, { force: true, recursive: true })
-  })
-
-  it("scaffolds a default vite-shadcn project before writing config", async () => {
-    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-
-    const { stdout } = await runCli(
-      ["init", "--scaffold", "--components", "card"],
-      {},
-      tempDir,
-    )
-    const project = parseJson<AhtmlProjectConfigJson>(
-      await readFile(path.join(tempDir, "agent-html.project.json"), "utf8"),
-    )
-
-    expect(stdout).toContain(
-      "Scaffolded user-local Vite + shadcn project files.",
-    )
-    expect(stdout).toContain("Next: npm install")
-    expect(stdout).toContain("Then: ahtml init --apply")
-    expect(stdout).toContain("Manual shadcn commands:")
-    expect(stdout).toContain("Then: ahtml doctor")
-    expect(project.scaffolded).toBe(true)
-    expect(project.paths.componentDir).toBe(
-      path.join("src", "components", "ui"),
-    )
-    expect(project.diagnostics.map((item) => item.code)).not.toContain(
-      "missing-package-json",
-    )
-    await expect(
-      readFile(path.join(tempDir, "package.json"), "utf8"),
-    ).resolves.toContain('"vite"')
-    await expect(
-      readFile(path.join(tempDir, "package.json"), "utf8"),
-    ).resolves.toContain('"@types/node"')
-    await expect(
-      readFile(path.join(tempDir, "components.json"), "utf8"),
-    ).resolves.toContain('"@/components/ui"')
-    await expect(
-      readFile(path.join(tempDir, "vite.config.ts"), "utf8"),
-    ).resolves.toContain("alias: {")
-    await expect(
-      readFile(path.join(tempDir, "tsconfig.app.json"), "utf8"),
-    ).resolves.toContain('"@/*"')
-    await expect(
-      readFile(path.join(tempDir, "tsconfig.json"), "utf8"),
-    ).resolves.toContain('"@/*"')
-    await expect(
-      readFile(path.join(tempDir, "src", "vite-env.d.ts"), "utf8"),
-    ).resolves.toContain('/// <reference types="vite/client" />')
-    await expect(
-      readFile(path.join(tempDir, "src", "lib", "utils.ts"), "utf8"),
-    ).resolves.toContain("twMerge")
-    await expect(
-      readFile(path.join(tempDir, "src", "main.tsx"), "utf8"),
-    ).resolves.toContain("createRoot")
-    await expect(
-      readFile(path.join(tempDir, "src", "main.tsx"), "utf8"),
-    ).resolves.toContain("agentDocument")
-    await expect(
-      readFile(
-        path.join(tempDir, "src", "agent-html", "document.generated.ts"),
-        "utf8",
-      ),
-    ).resolves.toContain("meta: {")
-    await expect(
-      readFile(
-        path.join(tempDir, "src", "agent-html", "renderer-adapter.tsx"),
-        "utf8",
-      ),
-    ).resolves.toContain("SanitizedAgentHtml")
-    await expect(
-      readFile(
-        path.join(tempDir, "src", "agent-html", "renderer-adapter.tsx"),
-        "utf8",
-      ),
-    ).resolves.toContain('node.name === "card"')
-    await rm(tempDir, { force: true, recursive: true })
-  })
-
-  it("prints scaffold install guidance for the detected package manager", async () => {
-    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-
-    await writeFile(path.join(tempDir, "pnpm-lock.yaml"), "")
-
-    const { stdout } = await runCli(
-      ["init", "--scaffold", "--components", "card"],
-      {},
-      tempDir,
-    )
-    const project = parseJson<AhtmlProjectConfigJson>(
-      await readFile(path.join(tempDir, "agent-html.project.json"), "utf8"),
-    )
-
-    expect(stdout).toContain("Next: pnpm install")
-    expect(stdout).toContain("Then: ahtml init --apply")
-    expect(project.packageManager).toBe("pnpm")
-    await rm(tempDir, { force: true, recursive: true })
-  })
-
-  it("uses shadcn setup and writes adapter files as the default init path", async () => {
-    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    const fakeBinDir = await setupFakePackageRunner(tempDir)
-
-    const { stdout } = await runCli(
+    const initialized = await runCli(
       ["init"],
-      { PATH: `${fakeBinDir}${path.delimiter}${process.env.PATH ?? ""}` },
+      { AHTML_HOME: runtimeHome },
       tempDir,
     )
-    const project = parseJson<AhtmlProjectConfigJson>(
-      await readFile(path.join(tempDir, "agent-html.project.json"), "utf8"),
-    )
 
-    expect(stdout).toContain(
-      "Running: npx shadcn@latest init --template vite --preset nova",
+    expect(initialized.stdout).toContain("Initialized managed runtime")
+    await expectFile(
+      path.join(runtimeHome, "config", "runtime.json"),
+      "ahtml-managed-runtime",
     )
-    expect(stdout).toContain(
-      "Running: npx shadcn@latest add accordion alert badge button card checkbox progress separator slider table tabs textarea toggle toggle-group tooltip",
-    )
-    expect(stdout).toContain("Installed user-local shadcn setup.")
-    expect(stdout).toContain("Wrote ahtml renderer adapter files.")
-    expect(stdout).toContain("Next: ahtml doctor")
-    expect(project.scaffolded).toBe(false)
-    expect(project.applied).toBe(true)
-    expect(project.integrationFiles).toBe(true)
-    expect(project.paths.componentDir).toBe(
-      path.join("src", "components", "ui"),
-    )
-    await expect(
-      readFile(path.join(tempDir, "vite.config.ts"), "utf8"),
-    ).resolves.toContain("defineConfig")
-    await expect(
-      readFile(path.join(tempDir, "components.json"), "utf8"),
-    ).resolves.toContain('"@/components/ui"')
-    await expect(
-      readFile(path.join(tempDir, "src", "main.tsx"), "utf8"),
-    ).resolves.toContain("createAgentHtmlRendererAdapter")
-    await expect(
-      readFile(path.join(tempDir, "src", "vite-env.d.ts"), "utf8"),
-    ).resolves.toContain('/// <reference types="vite/client" />')
-    await expect(
-      readFile(
-        path.join(tempDir, "src", "components", "ui", "card.tsx"),
-        "utf8",
-      ),
-    ).resolves.toContain("card")
+    await expectPathMissing(path.join(tempDir, "components.json"))
+    await expectPathMissing(path.join(tempDir, "vite.config.ts"))
     await rm(tempDir, { force: true, recursive: true })
   })
 
-  it("reports installed and missing user-local shadcn components through doctor", async () => {
+  it("reports managed runtime status without creating project scaffold files", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
+    const runtimeHome = path.join(tempDir, ".ahtml")
 
-    await writeFile(path.join(tempDir, "package.json"), JSON.stringify({}))
-    await writeFile(
-      path.join(tempDir, "components.json"),
-      JSON.stringify({
-        aliases: { ui: "@/components/ui" },
-        tailwind: { css: "src/index.css" },
-      }),
+    const missingStatus = await runCli(
+      ["status"],
+      { AHTML_HOME: runtimeHome },
+      tempDir,
     )
-    await runCli(["init", "--components", "card,badge"], {}, tempDir)
-
-    await expectCliFailure(
-      runCli(["doctor"], {}, tempDir),
-      "fail setup:shadcn-components missing card, badge. Run: ahtml init --apply",
-    )
-
-    const componentDir = path.join(tempDir, "src", "components", "ui")
-
-    await mkdir(componentDir, { recursive: true })
-    await writeFile(path.join(componentDir, "card.tsx"), "export {}\n")
-    await writeFile(path.join(componentDir, "badge.tsx"), "export {}\n")
-
-    const { stdout } = await runCli(["doctor"], {}, tempDir)
-
-    expect(stdout).toContain("ok config:project-config")
-    expect(stdout).toContain("ok setup:shadcn-components card, badge")
-    await rm(tempDir, { force: true, recursive: true })
-  })
-
-  it("recognizes shadcn components when the ui alias uses Windows separators", async () => {
-    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-
-    await writeFile(path.join(tempDir, "package.json"), JSON.stringify({}))
-    await writeFile(path.join(tempDir, "vite.config.ts"), "export default {}\n")
-    await writeFile(
-      path.join(tempDir, "components.json"),
-      JSON.stringify({
-        aliases: { ui: "@\\components\\ui" },
-        tailwind: { css: "src/index.css" },
-      }),
-    )
-    await runCli(["init", "--components", "card"], {}, tempDir)
-
-    const componentDir = path.join(tempDir, "src", "components", "ui")
-
-    await mkdir(componentDir, { recursive: true })
-    await writeFile(path.join(componentDir, "card.tsx"), "export {}\n")
-
-    const { stdout } = await runCli(["doctor"], {}, tempDir)
-    const status = await runCli(["status"], {}, tempDir)
-
-    expect(stdout).toContain("ok setup:shadcn-components card")
-    expect(status.stdout).toContain("ready: yes")
-    await rm(tempDir, { force: true, recursive: true })
-  })
-
-  it("recognizes components from a legacy project config with an alias-shaped componentDir", async () => {
-    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    const componentDir = path.join(tempDir, "src", "components", "ui")
-
-    await mkdir(componentDir, { recursive: true })
-    await writeFile(path.join(tempDir, "package.json"), JSON.stringify({}))
-    await writeFile(path.join(tempDir, "vite.config.ts"), "export default {}\n")
-    await writeFile(
-      path.join(tempDir, "components.json"),
-      JSON.stringify({
-        aliases: { ui: "@\\components\\ui" },
-        tailwind: { css: "src/index.css" },
-      }),
-    )
-    await writeFile(path.join(componentDir, "card.tsx"), "export {}\n")
-    await writeFile(
-      path.join(tempDir, "agent-html.project.json"),
-      JSON.stringify({
-        kind: "agent-html-project",
-        integration: "vite-shadcn",
-        status: "configured",
-        paths: {
-          componentDir: "@\\components\\ui",
-          componentsJson: "components.json",
-          viteConfig: "vite.config.ts",
-        },
-        shadcn: {
-          detected: true,
-          components: ["card"],
-        },
-      }),
-    )
-
-    const { stdout } = await runCli(["doctor"], {}, tempDir)
-    const status = await runCli(["status"], {}, tempDir)
-
-    expect(stdout).toContain("ok setup:shadcn-components card")
-    expect(status.stdout).toContain("ready: yes")
-    await rm(tempDir, { force: true, recursive: true })
-  })
-
-  it("shows project setup status and a single next step", async () => {
-    const missingDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    const missingStatus = await runCli(["status"], {}, missingDir)
 
     expect(missingStatus.stdout).toContain("ready: no")
-    expect(missingStatus.stdout).toContain("project config: missing")
+    expect(missingStatus.stdout).toContain("runtime manifest: missing")
     expect(missingStatus.stdout).toContain("Next: ahtml init")
-    await rm(missingDir, { force: true, recursive: true })
+    await expectPathMissing(path.join(tempDir, "src"))
+    await expectPathMissing(path.join(tempDir, "dist"))
+    await expectPathMissing(path.join(tempDir, "dist", "html"))
 
-    const partialDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    await writeFile(path.join(partialDir, "package.json"), JSON.stringify({}))
-    await writeFile(
-      path.join(partialDir, "components.json"),
-      JSON.stringify({
-        aliases: { ui: "@/components/ui" },
-        tailwind: { css: "src/index.css" },
-      }),
+    await runCli(["init"], { AHTML_HOME: runtimeHome }, tempDir)
+    const readyStatus = await runCli(
+      ["status"],
+      { AHTML_HOME: runtimeHome },
+      tempDir,
     )
-    await runCli(["init", "--components", "card"], {}, partialDir)
-    const partialStatus = await runCli(["status"], {}, partialDir)
-
-    expect(partialStatus.stdout).toContain("ready: no")
-    expect(partialStatus.stdout).toContain("shadcn components: missing card")
-    expect(partialStatus.stdout).toContain("Next: ahtml init --apply")
-    await rm(partialDir, { force: true, recursive: true })
-
-    const readyDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    await setupFakeUserLocalVite(readyDir, "Ready")
-    await runCli(["init", "--components", "card"], {}, readyDir)
-    const readyStatus = await runCli(["status"], {}, readyDir)
 
     expect(readyStatus.stdout).toContain("ready: yes")
-    expect(readyStatus.stdout).toContain("shadcn components: ok")
     expect(readyStatus.stdout).toContain(
-      "Next: ahtml preview --input artifact.agent.html",
+      "Next: ahtml build --input artifact.agent.html --out dist/html",
     )
-    await rm(readyDir, { force: true, recursive: true })
+    await rm(tempDir, { force: true, recursive: true })
   })
 
-  it("shows a cached update hint in status when a newer package is available", async () => {
+  it("builds from an empty consumer directory and writes runtime state outside the project", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    const cacheDir = await mkdtemp(path.join(tmpdir(), "agent-html-cache-"))
-    const registry = await startPackageVersionServer("99.0.0")
+    const runtimeHome = path.join(tempDir, "runtime-home")
+    const consumerDir = path.join(tempDir, "consumer")
+    const inputPath = path.join(consumerDir, "artifact.agent.html")
+    const outputDir = path.join(consumerDir, "dist", "html")
 
-    try {
-      await writeFile(
-        path.join(tempDir, "package.json"),
-        JSON.stringify({ packageManager: "pnpm@9.0.0" }),
-      )
+    await mkdir(consumerDir, { recursive: true })
+    await writeFile(
+      inputPath,
+      [
+        '<meta-agent theme="neutral" density="compact" tone="dashboard" width="dashboard" />',
+        '<page title="Managed Runtime"><card title="Overview">Built by managed runtime.</card></page>',
+      ].join("\n"),
+    )
 
-      const { stdout } = await runCli(
-        ["status"],
-        {
-          AHTML_NO_UPDATE_CHECK: "0",
-          AHTML_UPDATE_CHECK_CACHE_DIR: cacheDir,
-          AHTML_UPDATE_REGISTRY_URL: registry.url,
-          CI: "false",
-        },
-        tempDir,
-      )
+    await runCli(
+      ["build", "--input", inputPath, "--out", outputDir],
+      { AHTML_HOME: runtimeHome },
+      consumerDir,
+    )
 
-      expect(stdout).toContain(
-        "update: 99.0.0 available. Run: pnpm add @agent-html/ahtml@latest",
-      )
-      expect(registry.requests()).toBe(1)
-
-      const cached = await runCli(
-        ["status"],
-        {
-          AHTML_NO_UPDATE_CHECK: "0",
-          AHTML_UPDATE_CHECK_CACHE_DIR: cacheDir,
-          AHTML_UPDATE_REGISTRY_URL: registry.url,
-          CI: "false",
-        },
-        tempDir,
-      )
-
-      expect(cached.stdout).toContain("update: 99.0.0 available.")
-      expect(registry.requests()).toBe(1)
-    } finally {
-      await registry.close()
-      await rm(cacheDir, { force: true, recursive: true })
-      await rm(tempDir, { force: true, recursive: true })
-    }
+    await expectFile(path.join(outputDir, "index.html"), "Managed Runtime")
+    await expectFile(path.join(outputDir, "index.html"), "Overview")
+    await expectFile(
+      path.join(outputDir, "index.html"),
+      "Built by managed runtime.",
+    )
+    await expectFile(path.join(outputDir, "assets", "ahtml.css"), "ahtml-card")
+    await expectFile(
+      path.join(outputDir, "agent-html.inspect.json"),
+      "agent-html-inspection",
+    )
+    await expectFile(
+      path.join(runtimeHome, "runtime", "document.generated.json"),
+      "Managed Runtime",
+    )
+    await assertNoProjectScaffold(consumerDir)
+    await rm(tempDir, { force: true, recursive: true })
   })
 
-  it("reports package updates through doctor without failing", async () => {
+  it("composes, validates, configures, and inspects artifacts", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    const cacheDir = await mkdtemp(path.join(tmpdir(), "agent-html-cache-"))
-    const registry = await startPackageVersionServer("99.0.0")
-
-    try {
-      await writeFile(
-        path.join(tempDir, "package.json"),
-        JSON.stringify({ packageManager: "yarn@4.0.0" }),
-      )
-
-      const { stdout } = await runCli(
-        ["doctor"],
-        {
-          AHTML_NO_UPDATE_CHECK: "0",
-          AHTML_UPDATE_CHECK_CACHE_DIR: cacheDir,
-          AHTML_UPDATE_REGISTRY_URL: registry.url,
-          CI: "false",
-        },
-        tempDir,
-      )
-
-      expect(stdout).toContain(
-        "warn package:update latest is 99.0.0. Run: yarn add @agent-html/ahtml@latest",
-      )
-    } finally {
-      await registry.close()
-      await rm(cacheDir, { force: true, recursive: true })
-      await rm(tempDir, { force: true, recursive: true })
-    }
-  })
-
-  it("skips package update checks in CI and when disabled", async () => {
-    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    const cacheDir = await mkdtemp(path.join(tmpdir(), "agent-html-cache-"))
-    const registry = await startPackageVersionServer("99.0.0")
-
-    try {
-      const disabled = await runCli(
-        ["doctor"],
-        {
-          AHTML_NO_UPDATE_CHECK: "1",
-          AHTML_UPDATE_CHECK_CACHE_DIR: cacheDir,
-          AHTML_UPDATE_REGISTRY_URL: registry.url,
-          CI: "false",
-        },
-        tempDir,
-      )
-
-      expect(disabled.stdout).toContain("skip package:update disabled")
-      expect(registry.requests()).toBe(0)
-
-      const ci = await runCli(
-        ["doctor"],
-        {
-          AHTML_NO_UPDATE_CHECK: "0",
-          AHTML_UPDATE_CHECK_CACHE_DIR: cacheDir,
-          AHTML_UPDATE_REGISTRY_URL: registry.url,
-          CI: "true",
-        },
-        tempDir,
-      )
-
-      expect(ci.stdout).toContain("skip package:update disabled")
-      expect(registry.requests()).toBe(0)
-    } finally {
-      await registry.close()
-      await rm(cacheDir, { force: true, recursive: true })
-      await rm(tempDir, { force: true, recursive: true })
-    }
-  })
-
-  it("does not fail status or doctor when package update checks are unavailable", async () => {
-    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    const cacheDir = await mkdtemp(path.join(tmpdir(), "agent-html-cache-"))
-    const registry = await startPackageVersionServer("99.0.0", 500)
-
-    try {
-      const status = await runCli(
-        ["status"],
-        {
-          AHTML_NO_UPDATE_CHECK: "0",
-          AHTML_UPDATE_CHECK_CACHE_DIR: cacheDir,
-          AHTML_UPDATE_REGISTRY_URL: registry.url,
-          CI: "false",
-        },
-        tempDir,
-      )
-
-      expect(status.stdout).toContain("ready: no")
-      expect(status.stdout).not.toContain("update:")
-
-      const doctor = await runCli(
-        ["doctor"],
-        {
-          AHTML_NO_UPDATE_CHECK: "0",
-          AHTML_UPDATE_CHECK_CACHE_DIR: cacheDir,
-          AHTML_UPDATE_REGISTRY_URL: registry.url,
-          CI: "false",
-        },
-        tempDir,
-      )
-
-      expect(doctor.stdout).toContain("skip package:update unavailable")
-    } finally {
-      await registry.close()
-      await rm(cacheDir, { force: true, recursive: true })
-      await rm(tempDir, { force: true, recursive: true })
-    }
-  })
-
-  it("composes structured input into a valid agent-html document", async () => {
-    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    const inputPath = path.join(tempDir, "input.json")
-    const outputPath = path.join(tempDir, "artifact.agent.html")
+    const runtimeHome = path.join(tempDir, ".ahtml")
+    const inputPath = path.join(tempDir, "composition.json")
+    const documentPath = path.join(tempDir, "artifact.agent.html")
+    const outputDir = path.join(tempDir, "html")
 
     await writeFile(
       inputPath,
@@ -765,273 +241,190 @@ describe("agent-html CLI", () => {
         },
         document: {
           name: "page",
-          props: { title: "CLI Demo" },
+          props: { title: "CLI Compose" },
           children: [
             {
               name: "card",
               props: { title: "Overview" },
-              children: ["Generated by compose"],
+              children: ["Composed by CLI."],
             },
           ],
         },
       }),
     )
 
-    await runCli(["compose", "--input", inputPath, "--out", outputPath])
-
-    await expect(readFile(outputPath, "utf8")).resolves.toContain(
-      '<page title="CLI Demo">',
-    )
-    await rm(tempDir, { force: true, recursive: true })
-  })
-
-  it("composes the same input shape from stdin", async () => {
-    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    const outputPath = path.join(tempDir, "artifact.agent.html")
-
-    await runCliWithInput(
-      ["compose", "--stdin", "--out", outputPath],
-      JSON.stringify({
-        document: {
-          name: "page",
-          props: { title: "Stdin Demo" },
-          children: [{ name: "card", children: ["From stdin"] }],
-        },
-      }),
-    )
-
-    await expect(readFile(outputPath, "utf8")).resolves.toContain(
-      '<page title="Stdin Demo">',
-    )
-    await rm(tempDir, { force: true, recursive: true })
-  })
-
-  it("rejects blocked implementation props before compose output", async () => {
-    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    const inputPath = path.join(tempDir, "input.json")
-    const outputPath = path.join(tempDir, "artifact.agent.html")
-
-    await writeFile(
-      inputPath,
-      JSON.stringify({
-        document: {
-          name: "page",
-          props: { title: "Blocked", className: "p-4" },
-          children: [],
-        },
-      }),
-    )
-
-    await expectCliFailure(
-      runCli(["compose", "--input", inputPath, "--out", outputPath]),
-      "Blocked implementation prop",
-    )
-    await expect(readFile(outputPath, "utf8")).rejects.toMatchObject({
-      code: "ENOENT",
-    })
-    await rm(tempDir, { force: true, recursive: true })
-  })
-
-  it("sets finite config values in an isolated config file", async () => {
-    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    const configPath = path.join(tempDir, "agent-html.config.json")
-    const env = { AGENT_HTML_CONFIG_PATH: configPath }
-
-    await runCli(["config", "set", "density", "compact"], env)
-    const { stdout } = await runCli(["config", "get"], env)
-    const config = parseJson<ArtifactConfigJson>(stdout)
-
-    expect(config.density).toBe("compact")
-    await expectCliFailure(
-      runCli(["config", "set", "density", "loose"], env),
-      "Invalid value",
-    )
-    const persistedConfig = parseJson<ArtifactConfigJson>(
-      await readFile(configPath, "utf8"),
-    )
-
-    expect(persistedConfig.density).toBe("compact")
-    await rm(tempDir, { force: true, recursive: true })
-  })
-
-  it("builds a sanitized document into a static artifact directory", async () => {
-    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    const inputPath = path.join(tempDir, "artifact.agent.html")
-    const outputDir = path.join(tempDir, "html")
-
-    await setupFakeUserLocalVite(tempDir, "Built by CLI")
-    await writeFile(
-      inputPath,
-      [
-        '<meta-agent theme="neutral" density="compact" tone="dashboard" width="dashboard" />',
-        '<page title="CLI Build"><card title="Overview">Built by CLI</card></page>',
-      ].join("\n"),
-    )
-
-    await runCli(["init", "--components", "card"], {}, tempDir)
     await runCli(
-      ["build", "--input", inputPath, "--out", outputDir],
-      {},
+      ["compose", "--input", inputPath, "--out", documentPath],
+      { AHTML_HOME: runtimeHome },
+      tempDir,
+    )
+    await expectFile(documentPath, "CLI Compose")
+
+    const validation = await runCli(
+      ["validate", "--input", documentPath],
+      { AHTML_HOME: runtimeHome },
+      tempDir,
+    )
+    expect(validation.stdout).toContain("agent-html valid")
+
+    await runCli(
+      ["build", "--input", documentPath, "--out", outputDir],
+      { AHTML_HOME: runtimeHome },
       tempDir,
     )
 
-    await expect(
-      readFile(path.join(outputDir, "index.html"), "utf8"),
-    ).resolves.toContain("Built by CLI")
-    await expect(
-      readFile(path.join(outputDir, "agent-html.inspect.json"), "utf8"),
-    ).resolves.toContain('"agent-html-inspection"')
-    await rm(tempDir, { force: true, recursive: true })
-  }, 60000)
-
-  it("builds through user-local vite when project config exists", async () => {
-    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    const inputPath = path.join(tempDir, "artifact.agent.html")
-    const outputDir = path.join(tempDir, "html")
-
-    await setupFakeUserLocalVite(tempDir, "user-local vite")
-    await writeFile(
-      inputPath,
-      '<page title="User Local"><card>Built by user-local vite</card></page>',
-    )
-    await runCli(["init", "--components", "card"], {}, tempDir)
-    await runCli(
-      ["build", "--input", inputPath, "--out", outputDir],
-      {},
+    const documentInspection = await runCli(
+      ["inspect", "--input", documentPath, "--format", "json"],
+      { AHTML_HOME: runtimeHome },
       tempDir,
     )
+    expect(documentInspection.stdout).toContain('"density": "compact"')
+    expect(documentInspection.stdout).toContain('"name": "card"')
 
-    await expect(
-      readFile(path.join(outputDir, "index.html"), "utf8"),
-    ).resolves.toContain("user-local vite")
-    await expect(
-      readFile(
-        path.join(tempDir, "src", "agent-html", "document.generated.ts"),
-        "utf8",
-      ),
-    ).resolves.toContain("Built by user-local vite")
-    await expect(
-      readFile(path.join(outputDir, "agent-html.inspect.json"), "utf8"),
-    ).resolves.toContain('"agent-html-inspection"')
-    await rm(tempDir, { force: true, recursive: true })
-  })
-
-  it("validates a document without generating artifact output", async () => {
-    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    const inputPath = path.join(tempDir, "artifact.agent.html")
-
-    await writeFile(
-      inputPath,
-      '<page title="CLI Validate"><card>Valid by CLI</card></page>',
-    )
-
-    const { stdout } = await runCli(["validate", "--input", inputPath])
-
-    expect(stdout).toContain("agent-html valid")
-    await expect(
-      readFile(path.join(tempDir, "dist", "html", "index.html"), "utf8"),
-    ).rejects.toMatchObject({
-      code: "ENOENT",
-    })
-    await rm(tempDir, { force: true, recursive: true })
-  })
-
-  it("reports validate diagnostics for invalid documents", async () => {
-    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    const inputPath = path.join(tempDir, "artifact.agent.html")
-
-    await writeFile(
-      inputPath,
-      '<page title="Bad"><card className="x" /></page>',
-    )
-
-    await expectCliFailure(
-      runCli(["validate", "--input", inputPath]),
-      "unknown-attr",
-    )
-    await rm(tempDir, { force: true, recursive: true })
-  })
-
-  it("inspects documents and built artifact directories", async () => {
-    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    const inputPath = path.join(tempDir, "artifact.agent.html")
-    const outputDir = path.join(tempDir, "html")
-
-    await writeFile(
-      inputPath,
-      [
-        '<meta-agent theme="neutral" density="compact" tone="dashboard" width="dashboard" />',
-        '<page title="CLI Inspect"><card title="Overview">Inspect by CLI</card></page>',
-      ].join("\n"),
-    )
-
-    const documentInspection = await runCli([
-      "inspect",
-      "--input",
-      inputPath,
-      "--format",
-      "json",
-    ])
-    const parsedDocumentInspection = parseJson<{
-      readonly config: { readonly density: string }
-      readonly components: readonly { readonly name: string; count: number }[]
-    }>(documentInspection.stdout)
-
-    expect(parsedDocumentInspection.config.density).toBe("compact")
-    expect(parsedDocumentInspection.components).toContainEqual({
-      name: "card",
-      count: 1,
-    })
-
-    await setupFakeUserLocalVite(tempDir, "Inspect by CLI")
-    await runCli(["init", "--components", "card"], {}, tempDir)
-    await runCli(
-      ["build", "--input", inputPath, "--out", outputDir],
-      {},
+    const artifactInspection = await runCli(
+      ["inspect", "--dir", outputDir],
+      { AHTML_HOME: runtimeHome },
       tempDir,
     )
-
-    const artifactInspection = await runCli(["inspect", "--dir", outputDir])
-
     expect(artifactInspection.stdout).toContain("density: compact")
     expect(artifactInspection.stdout).toContain("- card: 1")
-    await rm(tempDir, { force: true, recursive: true })
-  }, 60000)
 
-  it("runs local doctor checks", async () => {
-    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    const configPath = path.join(tempDir, "agent-html.config.json")
-    const env = { AGENT_HTML_CONFIG_PATH: configPath }
-    const { stdout } = await runCli(["doctor"], env, tempDir)
-
-    expect(stdout).toContain("ok environment:node")
-    expect(stdout).toContain("ok config:config")
-    expect(stdout).toContain("ok config:project-config")
-    expect(stdout).toContain("ok setup:shadcn-components")
-    expect(stdout).toContain("ok artifact:output-dir")
+    await runCli(
+      ["config", "set", "density", "compact"],
+      { AHTML_HOME: runtimeHome },
+      tempDir,
+    )
+    const config = await runCli(
+      ["config", "get"],
+      { AHTML_HOME: runtimeHome },
+      tempDir,
+    )
+    expect(config.stdout).toContain('"compact"')
     await rm(tempDir, { force: true, recursive: true })
   })
 
-  it("reports invalid config through doctor diagnostics", async () => {
+  it("runs managed runtime doctor checks", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    const configPath = path.join(tempDir, "agent-html.config.json")
-
-    await writeFile(configPath, JSON.stringify({ density: "loose" }))
+    const runtimeHome = path.join(tempDir, ".ahtml")
 
     await expectCliFailure(
-      runCli(["doctor"], { AGENT_HTML_CONFIG_PATH: configPath }),
-      "fail config:config",
+      runCli(["doctor"], { AHTML_HOME: runtimeHome }, tempDir),
+      "fail runtime:root",
     )
+
+    await runCli(["init"], { AHTML_HOME: runtimeHome }, tempDir)
+    const { stdout } = await runCli(
+      ["doctor"],
+      { AHTML_HOME: runtimeHome },
+      tempDir,
+    )
+
+    expect(stdout).toContain("ok environment:node")
+    expect(stdout).toContain("ok runtime:root")
+    expect(stdout).toContain("ok runtime:manifest static-html")
+    expect(stdout).toContain("ok config:config")
+    expect(stdout).toContain("ok artifact:output-dir")
+    expect(stdout).not.toContain("project-config")
+    expect(stdout).not.toContain("shadcn-components")
     await rm(tempDir, { force: true, recursive: true })
   })
 
-  it("serves a preview from generated static output", async () => {
+  it("shows cached global update guidance in status and doctor", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
+    const runtimeHome = path.join(tempDir, ".ahtml")
+    const cacheDir = path.join(tempDir, "cache")
+    const registry = await startPackageVersionServer("99.0.0")
+
+    try {
+      await runCli(["init"], { AHTML_HOME: runtimeHome }, tempDir)
+
+      const status = await runCli(
+        ["status"],
+        {
+          AHTML_HOME: runtimeHome,
+          AHTML_NO_UPDATE_CHECK: "0",
+          AHTML_UPDATE_CHECK_CACHE_DIR: cacheDir,
+          AHTML_UPDATE_REGISTRY_URL: registry.url,
+          CI: "false",
+        },
+        tempDir,
+      )
+
+      expect(status.stdout).toContain(
+        "update: 99.0.0 available. Run: npm install -g @agent-html/ahtml@latest",
+      )
+      expect(registry.requests()).toBe(1)
+
+      const doctor = await runCli(
+        ["doctor"],
+        {
+          AHTML_HOME: runtimeHome,
+          AHTML_NO_UPDATE_CHECK: "0",
+          AHTML_UPDATE_CHECK_CACHE_DIR: cacheDir,
+          AHTML_UPDATE_REGISTRY_URL: registry.url,
+          CI: "false",
+        },
+        tempDir,
+      )
+
+      expect(doctor.stdout).toContain(
+        "warn package:update latest is 99.0.0. Run: npm install -g @agent-html/ahtml@latest",
+      )
+      expect(registry.requests()).toBe(1)
+    } finally {
+      await registry.close()
+      await rm(tempDir, { force: true, recursive: true })
+    }
+  })
+
+  it("skips or soft-fails package update checks without breaking diagnostics", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
+    const runtimeHome = path.join(tempDir, ".ahtml")
+    const cacheDir = path.join(tempDir, "cache")
+    const registry = await startPackageVersionServer("99.0.0", 500)
+
+    try {
+      await runCli(["init"], { AHTML_HOME: runtimeHome }, tempDir)
+
+      const disabled = await runCli(
+        ["doctor"],
+        {
+          AHTML_HOME: runtimeHome,
+          AHTML_NO_UPDATE_CHECK: "1",
+          AHTML_UPDATE_CHECK_CACHE_DIR: cacheDir,
+          AHTML_UPDATE_REGISTRY_URL: registry.url,
+          CI: "false",
+        },
+        tempDir,
+      )
+
+      expect(disabled.stdout).toContain("skip package:update disabled")
+
+      const unavailable = await runCli(
+        ["doctor"],
+        {
+          AHTML_HOME: runtimeHome,
+          AHTML_NO_UPDATE_CHECK: "0",
+          AHTML_UPDATE_CHECK_CACHE_DIR: cacheDir,
+          AHTML_UPDATE_REGISTRY_URL: registry.url,
+          CI: "false",
+        },
+        tempDir,
+      )
+
+      expect(unavailable.stdout).toContain("skip package:update unavailable")
+    } finally {
+      await registry.close()
+      await rm(tempDir, { force: true, recursive: true })
+    }
+  })
+
+  it("serves a preview from the generated static output", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
+    const runtimeHome = path.join(tempDir, ".ahtml")
     const inputPath = path.join(tempDir, "artifact.agent.html")
     const outputDir = path.join(tempDir, "html")
 
-    await setupFakeUserLocalVite(tempDir, "Preview by CLI")
-    await runCli(["init", "--components", "card"], {}, tempDir)
     await writeFile(
       inputPath,
       '<page title="CLI Preview"><card>Preview by CLI</card></page>',
@@ -1051,6 +444,11 @@ describe("agent-html CLI", () => {
       ],
       {
         cwd: tempDir,
+        env: {
+          ...process.env,
+          AHTML_HOME: runtimeHome,
+          AHTML_NO_UPDATE_CHECK: "1",
+        },
         stdio: ["ignore", "pipe", "pipe"],
       },
     )
@@ -1068,56 +466,32 @@ describe("agent-html CLI", () => {
     }
   }, 60000)
 
-  it("fails clearly when the preview port is unavailable", async () => {
+  it("rejects invalid input and flags clearly", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
     const inputPath = path.join(tempDir, "artifact.agent.html")
     const outputDir = path.join(tempDir, "html")
-    const server = createServer()
 
-    await setupFakeUserLocalVite(tempDir, "Port collision")
-    await runCli(["init", "--components", "card"], {}, tempDir)
     await writeFile(
       inputPath,
-      '<page title="CLI Preview"><card>Port collision</card></page>',
+      '<page title="Bad"><card className="x" /></page>',
     )
-    await new Promise<void>((resolve) => {
-      server.listen(0, "127.0.0.1", resolve)
-    })
 
-    const address = server.address()
-    const port = typeof address === "object" && address ? address.port : 0
-
-    try {
-      await expectCliFailure(
-        runCli(
-          [
-            "preview",
-            "--input",
-            inputPath,
-            "--out",
-            outputDir,
-            "--port",
-            String(port),
-          ],
-          {},
-          tempDir,
-        ),
-        "EADDRINUSE",
-      )
-    } finally {
-      await new Promise<void>((resolve, reject) => {
-        server.close((error) => {
-          if (error) {
-            reject(error)
-            return
-          }
-
-          resolve()
-        })
-      })
-      await rm(tempDir, { force: true, recursive: true })
-    }
-  }, 60000)
+    await expectCliFailure(
+      runCli(["build", "--input", inputPath, "--out", outputDir], {}, tempDir),
+      "unknown-attr",
+    )
+    await expectPathMissing(path.join(outputDir, "index.html"))
+    await expectCliFailure(runCli(["schema", "--format"]), "--format requires")
+    await expectCliFailure(
+      runCli(["init", "--scaffold"], {}, tempDir),
+      "does not accept --scaffold",
+    )
+    await expectCliFailure(
+      runCli(["schema", "--input", "artifact.agent.html"], {}, tempDir),
+      "does not accept --input",
+    )
+    await rm(tempDir, { force: true, recursive: true })
+  })
 
   it("accepts every checked-in agent-html example", async () => {
     const { validateAgentHtmlSource } = await importValidateModule()
@@ -1136,73 +510,6 @@ describe("agent-html CLI", () => {
         exampleName,
       ).toEqual([])
     }
-  })
-
-  it("reports helper diagnostics for invalid agent-html source", async () => {
-    const { validateAgentHtmlSource } = await importValidateModule()
-    const validation = await validateAgentHtmlSource(
-      '<page title="Bad"><card className="x" /></page>',
-      root,
-    )
-
-    expect(
-      validation.diagnostics.map((diagnostic) => diagnostic.message),
-    ).toEqual([
-      '"classname" is not an allowed agent-facing attribute on <card>.',
-    ])
-  })
-
-  it("rejects invalid build input before artifact generation", async () => {
-    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    const inputPath = path.join(tempDir, "artifact.agent.html")
-    const outputDir = path.join(tempDir, "html")
-
-    await writeFile(
-      inputPath,
-      '<page title="Bad"><card className="x" /></page>',
-    )
-
-    await expectCliFailure(
-      runCli(["build", "--input", inputPath, "--out", outputDir]),
-      "unknown-attr",
-    )
-    await expect(
-      readFile(path.join(outputDir, "index.html"), "utf8"),
-    ).rejects.toMatchObject({
-      code: "ENOENT",
-    })
-    await rm(tempDir, { force: true, recursive: true })
-  })
-
-  it("guides build users to initialize the project first", async () => {
-    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
-    const inputPath = path.join(tempDir, "artifact.agent.html")
-
-    await writeFile(
-      inputPath,
-      '<meta-agent theme="neutral" density="compact" tone="report" width="article" /><page title="Ready" />',
-    )
-
-    await expectCliFailure(
-      runCli(["build", "--input", inputPath], {}, tempDir),
-      "Project is not ready. Run: ahtml init.",
-    )
-    await rm(tempDir, { force: true, recursive: true })
-  })
-
-  it("rejects invalid flags with a non-zero exit", async () => {
-    await expectCliFailure(
-      runCli(["schema", "--format"]),
-      "--format requires a value.",
-    )
-    await expectCliFailure(
-      runCli(["schema", "--input", "artifact.agent.html"]),
-      "does not accept --input",
-    )
-    await expectCliFailure(
-      runCli(["validate", "--out", "dist/html"]),
-      "does not accept --out",
-    )
   })
 })
 
@@ -1240,112 +547,6 @@ async function importCommandMetadata() {
   return commandMetadata
 }
 
-async function runCliWithInput(args: readonly string[], input: string) {
-  await new Promise<void>((resolve, reject) => {
-    let stderr = ""
-    const child = spawn(process.execPath, [cliPath, ...args], {
-      cwd: root,
-      stdio: ["pipe", "ignore", "pipe"],
-    })
-
-    child.stderr.setEncoding("utf8")
-    child.stderr.on("data", (chunk: string) => {
-      stderr += chunk
-    })
-    child.on("error", reject)
-    child.on("exit", (code) => {
-      if (code === 0) {
-        resolve()
-        return
-      }
-
-      reject(new Error(stderr || `CLI exited with code ${code ?? "null"}`))
-    })
-    child.stdin.end(input)
-  })
-}
-
-async function setupFakeUserLocalVite(directory: string, html: string) {
-  const viteDir = path.join(directory, "node_modules", "vite")
-  const componentDir = path.join(directory, "src", "components", "ui")
-
-  await mkdir(path.join(viteDir, "bin"), { recursive: true })
-  await mkdir(componentDir, { recursive: true })
-  await writeFile(path.join(directory, "package.json"), JSON.stringify({}))
-  await writeFile(path.join(directory, "vite.config.ts"), "export default {}\n")
-  await writeFile(path.join(componentDir, "card.tsx"), "export {}\n")
-  await writeFile(
-    path.join(directory, "components.json"),
-    JSON.stringify({
-      aliases: { ui: "@/components/ui" },
-      tailwind: { css: "src/index.css" },
-    }),
-  )
-  await writeFile(
-    path.join(viteDir, "package.json"),
-    JSON.stringify({ bin: { vite: "bin/vite.mjs" } }),
-  )
-  await writeFile(
-    path.join(viteDir, "bin", "vite.mjs"),
-    [
-      'import { mkdir, writeFile } from "node:fs/promises"',
-      'import path from "node:path"',
-      'const outDir = process.argv[process.argv.indexOf("--outDir") + 1]',
-      "await mkdir(outDir, { recursive: true })",
-      `await writeFile(path.join(outDir, "index.html"), ${JSON.stringify(html)})`,
-      "",
-    ].join("\n"),
-  )
-}
-
-async function setupFakePackageRunner(directory: string) {
-  const binDir = path.join(directory, "fake-bin")
-  const runnerPath = path.join(binDir, "fake-npx.mjs")
-
-  await mkdir(binDir, { recursive: true })
-  await writeFile(
-    runnerPath,
-    [
-      'import { mkdir, writeFile } from "node:fs/promises"',
-      'import path from "node:path"',
-      "const args = process.argv.slice(2)",
-      'const initIndex = args.indexOf("init")',
-      'const addIndex = args.indexOf("add")',
-      "if (initIndex >= 0) {",
-      '  await writeFile(path.join(process.cwd(), "package.json"), JSON.stringify({ type: "module", scripts: { build: "vite build" }, dependencies: { vite: "latest", react: "latest", "react-dom": "latest" } }))',
-      '  await writeFile(path.join(process.cwd(), "vite.config.ts"), "import { defineConfig } from \\"vite\\"\\nexport default defineConfig({})\\n")',
-      '  await writeFile(path.join(process.cwd(), "components.json"), JSON.stringify({ aliases: { ui: "@/components/ui" }, tailwind: { css: "src/index.css" } }))',
-      '  await mkdir(path.join(process.cwd(), "src"), { recursive: true })',
-      '  await writeFile(path.join(process.cwd(), "src", "index.css"), "@import \\"tailwindcss\\";\\n")',
-      "}",
-      "if (addIndex >= 0) {",
-      '  const componentDir = path.join(process.cwd(), "src", "components", "ui")',
-      "  await mkdir(componentDir, { recursive: true })",
-      "  for (const component of args.slice(addIndex + 1)) {",
-      '    await writeFile(path.join(componentDir, `${component}.tsx`), `export const ${component.replace(/-/g, "_")} = "${component}"\\n`)',
-      "  }",
-      "}",
-      "",
-    ].join("\n"),
-  )
-
-  if (process.platform === "win32") {
-    await writeFile(
-      path.join(binDir, "npx.cmd"),
-      `@echo off\r\n"${process.execPath}" "${runnerPath}" %*\r\n`,
-    )
-  } else {
-    const npxPath = path.join(binDir, "npx")
-    await writeFile(
-      npxPath,
-      `#!/usr/bin/env sh\n"${process.execPath}" "${runnerPath}" "$@"\n`,
-    )
-    await chmod(npxPath, 0o755)
-  }
-
-  return binDir
-}
-
 async function startPackageVersionServer(version: string, statusCode = 200) {
   let requests = 0
   const server = createServer((_request, response) => {
@@ -1378,22 +579,21 @@ async function startPackageVersionServer(version: string, statusCode = 200) {
   }
 }
 
-function parseJson<T>(source: string): T {
-  return JSON.parse(source) as T
+async function assertNoProjectScaffold(directory: string) {
+  await expectPathMissing(path.join(directory, "src"))
+  await expectPathMissing(path.join(directory, "vite.config.ts"))
+  await expectPathMissing(path.join(directory, "components.json"))
+  await expectPathMissing(path.join(directory, "agent-html.project.json"))
 }
 
-function parseJsonFromOutput<T>(source: string): T {
-  const start = source.indexOf("{")
+async function expectFile(filePath: string, expected: string) {
+  const source = await readFile(filePath, "utf8")
 
-  if (start < 0) {
-    throw new Error("Expected CLI output to include JSON.")
-  }
-
-  return parseJson<T>(source.slice(start))
+  expect(source).toContain(expected)
 }
 
-function normalizeNewlines(value: string): string {
-  return value.replaceAll("\r\n", "\n")
+async function expectPathMissing(filePath: string) {
+  await expect(stat(filePath)).rejects.toMatchObject({ code: "ENOENT" })
 }
 
 async function expectCliFailure(
@@ -1458,6 +658,24 @@ async function waitForProcessExit(child: ReturnType<typeof spawn>) {
   await new Promise<void>((resolve) => {
     child.on("exit", () => resolve())
   })
+}
+
+function parseJson<T>(source: string): T {
+  return JSON.parse(source) as T
+}
+
+function parseJsonFromOutput<T>(source: string): T {
+  const start = source.indexOf("{")
+
+  if (start < 0) {
+    throw new Error("Expected CLI output to include JSON.")
+  }
+
+  return parseJson<T>(source.slice(start))
+}
+
+function normalizeNewlines(value: string): string {
+  return value.replaceAll("\r\n", "\n")
 }
 
 function getErrorOutput(error: unknown): string {

@@ -4,7 +4,7 @@
 
 ## Decision
 
-采购 shadcn/ui 作为标准组件实现底座和 user-local renderer adapter 材料。
+采购 shadcn/ui 作为 managed runtime 中的标准组件实现底座。
 
 不采购完整 shadcn props / registry schema 作为 agent-facing authoring protocol。
 
@@ -12,7 +12,7 @@
 
 ```txt
 shadcn/ui supplies implementation materials.
-user project owns shadcn components and styles.
+managed runtime owns shadcn components and styles.
 standardized component schema exposes fixed components, props, and slots.
 RenderConfig may select approved shadcn-backed presentation profiles.
 ```
@@ -25,21 +25,21 @@ shadcn/ui 对 agent-html 的价值在四处：
 - render profiles: theme、density、tone 和 layout preset 可标准化为受控 RenderConfig。
 - open code: renderer adapter 可以接管、改造和封装组件源码。
 - design system base: theme tokens、primitive、icons、utility 和默认视觉质量可作为实现底座。
-- registry / CLI: 可分发 renderer component、theme、hook、lib 和 component 实现材料到用户项目。
+- registry / CLI: 可分发 renderer component、theme、hook、lib 和 component 实现材料到 managed runtime。
 
 推荐关系：
 
 ```txt
 shadcn registry / component source
         ↓
-user-local renderer adapter
+managed runtime renderer adapter
         ↓
 standardized component schema
         ↓
 agent standard syntax
 ```
 
-`registry:block` 可作为复杂 RendererComponent 的实现材料来源。`components.json`、custom registry、CLI、MCP 和 migrations 都属于 project integration 采购面。
+`registry:block` 可作为复杂 RendererComponent 的实现材料来源。`components.json`、custom registry、CLI、MCP 和 migrations 都属于 managed runtime 采购面。
 
 `meta` 可辅助 schema 维护，但不能成为 ComponentSchema 的权威来源。
 
@@ -69,15 +69,15 @@ shadcn/ui 不属于 core engine 依赖。
 - shadcn 自身自由度很高，若直接暴露 props 会把维护成本推给 agent 和 renderer。
 - render profiles 若直接照搬 shadcn theme / Tailwind config，会把实现接口泄漏给 agent。
 - MCP、CLI 和 migrations 可辅助采购，但 artifact runtime 不应依赖这些能力。
-- CLI 写入用户项目时必须区分 generated files 和 user files。
+- CLI 写入 managed runtime 时必须区分 runtime files、user files 和 package files。
 - registry metadata 可辅助 schema 维护，但不能绕过标准组件声明。
 
 ## Follow-up
 
 实现前只需补查和当前任务直接相关的采购细节：
 
-- sandbox 初始化需要的 `components.json` 最小配置。
-- user-local adapter 初始化需要的 `components.json` 最小配置。
+- managed runtime 初始化需要的 `components.json` 最小配置。
+- managed runtime adapter 初始化需要的 component source 最小配置。
 - 标准组件的最小 agent-facing props。
 - 标准组件的固定 slot 结构。
 - shadcn-backed render profile 的最小枚举集合。

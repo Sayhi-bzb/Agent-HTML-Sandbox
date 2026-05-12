@@ -2,27 +2,7 @@ export const cliDefaults = {
   configPath: "agent-html.config.json",
   documentPath: "artifact.agent.html",
   outputDir: "dist/html",
-  projectConfigPath: "agent-html.project.json",
   previewPort: "4173",
-  shadcnComponents: [
-    "accordion",
-    "alert",
-    "badge",
-    "button",
-    "card",
-    "checkbox",
-    "progress",
-    "separator",
-    "slider",
-    "table",
-    "tabs",
-    "textarea",
-    "toggle",
-    "toggle-group",
-    "tooltip",
-  ],
-  shadcnPreset: "nova",
-  shadcnTemplate: "vite",
 }
 
 const safetyForbiddenCategories = [

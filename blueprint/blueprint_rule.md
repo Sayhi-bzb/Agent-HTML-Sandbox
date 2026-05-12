@@ -44,3 +44,11 @@ blueprint 文档应优先使用能直接锁定方向的高信息量表达。
 blueprint 写作应保持正交、克制、最小充分。
 
 新增规则或概念前，应确认它不重复覆盖已有规则。能用现有概念表达清楚时，不引入额外概念。
+
+## 7. Product Boundary First
+
+当实现路线和产品定位冲突时，blueprint 先锁定产品边界，再允许实现迁移。
+
+agent-html 的默认产品边界应服务 agent artifact runtime，而不是前端项目模板或用户项目接入器。
+
+默认概念使用 `managed runtime`、`runtime root`、`core engine` 和 `portable artifact`。不得把 `user-local`、`project integration` 或 `local-project mode` 作为默认路径名称。

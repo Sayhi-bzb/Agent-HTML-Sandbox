@@ -7,41 +7,32 @@ description: Learn the agent-html workflow for writing safe artifacts.
 
 agent-html is a local CLI engine for agents that need to produce safe, inspectable static artifacts.
 
-The `ahtml` package owns config, engine, and CLI. Vite, React, Tailwind, shadcn/ui, theme files, and UI components live in your local project. Agents do not write arbitrary HTML, CSS, Tailwind classes, scripts, event handlers, React props, Radix props, or shadcn props.
+The `ahtml` package owns the config, engine, CLI, and managed artifact runtime. Runtime files live under `~/.ahtml` or `%USERPROFILE%\.ahtml` by default, with `AHTML_HOME` as an override. Agents do not write arbitrary HTML, CSS, Tailwind classes, scripts, event handlers, React props, Radix props, or shadcn props.
 
 <Callout title="Primary rule">
   Run `ahtml init` first. Then treat the schema as the source of truth for
   component names, props, children, and render config values.
 </Callout>
 
-## 1. Initialize the local integration [#initialize-the-local-integration]
+## 1. Initialize the managed runtime [#initialize-the-managed-runtime]
 
 ```bash
-npm install @agent-html/ahtml
-npx ahtml init
-npx ahtml status
-npx ahtml doctor
+npm install -g @agent-html/ahtml
+ahtml init
+ahtml status
+ahtml doctor
 ```
 
 `@agent-html/ahtml` is published once to npmjs.com. Use the equivalent install command for your package manager:
 
-| Package manager | Install                         | Run `ahtml`       |
-| --------------- | ------------------------------- | ----------------- |
-| npm             | `npm install @agent-html/ahtml` | `npx ahtml`       |
-| pnpm            | `pnpm add @agent-html/ahtml`    | `pnpm exec ahtml` |
-| yarn            | `yarn add @agent-html/ahtml`    | `yarn ahtml`      |
-| bun             | `bun add @agent-html/ahtml`     | `bunx ahtml`      |
+| Package manager | Install                             | Run `ahtml` |
+| --------------- | ----------------------------------- | ----------- |
+| npm             | `npm install -g @agent-html/ahtml`  | `ahtml`     |
+| pnpm            | `pnpm add -g @agent-html/ahtml`     | `ahtml`     |
+| yarn            | `yarn global add @agent-html/ahtml` | `ahtml`     |
+| bun             | `bun add -g @agent-html/ahtml`      | `ahtml`     |
 
-`ahtml init` delegates Vite + shadcn setup to your local project, then writes the ahtml integration config and renderer adapter files.
-
-If the current directory is empty or shadcn cannot detect a supported framework, use the fallback scaffold:
-
-```bash
-npx ahtml init --scaffold
-<your-package-manager> install
-npx ahtml init --apply
-npx ahtml doctor
-```
+`ahtml init` initializes or repairs the managed runtime. It does not write `src/`, `components.json`, `vite.config.ts`, or `agent-html.project.json` into the current repository.
 
 `ahtml status` and `ahtml doctor` can show a non-blocking package update hint. Set `AHTML_NO_UPDATE_CHECK=1` to disable that check.
 
@@ -103,4 +94,4 @@ ahtml inspect --input artifact.agent.html
 ahtml inspect --dir dist/html
 ```
 
-Use `inspect` to review effective config and component usage without reading project source.
+Use `inspect` to review effective config and component usage without inspecting runtime files.

@@ -7,21 +7,15 @@
 ```txt
 user installs ahtml
         ↓
-ahtml init
-        ↓
-user-local template / renderer adapter
-        ↓
-shadcn/ui implementation
-        ↓
-ComponentSchema
+agent writes standard document
         ↓
 CLI schema / compose / validate / build
-        ↓
-agent-html + optional render config header
         ↓
 ahtml core parse / sanitize
         ↓
 SanitizedAgentHtml { meta, components }
+        ↓
+managed runtime under ~/.ahtml
         ↓
 renderer adapter
         ↓
@@ -30,9 +24,21 @@ React output + HTML output
 portable output
 ```
 
+## Schema Maintenance Chain
+
+```txt
+managed runtime shadcn/ui implementation
+        ↓
+generated shadcn introspection
+        ↓
+explicit schema overlay
+        ↓
+ComponentSchema
+```
+
 ## Contracts
 
-- `cli-to-user-project.md`: CLI 到用户项目、template 和 renderer adapter。
+- `cli-to-managed-runtime.md`: CLI 到 managed runtime、template 和 renderer adapter。
 - `shadcn-to-component-schema.md`: shadcn/ui 实现到标准组件 schema。
 - `component-schema-to-agent-html.md`: 标准组件 schema 到 agent-html 和 render config header。
 - `cli-to-artifact.md`: CLI 到 agent-html、renderer adapter 和 artifact。

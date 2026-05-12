@@ -21,7 +21,7 @@
 
 定位：
 
-- shadcn/ui 是标准组件的实现底座，位于 renderer adapter、template 或用户项目边界。
+- shadcn/ui 是标准组件的实现底座，位于 managed runtime、renderer adapter 或 template 边界。
 - shadcn-backed theme / density / layout preset 可作为 render config profile 来源。
 - Tailwind 可作为组件内部样式工具，不作为 agent-facing 主接口。
 - Radix UI 可承担可访问交互 primitive。
@@ -45,7 +45,7 @@
 - `.d.ts` 和 TSDoc 可作为 schema 维护辅助材料。
 - schema 只暴露用途、props、slots、组合关系和使用禁忌。
 - Storybook 可作为人类组件工作台，暂不作为 v1 主 schema 来源。
-- schema generation 可读取用户项目 shadcn 材料，但输出必须经过 overlay 收束。
+- schema generation 可读取 managed runtime shadcn 材料，但输出必须经过 overlay 收束。
 
 ## agent-html Parsing and Safety
 
@@ -91,7 +91,7 @@
 
 定位：
 
-- Vite static build 可作为默认 template 输出。
-- package-local Vite builder 是兼容基线，不是 core engine 边界。
+- Vite static build 可作为 managed runtime 输出。
+- project-local 或 package-local Vite builder 不是兼容基线，也不是 core engine 边界。
 - 交付阶段优先生成静态 artifact。
 - portable 输出应减少运行条件和部署依赖。

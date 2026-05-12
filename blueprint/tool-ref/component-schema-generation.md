@@ -11,7 +11,7 @@
 核心判断：
 
 ```txt
-user project components.json supplies shadcn config.
+managed runtime components.json supplies shadcn config.
 shadcn registry supplies item metadata, dependencies, files, docs links.
 component AST supplies exports, data-slot, cva variants, literal union props.
 generated shadcn introspection supplies the draft.
@@ -29,7 +29,7 @@ React docgen and Storybook stay auxiliary.
 推荐主路径：
 
 ```txt
-shadcn registry / user project components.json / component source
+shadcn registry / managed runtime components.json / component source
         ↓
 generated shadcn introspection
         ↓
@@ -54,7 +54,7 @@ overlay / docs enrichment
 
 采购分工：
 
-- user project `components.json`: style、base、aliases、iconLibrary、preset 和 registry 配置。
+- managed runtime `components.json`: style、base、aliases、iconLibrary、preset 和 registry 配置。
 - `shadcn registry`: registry item metadata、dependencies、registryDependencies、files 和 docs links。
 - `ts-morph`: TypeScript AST / type checker precision extraction。
 - `class-variance-authority`: `cva` variants 和 defaultVariants 抽取目标。
@@ -97,7 +97,7 @@ overlay / docs enrichment
 
 不把 generated shadcn introspection 直接发布为 agent-facing schema。
 
-不让 schema generation 把 user-local Tailwind config、theme object 或 shadcn props 反向写入 core public surface。
+不让 schema generation 把 runtime Tailwind config、theme object 或 shadcn props 反向写入 core public surface。
 
 ## Specific Risks
 
@@ -110,7 +110,7 @@ overlay / docs enrichment
 - react-docgen 容易诱导从 renderer props 反推 schema，只能用于辅助审计。
 - schema generation 失败不能静默通过，否则 agent 会使用过期 schema。
 - drift check 失败不能静默通过，否则 overlay 会描述不存在或已变形的 shadcn 能力。
-- 用户项目中的 shadcn 版本和组件来源可能漂移，drift check 应明确报告 adapter requirement 与实际安装状态。
+- managed runtime 中的 shadcn 版本和组件来源可能漂移，drift check 应明确报告 adapter requirement 与实际安装状态。
 
 ## Follow-up
 
@@ -123,4 +123,4 @@ overlay / docs enrichment
 - render config schema 的最小 key / value 枚举。
 - TSDoc custom tags 的最小集合。
 - TypeDoc JSON 到 ComponentSchema / ComponentPropSchema 的映射边界。
-- renderer adapter requirement 到 user project shadcn install check 的映射边界。
+- renderer adapter requirement 到 managed runtime shadcn install check 的映射边界。

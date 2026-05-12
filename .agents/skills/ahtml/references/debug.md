@@ -1,6 +1,6 @@
 # ahtml Debug
 
-Use this when setup, validation, build, preview, or shadcn integration fails.
+Use this when setup, validation, build, preview, or managed runtime rendering fails.
 
 ## First Checks
 
@@ -18,23 +18,16 @@ ahtml doctor
 `doctor` checks:
 
 - Node and package runtime
+- managed runtime root and manifest
 - `agent-html.config.json`
-- `agent-html.project.json`
-- user-local shadcn components
 - output directory writability
 
 ## Common Fixes
 
-Project not initialized:
+Runtime not initialized:
 
 ```bash
 ahtml init
-```
-
-Missing shadcn components:
-
-```bash
-ahtml init --apply
 ```
 
 Need to inspect current setup without writing:
@@ -66,9 +59,9 @@ ahtml inspect --input artifact.agent.html
 Build fails before artifact output:
 
 - Validate the input first.
-- Confirm `agent-html.project.json` exists.
-- Confirm `components.json` and Vite config exist in the user project.
-- Run `ahtml doctor` and follow missing component guidance.
+- Run `ahtml status` and follow the `Next:` command.
+- Run `ahtml doctor` and inspect runtime or config failures.
+- Set `AHTML_HOME` to an empty temporary directory to reproduce with a clean runtime.
 
 Preview fails:
 
@@ -78,4 +71,4 @@ Preview fails:
 
 ## Architecture Boundaries
 
-Do not fix failures by restoring a package-local Vite app, package-local renderer, or package-local shadcn UI kit. The package should stay engine + config + CLI; Vite + shadcn belong to the user project.
+Do not fix failures by restoring current-directory project integration, `agent-html.project.json`, `init --scaffold`, a package-local Vite app, or root shadcn UI files. The package should stay engine + config + CLI plus a user-level managed runtime under `~/.ahtml` or `%USERPROFILE%\.ahtml`.

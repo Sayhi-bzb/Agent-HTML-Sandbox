@@ -6,24 +6,24 @@ Docs: [agent-html.pages.dev/docs](https://agent-html.pages.dev/docs)
 
 ## Quick Start
 
-Install the published package in a user project:
+Install the published CLI globally:
 
 ```bash
-npm install @agent-html/ahtml
-npx ahtml init
-npx ahtml status
-npx ahtml doctor
-npx ahtml schema --format prompt
+npm install -g @agent-html/ahtml
+ahtml init
+ahtml status
+ahtml doctor
+ahtml schema --format prompt
 ```
 
 Use the same npmjs.com package with your package manager:
 
-| Package manager | Install                         | Run `ahtml`       |
-| --------------- | ------------------------------- | ----------------- |
-| npm             | `npm install @agent-html/ahtml` | `npx ahtml`       |
-| pnpm            | `pnpm add @agent-html/ahtml`    | `pnpm exec ahtml` |
-| yarn            | `yarn add @agent-html/ahtml`    | `yarn ahtml`      |
-| bun             | `bun add @agent-html/ahtml`     | `bunx ahtml`      |
+| Package manager | Install                             | Run `ahtml` |
+| --------------- | ----------------------------------- | ----------- |
+| npm             | `npm install -g @agent-html/ahtml`  | `ahtml`     |
+| pnpm            | `pnpm add -g @agent-html/ahtml`     | `ahtml`     |
+| yarn            | `yarn global add @agent-html/ahtml` | `ahtml`     |
+| bun             | `bun add -g @agent-html/ahtml`      | `ahtml`     |
 
 Install the agent skill:
 
@@ -51,11 +51,11 @@ Create `artifact.agent.html`:
 Validate, build, preview, and inspect:
 
 ```bash
-npx ahtml validate --input artifact.agent.html
-npx ahtml build --input artifact.agent.html --out dist/html
-npx ahtml preview --input artifact.agent.html --out dist/html --port 4173
-npx ahtml inspect --input artifact.agent.html
-npx ahtml inspect --dir dist/html
+ahtml validate --input artifact.agent.html
+ahtml build --input artifact.agent.html --out dist/html
+ahtml preview --input artifact.agent.html --out dist/html --port 4173
+ahtml inspect --input artifact.agent.html
+ahtml inspect --dir dist/html
 ```
 
 Open the preview URL printed by `ahtml preview` to review the output.
@@ -93,13 +93,13 @@ Create `composition.json`:
 Compose it into the standard document format:
 
 ```bash
-npx ahtml compose --input composition.json --out artifact.agent.html
+ahtml compose --input composition.json --out artifact.agent.html
 ```
 
 ## CLI Commands
 
 ```bash
-ahtml init [--template <name>] [--preset <name-or-code>] [--components <list>] [--out <path>] [--scaffold] [--apply] [--dry-run]
+ahtml init [--dry-run]
 ahtml schema [--format prompt|json] [--out <path>]
 ahtml compose --input <path>|--stdin [--out <path>]
 ahtml validate --input <path>
@@ -115,7 +115,8 @@ ahtml config set <key> <value>
 Defaults:
 
 - Config file: `agent-html.config.json`
-- Project integration file: `agent-html.project.json`
+- Runtime home: `~/.ahtml` or `%USERPROFILE%\.ahtml`
+- Runtime override: `AHTML_HOME`
 - Composed document: `artifact.agent.html`
 - Build output: `dist/html`
 
@@ -123,9 +124,9 @@ Defaults:
 
 ## Rules
 
-- Run `npx ahtml init` first.
-- In an empty or unsupported directory, use `npx ahtml init --scaffold`, then install dependencies with your package manager, then run `npx ahtml init --apply`.
-- Treat `npx ahtml schema --format prompt` as the source of truth.
+- Run `ahtml init` once to initialize or repair the user-level managed runtime under `~/.ahtml` or `%USERPROFILE%\.ahtml`.
+- `ahtml build` also bootstraps the managed runtime when needed.
+- Treat `ahtml schema --format prompt` as the source of truth.
 - Use only registered agent-html components, props, children, and render config values.
 - Do not write Tailwind classes, `className`, `style`, CSS, scripts, event handlers, shadcn props, Radix props, arbitrary HTML attributes, external resource passthrough, or raw HTML.
 

@@ -3,8 +3,6 @@ import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
-import { getPackageAddCommand } from "../config/project.mjs"
-
 const packageName = "@agent-html/ahtml"
 const cacheTtlMs = 24 * 60 * 60 * 1000
 const requestTimeoutMs = 1500
@@ -122,11 +120,27 @@ function createUpdateResult(currentVersion, latestVersion, { packageManager }) {
       status: "available",
       currentVersion,
       latestVersion,
-      command: getPackageAddCommand(packageManager, `${packageName}@latest`),
+      command: getPackageUpdateCommand(packageManager),
     }
   }
 
   return { status: "current", currentVersion, latestVersion }
+}
+
+function getPackageUpdateCommand(packageManager) {
+  if (packageManager === "pnpm") {
+    return `pnpm add -g ${packageName}@latest`
+  }
+
+  if (packageManager === "yarn") {
+    return `yarn global add ${packageName}@latest`
+  }
+
+  if (packageManager === "bun") {
+    return `bun add -g ${packageName}@latest`
+  }
+
+  return `npm install -g ${packageName}@latest`
 }
 
 function compareSemver(left, right) {

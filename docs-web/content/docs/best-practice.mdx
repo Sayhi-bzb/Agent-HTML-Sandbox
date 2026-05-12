@@ -5,9 +5,9 @@ description: Follow the writing rules agents should use by default.
 
 # Best Practice
 
-## Initialize local setup first [#initialize-local-setup-first]
+## Initialize the managed runtime first [#initialize-the-managed-runtime-first]
 
-Start from the user-local integration:
+Start from the user-level managed runtime:
 
 ```bash
 ahtml init
@@ -15,7 +15,7 @@ ahtml status
 ahtml doctor
 ```
 
-Vite, React, Tailwind, and shadcn/ui belong to the user's local project. The `ahtml` package stays focused on config, engine, and CLI.
+Runtime files live under `~/.ahtml` or `%USERPROFILE%\.ahtml` by default. Set `AHTML_HOME` only when you need an isolated runtime for tests or debugging.
 
 ## Read schema first [#read-schema-first]
 
@@ -84,6 +84,6 @@ ahtml status
 ahtml doctor
 ```
 
-- If the project is not initialized, run `ahtml init`.
-- If shadcn components are missing, run `ahtml init --apply`.
-- If validation fails, repair the agent-html document instead of changing the local renderer.
+- If the runtime is not initialized, run `ahtml init`.
+- If the package is outdated, follow the update command printed by `status` or `doctor`.
+- If validation fails, repair the agent-html document instead of bypassing validation or changing runtime behavior.

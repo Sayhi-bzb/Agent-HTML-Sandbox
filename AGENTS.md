@@ -24,7 +24,7 @@ Architecture principles live under `blueprint/`; start at `blueprint/index.md`. 
 ## Repository Map
 
 - `src/engine`: parse, validate, sanitize, ComponentSchema, render config, diagnostics, and shared agent-html types.
-- `src/config`: finite defaults and user project config detection.
+- `src/config`: finite defaults and CLI config values.
 - `src/cli`: command orchestration, local IO, init/build/preview/inspect/status/doctor/config.
 - `docs-web/content/`: public documentation content.
 - `.agents/skills/ahtml/`: agent-facing skill guidance for install, usage, debug, and bug-reporting behavior.
@@ -57,8 +57,8 @@ Architecture principles live under `blueprint/`; start at `blueprint/index.md`. 
 
 - Keep this repo as a single-package npm CLI package.
 - Keep package source focused on `src/cli`, `src/config`, and `src/engine`.
-- Keep Vite, React, Tailwind, shadcn/ui, themes, renderer adapters, and UI components in the user-local project generated or connected through `ahtml init`.
-- Do not restore a root Vite app, package-local Vite builder, package-local renderer, package-local shadcn UI kit, or root `src/components/ui/`.
+- Keep managed runtime state under `~/.ahtml`, `%USERPROFILE%\.ahtml`, or `AHTML_HOME`; do not write frontend scaffold files into the current project.
+- Do not restore `agent-html.project.json`, `init --scaffold`, `init --apply`, a root Vite app, current-directory Vite builder, package-local Vite builder, package-local renderer, package-local shadcn UI kit, or root `src/components/ui/`.
 - Do not introduce a monorepo unless a spec explicitly changes that direction.
 
 ## Code Rules

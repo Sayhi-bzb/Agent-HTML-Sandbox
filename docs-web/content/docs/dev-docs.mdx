@@ -47,13 +47,13 @@ The package should include only the config, engine, CLI, bin entry, TypeScript c
 npm run verify:pack
 ```
 
-This packs the project, installs it into a temporary consumer project, and verifies installed `ahtml` commands.
+This packs the project, installs it into a temporary consumer directory, sets `AHTML_HOME` to an isolated runtime directory, and verifies installed `ahtml` commands without creating project scaffold files.
 
 ## Verify published package [#verify-published-package]
 
 ```bash
 npm view @agent-html/ahtml dist-tags versions --json
-npm install @agent-html/ahtml
+npm install -g @agent-html/ahtml
 ```
 
 The public package is published under `@agent-html/ahtml`; the CLI bin remains `ahtml`. Publish only to npmjs.com. pnpm, yarn, and bun consume the same npm registry package and do not need separate package releases.
@@ -74,10 +74,10 @@ Workflow filename: publish-npm.yml
 Release a package version:
 
 ```bash
-npm version 0.1.0-alpha.1 --no-git-tag-version
+npm version <version> --no-git-tag-version
 git add package.json package-lock.json
-git commit -m "chore: release 0.1.0-alpha.1"
-git tag v0.1.0-alpha.1
+git commit -m "chore: release <version>"
+git tag v<version>
 git push origin main --tags
 ```
 
@@ -93,16 +93,10 @@ List skills from this repository:
 npx skills add Sayhi-bzb/Agent-HTML --list
 ```
 
-Install the `ahtml` skill for Codex:
+Install the `ahtml` skill:
 
 ```bash
-npx skills add Sayhi-bzb/Agent-HTML --skill ahtml -a codex
-```
-
-Install globally for Codex:
-
-```bash
-npx skills add Sayhi-bzb/Agent-HTML --skill ahtml -a codex -g
+npx skills add Sayhi-bzb/Agent-HTML --skill ahtml
 ```
 
 Test installation from a local checkout:
@@ -116,11 +110,11 @@ npx skills add . --skill ahtml -a codex --copy -y
 ```txt
 installed ahtml package
   -> config + engine + CLI
-  -> user-local Vite + shadcn integration
+  -> managed runtime under ~/.ahtml or AHTML_HOME
   -> static artifact directory
 ```
 
-`ahtml build` must use the user-local integration. Do not restore a package-local Vite builder, package-local renderer, or package-local shadcn UI kit.
+`ahtml build` must use the managed runtime. Do not restore current-directory project integration, `agent-html.project.json`, `init --scaffold`, package-local Vite apps, package-local renderer apps, or root shadcn UI files.
 
 ## Maintenance checklist [#maintenance-checklist]
 

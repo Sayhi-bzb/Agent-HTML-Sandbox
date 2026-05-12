@@ -1,6 +1,6 @@
 {
   "name": "@agent-html/ahtml",
-  "version": "0.1.0-alpha.5",
+  "version": "0.1.0-alpha.6",
   "description": "Sanitized agent-html artifact CLI.",
   "license": "MIT",
   "type": "module",
@@ -78,7 +78,7 @@
     "ahtml",
     "cli",
     "artifact",
-    "shadcn"
+    "static-html"
   ],
   "author": "",
   "bugs": {
