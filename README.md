@@ -25,13 +25,11 @@ Use the same npmjs.com package with your package manager:
 | yarn            | `yarn add @agent-html/ahtml`    | `yarn ahtml`      |
 | bun             | `bun add @agent-html/ahtml`     | `bunx ahtml`      |
 
-Install the Codex skill for agent guidance:
+Install the agent skill:
 
 ```bash
-npx skills add Sayhi-bzb/Agent-HTML --skill ahtml -a codex -g
+npx skills add Sayhi-bzb/Agent-HTML --skill ahtml
 ```
-
-Without `-g`, the skill is installed for the current project.
 
 Create `artifact.agent.html`:
 
