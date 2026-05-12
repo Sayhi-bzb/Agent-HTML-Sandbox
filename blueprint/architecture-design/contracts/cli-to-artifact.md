@@ -4,7 +4,7 @@
 
 ## Provider
 
-CLI 提供 `schema`、`validate`、`build`、`preview`、`inspect`、`doctor`、`config`。
+CLI 提供 `schema`、`validate`、`build`、`preview`、`inspect`、`doctor`、`config get`。
 
 ## Consumer
 
@@ -17,7 +17,7 @@ agent、developer 和 artifact delivery flow 消费 CLI。
 - `build` 必须经过 parse / validate / sanitize。
 - `build` 必须复用 managed runtime、renderer adapter 和 portable output。
 - `preview` 必须复用 build artifact 或同一 managed runtime renderer adapter。
-- `config` 只管理有限 presentation / output 配置。
+- `config get` 只读取 schema 派生的默认 RenderConfig 视图，不写入独立配置状态。
 - `.agent.html` 是唯一 agent-facing document 输入和可检查中间表示。
 - file document 必须进入同一 sanitize path。
 - CLI 不改变 ComponentSchema、RenderConfig、renderer adapter 和 artifact 的权威边界。

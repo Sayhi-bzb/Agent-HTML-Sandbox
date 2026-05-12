@@ -3,7 +3,6 @@ import type { ComponentSchema, GeneratedShadcnIntrospection } from "../types"
 export const GENERATED_SHADCN_INTROSPECTIONS = [
   {
     registryName: "accordion",
-    sourceFile: "src/components/ui/accordion.tsx",
     componentName: "Accordion",
     exports: [
       "Accordion",
@@ -24,7 +23,6 @@ export const GENERATED_SHADCN_INTROSPECTIONS = [
   },
   {
     registryName: "alert",
-    sourceFile: "src/components/ui/alert.tsx",
     componentName: "Alert",
     exports: ["Alert", "AlertAction", "AlertDescription", "AlertTitle"],
     slots: ["alert", "alert-action", "alert-description", "alert-title"],
@@ -37,7 +35,6 @@ export const GENERATED_SHADCN_INTROSPECTIONS = [
   },
   {
     registryName: "badge",
-    sourceFile: "src/components/ui/badge.tsx",
     componentName: "Badge",
     exports: ["Badge", "badgeVariants"],
     slots: ["badge"],
@@ -57,7 +54,6 @@ export const GENERATED_SHADCN_INTROSPECTIONS = [
   },
   {
     registryName: "button",
-    sourceFile: "src/components/ui/button.tsx",
     componentName: "Button",
     exports: ["Button", "buttonVariants"],
     slots: ["button"],
@@ -87,7 +83,6 @@ export const GENERATED_SHADCN_INTROSPECTIONS = [
   },
   {
     registryName: "card",
-    sourceFile: "src/components/ui/card.tsx",
     componentName: "Card",
     exports: [
       "Card",
@@ -116,7 +111,6 @@ export const GENERATED_SHADCN_INTROSPECTIONS = [
   },
   {
     registryName: "checkbox",
-    sourceFile: "src/components/ui/checkbox.tsx",
     componentName: "Checkbox",
     exports: ["Checkbox"],
     slots: ["checkbox", "checkbox-indicator"],
@@ -126,7 +120,6 @@ export const GENERATED_SHADCN_INTROSPECTIONS = [
   },
   {
     registryName: "progress",
-    sourceFile: "src/components/ui/progress.tsx",
     componentName: "Progress",
     exports: ["Progress"],
     slots: ["progress", "progress-indicator"],
@@ -136,7 +129,6 @@ export const GENERATED_SHADCN_INTROSPECTIONS = [
   },
   {
     registryName: "separator",
-    sourceFile: "src/components/ui/separator.tsx",
     componentName: "Separator",
     exports: ["Separator"],
     slots: ["separator"],
@@ -146,7 +138,6 @@ export const GENERATED_SHADCN_INTROSPECTIONS = [
   },
   {
     registryName: "slider",
-    sourceFile: "src/components/ui/slider.tsx",
     componentName: "Slider",
     exports: ["Slider"],
     slots: ["slider", "slider-range", "slider-thumb", "slider-track"],
@@ -156,7 +147,6 @@ export const GENERATED_SHADCN_INTROSPECTIONS = [
   },
   {
     registryName: "table",
-    sourceFile: "src/components/ui/table.tsx",
     componentName: "Table",
     exports: [
       "Table",
@@ -185,7 +175,6 @@ export const GENERATED_SHADCN_INTROSPECTIONS = [
   },
   {
     registryName: "tabs",
-    sourceFile: "src/components/ui/tabs.tsx",
     componentName: "Tabs",
     exports: [
       "Tabs",
@@ -204,7 +193,6 @@ export const GENERATED_SHADCN_INTROSPECTIONS = [
   },
   {
     registryName: "textarea",
-    sourceFile: "src/components/ui/textarea.tsx",
     componentName: "Textarea",
     exports: ["Textarea"],
     slots: ["textarea"],
@@ -214,7 +202,6 @@ export const GENERATED_SHADCN_INTROSPECTIONS = [
   },
   {
     registryName: "toggle-group",
-    sourceFile: "src/components/ui/toggle-group.tsx",
     componentName: "ToggleGroup",
     exports: ["ToggleGroup", "ToggleGroupItem"],
     slots: ["toggle-group", "toggle-group-item"],
@@ -227,7 +214,6 @@ export const GENERATED_SHADCN_INTROSPECTIONS = [
   },
   {
     registryName: "toggle",
-    sourceFile: "src/components/ui/toggle.tsx",
     componentName: "Toggle",
     exports: ["Toggle", "toggleVariants"],
     slots: ["toggle"],
@@ -241,7 +227,6 @@ export const GENERATED_SHADCN_INTROSPECTIONS = [
   },
   {
     registryName: "tooltip",
-    sourceFile: "src/components/ui/tooltip.tsx",
     componentName: "Tooltip",
     exports: ["Tooltip", "TooltipContent", "TooltipProvider", "TooltipTrigger"],
     slots: [

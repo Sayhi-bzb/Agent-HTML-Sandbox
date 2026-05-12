@@ -81,14 +81,24 @@ Architecture principles live under `blueprint/`; start at `blueprint/index.md`. 
 - `spec/` and `blueprint/`: not routine documentation surfaces. Update them only when scope, checkpoints, architecture principles, or product boundaries change.
 - Keep `README.md`, `docs-web/content/`, and `.agents/skills/ahtml/` aligned when user-facing commands or workflows change.
 
+## Skill Writing Norms
+
+- Treat `SKILL.md` as the entrypoint, not the handbook. Keep it short, guide-like, and centered on the default user path.
+- For `ahtml`, keep the core path in `SKILL.md`: how an agent writes `.agent.html`, the minimal syntax and validation expectations, and how to hand the result back to the user.
+- Use progressive disclosure for everything else. Route install, repair, debugging, and bug-reporting detail into one-hop `references/` files and load them only when the task calls for them.
+- Write references with explicit trigger conditions in `SKILL.md`; do not list a file without saying when to read it.
+- Keep one stable vocabulary across skill files. Prefer `.agent.html`, artifact, schema, validate, build, preview, inspect, and managed runtime. Avoid parallel synonyms for the same concept.
+- Use a guide tone. Prefer concise, practical instruction over stiff policy language, and avoid repeating the same workflow in multiple files.
+- Keep skill content focused on helping the agent produce and deliver user results. If a section does not change how the agent should act, move it out of `SKILL.md`.
+
 ## Commit And PR Norms
 
 - Keep commits scoped to one concern.
 - Do not include generated output unless it is required for the change.
 - Check `git status --short` before committing so unrelated worktree changes are not swept in.
 - For ordinary code or docs edits, run `npm run check:commit`.
-- For package-boundary, runtime, CLI build, release, or dependency changes, run `npm run check:ready`.
+- For package-boundary, runtime, CLI build, release, or dependency changes, run the relevant targeted checks from `spec/maintenance-checklist.md`.
 - For docs-web site changes, run `npm run check:docs`.
-- Before release or after broad cross-layer changes, run `npm run check:all`.
+- Before release or after broad cross-layer changes, use `spec/maintenance-checklist.md` as the release surface and run only the checks it names.
 - For package-boundary changes, verify `package.json.files` and `scripts/verify-packed-ahtml.mjs` still agree.
 - Before committing, run GitNexus `detect_changes` and confirm affected symbols and flows are expected.

@@ -6,21 +6,25 @@ Use this when the user wants to produce, validate, build, preview, or inspect an
 
 ```txt
 user asks
-  -> ahtml setup prepares managed shadcn runtime when needed
   -> agent reads ahtml schema
-  -> agent outputs .agent.html
+  -> agent writes .agent.html
   -> ahtml validates and sanitizes
-  -> shadcn-backed managed runtime renders
+  -> managed runtime renders
   -> static artifact directory
 ```
 
 ## Commands
 
-Inspect the agent-facing contract:
+Read the agent-facing contract first:
 
 ```bash
-ahtml setup --yes
 ahtml schema --format prompt
+```
+
+Write a document:
+
+```bash
+artifact.agent.html
 ```
 
 Validate without building:
@@ -47,7 +51,13 @@ Inspect the source document:
 ahtml inspect --input artifact.agent.html
 ```
 
-Read default finite render config:
+Inspect a built artifact:
+
+```bash
+ahtml inspect --dir dist/html
+```
+
+Read default finite render config values:
 
 ```bash
 ahtml config get

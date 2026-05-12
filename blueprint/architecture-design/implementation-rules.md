@@ -22,6 +22,8 @@ RenderConfig 可选择 renderer adapter 已注册的 shadcn-backed theme、densi
 
 新增 shadcn component requirement 时，必须同步 renderer adapter、ComponentSchema 说明和 runtime doctor 检查。
 
+shadcn component catalog、preset 名称、preset code 校验和 registry item 查询应优先调用 shadcn 官方 package API。ahtml 不应维护一套与 shadcn 平行的组件名单、preset 名单或 registry schema。
+
 ## 4. component changes follow schema changes
 
 新增、删除或修改 agent-facing 组件时，必须同步 ComponentSchema、props schema / tokens、renderer adapter 注册和 agent-facing 示例。

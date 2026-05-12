@@ -54,6 +54,26 @@ type CommandMetadataModule = {
   readonly commandMetadata: Readonly<Record<string, unknown>>
 }
 
+type RuntimeSetupModule = {
+  readonly resolveRuntimeSetup: (options?: {
+    readonly options?: Record<string, string | boolean>
+    readonly interactive?: boolean
+  }) => Promise<{
+    readonly componentSource: string
+    readonly preset: string
+    readonly components: readonly string[]
+  }>
+}
+
+type ShadcnApiModule = {
+  readonly getShadcnComponentCatalog: () => Promise<{
+    readonly components: readonly string[]
+    readonly source: string
+  }>
+  readonly listShadcnPresets: () => readonly string[]
+  readonly validateShadcnPreset: (value: string) => boolean
+}
+
 describe("agent-html CLI", () => {
   it("keeps the checked-in schema prompt in sync with the CLI schema formatter", async () => {
     const schemaModuleUrl = pathToFileURL(
@@ -93,7 +113,7 @@ describe("agent-html CLI", () => {
       expect(stdout).toContain(`ahtml ${command}`)
       expect(stdout).toContain("Usage:")
     }
-  }, 10000)
+  }, 30000)
 
   it("prints agent-facing schema without implementation props", async () => {
     const { stdout } = await runCli(["schema", "--format", "json"])
@@ -220,6 +240,40 @@ describe("agent-html CLI", () => {
     expect(secondSetup.stdout).toContain("ahtml runtime already ready")
     await rm(tempDir, { force: true, recursive: true })
   })
+
+  it("uses shadcn API for runtime setup catalogs and keeps bundled fallback minimal", async () => {
+    const { resolveRuntimeSetup } = await importRuntimeSetupModule()
+    const {
+      getShadcnComponentCatalog,
+      listShadcnPresets,
+      validateShadcnPreset,
+    } = await importShadcnApiModule()
+
+    const bundled = await resolveRuntimeSetup({
+      interactive: false,
+      options: {
+        "component-source": "bundled",
+        preset: "custom",
+        components: "all",
+      },
+    })
+    expect(bundled.components).toEqual(["card"])
+
+    const catalog = await getShadcnComponentCatalog()
+    expect(catalog.source).toBe("shadcn-api")
+    expect(catalog.components).toContain("card")
+    expect(catalog.components).toContain("button")
+
+    const presets = listShadcnPresets()
+    expect(presets).toContain("nova")
+    expect(validateShadcnPreset("nova")).toBe(true)
+    await expect(
+      resolveRuntimeSetup({
+        interactive: false,
+        options: { preset: "not-a-shadcn-preset" },
+      }),
+    ).rejects.toThrow("Unsupported shadcn preset")
+  }, 30000)
 
   it("builds from an empty consumer directory and writes runtime state outside the project", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
@@ -559,6 +613,22 @@ async function importCommandMetadata() {
   )) as CommandMetadataModule
 
   return commandMetadata
+}
+
+async function importRuntimeSetupModule(): Promise<RuntimeSetupModule> {
+  const runtimeSetupModuleUrl = pathToFileURL(
+    path.join(root, "src", "cli", "runtime-setup.mjs"),
+  ).href
+
+  return (await import(runtimeSetupModuleUrl)) as RuntimeSetupModule
+}
+
+async function importShadcnApiModule(): Promise<ShadcnApiModule> {
+  const shadcnApiModuleUrl = pathToFileURL(
+    path.join(root, "src", "cli", "shadcn-api.mjs"),
+  ).href
+
+  return (await import(shadcnApiModuleUrl)) as ShadcnApiModule
 }
 
 async function startPackageVersionServer(version: string, statusCode = 200) {

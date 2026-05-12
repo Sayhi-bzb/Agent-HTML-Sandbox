@@ -73,7 +73,7 @@ ahtml doctor
   </CodeBlockTab>
 </CodeBlockTabs>
 
-`ahtml setup` configures the managed runtime under `~/.ahtml`, currently with a shadcn-backed renderer. Guided setup defaults to `--component-source shadcn-cli`, which installs selected runtime components through `npx shadcn@latest` inside the managed runtime. `ahtml status`, `ahtml doctor`, `ahtml build`, and `ahtml preview` initialize or repair the managed runtime automatically with bundled defaults when setup has not run. They do not write `src/`, `components.json`, `vite.config.ts`, or `agent-html.project.json` into the current repository.
+`ahtml setup` configures the managed runtime under `~/.ahtml`, currently with a shadcn-backed renderer. Guided setup reads shadcn component and preset metadata from shadcn package APIs, then installs selected runtime components through shadcn CLI inside the managed runtime. `ahtml status`, `ahtml doctor`, `ahtml build`, and `ahtml preview` initialize or repair the managed runtime automatically with bundled defaults when setup has not run. They do not write `src/`, `components.json`, `vite.config.ts`, or `agent-html.project.json` into the current repository.
 
 `ahtml status` and `ahtml doctor` can show a non-blocking package update hint. Set `AHTML_NO_UPDATE_CHECK=1` to disable that check.
 

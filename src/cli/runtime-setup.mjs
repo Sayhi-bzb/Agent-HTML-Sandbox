@@ -1,5 +1,3 @@
-import { execFile } from "node:child_process"
-import { promisify } from "node:util"
 import {
   cancel,
   intro,
@@ -9,7 +7,13 @@ import {
   select,
 } from "@clack/prompts"
 
-const execFileAsync = promisify(execFile)
+import {
+  fallbackShadcnComponents,
+  getDefaultShadcnPreset,
+  getShadcnComponentCatalog,
+  listShadcnPresets,
+  validateShadcnPreset,
+} from "./shadcn-api.mjs"
 
 export class RuntimeSetupCancelledError extends Error {
   constructor() {
@@ -18,11 +22,11 @@ export class RuntimeSetupCancelledError extends Error {
   }
 }
 
-export const defaultRuntimeSetup = {
+const defaultRuntimeSetup = {
   uiLibrary: "shadcn",
   componentSource: "shadcn-cli",
   installMode: "preset",
-  preset: "nova",
+  preset: getDefaultShadcnPreset(),
   components: ["card"],
 }
 
@@ -31,19 +35,9 @@ export const bundledRuntimeSetup = {
   componentSource: "bundled",
 }
 
-export const supportedUiLibraries = ["shadcn"]
-export const supportedComponentSources = ["bundled", "shadcn-cli"]
-export const requiredRuntimeComponents = ["card"]
-export const supportedShadcnPresets = [
-  "nova",
-  "vega",
-  "maia",
-  "lyra",
-  "mira",
-  "luma",
-  "sera",
-]
-export const supportedShadcnComponents = ["card"]
+const supportedUiLibraries = ["shadcn"]
+const supportedComponentSources = ["bundled", "shadcn-cli"]
+const requiredRuntimeComponents = ["card"]
 
 export async function resolveRuntimeSetup({
   options = {},
@@ -67,6 +61,7 @@ export async function resolveRuntimeSetup({
       ? (options.preset ?? answers.preset ?? defaultRuntimeSetup.preset)
       : "custom"
   const componentCatalog = await getComponentCatalog(componentSource)
+  const shadcnPresets = listShadcnPresets()
   const components = withRequiredRuntimeComponents(
     normalizeComponents(
       options.components ??
@@ -83,6 +78,7 @@ export async function resolveRuntimeSetup({
     preset,
     components,
     componentCatalog,
+    shadcnPresets,
   })
 
   return {
@@ -154,7 +150,8 @@ function assertRuntimeSetup({
   installMode,
   preset,
   components,
-  componentCatalog = supportedShadcnComponents,
+  componentCatalog = fallbackShadcnComponents,
+  shadcnPresets = listShadcnPresets(),
 }) {
   if (!supportedUiLibraries.includes(uiLibrary)) {
     throw new Error(
@@ -172,9 +169,9 @@ function assertRuntimeSetup({
     throw new Error('setup mode must be "preset" or "custom".')
   }
 
-  if (installMode === "preset" && !supportedShadcnPresets.includes(preset)) {
+  if (installMode === "preset" && !validateShadcnPreset(preset)) {
     throw new Error(
-      `Unsupported shadcn preset "${preset}". Supported: ${supportedShadcnPresets.join(", ")}.`,
+      `Unsupported shadcn preset "${preset}". Supported named styles: ${shadcnPresets.join(", ")}. Preset codes from shadcn are also supported.`,
     )
   }
 
@@ -209,7 +206,7 @@ async function promptForRuntimeSetup() {
     installMode === "preset"
       ? await chooseOption({
           label: "shadcn preset",
-          options: supportedShadcnPresets,
+          options: listShadcnPresets(),
           defaultValue: defaultRuntimeSetup.preset,
         })
       : "custom"
@@ -265,7 +262,7 @@ function unwrapPromptValue(value) {
 
 function normalizeComponents(
   value,
-  componentCatalog = supportedShadcnComponents,
+  componentCatalog = fallbackShadcnComponents,
 ) {
   if (Array.isArray(value)) {
     return [...new Set(value)]
@@ -305,24 +302,9 @@ function withRequiredRuntimeComponents(components) {
 
 async function getComponentCatalog(componentSource) {
   if (componentSource !== "shadcn-cli") {
-    return supportedShadcnComponents
+    return fallbackShadcnComponents
   }
 
-  const { stdout } = await execFileAsync(
-    process.platform === "win32" ? "npx.cmd" : "npx",
-    ["shadcn@latest", "search", "@shadcn", "--limit", "100"],
-    {
-      shell: process.platform === "win32",
-    },
-  )
-  const search = JSON.parse(stdout)
-  const names = search.items
-    .filter((item) => item.type === "registry:ui")
-    .map((item) => item.name)
-
-  if (names.length === 0) {
-    throw new Error("shadcn registry search returned no UI components.")
-  }
-
-  return names
+  const catalog = await getShadcnComponentCatalog()
+  return catalog.components
 }

@@ -32,7 +32,6 @@ export type ComponentSchemaOverlay = {
 
 export type GeneratedShadcnIntrospection = {
   readonly registryName: string
-  readonly sourceFile: string
   readonly componentName: string
   readonly exports: readonly string[]
   readonly slots: readonly string[]

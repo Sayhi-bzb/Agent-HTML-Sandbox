@@ -77,7 +77,7 @@ Defaults:
 
 - Runtime home: `~/.ahtml` or `%USERPROFILE%\.ahtml`
 - Runtime renderer: internal shadcn-backed React/Vite renderer
-- Runtime setup: `ahtml setup` uses shadcn CLI by default; runtime-aware commands use bundled defaults when they must repair non-interactively
+- Runtime setup: guided setup reads shadcn component and preset metadata from the `shadcn` package APIs, then uses shadcn CLI inside the managed runtime; runtime-aware commands repair with bundled defaults when they must bootstrap non-interactively
 - Runtime override: `AHTML_HOME`
 - Document: `artifact.agent.html`
 - Build output: `dist/html`
@@ -86,7 +86,8 @@ Defaults:
 
 ## Rules
 
-- `ahtml setup` guides managed runtime installation and defaults to shadcn CLI as the component source. `ahtml status`, `ahtml doctor`, `ahtml build`, and `ahtml preview` can bootstrap or repair it automatically with bundled defaults when no guided setup has run.
+- `ahtml setup` guides managed runtime installation. `ahtml status`, `ahtml doctor`, `ahtml build`, and `ahtml preview` can bootstrap or repair it automatically with bundled defaults when no guided setup has run.
+- shadcn component catalogs and preset names come from shadcn APIs at setup time; ahtml should not maintain parallel shadcn component or preset lists.
 - shadcn/ui is an internal renderer implementation detail; do not initialize shadcn in the current project for normal `ahtml` use.
 - Treat `ahtml schema --format prompt` as the source of truth.
 - Use only registered agent-html components, props, children, and render config values.

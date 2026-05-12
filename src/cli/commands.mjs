@@ -97,7 +97,7 @@ export const commandMetadata = {
         value: true,
       },
     ],
-    example: `ahtml inspect --dir ${cliDefaults.outputDir}`,
+    example: `ahtml inspect --input ${cliDefaults.documentPath}`,
   },
   preview: {
     summary: "Build and serve the static artifact over local HTTP.",

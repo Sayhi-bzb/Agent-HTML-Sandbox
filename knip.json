@@ -7,5 +7,13 @@
     "src/cli/runtime-template/src/ssr.tsx"
   ],
   "ignoreBinaries": ["gitnexus"],
-  "project": ["src/**/*.ts", "src/**/*.tsx", "*.{ts,js}", "scripts/**/*.mjs"]
+  "project": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/cli/runtime-setup.mjs",
+    "src/cli/runtime-status.mjs",
+    "src/cli/shadcn-api.mjs",
+    "*.{ts,js}",
+    "scripts/**/*.mjs"
+  ]
 }

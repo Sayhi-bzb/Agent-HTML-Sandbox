@@ -52,11 +52,13 @@ Prepare the next alpha version:
 npm run release:alpha
 ```
 
-Run the full local release check, including package dry-run:
+Run the release-grade local check:
 
 ```bash
 npm run release:check
 ```
+
+For tag-driven publishing, CI runs the publish gate and publish step. Local release work should stop after the minimal package checks and dry-run.
 
 Commit, tag, and push:
 

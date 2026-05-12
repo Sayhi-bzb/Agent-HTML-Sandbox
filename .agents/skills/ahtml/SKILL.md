@@ -1,37 +1,41 @@
 ---
 name: ahtml
-description: Install, use, and debug ahtml agent-html artifact workflows. Use when working with ahtml CLI commands such as status, doctor, schema, validate, build, preview, inspect, or config; when using the managed ahtml runtime; or when explaining the ahtml engine and CLI architecture.
+description: Write, validate, build, preview, inspect, install, and debug ahtml `.agent.html` artifact workflows. Use when producing agent-facing documents that need richer structure, clearer reading, interaction, or easier sharing than Markdown can provide; when installing or repairing the managed runtime; or when diagnosing runtime, build, preview, or validation failures.
 ---
 
 # ahtml
 
-Use this skill for `ahtml`, a local CLI engine that turns constrained agent-facing documents into sanitized static artifacts.
+Use this skill when the goal is to turn agent-facing work into a portable HTML artifact that is easier to read, inspect, share, and hand back into the agent loop.
 
-Core model:
+## Core path
 
-- `ahtml` package owns `config`, `engine`, and `cli`.
-- `ahtml` renders through a shadcn-backed managed runtime under `~/.ahtml` or `%USERPROFILE%\.ahtml`; set `AHTML_HOME` only for isolation.
-- The current repository should only contain the user's input files and chosen artifact output, not a generated frontend project.
-- Agent-facing input must not expose Tailwind classes, `className`, `style`, scripts, event handlers, shadcn props, Radix props, arbitrary HTML attributes, or raw HTML passthrough.
+- Start with the schema: `ahtml schema --format prompt`.
+- Write a `.agent.html` document with registered components and finite metadata.
+- Keep agent-facing input free of Tailwind classes, `className`, `style`, scripts, event handlers, shadcn props, Radix props, arbitrary HTML attributes, and raw HTML passthrough.
+- Validate before building: `ahtml validate --input artifact.agent.html`.
+- Build or preview when the user needs a shareable artifact: `ahtml build --input ...` or `ahtml preview --input ...`.
+- When finishing, tell the user what you wrote, what passed validation, and where the artifact lives.
 
-Default workflow:
+## Minimal shape
 
 ```bash
-ahtml setup --yes
-ahtml status
-ahtml doctor
-ahtml schema --format prompt
-ahtml validate --input artifact.agent.html
-ahtml build --input artifact.agent.html --out dist/html
-ahtml preview --input artifact.agent.html --out dist/html
-ahtml inspect --input artifact.agent.html
+<meta-agent
+  theme="neutral"
+  density="comfortable"
+  tone="report"
+  width="article"
+/>
+
+<page title="Review">
+  <card title="Summary">...</card>
+</page>
 ```
 
-Load references only as needed:
+## Route by task
 
-- Read `references/install.md` when installing, checking, repairing, or isolating the managed runtime.
-- Read `references/usage.md` when producing `.agent.html`, building, previewing, or explaining the normal user flow.
-- Read `references/debug.md` when `status`, `doctor`, `build`, `preview`, runtime setup, components, or config fail.
-- Read `references/bug-reporting.md` when a reproducible `ahtml` product bug remains after normal debug checks.
+- Runtime install, repair, or isolation -> `references/install.md`
+- Writing `.agent.html`, building, previewing, or inspecting an artifact -> `references/usage.md`
+- `status`, `doctor`, runtime setup, or config/build/preview failures -> `references/debug.md`
+- Reproducible product bug after normal checks -> `references/bug-reporting.md`
 
-Prefer `ahtml setup` for guided managed runtime installation. Automatic runtime bootstrap through `ahtml status`, `ahtml doctor`, `ahtml build`, or `ahtml preview` remains valid for defaults. Do not use removed project-local scaffold or init flows.
+Do not use removed project-local scaffold or init flows.

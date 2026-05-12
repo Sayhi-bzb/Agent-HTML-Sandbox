@@ -222,6 +222,7 @@ function assertPackBoundary(files) {
     "src/cli/runtime-template.mjs",
     "src/cli/runtime-template/src/app.tsx",
     "src/cli/schema.mjs",
+    "src/cli/shadcn-api.mjs",
     "src/cli/validate.mjs",
     "src/engine/component-schema.ts",
     "src/engine/core.ts",

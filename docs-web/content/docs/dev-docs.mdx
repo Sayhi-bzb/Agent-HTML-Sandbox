@@ -84,6 +84,8 @@ git push origin main --tags
 
 Tagged prereleases publish to the matching prerelease dist-tag, such as `alpha`. Stable releases publish to `latest`. The publish workflow fails if the Git tag does not match `package.json` version.
 
+`release:check` is the local minimal release gate. It covers the package tests, build, pack boundary, and npm dry-run publish. The GitHub Actions publish workflow runs the same package gate again before tag-driven publish.
+
 ## Distribute the ahtml skill [#distribute-the-ahtml-skill]
 
 The `ahtml` agent skill lives at `.agents/skills/ahtml`. The open `skills` CLI discovers `.agents/skills/` automatically.
@@ -116,6 +118,8 @@ installed ahtml package
 ```
 
 `ahtml build` must use the managed runtime. The runtime may contain Vite, React, and shadcn-backed renderer files under `~/.ahtml/runtime`, but the current project must not receive that scaffold. Do not restore current-directory project integration, `agent-html.project.json`, `init --scaffold`, package-local Vite apps, package-local renderer apps, or root shadcn UI files.
+
+Guided setup reads shadcn component catalogs, preset names, and preset code validation from shadcn package APIs, then uses shadcn CLI inside the managed runtime when components need to be installed. Do not maintain parallel shadcn component lists, preset lists, or registry schemas in ahtml docs, schema, or package source.
 
 ## Maintenance checklist [#maintenance-checklist]
 

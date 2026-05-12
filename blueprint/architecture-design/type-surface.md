@@ -169,12 +169,12 @@ Consumers: agent
 
 Change rule: CliSchemaOutput 必须来自 ComponentSchema 和 RenderConfig，不得暴露 renderer props、Tailwind class、shadcn props 或源码结构。
 
-## 15. ArtifactConfig
+## 15. CliConfigView
 
-Ownership: CLI config / portable output
+Ownership: CLI / standardized component schema
 
-Purpose: 表示 CLI 管理的有限 presentation / output 配置。
+Purpose: 表示 CLI 从 ComponentSchema 和 RenderConfig 派生的只读配置视图。
 
-Consumers: schema, build
+Consumers: agent, developer
 
-Change rule: ArtifactConfig 不得映射为任意 CSS、Tailwind class、inline style、script、HTML attribute passthrough 或外部资源。
+Change rule: CliConfigView 不得成为独立配置状态源，不得映射为任意 CSS、Tailwind class、inline style、script、HTML attribute passthrough 或外部资源。

@@ -57,7 +57,6 @@ describe("agent-html public types", () => {
   it("models shadcn introspection and explicit schema overlay separately", () => {
     const introspection = {
       registryName: "button",
-      sourceFile: "src/components/ui/button.tsx",
       componentName: "Button",
       exports: ["Button", "buttonVariants"],
       slots: ["button"],

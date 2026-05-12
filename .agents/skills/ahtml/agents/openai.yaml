@@ -1,4 +1,4 @@
 interface:
   display_name: "ahtml"
-  short_description: "Install, use, and debug ahtml workflows"
-  default_prompt: "Use $ahtml to initialize and debug an agent-html artifact workflow."
+  short_description: "Turn agent work into readable, shareable HTML artifacts"
+  default_prompt: "Use $ahtml to turn agent-facing work into a portable HTML artifact that is easier to read, inspect, share, and hand back into the agent loop."
