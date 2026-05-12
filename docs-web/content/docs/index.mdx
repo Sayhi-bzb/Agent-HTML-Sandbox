@@ -11,7 +11,9 @@ The `ahtml` package owns the config, engine, CLI, and shadcn-backed managed arti
 
 <Callout title="Primary rule">
   Install `ahtml`, then treat the schema as the source of truth for component
-  names, props, children, and render config values. Runtime setup is automatic.
+  names, props, children, and render config values. Use `ahtml setup` when you
+  want guided runtime setup; runtime-aware commands can still repair defaults
+  automatically.
 </Callout>
 
 ## 1. Install the CLI [#install-the-cli]
@@ -30,6 +32,7 @@ The `ahtml` package owns the config, engine, CLI, and shadcn-backed managed arti
 
 ```bash
 npm install -g @agent-html/ahtml
+ahtml setup
 ahtml status
 ahtml doctor
 ```
@@ -40,6 +43,7 @@ ahtml doctor
 
 ```bash
 pnpm add -g @agent-html/ahtml
+ahtml setup
 ahtml status
 ahtml doctor
 ```
@@ -50,6 +54,7 @@ ahtml doctor
 
 ```bash
 yarn global add @agent-html/ahtml
+ahtml setup
 ahtml status
 ahtml doctor
 ```
@@ -60,6 +65,7 @@ ahtml doctor
 
 ```bash
 bun add -g @agent-html/ahtml
+ahtml setup
 ahtml status
 ahtml doctor
 ```
@@ -67,7 +73,7 @@ ahtml doctor
   </CodeBlockTab>
 </CodeBlockTabs>
 
-`ahtml status`, `ahtml doctor`, `ahtml build`, and `ahtml preview` initialize or repair the managed runtime automatically, including the internal shadcn-backed renderer. They do not write `src/`, `components.json`, `vite.config.ts`, or `agent-html.project.json` into the current repository.
+`ahtml setup` configures the managed runtime under `~/.ahtml`, currently with a shadcn-backed renderer. Guided setup defaults to `--component-source shadcn-cli`, which installs selected runtime components through `npx shadcn@latest` inside the managed runtime. `ahtml status`, `ahtml doctor`, `ahtml build`, and `ahtml preview` initialize or repair the managed runtime automatically with bundled defaults when setup has not run. They do not write `src/`, `components.json`, `vite.config.ts`, or `agent-html.project.json` into the current repository.
 
 `ahtml status` and `ahtml doctor` can show a non-blocking package update hint. Set `AHTML_NO_UPDATE_CHECK=1` to disable that check.
 

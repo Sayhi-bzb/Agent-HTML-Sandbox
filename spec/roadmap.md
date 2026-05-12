@@ -22,7 +22,6 @@ user receives portable static HTML
 
 当前工作目录默认只承载输入和输出：
 
-- composition input
 - `.agent.html`
 - static artifact output
 
@@ -103,8 +102,11 @@ AHTML_HOME
 工作项：
 
 - runtime bootstrap 生成 runtime manifest、runtime directories 和 generated document 文件。
+- `ahtml setup` 提供显式 guided runtime setup，记录 shadcn preset、自定义组件选择和 component source。
+- component source 支持 bundled alpha template 和 managed runtime 内的 `shadcn` CLI 安装路径。
 - `status` / `doctor` / `build` / `preview` 默认自动初始化或修复 managed runtime。
-- 不保留 `ahtml init`；runtime repair 由 `status` / `doctor` / `build` / `preview` 自动触发。
+- 不保留 `ahtml init`；runtime repair 由 `setup` 或 `status` / `doctor` / `build` / `preview` 自动触发。
+- runtime setup 生成 prompt-ui manifest，供 agent 读取可用 UI 底座、组件清单和安全边界。
 - `build` / `preview` 首次运行可以自动 bootstrap。
 - bootstrap 失败时输出明确修复命令。
 
@@ -143,7 +145,7 @@ AHTML_HOME
 
 - 删除 `src/config/project.mjs`。
 - 删除 `src/cli/scaffold.mjs`。
-- 删除 `init --template`、`--preset`、`--components`、`--out`、`--scaffold`、`--apply`。
+- 删除 `init --template`、`init --preset`、`init --components`、`init --out`、`init --scaffold`、`init --apply`。
 - 删除 `agent-html.project.json` readiness。
 - 默认 `status` / `doctor` 不再以 project config 判断 readiness。
 - `build` 不读取当前目录的 Vite、React、Tailwind、shadcn 或 renderer adapter。
@@ -175,7 +177,7 @@ ahtml build --input artifact.agent.html --out dist/html
 
 验收：
 
-- `npm run verify:pack` 在空 consumer dir 中完成 compose、validate、build、inspect、preview。
+- `npm run verify:pack` 在空 consumer dir 中完成 validate、build、inspect、preview。
 - consumer dir 不出现 `src/`、`vite.config.ts`、`components.json`、`agent-html.project.json`。
 - docs 不再把 project-local setup 当作 happy path。
 

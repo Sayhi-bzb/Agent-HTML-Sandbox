@@ -1,24 +1,60 @@
-import { readFileSync } from "node:fs"
-import path from "node:path"
-import { fileURLToPath } from "node:url"
-
 import { describe, expect, it } from "vitest"
 
 import { sanitizeAgentHtml } from "./sanitize-agent-html"
 
-const examplesDir = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "examples",
-)
-const htmlEffectivenessSource = readFileSync(
-  path.join(examplesDir, "claude-code-html-effectiveness.agent.html"),
-  "utf8",
-)
-const collaborationWorkbenchSource = readFileSync(
-  path.join(examplesDir, "human-agent-collaboration-workbench.agent.html"),
-  "utf8",
-)
+const semanticReportSource = `
+  <meta-agent theme="neutral" density="comfortable" tone="report" width="wide" />
+  <page title="Semantic Report">
+    <alert title="Thesis">HTML artifacts can stay readable without exposing implementation details.</alert>
+    <card title="Executive Summary">
+      <badge tone="success">Readable</badge>
+      <list>
+        <item>Agents use semantic components.</item>
+        <item>Renderer details stay internal.</item>
+      </list>
+    </card>
+    <table>
+      <row kind="header">
+        <cell>Use Case</cell>
+        <cell>Component</cell>
+      </row>
+      <row>
+        <cell>Code review</cell>
+        <cell>alert, table, list</cell>
+      </row>
+    </table>
+  </page>
+`
+
+const collaborationWorkbenchSource = `
+  <meta-agent theme="neutral" density="comfortable" tone="dashboard" width="wide" />
+  <page title="Human Agent Collaboration Workbench">
+    <tabs default="decide">
+      <tab value="explore" label="Explore">
+        <accordion>
+          <accordion-item value="review" title="Review Console">
+            <list>
+              <item>Inspect findings and choose a response.</item>
+            </list>
+          </accordion-item>
+        </accordion>
+      </tab>
+      <tab value="decide" label="Decide">
+        <choice-group title="Direction" mode="single" default="ship">
+          <choice value="ship" label="Ship">Use the current direction.</choice>
+          <choice value="revise" label="Revise">Ask for another pass.</choice>
+        </choice-group>
+        <slider-control label="Review strictness" value="70" min="0" max="100" step="5" unit="%">
+          Increase this when the artifact drives implementation.
+        </slider-control>
+        <feedback-box title="Export prompt" copy-label="Copy">
+          Implement the selected direction with the chosen strictness.
+        </feedback-box>
+        <progress-meter label="Decision confidence" value="82" detail="Enough signal to continue." />
+      </tab>
+    </tabs>
+  </page>
+`
 
 describe("sanitizeAgentHtml", () => {
   it("produces SanitizedAgentHtml for valid MVP agent-html", () => {
@@ -325,15 +361,15 @@ describe("sanitizeAgentHtml", () => {
     expect(result.document?.components[0]?.children[0]?.type).toBe("component")
   })
 
-  it("accepts the complex Claude Code HTML effectiveness example", () => {
-    const result = sanitizeAgentHtml(htmlEffectivenessSource)
+  it("accepts a representative semantic report", () => {
+    const result = sanitizeAgentHtml(semanticReportSource)
 
     expect(result.diagnostics).toEqual([])
     expect(result.document?.components[0]).toMatchObject({
       type: "component",
       name: "page",
       props: {
-        title: "Claude Code HTML Effectiveness",
+        title: "Semantic Report",
       },
     })
   })
@@ -375,7 +411,7 @@ describe("sanitizeAgentHtml", () => {
     })
   })
 
-  it("accepts the interactive collaboration workbench example", () => {
+  it("accepts a representative interactive collaboration workbench", () => {
     const result = sanitizeAgentHtml(collaborationWorkbenchSource)
 
     expect(result.diagnostics).toEqual([])

@@ -165,36 +165,16 @@ Ownership: CLI / standardized component schema
 
 Purpose: 表示 `schema` 命令输出的脱水 agent-facing contract。
 
-Consumers: agent, compose
+Consumers: agent
 
 Change rule: CliSchemaOutput 必须来自 ComponentSchema 和 RenderConfig，不得暴露 renderer props、Tailwind class、shadcn props 或源码结构。
 
-## 15. CompositionInput
-
-Ownership: CLI compose
-
-Purpose: 表示 `compose` 命令接收的内容输入。
-
-Consumers: compose
-
-Change rule: CompositionInput 不得绕过 ComponentSchema，也不得直接成为 renderer 输入。
-
-## 16. CompositionDocument
-
-Ownership: CLI compose / agent-html authoring boundary
-
-Purpose: 表示 `compose` 产出的标准 agent-html document。
-
-Consumers: parse / sanitize, build
-
-Change rule: CompositionDocument 必须进入 parse / validate / sanitize。`.agent.html` 是它的可检查文件形态。
-
-## 17. ArtifactConfig
+## 15. ArtifactConfig
 
 Ownership: CLI config / portable output
 
 Purpose: 表示 CLI 管理的有限 presentation / output 配置。
 
-Consumers: schema, compose, build
+Consumers: schema, build
 
 Change rule: ArtifactConfig 不得映射为任意 CSS、Tailwind class、inline style、script、HTML attribute passthrough 或外部资源。

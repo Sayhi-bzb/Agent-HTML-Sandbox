@@ -10,7 +10,7 @@ agent-html 的产品形态是：
 ahtml CLI + core engine + managed runtime + portable artifact output
 ```
 
-CLI 负责 agent-facing schema、compose、validate、build、preview、inspect、doctor 和 runtime 编排。
+CLI 负责 agent-facing schema、validate、build、preview、inspect、doctor 和 runtime 编排。
 
 engine 负责 agent-html 文档边界、安全边界、ComponentSchema、diagnostics 和 `SanitizedAgentHtml`。
 
@@ -55,7 +55,7 @@ agent writes standard agent-html syntax
 runtime 主路径是：
 
 ```txt
-CLI compose / agent writes standard document
+agent writes standard document
         ↓
 ahtml core parse / validate / sanitize
         ↓
@@ -72,8 +72,6 @@ CLI 主路径是：
 
 ```txt
 schema
-        ↓
-compose
         ↓
 validate
         ↓
@@ -113,7 +111,7 @@ agent-html 使用固定结构的标准组件语法。组件风格、布局、间
 
 renderer adapter 将标准语法映射为 managed runtime 中的 UI 实现，并产出可检查的底层 HTML。React、Tailwind class 和 shadcn/ui 细节不进入 agent-facing 主接口。
 
-`.agent.html` 是可检查中间表示和调试格式。主入口是 CLI 编排：`schema` 输出 agent-facing contract，`compose` 产出标准 document，`validate` 检查 document，`build` 生成 artifact，`preview` 做本地验收，`inspect` 和 `doctor` 做基础调试，`config` 管理有限 presentation / output 配置。
+`.agent.html` 是唯一 agent-facing document 输入、可检查中间表示和调试格式。主入口是 CLI 编排：`schema` 输出 agent-facing contract，`validate` 检查 document，`build` 生成 artifact，`preview` 做本地验收，`inspect` 和 `doctor` 做基础调试，`config` 管理有限 presentation / output 配置。
 
 旧 project-local Vite/shadcn scaffold 已移除，不是兼容基线。目标架构应把 renderer state 和 runtime files 收纳进 managed runtime。
 
@@ -231,7 +229,7 @@ CLI 是 agent-html engine 的主入口。
 
 CLI 只编排 ComponentSchema、RenderConfig、parse / sanitize、managed runtime、renderer adapter 和 portable output。CLI 不定义平行协议，不绕过 sanitize，不暴露 shadcn props、Tailwind class、style、script 或外部资源逃逸口。
 
-`ahtml init` 默认初始化或检查 managed runtime。CLI 不提供写入当前工作目录的 project scaffold 模式，也不得把项目样式提升为 agent-facing 协议。
+`ahtml setup` 默认初始化或检查 managed runtime。首次 `status`、`doctor`、`build` 或 `preview` 可以用默认 shadcn preset 自动修复 runtime。CLI 不提供写入当前工作目录的 project scaffold 模式，也不得把项目样式提升为 agent-facing 协议。
 
 ## Non-goals
 

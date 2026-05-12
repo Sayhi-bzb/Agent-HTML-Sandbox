@@ -12,43 +12,6 @@ ahtml status
 ahtml doctor
 ```
 
-## Composition input [#composition-input]
-
-Use structured JSON when an agent or app wants to generate the standard `.agent.html` document through `ahtml compose`.
-
-```json title="composition.json"
-{
-  "meta": {
-    "theme": "neutral",
-    "density": "comfortable",
-    "tone": "report",
-    "width": "article"
-  },
-  "document": {
-    "name": "page",
-    "props": {
-      "title": "Minimal Artifact"
-    },
-    "children": [
-      {
-        "name": "card",
-        "props": {
-          "title": "Overview"
-        },
-        "children": ["A compact artifact with one card."]
-      }
-    ]
-  }
-}
-```
-
-```bash
-ahtml compose --input composition.json --out artifact.agent.html
-ahtml validate --input artifact.agent.html
-ahtml build --input artifact.agent.html --out dist/html
-ahtml preview --input artifact.agent.html --out dist/html
-```
-
 ## Minimal artifact [#minimal-artifact]
 
 ```html title="artifact.agent.html"

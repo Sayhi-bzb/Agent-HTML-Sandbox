@@ -63,13 +63,25 @@ try {
 
   await expectStdout(["schema", "--format", "prompt"], "Write agent-html only.")
   await expectStdout(["--help"], "Closed-loop workflow:")
+  await expectStdout(["--help"], "ahtml setup --yes")
   for (const command of Object.keys(commandMetadata)) {
     await expectStdout([command, "--help"], `ahtml ${command}`)
   }
   await expectStdout(["schema", "--format", "json"], '"components"')
 
+  await expectStdout(
+    ["setup", "--yes", "--component-source", "bundled"],
+    "ahtml runtime ready",
+  )
+  await expectStdout(
+    ["setup", "--yes", "--component-source", "bundled"],
+    "ahtml runtime already ready",
+  )
   await expectStdout(["status"], "ready: yes")
   await expectStdout(["status"], "runtime manifest: ok")
+  await expectStdout(["status"], "ui library: shadcn")
+  await expectStdout(["status"], "component source: bundled")
+  await expectStdout(["status"], "prompt-ui manifest: ok")
   await expectStdout(
     ["status"],
     "Next: ahtml build --input artifact.agent.html --out dist/html",
@@ -78,52 +90,25 @@ try {
     path.join(runtimeHome, "config", "runtime.json"),
     "ahtml-managed-runtime",
   )
+  await expectFile(
+    path.join(runtimeHome, "config", "prompt-ui.manifest.json"),
+    "ahtml-prompt-ui-manifest",
+  )
   await expectStdout(["status"], "ready: yes")
   await expectStdout(
     ["status"],
     "Next: ahtml build --input artifact.agent.html --out dist/html",
   )
 
-  const inputPath = path.join(consumerDir, "composition.json")
   const documentPath = path.join(consumerDir, "artifact.agent.html")
   const outputDir = path.join(consumerDir, "dist", "html")
   await writeFile(
-    inputPath,
-    JSON.stringify({
-      meta: {
-        theme: "neutral",
-        density: "compact",
-        tone: "dashboard",
-        width: "dashboard",
-      },
-      document: {
-        name: "page",
-        props: { title: "Packed CLI" },
-        children: [
-          {
-            name: "card",
-            props: { title: "Overview" },
-            children: ["Built from an installed package."],
-          },
-        ],
-      },
-    }),
+    documentPath,
+    [
+      '<meta-agent theme="neutral" density="compact" tone="dashboard" width="dashboard" />',
+      '<page title="Packed CLI"><card title="Overview">Built from an installed package.</card></page>',
+    ].join("\n"),
   )
-
-  await runAhtml(["compose", "--input", inputPath, "--out", documentPath])
-  await expectFile(documentPath, "Packed CLI")
-
-  await execFileWithInput(
-    ["compose", "--stdin", "--out", path.join(consumerDir, "stdin.agent.html")],
-    JSON.stringify({
-      document: {
-        name: "page",
-        props: { title: "Packed Stdin" },
-        children: [{ name: "card", children: ["Composed from stdin."] }],
-      },
-    }),
-  )
-  await expectFile(path.join(consumerDir, "stdin.agent.html"), "Packed Stdin")
 
   await runAhtml(["build", "--input", documentPath, "--out", outputDir])
   await expectFile(path.join(outputDir, "index.html"), "Packed CLI")
@@ -159,6 +144,7 @@ try {
     "does not accept --input",
   )
   await expectFailure(["init"], 'Unknown command "init"')
+  await expectFailure(["compose"], 'Unknown command "compose"')
 
   await expectFailure(
     [
@@ -173,25 +159,6 @@ try {
       path.join(consumerDir, "dist", "invalid"),
     ],
     "unknown-attr",
-  )
-
-  await expectFailure(
-    [
-      "compose",
-      "--input",
-      await writeTempFile(
-        consumerDir,
-        "blocked.json",
-        JSON.stringify({
-          document: {
-            name: "page",
-            props: { title: "Bad", className: "x" },
-            children: [],
-          },
-        }),
-      ),
-    ],
-    "Blocked implementation prop",
   )
 
   console.log("Packed ahtml verification passed.")
@@ -249,6 +216,7 @@ function assertPackBoundary(files) {
     "src/cli/module-loader.mjs",
     "src/cli/runtime-build.mjs",
     "src/cli/runtime-paths.mjs",
+    "src/cli/runtime-setup.mjs",
     "src/cli/runtime-status.mjs",
     "src/cli/runtime-template.mjs",
     "src/cli/runtime-template/src/app.tsx",
@@ -333,33 +301,6 @@ async function expectFailure(args, expectedStderr) {
   }
 
   throw new Error(`Expected command to fail with "${expectedStderr}".`)
-}
-
-async function execFileWithInput(args, input) {
-  await new Promise((resolve, reject) => {
-    let stderr = ""
-    const child = spawn(ahtmlCommand, args, {
-      cwd: consumerDir,
-      env: getAhtmlEnv(),
-      ...windowsShellOptions,
-      stdio: ["pipe", "ignore", "pipe"],
-    })
-
-    child.stderr.setEncoding("utf8")
-    child.stderr.on("data", (chunk) => {
-      stderr += chunk
-    })
-    child.on("error", reject)
-    child.on("exit", (code) => {
-      if (code === 0) {
-        resolve()
-        return
-      }
-
-      reject(new Error(stderr || `${ahtmlCommand} exited with code ${code}`))
-    })
-    child.stdin.end(input)
-  })
 }
 
 async function expectPreview(inputPath, outputDir) {

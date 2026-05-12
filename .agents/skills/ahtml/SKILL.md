@@ -1,6 +1,6 @@
 ---
 name: ahtml
-description: Install, use, and debug ahtml agent-html artifact workflows. Use when working with ahtml CLI commands such as status, doctor, schema, compose, validate, build, preview, inspect, or config; when using the managed ahtml runtime; or when explaining the ahtml engine/config/CLI architecture.
+description: Install, use, and debug ahtml agent-html artifact workflows. Use when working with ahtml CLI commands such as status, doctor, schema, validate, build, preview, inspect, or config; when using the managed ahtml runtime; or when explaining the ahtml engine/config/CLI architecture.
 ---
 
 # ahtml
@@ -17,10 +17,10 @@ Core model:
 Default workflow:
 
 ```bash
+ahtml setup --yes
 ahtml status
 ahtml doctor
 ahtml schema --format prompt
-ahtml compose --input composition.json --out artifact.agent.html
 ahtml validate --input artifact.agent.html
 ahtml build --input artifact.agent.html --out dist/html
 ahtml preview --input artifact.agent.html --out dist/html
@@ -31,8 +31,8 @@ ahtml inspect --dir dist/html
 Load references only as needed:
 
 - Read `references/install.md` when installing, checking, repairing, or isolating the managed runtime.
-- Read `references/usage.md` when producing content, composing `.agent.html`, building, previewing, or explaining the normal user flow.
+- Read `references/usage.md` when producing `.agent.html`, building, previewing, or explaining the normal user flow.
 - Read `references/debug.md` when `status`, `doctor`, `build`, `preview`, runtime setup, components, or config fail.
 - Read `references/bug-reporting.md` when a reproducible `ahtml` product bug remains after normal debug checks.
 
-Prefer automatic runtime bootstrap through `ahtml status`, `ahtml doctor`, `ahtml build`, or `ahtml preview`. Do not use removed project-local scaffold or init flows.
+Prefer `ahtml setup` for guided managed runtime installation. Automatic runtime bootstrap through `ahtml status`, `ahtml doctor`, `ahtml build`, or `ahtml preview` remains valid for defaults. Do not use removed project-local scaffold or init flows.

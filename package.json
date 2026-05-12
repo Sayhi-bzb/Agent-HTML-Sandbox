@@ -1,6 +1,6 @@
 {
   "name": "@agent-html/ahtml",
-  "version": "0.1.0-alpha.8",
+  "version": "0.1.0-alpha.9",
   "description": "Sanitized agent-html artifact CLI.",
   "license": "MIT",
   "type": "module",
@@ -21,7 +21,6 @@
     "src/engine/parse/",
     "src/cli/",
     "!src/**/*.test.ts",
-    "!src/engine/examples/",
     "tsconfig.json",
     "tsconfig.node.json",
     "README.md"

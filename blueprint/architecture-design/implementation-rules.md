@@ -170,7 +170,7 @@ render config 不得映射为任意 CSS、Tailwind class、inline style、script
 
 ## 22. CLI only orchestrates
 
-CLI 命令只能编排 schema、compose、parse / sanitize、managed runtime、renderer adapter 和 portable output。
+CLI 命令只能编排 schema、parse / sanitize、managed runtime、renderer adapter 和 portable output。
 
 CLI 不得创建独立 renderer。
 

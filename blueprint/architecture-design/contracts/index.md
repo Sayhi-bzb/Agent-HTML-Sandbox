@@ -9,7 +9,7 @@ user installs ahtml
         ↓
 agent writes standard document
         ↓
-CLI schema / compose / validate / build
+CLI schema / validate / build
         ↓
 ahtml core parse / sanitize
         ↓

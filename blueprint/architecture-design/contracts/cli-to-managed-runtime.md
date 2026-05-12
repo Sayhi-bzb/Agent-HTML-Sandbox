@@ -13,8 +13,10 @@ managed runtime 消费 CLI 生成或安装的配置、renderer adapter 和 shadc
 ## Rules
 
 - 默认 runtime 位于用户级 `.ahtml` 目录，不位于当前工作目录。
-- `ahtml init` 默认初始化或检查 managed runtime。
-- 首次 `build` / `preview` 可以触发 runtime bootstrap，或给出明确初始化命令。
+- `ahtml setup` 默认初始化或检查 managed runtime，并可记录 shadcn preset、自定义组件选择和 component source。
+- component source 可以是 bundled alpha template 或 managed runtime 内的 `shadcn` CLI 安装路径；两者都不得写入当前工作目录。
+- 首次 `status` / `doctor` / `build` / `preview` 可以触发默认 runtime bootstrap，或给出明确初始化命令。
+- CLI 生成 prompt-ui manifest，供 agent 读取可用 UI 底座、组件清单和安全边界。
 - shadcn components、theme、CSS variables 和 Tailwind 配置属于 managed runtime。
 - CLI 必须能检查 renderer adapter 所需 runtime 组件是否存在。
 - CLI 生成或安装的 renderer adapter 必须消费 `SanitizedAgentHtml`。

@@ -23,6 +23,11 @@ export function getRuntimePaths(env = process.env) {
     logsDir: path.join(runtimeRoot, "logs"),
     configDir: path.join(runtimeRoot, "config"),
     manifestPath: path.join(runtimeRoot, "config", runtimeManifestName),
+    promptUiManifestPath: path.join(
+      runtimeRoot,
+      "config",
+      "prompt-ui.manifest.json",
+    ),
     runtimePackageJsonPath: path.join(runtimeRoot, "runtime", "package.json"),
     runtimeViteConfigPath: path.join(runtimeRoot, "runtime", "vite.config.mjs"),
     runtimeSsrDir: path.join(runtimeRoot, "runtime", ".ahtml-ssr"),

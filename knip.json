@@ -1,7 +1,11 @@
 {
   "$schema": "https://unpkg.com/knip@latest/schema.json",
-  "entry": ["src/engine/core.ts", "src/engine/schema-overlays.ts"],
+  "entry": [
+    "src/engine/core.ts",
+    "src/engine/schema-overlays.ts",
+    "src/cli/runtime-template/src/main.tsx",
+    "src/cli/runtime-template/src/ssr.tsx"
+  ],
   "ignoreBinaries": ["gitnexus"],
-  "ignoreDependencies": ["clsx", "react", "react-dom", "tailwind-merge"],
-  "project": ["src/**/*.ts", "*.{ts,js}", "scripts/**/*.mjs"]
+  "project": ["src/**/*.ts", "src/**/*.tsx", "*.{ts,js}", "scripts/**/*.mjs"]
 }

@@ -36,7 +36,7 @@ Include only relevant, redacted information:
 - `@agent-html/ahtml` version.
 - Node and npm versions.
 - OS and shell.
-- Minimal `.agent.html` or composition JSON that reproduces the issue.
+- Minimal `.agent.html` that reproduces the issue.
 - Expected behavior and actual behavior.
 - Results from `ahtml status` and `ahtml doctor`.
 - Runtime home path and whether `AHTML_HOME` was set.

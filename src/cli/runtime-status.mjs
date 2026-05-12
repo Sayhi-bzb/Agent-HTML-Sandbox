@@ -15,24 +15,35 @@ import {
   runtimeRenderer,
   runtimeVersion,
 } from "./runtime-paths.mjs"
+import {
+  bundledRuntimeSetup,
+  createPromptUiManifest,
+} from "./runtime-setup.mjs"
 import { writeRuntimeTemplate } from "./runtime-template.mjs"
 
 export async function bootstrapManagedRuntime({
   packageVersion = "0.0.0",
   packageRoot = runtimePackageRoot,
   paths = getRuntimePaths(),
+  setup = bundledRuntimeSetup,
+  schema,
 } = {}) {
   await mkdir(paths.runtimeDir, { recursive: true })
   await mkdir(paths.cacheDir, { recursive: true })
   await mkdir(paths.logsDir, { recursive: true })
   await mkdir(paths.configDir, { recursive: true })
-  await writeRuntimeTemplate({ packageRoot, paths })
+  await writeRuntimeTemplate({ packageRoot, paths, setup })
 
   const manifest = {
     kind: "ahtml-managed-runtime",
     version: runtimeVersion,
     renderer: runtimeRenderer,
     packageVersion,
+    uiLibrary: setup.uiLibrary,
+    componentSource: setup.componentSource,
+    installMode: setup.installMode,
+    preset: setup.preset,
+    components: setup.components,
     paths: {
       runtime: paths.runtimeDir,
       cache: paths.cacheDir,
@@ -42,6 +53,10 @@ export async function bootstrapManagedRuntime({
   }
 
   await writeJsonFile(paths.manifestPath, manifest)
+  await writeJsonFile(
+    paths.promptUiManifestPath,
+    createPromptUiManifest({ packageVersion, setup, schema }),
+  )
   return manifest
 }
 
@@ -78,6 +93,7 @@ export async function getRuntimeStatus({
     shadcnCard: await pathExists(
       path.join(paths.runtimeComponentsDir, "card.tsx"),
     ),
+    promptUiManifest: await pathExists(paths.promptUiManifestPath),
     viteConfig: await pathExists(paths.runtimeViteConfigPath),
     outputWritable: false,
   }
@@ -104,6 +120,7 @@ export async function getRuntimeStatus({
     checks.manifest &&
     checks.rendererAdapter &&
     checks.shadcnCard &&
+    checks.promptUiManifest &&
     checks.viteConfig
 
   return {

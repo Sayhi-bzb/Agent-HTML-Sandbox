@@ -2,15 +2,7 @@
 // @vitest-environment node
 
 import { execFile, spawn } from "node:child_process"
-import {
-  mkdir,
-  mkdtemp,
-  readFile,
-  readdir,
-  rm,
-  stat,
-  writeFile,
-} from "node:fs/promises"
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises"
 import { createServer } from "node:http"
 import { tmpdir } from "node:os"
 import path from "node:path"
@@ -22,7 +14,13 @@ import { describe, expect, it } from "vitest"
 const execFileAsync = promisify(execFile)
 const root = process.cwd()
 const cliPath = path.join(root, "bin", "ahtml.mjs")
-const examplesDir = path.join(root, "src", "engine", "examples")
+const validAgentHtmlFixtures = [
+  '<page title="Fixture"><card title="Summary">Valid text.</card></page>',
+  [
+    '<meta-agent theme="neutral" density="compact" tone="dashboard" width="dashboard" />',
+    '<page title="Dashboard"><card title="Queue">Ready.</card></page>',
+  ].join("\n"),
+]
 
 type CliSchemaOutput = {
   readonly kind: string
@@ -81,6 +79,7 @@ describe("agent-html CLI", () => {
 
     for (const result of [defaultHelp, longHelp, shortHelp, namedHelp]) {
       expect(result.stdout).toContain("Closed-loop workflow:")
+      expect(result.stdout).toContain("ahtml setup --yes")
       expect(result.stdout).toContain("ahtml status")
       expect(result.stdout).toContain("ahtml build --input")
       expect(result.stdout).not.toContain("agent-html.project.json")
@@ -138,6 +137,10 @@ describe("agent-html CLI", () => {
 
     expect(missingStatus.stdout).toContain("ready: yes")
     expect(missingStatus.stdout).toContain("runtime manifest: ok")
+    expect(missingStatus.stdout).toContain("ui library: shadcn")
+    expect(missingStatus.stdout).toContain("component source: bundled")
+    expect(missingStatus.stdout).toContain("runtime preset: nova")
+    expect(missingStatus.stdout).toContain("prompt-ui manifest: ok")
     expect(missingStatus.stdout).toContain(
       "Next: ahtml build --input artifact.agent.html --out dist/html",
     )
@@ -145,9 +148,63 @@ describe("agent-html CLI", () => {
       path.join(runtimeHome, "config", "runtime.json"),
       "ahtml-managed-runtime",
     )
+    await expectFile(
+      path.join(runtimeHome, "config", "prompt-ui.manifest.json"),
+      "ahtml-prompt-ui-manifest",
+    )
     await expectPathMissing(path.join(tempDir, "src"))
     await expectPathMissing(path.join(tempDir, "dist"))
     await expectPathMissing(path.join(tempDir, "dist", "html"))
+    await rm(tempDir, { force: true, recursive: true })
+  })
+
+  it("sets up the managed shadcn runtime explicitly", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
+    const runtimeHome = path.join(tempDir, ".ahtml")
+
+    const setup = await runCli(
+      [
+        "setup",
+        "--yes",
+        "--component-source",
+        "bundled",
+        "--preset",
+        "custom",
+        "--components",
+        "1",
+      ],
+      { AHTML_HOME: runtimeHome },
+      tempDir,
+    )
+
+    expect(setup.stdout).toContain("ahtml runtime ready")
+    expect(setup.stdout).toContain("ui library: shadcn")
+    expect(setup.stdout).toContain("component source: bundled")
+    expect(setup.stdout).toContain("preset: custom")
+    expect(setup.stdout).toContain("components: card")
+    await expectFile(
+      path.join(runtimeHome, "config", "runtime.json"),
+      '"preset": "custom"',
+    )
+    await expectFile(
+      path.join(runtimeHome, "config", "prompt-ui.manifest.json"),
+      '"uiLibrary": "shadcn"',
+    )
+    await expectFile(
+      path.join(runtimeHome, "config", "prompt-ui.manifest.json"),
+      '"componentSource": "bundled"',
+    )
+    await expectFile(
+      path.join(runtimeHome, "config", "prompt-ui.manifest.json"),
+      '"name": "table"',
+    )
+
+    const secondSetup = await runCli(
+      ["setup", "--yes"],
+      { AHTML_HOME: runtimeHome },
+      tempDir,
+    )
+    expect(secondSetup.stdout).toContain("ahtml runtime already ready")
     await rm(tempDir, { force: true, recursive: true })
   })
 
@@ -192,42 +249,19 @@ describe("agent-html CLI", () => {
     await rm(tempDir, { force: true, recursive: true })
   })
 
-  it("composes, validates, configures, and inspects artifacts", async () => {
+  it("validates, configures, and inspects artifacts", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
     const runtimeHome = path.join(tempDir, ".ahtml")
-    const inputPath = path.join(tempDir, "composition.json")
     const documentPath = path.join(tempDir, "artifact.agent.html")
     const outputDir = path.join(tempDir, "html")
 
     await writeFile(
-      inputPath,
-      JSON.stringify({
-        meta: {
-          theme: "neutral",
-          density: "compact",
-          tone: "dashboard",
-          width: "dashboard",
-        },
-        document: {
-          name: "page",
-          props: { title: "CLI Compose" },
-          children: [
-            {
-              name: "card",
-              props: { title: "Overview" },
-              children: ["Composed by CLI."],
-            },
-          ],
-        },
-      }),
+      documentPath,
+      [
+        '<meta-agent theme="neutral" density="compact" tone="dashboard" width="dashboard" />',
+        '<page title="CLI Artifact"><card title="Overview">Written as agent-html.</card></page>',
+      ].join("\n"),
     )
-
-    await runCli(
-      ["compose", "--input", inputPath, "--out", documentPath],
-      { AHTML_HOME: runtimeHome },
-      tempDir,
-    )
-    await expectFile(documentPath, "CLI Compose")
 
     const validation = await runCli(
       ["validate", "--input", documentPath],
@@ -287,6 +321,7 @@ describe("agent-html CLI", () => {
     expect(stdout).toContain("ok runtime:manifest shadcn-runtime")
     expect(stdout).toContain("ok runtime:renderer-adapter")
     expect(stdout).toContain("ok runtime:shadcn-card")
+    expect(stdout).toContain("ok runtime:prompt-ui-manifest")
     expect(stdout).toContain("ok runtime:vite-config")
     expect(stdout).toContain("ok config:config")
     expect(stdout).toContain("ok artifact:output-dir")
@@ -453,27 +488,25 @@ describe("agent-html CLI", () => {
       'Unknown command "init"',
     )
     await expectCliFailure(
+      runCli(["compose", "--input", "composition.json"], {}, tempDir),
+      'Unknown command "compose"',
+    )
+    await expectCliFailure(
       runCli(["schema", "--input", "artifact.agent.html"], {}, tempDir),
       "does not accept --input",
     )
     await rm(tempDir, { force: true, recursive: true })
   })
 
-  it("accepts every checked-in agent-html example", async () => {
+  it("accepts representative agent-html fixtures", async () => {
     const { validateAgentHtmlSource } = await importValidateModule()
-    const exampleNames = (await readdir(examplesDir)).filter((name) =>
-      name.endsWith(".agent.html"),
-    )
 
-    expect(exampleNames.length).toBeGreaterThan(0)
-
-    for (const exampleName of exampleNames) {
-      const source = await readFile(path.join(examplesDir, exampleName), "utf8")
+    for (const source of validAgentHtmlFixtures) {
       const validation = await validateAgentHtmlSource(source, root)
 
       expect(
         validation.diagnostics.map((diagnostic) => diagnostic.message),
-        exampleName,
+        source,
       ).toEqual([])
     }
   })

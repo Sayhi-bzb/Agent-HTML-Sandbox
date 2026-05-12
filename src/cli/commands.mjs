@@ -1,6 +1,46 @@
 import { cliDefaults, safetyHelpText } from "../config/defaults.mjs"
 
 export const commandMetadata = {
+  setup: {
+    summary: "Configure the managed shadcn runtime.",
+    purpose:
+      "Interactively configure or repair the user-level managed runtime.",
+    usage:
+      "ahtml setup [--yes] [--force] [--ui shadcn] [--component-source bundled|shadcn-cli] [--preset <name|custom>] [--components <list|all>]",
+    options: [
+      {
+        name: "yes",
+        description: "Use default answers without prompting.",
+        value: false,
+      },
+      {
+        name: "force",
+        description: "Rewrite the managed runtime even if it is ready.",
+        value: false,
+      },
+      {
+        name: "ui",
+        description: "UI implementation library. Currently shadcn.",
+        value: true,
+      },
+      {
+        name: "component-source",
+        description: "Component source. Defaults to shadcn-cli.",
+        value: true,
+      },
+      {
+        name: "preset",
+        description: "shadcn preset name, or custom.",
+        value: true,
+      },
+      {
+        name: "components",
+        description: "Comma-separated shadcn components, or all.",
+        value: true,
+      },
+    ],
+    example: "ahtml setup --yes --preset nova",
+  },
   schema: {
     summary: "Print the agent-facing component and config contract.",
     purpose: "Print the dehydrated agent-facing contract.",
@@ -18,26 +58,6 @@ export const commandMetadata = {
       },
     ],
     example: "ahtml schema --format prompt",
-  },
-  compose: {
-    summary: `Convert structured JSON content into ${cliDefaults.documentPath}.`,
-    purpose:
-      "Convert structured JSON content into a standard .agent.html document.",
-    usage: "ahtml compose --input <path>|--stdin [--out <path>]",
-    options: [
-      { name: "input", description: "Composition JSON file.", value: true },
-      {
-        name: "stdin",
-        description: "Read CompositionInput JSON from stdin.",
-        value: false,
-      },
-      {
-        name: "out",
-        description: `Output document path. Defaults to ${cliDefaults.documentPath}.`,
-        value: true,
-      },
-    ],
-    example: `ahtml compose --input composition.json --out ${cliDefaults.documentPath}`,
   },
   validate: {
     summary: "Validate an agent-html document without writing output.",
@@ -132,9 +152,9 @@ Commands:
 ${formatCommandList()}
 
 Closed-loop workflow:
+  ahtml setup --yes
   ahtml status
   ahtml schema --format prompt
-  ahtml compose --input composition.json --out ${cliDefaults.documentPath}
   ahtml validate --input ${cliDefaults.documentPath}
   ahtml build --input ${cliDefaults.documentPath} --out ${cliDefaults.outputDir}
   ahtml inspect --dir ${cliDefaults.outputDir}

@@ -22,6 +22,7 @@ import { formatPrompt, getCliSchemaOutput } from "./schema.mjs"
 import { checkForPackageUpdate } from "./update-check.mjs"
 import { buildRuntimeArtifact } from "./runtime-build.mjs"
 import { getRuntimePaths } from "./runtime-paths.mjs"
+import { bundledRuntimeSetup, resolveRuntimeSetup } from "./runtime-setup.mjs"
 import {
   bootstrapManagedRuntime,
   getRuntimeStatus,
@@ -37,7 +38,6 @@ const packageRoot = path.resolve(
 )
 const userRoot = process.cwd()
 const runtimePaths = getRuntimePaths()
-const defaultDocumentPath = path.join(userRoot, cliDefaults.documentPath)
 const defaultConfigPath = path.resolve(
   userRoot,
   process.env.AGENT_HTML_CONFIG_PATH ?? cliDefaults.configPath,
@@ -49,8 +49,8 @@ const defaultOutputDir = path.join(
 const command = process.argv[2]
 const args = process.argv.slice(3)
 const commandHandlers = {
+  setup: setupCommand,
   schema: schemaCommand,
-  compose: composeCommand,
   validate: validateCommand,
   build: buildCommand,
   inspect: inspectCommand,
@@ -120,33 +120,41 @@ async function schemaCommand(commandArgs, definition) {
   await writeOrPrint(output, options.out)
 }
 
-async function composeCommand(commandArgs, definition) {
+async function setupCommand(commandArgs, definition) {
   const options = parseOptions(commandArgs, definition)
+  const packageVersion = await readPackageVersion()
+  const status = await getRuntimeStatus({
+    packageVersion,
+    outputDir: defaultOutputDir,
+    paths: runtimePaths,
+  })
 
-  if (options.input && options.stdin) {
-    fail("compose accepts either --input or --stdin, not both.")
-  }
-
-  const source = options.stdin
-    ? await readStdin()
-    : await readRequiredFile(
-        options.input,
-        "compose requires --input or --stdin.",
-      )
-  const input = parseJson(source, "CompositionInput must be valid JSON.")
-  const config = await readEffectiveConfig()
-  const document = await composeDocument(input, config)
-  const validation = await validateAgentHtmlSource(document)
-
-  if (validation.diagnostics.length > 0) {
-    printDiagnostics(validation.diagnostics)
-    process.exitCode = 1
+  if (status.ready && !options.force) {
+    process.stdout.write(
+      `ahtml runtime already ready at ${runtimePaths.runtimeRoot}\n`,
+    )
+    process.stdout.write("Run ahtml setup --force to rewrite it.\n")
     return
   }
 
-  await writeTextFile(
-    path.resolve(userRoot, options.out ?? defaultDocumentPath),
-    document,
+  const setup = await resolveRuntimeSetup({ options })
+  const schema = await getCliSchemaOutput()
+  const manifest = await bootstrapManagedRuntime({
+    packageRoot,
+    packageVersion,
+    paths: runtimePaths,
+    setup,
+    schema,
+  })
+
+  process.stdout.write("ahtml runtime ready\n")
+  process.stdout.write(`runtime root: ${runtimePaths.runtimeRoot}\n`)
+  process.stdout.write(`ui library: ${manifest.uiLibrary}\n`)
+  process.stdout.write(`component source: ${manifest.componentSource}\n`)
+  process.stdout.write(`preset: ${manifest.preset}\n`)
+  process.stdout.write(`components: ${manifest.components.join(", ")}\n`)
+  process.stdout.write(
+    `prompt-ui manifest: ${runtimePaths.promptUiManifestPath}\n`,
   )
 }
 
@@ -251,7 +259,7 @@ async function doctorCommand(commandArgs) {
   checks.push(
     await runDoctorCheck("runtime", "manifest", async () => {
       const manifest = await readRuntimeManifest(runtimePaths)
-      return `${manifest.renderer} v${manifest.version}`
+      return `${manifest.renderer} v${manifest.version} ${manifest.uiLibrary}/${manifest.componentSource}/${manifest.preset}`
     }),
   )
   checks.push(
@@ -267,6 +275,12 @@ async function doctorCommand(commandArgs) {
       const cardPath = path.join(runtimePaths.runtimeComponentsDir, "card.tsx")
       await stat(cardPath)
       return cardPath
+    }),
+  )
+  checks.push(
+    await runDoctorCheck("runtime", "prompt-ui-manifest", async () => {
+      await stat(runtimePaths.promptUiManifestPath)
+      return runtimePaths.promptUiManifestPath
     }),
   )
   checks.push(
@@ -324,6 +338,10 @@ function formatRuntimeStatus(status, update) {
     `runtime root: ${status.paths.runtimeRoot}`,
     `runtime manifest: ${status.checks.manifest ? "ok" : "missing"}`,
     `runtime renderer: ${status.manifest?.renderer ?? "missing"}`,
+    `ui library: ${status.manifest?.uiLibrary ?? "missing"}`,
+    `component source: ${status.manifest?.componentSource ?? "missing"}`,
+    `runtime preset: ${status.manifest?.preset ?? "missing"}`,
+    `prompt-ui manifest: ${status.checks.promptUiManifest ? "ok" : "missing"}`,
     `artifact output: ${cliDefaults.outputDir}`,
     `output writable: ${status.checks.outputWritable ? "yes" : "no"}`,
     `Next: ahtml build --input ${cliDefaults.documentPath} --out ${cliDefaults.outputDir}`,
@@ -384,6 +402,17 @@ async function ensureManagedRuntime(packageVersion) {
     packageRoot,
     packageVersion,
     paths: runtimePaths,
+    setup: await resolveRuntimeSetup({
+      options: {
+        ui: bundledRuntimeSetup.uiLibrary,
+        "component-source": bundledRuntimeSetup.componentSource,
+        preset: bundledRuntimeSetup.preset,
+        components: bundledRuntimeSetup.components,
+        yes: true,
+      },
+      interactive: false,
+    }),
+    schema: await getCliSchemaOutput(),
   })
 }
 
@@ -619,76 +648,6 @@ async function configCommand(commandArgs) {
   await writeJsonFile(defaultConfigPath, next)
 }
 
-async function composeDocument(input, fallbackConfig) {
-  if (!input || typeof input !== "object" || Array.isArray(input)) {
-    fail("CompositionInput must be a JSON object.")
-  }
-
-  const schema = await getCliSchemaOutput()
-  const meta = assertRenderConfig(
-    { ...fallbackConfig, ...(input.meta ?? {}) },
-    schema.renderConfig.values,
-  )
-
-  const rootNode = input.document ?? input.root ?? input.components?.[0]
-
-  if (!rootNode) {
-    fail("CompositionInput requires document, root, or components[0].")
-  }
-
-  const body = renderCompositionNode(rootNode, schema.safetyPolicy)
-  return `${renderMetaAgent(meta)}\n${body}\n`
-}
-
-function renderCompositionNode(node, safetyPolicy) {
-  if (typeof node === "string") {
-    return escapeText(node)
-  }
-
-  if (!node || typeof node !== "object" || Array.isArray(node)) {
-    fail("Composition nodes must be strings or objects.")
-  }
-
-  if (isBlockedFieldName(node.name, safetyPolicy)) {
-    fail(`Blocked component or field "${node.name}" is not allowed.`)
-  }
-
-  const name = requireString(
-    node.name,
-    "Composition node requires a string name.",
-  )
-  const props = node.props ?? {}
-
-  if (!props || typeof props !== "object" || Array.isArray(props)) {
-    fail(`<${name}> props must be an object.`)
-  }
-
-  for (const key of Object.keys(node)) {
-    if (isBlockedFieldName(key, safetyPolicy)) {
-      fail(`Blocked implementation field "${key}" is not allowed.`)
-    }
-  }
-
-  const attrs = Object.entries(props)
-    .map(([key, value]) => {
-      if (isBlockedFieldName(key, safetyPolicy)) {
-        fail(`Blocked implementation prop "${key}" is not allowed.`)
-      }
-
-      return ` ${key}="${escapeAttr(String(value))}"`
-    })
-    .join("")
-  const children = (node.children ?? [])
-    .map((child) => renderCompositionNode(child, safetyPolicy))
-    .join("")
-
-  if (children.length === 0) {
-    return `<${name}${attrs} />`
-  }
-
-  return `<${name}${attrs}>${children}</${name}>`
-}
-
 async function readEffectiveConfig() {
   const schema = await getCliSchemaOutput()
 
@@ -753,22 +712,6 @@ function assertRenderConfig(config, values) {
   )
 }
 
-function renderMetaAgent(meta) {
-  const attrs = Object.entries(meta)
-    .map(([key, value]) => `${key}="${escapeAttr(String(value))}"`)
-    .join(" ")
-
-  return `<meta-agent ${attrs} />`
-}
-
-function isBlockedFieldName(name, safetyPolicy) {
-  return (
-    safetyPolicy.blockedNames.includes(name) ||
-    safetyPolicy.blockedNames.includes(name.toLowerCase()) ||
-    /^on[a-z]/i.test(name)
-  )
-}
-
 function parseOptions(commandArgs, definition) {
   const options = {}
   const optionDefinitions = new Map(
@@ -815,14 +758,6 @@ async function writeOrPrint(output, outputPath) {
   await writeTextFile(path.resolve(userRoot, outputPath), output)
 }
 
-async function readRequiredFile(inputPath, message) {
-  if (!inputPath) {
-    fail(message)
-  }
-
-  return readFile(path.resolve(userRoot, inputPath), "utf8")
-}
-
 async function writeJsonFile(filePath, value) {
   await writeTextFile(filePath, `${JSON.stringify(value, null, 2)}\n`)
 }
@@ -830,16 +765,6 @@ async function writeJsonFile(filePath, value) {
 async function writeTextFile(filePath, value) {
   await mkdir(path.dirname(filePath), { recursive: true })
   await writeFile(filePath, value)
-}
-
-async function readStdin() {
-  const chunks = []
-
-  for await (const chunk of process.stdin) {
-    chunks.push(chunk)
-  }
-
-  return Buffer.concat(chunks).toString("utf8")
 }
 
 async function readPackageVersion() {
@@ -864,26 +789,6 @@ function printDiagnostics(diagnostics) {
       `${diagnostic.severity}: ${diagnostic.code} at ${diagnostic.path}: ${diagnostic.message}`,
     )
   }
-}
-
-function requireString(value, message) {
-  if (typeof value !== "string" || value.length === 0) {
-    fail(message)
-  }
-
-  return value
-}
-
-function escapeAttr(value) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-}
-
-function escapeText(value) {
-  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;")
 }
 
 function fail(message) {

@@ -26,6 +26,7 @@ For a published package:
 
 ```bash
 npm install -g @agent-html/ahtml
+ahtml setup
 ahtml status
 ahtml doctor
 ```
@@ -43,20 +44,20 @@ For local repository development:
 ```bash
 npm install
 npm link
+ahtml setup --yes
 ahtml status
 ahtml doctor
 ```
 
 ## Runtime Repair
 
-Runtime setup is automatic for normal commands. To force repair, run a runtime-aware command with the desired `AHTML_HOME`:
+Runtime setup is guided by `ahtml setup`. Runtime-aware commands can still install defaults automatically. To force repair, run:
 
 ```bash
-ahtml status
-ahtml doctor
+ahtml setup --force
 ```
 
-Do not use removed project-local commands or flags such as `init`, `--template`, `--preset`, `--components`, `--apply`, or `--scaffold`.
+Do not use removed project-local commands or flags such as `init`, `--template`, `--apply`, or `--scaffold`. `ahtml setup` defaults to `--component-source shadcn-cli`; `ahtml setup --preset`, `ahtml setup --components`, and `ahtml setup --component-source bundled` configure the managed runtime under `.ahtml`; they do not configure the current project.
 
 ## After Install
 

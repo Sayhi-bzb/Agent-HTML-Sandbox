@@ -27,6 +27,7 @@ pnpm-debug.log*
 .wrangler/
 .turbo/
 .cache/
+.tmp/
 coverage/
 
 # OS and editor files
@@ -37,3 +38,6 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+
+
+secret/
