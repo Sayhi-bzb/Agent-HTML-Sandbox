@@ -39,8 +39,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run package checks
-        run: npm run check
+      - name: Lint package
+        run: npm run lint
+
+      - name: Check package graph
+        run: npm run knip
+
+      - name: Run tests
+        run: npm run test:run
+
+      - name: Build package
+        run: npm run build
 
       - name: Verify packed CLI
         run: npm run verify:pack
