@@ -571,6 +571,154 @@ describe("agent-html CLI", () => {
     await rm(readyDir, { force: true, recursive: true })
   })
 
+  it("shows a cached update hint in status when a newer package is available", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
+    const cacheDir = await mkdtemp(path.join(tmpdir(), "agent-html-cache-"))
+    const registry = await startPackageVersionServer("99.0.0")
+
+    try {
+      const { stdout } = await runCli(
+        ["status"],
+        {
+          AHTML_NO_UPDATE_CHECK: "0",
+          AHTML_UPDATE_CHECK_CACHE_DIR: cacheDir,
+          AHTML_UPDATE_REGISTRY_URL: registry.url,
+          CI: "false",
+        },
+        tempDir,
+      )
+
+      expect(stdout).toContain(
+        "update: 99.0.0 available. Run: npm install @agent-html/ahtml@latest",
+      )
+      expect(registry.requests()).toBe(1)
+
+      const cached = await runCli(
+        ["status"],
+        {
+          AHTML_NO_UPDATE_CHECK: "0",
+          AHTML_UPDATE_CHECK_CACHE_DIR: cacheDir,
+          AHTML_UPDATE_REGISTRY_URL: registry.url,
+          CI: "false",
+        },
+        tempDir,
+      )
+
+      expect(cached.stdout).toContain("update: 99.0.0 available.")
+      expect(registry.requests()).toBe(1)
+    } finally {
+      await registry.close()
+      await rm(cacheDir, { force: true, recursive: true })
+      await rm(tempDir, { force: true, recursive: true })
+    }
+  })
+
+  it("reports package updates through doctor without failing", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
+    const cacheDir = await mkdtemp(path.join(tmpdir(), "agent-html-cache-"))
+    const registry = await startPackageVersionServer("99.0.0")
+
+    try {
+      const { stdout } = await runCli(
+        ["doctor"],
+        {
+          AHTML_NO_UPDATE_CHECK: "0",
+          AHTML_UPDATE_CHECK_CACHE_DIR: cacheDir,
+          AHTML_UPDATE_REGISTRY_URL: registry.url,
+          CI: "false",
+        },
+        tempDir,
+      )
+
+      expect(stdout).toContain(
+        "warn package:update latest is 99.0.0. Run: npm install @agent-html/ahtml@latest",
+      )
+    } finally {
+      await registry.close()
+      await rm(cacheDir, { force: true, recursive: true })
+      await rm(tempDir, { force: true, recursive: true })
+    }
+  })
+
+  it("skips package update checks in CI and when disabled", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
+    const cacheDir = await mkdtemp(path.join(tmpdir(), "agent-html-cache-"))
+    const registry = await startPackageVersionServer("99.0.0")
+
+    try {
+      const disabled = await runCli(
+        ["doctor"],
+        {
+          AHTML_NO_UPDATE_CHECK: "1",
+          AHTML_UPDATE_CHECK_CACHE_DIR: cacheDir,
+          AHTML_UPDATE_REGISTRY_URL: registry.url,
+          CI: "false",
+        },
+        tempDir,
+      )
+
+      expect(disabled.stdout).toContain("skip package:update disabled")
+      expect(registry.requests()).toBe(0)
+
+      const ci = await runCli(
+        ["doctor"],
+        {
+          AHTML_NO_UPDATE_CHECK: "0",
+          AHTML_UPDATE_CHECK_CACHE_DIR: cacheDir,
+          AHTML_UPDATE_REGISTRY_URL: registry.url,
+          CI: "true",
+        },
+        tempDir,
+      )
+
+      expect(ci.stdout).toContain("skip package:update disabled")
+      expect(registry.requests()).toBe(0)
+    } finally {
+      await registry.close()
+      await rm(cacheDir, { force: true, recursive: true })
+      await rm(tempDir, { force: true, recursive: true })
+    }
+  })
+
+  it("does not fail status or doctor when package update checks are unavailable", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
+    const cacheDir = await mkdtemp(path.join(tmpdir(), "agent-html-cache-"))
+    const registry = await startPackageVersionServer("99.0.0", 500)
+
+    try {
+      const status = await runCli(
+        ["status"],
+        {
+          AHTML_NO_UPDATE_CHECK: "0",
+          AHTML_UPDATE_CHECK_CACHE_DIR: cacheDir,
+          AHTML_UPDATE_REGISTRY_URL: registry.url,
+          CI: "false",
+        },
+        tempDir,
+      )
+
+      expect(status.stdout).toContain("ready: no")
+      expect(status.stdout).not.toContain("update:")
+
+      const doctor = await runCli(
+        ["doctor"],
+        {
+          AHTML_NO_UPDATE_CHECK: "0",
+          AHTML_UPDATE_CHECK_CACHE_DIR: cacheDir,
+          AHTML_UPDATE_REGISTRY_URL: registry.url,
+          CI: "false",
+        },
+        tempDir,
+      )
+
+      expect(doctor.stdout).toContain("skip package:update unavailable")
+    } finally {
+      await registry.close()
+      await rm(cacheDir, { force: true, recursive: true })
+      await rm(tempDir, { force: true, recursive: true })
+    }
+  })
+
   it("composes structured input into a valid agent-html document", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
     const inputPath = path.join(tempDir, "input.json")
@@ -1037,6 +1185,7 @@ function runCli(
     cwd,
     env: {
       ...process.env,
+      AHTML_NO_UPDATE_CHECK: "1",
       ...env,
     },
   })
@@ -1165,6 +1314,38 @@ async function setupFakePackageRunner(directory: string) {
   }
 
   return binDir
+}
+
+async function startPackageVersionServer(version: string, statusCode = 200) {
+  let requests = 0
+  const server = createServer((_request, response) => {
+    requests += 1
+    response.writeHead(statusCode, { "content-type": "application/json" })
+    response.end(JSON.stringify({ version }))
+  })
+
+  await new Promise<void>((resolve) => {
+    server.listen(0, "127.0.0.1", resolve)
+  })
+
+  const address = server.address()
+  const port = typeof address === "object" && address ? address.port : 0
+
+  return {
+    url: `http://127.0.0.1:${port}/@agent-html%2Fahtml/latest`,
+    requests: () => requests,
+    close: () =>
+      new Promise<void>((resolve, reject) => {
+        server.close((error) => {
+          if (error) {
+            reject(error)
+            return
+          }
+
+          resolve()
+        })
+      }),
+  }
 }
 
 function parseJson<T>(source: string): T {

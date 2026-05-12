@@ -104,6 +104,8 @@ Defaults:
 - Composed document: `artifact.agent.html`
 - Build output: `dist/html`
 
+`ahtml status` and `ahtml doctor` can show a non-blocking package update hint. Set `AHTML_NO_UPDATE_CHECK=1` to disable that check.
+
 ## Rules
 
 - Run `npx ahtml init` first.

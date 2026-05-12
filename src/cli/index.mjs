@@ -23,6 +23,7 @@ import {
   scaffoldAgentHtmlIntegration,
   scaffoldUserProject,
 } from "./scaffold.mjs"
+import { checkForPackageUpdate } from "./update-check.mjs"
 import { validateAgentHtmlSource, validateRenderConfig } from "./validate.mjs"
 
 const packageRoot = path.resolve(
@@ -388,14 +389,15 @@ async function doctorCommand(commandArgs) {
       return defaultOutputDir
     }),
   )
+  checks.push(await runDoctorUpdateCheck())
 
   for (const check of checks) {
     process.stdout.write(
-      `${check.ok ? "ok" : "fail"} ${check.category}:${check.name} ${check.detail}\n`,
+      `${check.status} ${check.category}:${check.name} ${check.detail}\n`,
     )
   }
 
-  if (checks.some((check) => !check.ok)) {
+  if (checks.some((check) => check.status === "fail")) {
     process.exitCode = 1
   }
 }
@@ -406,7 +408,8 @@ async function statusCommand(commandArgs) {
   }
 
   const status = await getProjectStatus()
-  process.stdout.write(formatProjectStatus(status))
+  const update = await checkForPackageUpdate()
+  process.stdout.write(formatProjectStatus(status, update))
 }
 
 async function getProjectStatus() {
@@ -451,7 +454,7 @@ async function getProjectStatus() {
   }
 }
 
-function formatProjectStatus(status) {
+function formatProjectStatus(status, update) {
   const lines = [
     "ahtml status",
     `ready: ${status.ready ? "yes" : "no"}`,
@@ -466,6 +469,12 @@ function formatProjectStatus(status) {
     `artifact output: ${status.outputDir}`,
     `Next: ${status.next}`,
   ]
+
+  if (update?.status === "available") {
+    lines.push(
+      `update: ${update.latestVersion} available. Run: ${update.command}`,
+    )
+  }
 
   return `${lines.join("\n")}\n`
 }
@@ -604,14 +613,43 @@ function formatInspectionSummary(inspection) {
 async function runDoctorCheck(category, name, check) {
   try {
     const detail = await check()
-    return { category, name, ok: true, detail }
+    return { category, name, status: "ok", detail }
   } catch (error) {
     return {
       category,
       name,
-      ok: false,
+      status: "fail",
       detail: error instanceof Error ? error.message : String(error),
     }
+  }
+}
+
+async function runDoctorUpdateCheck() {
+  const update = await checkForPackageUpdate()
+
+  if (update.status === "available") {
+    return {
+      category: "package",
+      name: "update",
+      status: "warn",
+      detail: `latest is ${update.latestVersion}. Run: ${update.command}`,
+    }
+  }
+
+  if (update.status === "current") {
+    return {
+      category: "package",
+      name: "update",
+      status: "ok",
+      detail: "current",
+    }
+  }
+
+  return {
+    category: "package",
+    name: "update",
+    status: "skip",
+    detail: update.reason,
   }
 }
 

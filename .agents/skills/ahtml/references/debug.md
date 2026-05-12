@@ -13,6 +13,8 @@ ahtml doctor
 
 `status` gives a single `Next:` command. Prefer following it before guessing.
 
+`status` and `doctor` may also show a non-blocking package update hint. Set `AHTML_NO_UPDATE_CHECK=1` when update checks would be noisy, such as in CI or offline diagnostics.
+
 `doctor` checks:
 
 - Node and package runtime
