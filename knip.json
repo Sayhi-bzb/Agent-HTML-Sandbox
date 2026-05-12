@@ -1,5 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@latest/schema.json",
   "entry": ["src/engine/core.ts", "src/engine/schema-overlays.ts"],
+  "ignoreBinaries": ["gitnexus"],
   "project": ["src/**/*.ts", "*.{ts,js}", "scripts/**/*.mjs"]
 }
