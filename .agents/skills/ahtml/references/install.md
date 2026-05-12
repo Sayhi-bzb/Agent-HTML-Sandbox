@@ -18,7 +18,7 @@ Default `ahtml init` delegates user-local setup to shadcn, then writes ahtml int
 For a published package:
 
 ```bash
-npm install @agent-html/ahtml@alpha
+npm install @agent-html/ahtml
 npx ahtml init
 npx ahtml status
 npx ahtml doctor
@@ -64,9 +64,12 @@ Fallback only, for environments where shadcn CLI cannot be used:
 
 ```bash
 npx ahtml init --scaffold
+npm install
+npx ahtml init --apply
+npx ahtml doctor
 ```
 
-Do not present `--scaffold` as the main path. It writes a minimal local Vite + shadcn scaffold without delegating to shadcn.
+Do not present `--scaffold` as the main path. It writes a minimal local Vite + shadcn scaffold without delegating to shadcn. The generated scaffold still needs its project dependencies installed before build or preview can run.
 
 ## After Init
 

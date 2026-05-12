@@ -61,10 +61,6 @@ jobs:
           version="$(node -p "require('./package.json').version")"
           dist_tag="latest"
 
-          if [[ "$version" == *-* ]]; then
-            dist_tag="alpha"
-          fi
-
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "dist_tag=$dist_tag" >> "$GITHUB_OUTPUT"
           echo "Package version: $version"

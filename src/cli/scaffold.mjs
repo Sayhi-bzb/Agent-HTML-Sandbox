@@ -31,22 +31,11 @@ export async function scaffoldUserProject({ userRoot, template }) {
   )
   await writeTextFileIfMissing(
     path.join(userRoot, "src", "main.tsx"),
-    [
-      'import React from "react"',
-      'import { createRoot } from "react-dom/client"',
-      'import document from "./agent-html/document.generated"',
-      'import { createAgentHtmlRendererAdapter } from "./agent-html/renderer-adapter"',
-      'import "./index.css"',
-      "",
-      "const Adapter = createAgentHtmlRendererAdapter(document)",
-      "",
-      'createRoot(document.getElementById("root")!).render(',
-      "  <React.StrictMode>",
-      "    <Adapter />",
-      "  </React.StrictMode>,",
-      ")",
-      "",
-    ].join("\n"),
+    createMainSource(),
+  )
+  await writeTextFileIfMissing(
+    path.join(userRoot, "src", "vite-env.d.ts"),
+    createViteEnvSource(),
   )
   await writeTextFileIfMissing(
     path.join(userRoot, "src", "index.css"),
@@ -66,16 +55,7 @@ export async function scaffoldUserProject({ userRoot, template }) {
   )
   await writeTextFileIfMissing(
     path.join(userRoot, "vite.config.ts"),
-    [
-      'import react from "@vitejs/plugin-react"',
-      'import tailwindcss from "@tailwindcss/vite"',
-      'import { defineConfig } from "vite"',
-      "",
-      "export default defineConfig({",
-      "  plugins: [react(), tailwindcss()],",
-      "})",
-      "",
-    ].join("\n"),
+    createViteConfigSource(),
   )
   await writeTextFileIfMissing(
     path.join(userRoot, "tsconfig.json"),
@@ -95,16 +75,7 @@ export async function scaffoldUserProject({ userRoot, template }) {
   )
   await writeTextFileIfMissing(
     path.join(userRoot, "src", "agent-html", "document.generated.ts"),
-    [
-      "export default {",
-      '  theme: "neutral",',
-      '  density: "comfortable",',
-      '  tone: "dashboard",',
-      '  width: "dashboard",',
-      "  components: [],",
-      "} as const",
-      "",
-    ].join("\n"),
+    createInitialDocumentSource(),
   )
 }
 
@@ -115,24 +86,10 @@ export async function scaffoldAgentHtmlIntegration({
   const mainPath = path.join(userRoot, "src", "main.tsx")
   const writeEntry = overwriteEntry ? writeTextFile : writeTextFileIfMissing
 
-  await writeEntry(
-    mainPath,
-    [
-      'import React from "react"',
-      'import { createRoot } from "react-dom/client"',
-      'import document from "./agent-html/document.generated"',
-      'import { createAgentHtmlRendererAdapter } from "./agent-html/renderer-adapter"',
-      'import "./index.css"',
-      "",
-      "const Adapter = createAgentHtmlRendererAdapter(document)",
-      "",
-      'createRoot(document.getElementById("root")!).render(',
-      "  <React.StrictMode>",
-      "    <Adapter />",
-      "  </React.StrictMode>,",
-      ")",
-      "",
-    ].join("\n"),
+  await writeEntry(mainPath, createMainSource())
+  await writeTextFileIfMissing(
+    path.join(userRoot, "src", "vite-env.d.ts"),
+    createViteEnvSource(),
   )
   await writeTextFileIfMissing(
     path.join(userRoot, "src", "agent-html", "renderer-adapter.tsx"),
@@ -140,16 +97,7 @@ export async function scaffoldAgentHtmlIntegration({
   )
   await writeTextFileIfMissing(
     path.join(userRoot, "src", "agent-html", "document.generated.ts"),
-    [
-      "export default {",
-      '  theme: "neutral",',
-      '  density: "comfortable",',
-      '  tone: "dashboard",',
-      '  width: "dashboard",',
-      "  components: [],",
-      "} as const",
-      "",
-    ].join("\n"),
+    createInitialDocumentSource(),
   )
 }
 
@@ -179,6 +127,7 @@ function createScaffoldPackageJson(packageName) {
     },
     devDependencies: {
       typescript: "latest",
+      "@types/node": "^25.0.0",
       "@types/react": "^19.2.14",
       "@types/react-dom": "^19.2.3",
     },
@@ -188,6 +137,11 @@ function createScaffoldPackageJson(packageName) {
 function createScaffoldTsConfig() {
   return {
     files: [],
+    compilerOptions: {
+      paths: {
+        "@/*": ["./src/*"],
+      },
+    },
     references: [{ path: "./tsconfig.app.json" }],
   }
 }
@@ -205,6 +159,9 @@ function createScaffoldTsConfigApp() {
       jsx: "react-jsx",
       strict: true,
       skipLibCheck: true,
+      paths: {
+        "@/*": ["./src/*"],
+      },
     },
     include: ["src"],
   }
@@ -238,10 +195,12 @@ function createRendererAdapterSource() {
     'import type { ReactNode } from "react"',
     "",
     "export type SanitizedAgentHtml = {",
-    "  readonly theme: string",
-    "  readonly density: string",
-    "  readonly tone: string",
-    "  readonly width: string",
+    "  readonly meta: {",
+    "    readonly theme: string",
+    "    readonly density: string",
+    "    readonly tone: string",
+    "    readonly width: string",
+    "  }",
     "  readonly components: readonly SanitizedAgentHtmlNode[]",
     "}",
     "",
@@ -254,9 +213,15 @@ function createRendererAdapterSource() {
     "      readonly children: readonly SanitizedAgentHtmlNode[]",
     "    }",
     "",
-    "export function createAgentHtmlRendererAdapter(document: SanitizedAgentHtml) {",
+    "export function createAgentHtmlRendererAdapter(agentDocument: SanitizedAgentHtml) {",
     "  return function AgentHtmlRendererAdapter() {",
-    "    return <>{document.components.map((node, index) => renderNode(node, index))}</>",
+    "    return (",
+    '      <main data-agent-html-theme={agentDocument.meta.theme} className="min-h-screen bg-background text-foreground">',
+    '        <div className="mx-auto w-full max-w-4xl px-6 py-10">',
+    "          {agentDocument.components.map((node, index) => renderNode(node, index))}",
+    "        </div>",
+    "      </main>",
+    "    )",
     "  }",
     "}",
     "",
@@ -264,13 +229,91 @@ function createRendererAdapterSource() {
     '  if (node.type === "text") {',
     "    return node.value",
     "  }",
+    "  const children = node.children.map((child, index) => renderNode(child, index))",
+    "  const title = node.props.title",
+    "",
+    '  if (node.name === "page") {',
+    "    return (",
+    '      <article key={key} data-agent-html-component={node.name} className="space-y-6">',
+    '        {title ? <h1 className="text-3xl font-semibold tracking-tight">{title}</h1> : null}',
+    "        {children}",
+    "      </article>",
+    "    )",
+    "  }",
+    "",
+    '  if (node.name === "card") {',
+    "    return (",
+    '      <section key={key} data-agent-html-component={node.name} className="rounded-lg border bg-card p-6 text-card-foreground shadow-sm">',
+    '        {title ? <h2 className="mb-3 text-xl font-semibold">{title}</h2> : null}',
+    '        <div className="space-y-3 leading-7">{children}</div>',
+    "      </section>",
+    "    )",
+    "  }",
     "",
     "  return (",
-    "    <section key={key} data-agent-html-component={node.name}>",
-    "      {node.children.map((child, index) => renderNode(child, index))}",
+    '    <section key={key} data-agent-html-component={node.name} className="space-y-3">',
+    '      {title ? <h2 className="text-xl font-semibold">{title}</h2> : null}',
+    "      {children}",
     "    </section>",
     "  )",
     "}",
+    "",
+  ].join("\n")
+}
+
+function createMainSource() {
+  return [
+    'import React from "react"',
+    'import { createRoot } from "react-dom/client"',
+    'import agentDocument from "./agent-html/document.generated"',
+    'import { createAgentHtmlRendererAdapter } from "./agent-html/renderer-adapter"',
+    'import "./index.css"',
+    "",
+    "const Adapter = createAgentHtmlRendererAdapter(agentDocument)",
+    "",
+    'createRoot(document.getElementById("root")!).render(',
+    "  <React.StrictMode>",
+    "    <Adapter />",
+    "  </React.StrictMode>,",
+    ")",
+    "",
+  ].join("\n")
+}
+
+function createViteEnvSource() {
+  return '/// <reference types="vite/client" />\n'
+}
+
+function createViteConfigSource() {
+  return [
+    'import react from "@vitejs/plugin-react"',
+    'import tailwindcss from "@tailwindcss/vite"',
+    'import { fileURLToPath, URL } from "node:url"',
+    'import { defineConfig } from "vite"',
+    "",
+    "export default defineConfig({",
+    "  plugins: [react(), tailwindcss()],",
+    "  resolve: {",
+    "    alias: {",
+    '      "@": fileURLToPath(new URL("./src", import.meta.url)),',
+    "    },",
+    "  },",
+    "})",
+    "",
+  ].join("\n")
+}
+
+function createInitialDocumentSource() {
+  return [
+    "export default {",
+    "  meta: {",
+    '    theme: "neutral",',
+    '    density: "comfortable",',
+    '    tone: "dashboard",',
+    '    width: "dashboard",',
+    "  },",
+    "  components: [],",
+    "} as const",
     "",
   ].join("\n")
 }

@@ -6,10 +6,10 @@ Docs: [agent-html.pages.dev/docs](https://agent-html.pages.dev/docs)
 
 ## Quick Start
 
-Install the published alpha package in a user project:
+Install the published package in a user project:
 
 ```bash
-npm install @agent-html/ahtml@alpha
+npm install @agent-html/ahtml
 npx ahtml init
 npx ahtml status
 npx ahtml doctor

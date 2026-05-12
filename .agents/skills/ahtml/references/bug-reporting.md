@@ -76,7 +76,7 @@ Use this body format:
 Use the repository issue tracker from `package.json`:
 
 ```txt
-https://github.com/Sayhi-bzb/Agent-HTML-Sandbox/issues
+https://github.com/Sayhi-bzb/Agent-HTML/issues
 ```
 
 Only run `gh issue create`, open a browser, or use network tooling when the user explicitly asks to submit the issue.

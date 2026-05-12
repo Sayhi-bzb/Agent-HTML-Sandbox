@@ -196,7 +196,12 @@ async function initCommand(commandArgs, definition) {
     process.stdout.write("Wrote ahtml renderer adapter files.\n")
     process.stdout.write("Next: ahtml doctor\n")
   } else if (project.shadcn.commands.length > 0) {
-    process.stdout.write("Next: ahtml init --apply\n")
+    if (scaffold) {
+      process.stdout.write("Next: npm install\n")
+      process.stdout.write("Then: ahtml init --apply\n")
+    } else {
+      process.stdout.write("Next: ahtml init --apply\n")
+    }
     process.stdout.write("Manual shadcn commands:\n")
     for (const commandLine of project.shadcn.commands) {
       process.stdout.write(`  ${commandLine}\n`)

@@ -91,14 +91,29 @@ try {
   await expectStdout(
     ahtmlCommand,
     ["init", "--scaffold", "--components", "card"],
-    "Next: ahtml init --apply",
+    "Next: npm install",
+    scaffoldDir,
+  )
+  await expectStdout(
+    ahtmlCommand,
+    ["init", "--scaffold", "--components", "card", "--dry-run"],
+    '"wouldScaffold": true',
     scaffoldDir,
   )
   await expectFile(path.join(scaffoldDir, "components.json"), "@/components/ui")
+  await expectFile(path.join(scaffoldDir, "tsconfig.json"), "@/*")
   await expectFile(path.join(scaffoldDir, "src", "lib", "utils.ts"), "twMerge")
   await expectFile(
+    path.join(scaffoldDir, "src", "vite-env.d.ts"),
+    "vite/client",
+  )
+  await expectFile(
+    path.join(scaffoldDir, "src", "agent-html", "document.generated.ts"),
+    "meta:",
+  )
+  await expectFile(
     path.join(scaffoldDir, "src", "agent-html", "renderer-adapter.tsx"),
-    "SanitizedAgentHtml",
+    'node.name === "card"',
   )
 
   const inputPath = path.join(consumerDir, "composition.json")

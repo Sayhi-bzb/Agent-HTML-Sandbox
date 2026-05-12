@@ -322,7 +322,8 @@ describe("agent-html CLI", () => {
     expect(stdout).toContain(
       "Scaffolded user-local Vite + shadcn project files.",
     )
-    expect(stdout).toContain("Next: ahtml init --apply")
+    expect(stdout).toContain("Next: npm install")
+    expect(stdout).toContain("Then: ahtml init --apply")
     expect(stdout).toContain("Manual shadcn commands:")
     expect(stdout).toContain("Then: ahtml doctor")
     expect(project.scaffolded).toBe(true)
@@ -336,8 +337,23 @@ describe("agent-html CLI", () => {
       readFile(path.join(tempDir, "package.json"), "utf8"),
     ).resolves.toContain('"vite"')
     await expect(
+      readFile(path.join(tempDir, "package.json"), "utf8"),
+    ).resolves.toContain('"@types/node"')
+    await expect(
       readFile(path.join(tempDir, "components.json"), "utf8"),
     ).resolves.toContain('"@/components/ui"')
+    await expect(
+      readFile(path.join(tempDir, "vite.config.ts"), "utf8"),
+    ).resolves.toContain("alias: {")
+    await expect(
+      readFile(path.join(tempDir, "tsconfig.app.json"), "utf8"),
+    ).resolves.toContain('"@/*"')
+    await expect(
+      readFile(path.join(tempDir, "tsconfig.json"), "utf8"),
+    ).resolves.toContain('"@/*"')
+    await expect(
+      readFile(path.join(tempDir, "src", "vite-env.d.ts"), "utf8"),
+    ).resolves.toContain('/// <reference types="vite/client" />')
     await expect(
       readFile(path.join(tempDir, "src", "lib", "utils.ts"), "utf8"),
     ).resolves.toContain("twMerge")
@@ -345,11 +361,26 @@ describe("agent-html CLI", () => {
       readFile(path.join(tempDir, "src", "main.tsx"), "utf8"),
     ).resolves.toContain("createRoot")
     await expect(
+      readFile(path.join(tempDir, "src", "main.tsx"), "utf8"),
+    ).resolves.toContain("agentDocument")
+    await expect(
+      readFile(
+        path.join(tempDir, "src", "agent-html", "document.generated.ts"),
+        "utf8",
+      ),
+    ).resolves.toContain("meta: {")
+    await expect(
       readFile(
         path.join(tempDir, "src", "agent-html", "renderer-adapter.tsx"),
         "utf8",
       ),
     ).resolves.toContain("SanitizedAgentHtml")
+    await expect(
+      readFile(
+        path.join(tempDir, "src", "agent-html", "renderer-adapter.tsx"),
+        "utf8",
+      ),
+    ).resolves.toContain('node.name === "card"')
     await rm(tempDir, { force: true, recursive: true })
   })
 
@@ -390,6 +421,9 @@ describe("agent-html CLI", () => {
     await expect(
       readFile(path.join(tempDir, "src", "main.tsx"), "utf8"),
     ).resolves.toContain("createAgentHtmlRendererAdapter")
+    await expect(
+      readFile(path.join(tempDir, "src", "vite-env.d.ts"), "utf8"),
+    ).resolves.toContain('/// <reference types="vite/client" />')
     await expect(
       readFile(
         path.join(tempDir, "src", "components", "ui", "card.tsx"),
