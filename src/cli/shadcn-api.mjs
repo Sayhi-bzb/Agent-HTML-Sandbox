@@ -6,8 +6,10 @@ import {
 } from "shadcn/preset"
 import { searchRegistries } from "shadcn/registry"
 
+import { requiredShadcnRuntimeComponents } from "../config/render-capabilities.mjs"
+
 const shadcnRegistry = "@shadcn"
-export const fallbackShadcnComponents = ["card"]
+export const fallbackShadcnComponents = requiredShadcnRuntimeComponents
 
 export function getDefaultShadcnPreset() {
   return DEFAULT_PRESET_CONFIG.style

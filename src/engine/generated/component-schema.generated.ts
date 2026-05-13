@@ -261,10 +261,6 @@ export const GENERATED_STANDARD_COMPONENT_SCHEMAS = [
       "list",
       "tabs",
       "accordion",
-      "choice-group",
-      "slider-control",
-      "feedback-box",
-      "progress-meter",
     ],
   },
   {
@@ -303,10 +299,6 @@ export const GENERATED_STANDARD_COMPONENT_SCHEMAS = [
       "list",
       "tabs",
       "accordion",
-      "choice-group",
-      "slider-control",
-      "feedback-box",
-      "progress-meter",
       "#text",
     ],
   },
@@ -409,10 +401,6 @@ export const GENERATED_STANDARD_COMPONENT_SCHEMAS = [
       "table",
       "list",
       "accordion",
-      "choice-group",
-      "slider-control",
-      "feedback-box",
-      "progress-meter",
     ],
   },
   {
@@ -439,132 +427,5 @@ export const GENERATED_STANDARD_COMPONENT_SCHEMAS = [
       },
     ],
     allowedChildren: ["alert", "badge", "table", "list", "#text"],
-  },
-  {
-    name: "choice-group",
-    description: "Controlled choice selector.",
-    props: [
-      {
-        name: "title",
-        valueKind: "string",
-        description: "Choice group heading.",
-      },
-      {
-        name: "mode",
-        valueKind: "enum",
-        description: "Choice selection mode.",
-        enumValues: ["single", "multiple"],
-      },
-      {
-        name: "default",
-        valueKind: "string",
-        description: "Default selected value.",
-      },
-    ],
-    allowedChildren: ["choice"],
-  },
-  {
-    name: "choice",
-    description: "Choice option.",
-    props: [
-      {
-        name: "value",
-        valueKind: "string",
-        required: true,
-        description: "Stable choice value.",
-      },
-      {
-        name: "label",
-        valueKind: "string",
-        required: true,
-        description: "Visible choice label.",
-      },
-    ],
-    allowedChildren: ["#text"],
-  },
-  {
-    name: "slider-control",
-    description: "Controlled numeric tuning control.",
-    props: [
-      {
-        name: "label",
-        valueKind: "string",
-        required: true,
-        description: "Visible slider label.",
-      },
-      {
-        name: "value",
-        valueKind: "number",
-        required: true,
-        description: "Initial slider value.",
-      },
-      {
-        name: "min",
-        valueKind: "number",
-        description: "Minimum value.",
-      },
-      {
-        name: "max",
-        valueKind: "number",
-        description: "Maximum value.",
-      },
-      {
-        name: "step",
-        valueKind: "number",
-        description: "Step value.",
-      },
-      {
-        name: "unit",
-        valueKind: "string",
-        description: "Display unit.",
-      },
-    ],
-    allowedChildren: ["#text"],
-  },
-  {
-    name: "feedback-box",
-    description: "Editable feedback capture with copy action.",
-    props: [
-      {
-        name: "title",
-        valueKind: "string",
-        description: "Feedback box heading.",
-      },
-      {
-        name: "placeholder",
-        valueKind: "string",
-        description: "Textarea placeholder.",
-      },
-      {
-        name: "copy-label",
-        valueKind: "string",
-        description: "Copy button label.",
-      },
-    ],
-    allowedChildren: ["#text"],
-  },
-  {
-    name: "progress-meter",
-    description: "Progress or confidence indicator.",
-    props: [
-      {
-        name: "label",
-        valueKind: "string",
-        required: true,
-        description: "Visible meter label.",
-      },
-      {
-        name: "value",
-        valueKind: "number",
-        required: true,
-        description: "Progress value from 0 to 100.",
-      },
-      {
-        name: "detail",
-        valueKind: "string",
-        description: "Supporting detail text.",
-      },
-    ],
-    allowedChildren: [],
   },
 ] as const satisfies readonly ComponentSchema[]

@@ -1,11 +1,13 @@
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import tailwindcss from "__AHTML_TAILWINDCSS_VITE_PLUGIN__"
 
 const runtimeRoot = path.dirname(fileURLToPath(import.meta.url))
 const dependencies = __AHTML_RUNTIME_DEPENDENCIES__
 
 export default {
   root: runtimeRoot,
+  plugins: [tailwindcss()],
   resolve: {
     alias: {
       "@": path.join(runtimeRoot, "src"),
@@ -14,8 +16,12 @@ export default {
       "react-dom": dependencies.reactDomRoot,
       "react-dom/client": dependencies.reactDomClient,
       "react-dom/server": dependencies.reactDomServer,
+      "class-variance-authority": dependencies.classVarianceAuthorityRoot,
       clsx: dependencies.clsxRoot,
+      "lucide-react": dependencies.lucideReactRoot,
+      "radix-ui": dependencies.radixUiRoot,
       "tailwind-merge": dependencies.tailwindMergeRoot,
+      tailwindcss: dependencies.tailwindcssStylesheet,
     },
   },
   ssr: {

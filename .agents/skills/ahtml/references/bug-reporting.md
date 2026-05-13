@@ -2,6 +2,8 @@
 
 Use this when debugging indicates a likely `ahtml` product bug after normal setup, validation, and diagnostics checks.
 
+Product bugs are failures in the path from semantic `.agent.html` to stable, shareable HTML artifact. Invalid raw HTML, CSS, scripts, or unsupported renderer props are expected validation failures, not product bugs.
+
 ## First Confirm It Is A Product Bug
 
 Before drafting an issue, run or ask for results from:

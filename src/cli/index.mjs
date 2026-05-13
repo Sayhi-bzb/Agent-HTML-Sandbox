@@ -1,5 +1,10 @@
 import http from "node:http"
-import { confirm, isCancel, cancel as cancelPrompt } from "@clack/prompts"
+import {
+  cancel as cancelPrompt,
+  confirm,
+  isCancel,
+  spinner,
+} from "@clack/prompts"
 import {
   access,
   constants,
@@ -12,6 +17,10 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 import { cliDefaults } from "../config/defaults.mjs"
+import {
+  requiredShadcnRuntimeExports,
+  supportedRuntimeBase,
+} from "../config/render-capabilities.mjs"
 import {
   commandMetadata,
   formatCommandHelp,
@@ -188,20 +197,37 @@ async function runSetup(options) {
   const packageVersion = await readPackageVersion()
   const setup = await resolveRuntimeSetup({ options })
   const schema = await getCliSchemaOutput()
-  const manifest = await bootstrapManagedRuntime({
-    packageRoot,
-    packageVersion,
-    paths: runtimePaths,
-    setup,
-    schema,
-  })
+  const progress =
+    isInteractiveRuntimeSetup() && !options.yes ? spinner() : undefined
+
+  progress?.start("Preparing managed runtime...")
+  let manifest
+  try {
+    manifest = await bootstrapManagedRuntime({
+      packageRoot,
+      packageVersion,
+      paths: runtimePaths,
+      setup,
+      schema,
+    })
+    progress?.stop("Runtime ready.")
+  } catch (error) {
+    progress?.stop("Runtime setup failed.")
+    throw error
+  }
 
   process.stdout.write("ahtml runtime ready\n")
   process.stdout.write(`runtime root: ${runtimePaths.runtimeRoot}\n`)
   process.stdout.write(`ui library: ${manifest.uiLibrary}\n`)
   process.stdout.write(`component source: ${manifest.componentSource}\n`)
+  process.stdout.write(`runtime base: ${manifest.runtimeBase}\n`)
   process.stdout.write(`preset: ${manifest.preset}\n`)
-  process.stdout.write(`components: ${manifest.components.join(", ")}\n`)
+  process.stdout.write(
+    `components: ${manifest.installedUiComponents.join(", ")}\n`,
+  )
+  process.stdout.write(
+    `renderable agent components: ${manifest.renderableAgentComponents.join(", ")}\n`,
+  )
   process.stdout.write(
     `prompt-ui manifest: ${runtimePaths.promptUiManifestPath}\n`,
   )
@@ -312,6 +338,37 @@ async function doctorCommand(commandArgs) {
     }),
   )
   checks.push(
+    await runDoctorCheck("runtime", "base", async () => {
+      const manifest = await readRuntimeManifest(runtimePaths)
+
+      if (manifest.runtimeBase !== supportedRuntimeBase) {
+        throw new Error(
+          `Unsupported runtime base "${manifest.runtimeBase}". Supported: ${supportedRuntimeBase}.`,
+        )
+      }
+
+      return manifest.runtimeBase
+    }),
+  )
+  checks.push(
+    await runDoctorCheck("runtime", "schema-renderer-parity", async () => {
+      const manifest = await readRuntimeManifest(runtimePaths)
+      const schema = await getCliSchemaOutput()
+      const schemaComponents = schema.components.map(
+        (component) => component.name,
+      )
+
+      assertSameStringSet({
+        actual: manifest.renderableAgentComponents,
+        actualName: "runtime manifest renderableAgentComponents",
+        expected: schemaComponents,
+        expectedName: "schema components",
+      })
+
+      return `${manifest.renderableAgentComponents.length} components`
+    }),
+  )
+  checks.push(
     await runDoctorCheck("runtime", "renderer-adapter", async () => {
       await stat(path.join(runtimePaths.runtimeSrcDir, "app.tsx"))
       await stat(path.join(runtimePaths.runtimeSrcDir, "main.tsx"))
@@ -320,16 +377,63 @@ async function doctorCommand(commandArgs) {
     }),
   )
   checks.push(
-    await runDoctorCheck("runtime", "shadcn-card", async () => {
-      const cardPath = path.join(runtimePaths.runtimeComponentsDir, "card.tsx")
-      await stat(cardPath)
-      return cardPath
+    await runDoctorCheck("runtime", "shadcn-components", async () => {
+      const manifest = await readRuntimeManifest(runtimePaths)
+      const componentPaths = manifest.installedUiComponents.map((component) =>
+        path.join(runtimePaths.runtimeComponentsDir, `${component}.tsx`),
+      )
+
+      for (const [index, componentPath] of componentPaths.entries()) {
+        await stat(componentPath)
+        await assertRuntimeComponentExports({
+          component: manifest.installedUiComponents[index],
+          componentPath,
+        })
+      }
+
+      return manifest.installedUiComponents.join(", ")
     }),
   )
   checks.push(
     await runDoctorCheck("runtime", "prompt-ui-manifest", async () => {
       await stat(runtimePaths.promptUiManifestPath)
       return runtimePaths.promptUiManifestPath
+    }),
+  )
+  checks.push(
+    await runDoctorCheck("runtime", "render-capabilities", async () => {
+      await stat(runtimePaths.runtimeCapabilitiesPath)
+      return runtimePaths.runtimeCapabilitiesPath
+    }),
+  )
+  checks.push(
+    await runDoctorCheck("runtime", "render-capability-parity", async () => {
+      const schema = await getCliSchemaOutput()
+      const runtimeCapabilities = await readRuntimeCapabilities(runtimePaths)
+
+      assertUiCapabilitiesParity({
+        actual: runtimeCapabilities.uiCapabilities,
+        actualName: "runtime render capabilities",
+        expected: schema.uiCapabilities,
+        expectedName: "schema uiCapabilities",
+      })
+
+      return `${runtimeCapabilities.uiCapabilities.components.length} ui capabilities`
+    }),
+  )
+  checks.push(
+    await runDoctorCheck("runtime", "renderer-spec-parity", async () => {
+      const schema = await getCliSchemaOutput()
+      const runtimeCapabilities = await readRuntimeCapabilities(runtimePaths)
+
+      assertRendererSpecParity({
+        actual: runtimeCapabilities.rendererSpec,
+        actualName: "runtime renderer spec",
+        expected: schema.rendererSpec,
+        expectedName: "schema rendererSpec",
+      })
+
+      return `${runtimeCapabilities.rendererSpec.components.length} renderer specs`
     }),
   )
   checks.push(
@@ -358,6 +462,193 @@ async function doctorCommand(commandArgs) {
   }
 }
 
+async function assertRuntimeComponentExports({ component, componentPath }) {
+  const expectedExports = requiredShadcnRuntimeExports[component] ?? []
+
+  if (expectedExports.length === 0) {
+    return
+  }
+
+  const source = await readFile(componentPath, "utf8")
+  const missingExports = expectedExports.filter(
+    (exportName) => !hasNamedExport(source, exportName),
+  )
+
+  if (missingExports.length > 0) {
+    throw new Error(
+      `${componentPath} is missing exports: ${missingExports.join(", ")}`,
+    )
+  }
+}
+
+async function readRuntimeCapabilities(paths) {
+  return parseJson(
+    await readFile(paths.runtimeCapabilitiesPath, "utf8"),
+    "render-capabilities.generated.json must be valid JSON.",
+  )
+}
+
+function hasNamedExport(source, exportName) {
+  const namedExportPattern = new RegExp(
+    `export\\s*\\{[^}]*\\b${escapeRegExp(exportName)}\\b[^}]*\\}`,
+    "m",
+  )
+  const functionExportPattern = new RegExp(
+    `export\\s+function\\s+${escapeRegExp(exportName)}\\b`,
+    "m",
+  )
+  const constExportPattern = new RegExp(
+    `export\\s+const\\s+${escapeRegExp(exportName)}\\b`,
+    "m",
+  )
+
+  return (
+    namedExportPattern.test(source) ||
+    functionExportPattern.test(source) ||
+    constExportPattern.test(source)
+  )
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+function assertSameStringSet({ actual, actualName, expected, expectedName }) {
+  const actualSet = new Set(actual)
+  const expectedSet = new Set(expected)
+  const missing = expected.filter((item) => !actualSet.has(item))
+  const extra = actual.filter((item) => !expectedSet.has(item))
+
+  if (missing.length > 0 || extra.length > 0) {
+    throw new Error(
+      [
+        `${actualName} does not match ${expectedName}.`,
+        missing.length > 0 ? `Missing: ${missing.join(", ")}` : "",
+        extra.length > 0 ? `Extra: ${extra.join(", ")}` : "",
+      ]
+        .filter(Boolean)
+        .join(" "),
+    )
+  }
+}
+
+function assertUiCapabilitiesParity({
+  actual,
+  actualName,
+  expected,
+  expectedName,
+}) {
+  const actualComponents = actual?.components ?? []
+  const expectedComponents = expected?.components ?? []
+
+  assertSameStringSet({
+    actual: actualComponents.map((component) => component.name),
+    actualName: `${actualName} components`,
+    expected: expectedComponents.map((component) => component.name),
+    expectedName: `${expectedName} components`,
+  })
+
+  for (const expectedComponent of expectedComponents) {
+    const actualComponent = actualComponents.find(
+      (component) => component.name === expectedComponent.name,
+    )
+
+    if (!actualComponent) {
+      continue
+    }
+
+    assertSameStringSet({
+      actual: actualComponent.props ?? [],
+      actualName: `${actualName} ${expectedComponent.name} props`,
+      expected: expectedComponent.props ?? [],
+      expectedName: `${expectedName} ${expectedComponent.name} props`,
+    })
+    assertSameValue({
+      actual: actualComponent.renderKind,
+      actualName: `${actualName} ${expectedComponent.name} renderKind`,
+      expected: expectedComponent.renderKind,
+      expectedName: `${expectedName} ${expectedComponent.name} renderKind`,
+    })
+    assertSameStringSet({
+      actual: (actualComponent.slots ?? []).map((slot) => slot.name),
+      actualName: `${actualName} ${expectedComponent.name} slots`,
+      expected: (expectedComponent.slots ?? []).map((slot) => slot.name),
+      expectedName: `${expectedName} ${expectedComponent.name} slots`,
+    })
+
+    for (const expectedSlot of expectedComponent.slots ?? []) {
+      const actualSlot = (actualComponent.slots ?? []).find(
+        (slot) => slot.name === expectedSlot.name,
+      )
+
+      if (!actualSlot) {
+        continue
+      }
+
+      assertSameStringSet({
+        actual: actualSlot.props ?? [],
+        actualName: `${actualName} ${expectedComponent.name}.${expectedSlot.name} props`,
+        expected: expectedSlot.props ?? [],
+        expectedName: `${expectedName} ${expectedComponent.name}.${expectedSlot.name} props`,
+      })
+      assertSameStringSet({
+        actual: actualSlot.children ?? [],
+        actualName: `${actualName} ${expectedComponent.name}.${expectedSlot.name} children`,
+        expected: expectedSlot.children ?? [],
+        expectedName: `${expectedName} ${expectedComponent.name}.${expectedSlot.name} children`,
+      })
+    }
+  }
+}
+
+function assertRendererSpecParity({
+  actual,
+  actualName,
+  expected,
+  expectedName,
+}) {
+  const actualComponents = actual?.components ?? []
+  const expectedComponents = expected?.components ?? []
+
+  assertSameStringSet({
+    actual: actualComponents.map((component) => component.name),
+    actualName: `${actualName} components`,
+    expected: expectedComponents.map((component) => component.name),
+    expectedName: `${expectedName} components`,
+  })
+
+  for (const expectedComponent of expectedComponents) {
+    const actualComponent = actualComponents.find(
+      (component) => component.name === expectedComponent.name,
+    )
+
+    if (!actualComponent) {
+      continue
+    }
+
+    assertSameValue({
+      actual: actualComponent.renderKind,
+      actualName: `${actualName} ${expectedComponent.name} renderKind`,
+      expected: expectedComponent.renderKind,
+      expectedName: `${expectedName} ${expectedComponent.name} renderKind`,
+    })
+    assertSameStringSet({
+      actual: (actualComponent.slots ?? []).map((slot) => slot.name),
+      actualName: `${actualName} ${expectedComponent.name} slots`,
+      expected: (expectedComponent.slots ?? []).map((slot) => slot.name),
+      expectedName: `${expectedName} ${expectedComponent.name} slots`,
+    })
+  }
+}
+
+function assertSameValue({ actual, actualName, expected, expectedName }) {
+  if (actual !== expected) {
+    throw new Error(
+      `${actualName} does not match ${expectedName}. Actual: ${String(actual)} Expected: ${String(expected)}.`,
+    )
+  }
+}
+
 async function statusCommand(commandArgs) {
   if (commandArgs.length > 0) {
     fail("status does not accept arguments.")
@@ -383,8 +674,12 @@ function formatRuntimeStatus(status, update) {
     `runtime renderer: ${status.manifest?.renderer ?? "missing"}`,
     `ui library: ${status.manifest?.uiLibrary ?? "missing"}`,
     `component source: ${status.manifest?.componentSource ?? "missing"}`,
+    `runtime base: ${status.manifest?.runtimeBase ?? "missing"}`,
     `runtime preset: ${status.manifest?.preset ?? "missing"}`,
+    `installed ui components: ${status.manifest?.installedUiComponents?.join(", ") ?? "missing"}`,
+    `renderable agent components: ${status.manifest?.renderableAgentComponents?.join(", ") ?? "missing"}`,
     `prompt-ui manifest: ${status.checks.promptUiManifest ? "ok" : "missing"}`,
+    `render capabilities: ${status.checks.runtimeCapabilities ? "ok" : "missing"}`,
     `artifact output: ${cliDefaults.outputDir}`,
     `output writable: ${status.checks.outputWritable ? "yes" : "no"}`,
     `Next: ahtml build --input ${cliDefaults.documentPath} --out ${cliDefaults.outputDir}`,

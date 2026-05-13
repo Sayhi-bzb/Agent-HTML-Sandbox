@@ -3,10 +3,21 @@ Write agent-html only.
 Header:
 <meta-agent theme="neutral" density="compact|comfortable" tone="report|dashboard|decision" width="article|dashboard|wide" />
 
-Standard components:
-page(title*) -> alert/card/separator/table/list/tabs/accordion/choice-group/slider-control/feedback-box/progress-meter
+Preferred generic ui/slot syntax:
+<ui name="page" title="...">...</ui>
+<ui name="card" title="...">text or child ui</ui>
+<ui name="alert" title="..." tone="neutral|danger">text</ui>
+<ui name="badge" tone="neutral|success|warning|danger">text</ui>
+<ui name="separator"></ui>
+<ui name="list" variant="ordered|unordered"><slot name="item">text</slot></ui>
+<ui name="table"><slot name="row" kind="header|body"><slot name="cell">text</slot></slot></ui>
+<ui name="tabs" default-value="id"><slot name="tabs-list"><slot name="tabs-trigger" value="id">Label</slot></slot><slot name="tabs-content" value="id">child ui</slot></ui>
+<ui name="accordion"><slot name="accordion-item" value="id" title="...">text or child ui</slot></ui>
+
+Semantic compatibility tags:
+page(title*) -> alert/card/separator/table/list/tabs/accordion
 alert(title? tone?=neutral|danger) -> text
-card(title?) -> alert/badge/separator/table/list/tabs/accordion/choice-group/slider-control/feedback-box/progress-meter/text
+card(title?) -> alert/badge/separator/table/list/tabs/accordion/text
 separator -> none
 badge(tone?=neutral|success|warning|danger) -> text
 table -> row
@@ -15,14 +26,9 @@ cell -> text
 list(variant?=ordered|unordered) -> item
 item -> text
 tabs(default?) -> tab
-tab(value* label*) -> alert/card/separator/table/list/accordion/choice-group/slider-control/feedback-box/progress-meter
+tab(value* label*) -> alert/card/separator/table/list/accordion
 accordion -> accordion-item
 accordion-item(value* title*) -> alert/badge/table/list/text
-choice-group(title? mode?=single|multiple default?) -> choice
-choice(value* label*) -> text
-slider-control(label* value* min? max? step? unit?) -> text
-feedback-box(title? placeholder? copy-label?) -> text
-progress-meter(label* value* detail?) -> none
 
 Forbidden:
 asChild/class/className/css/dangerouslySetInnerHTML/onClick/onclick/script/style/Tailwind/shadcn props/Radix props/React props/events/external URLs/unknown tags/unknown attrs

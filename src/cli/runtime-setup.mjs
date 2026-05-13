@@ -2,11 +2,16 @@ import {
   cancel,
   intro,
   isCancel,
-  multiselect,
+  log,
   outro,
   select,
+  text,
 } from "@clack/prompts"
 
+import {
+  getAgentComponentSource,
+  requiredShadcnRuntimeComponents,
+} from "../config/render-capabilities.mjs"
 import {
   fallbackShadcnComponents,
   getDefaultShadcnPreset,
@@ -27,7 +32,7 @@ const defaultRuntimeSetup = {
   componentSource: "shadcn-cli",
   installMode: "preset",
   preset: getDefaultShadcnPreset(),
-  components: ["card"],
+  components: requiredShadcnRuntimeComponents,
 }
 
 export const bundledRuntimeSetup = {
@@ -37,7 +42,23 @@ export const bundledRuntimeSetup = {
 
 const supportedUiLibraries = ["shadcn"]
 const supportedComponentSources = ["bundled", "shadcn-cli"]
-const requiredRuntimeComponents = ["card"]
+const recommendedRuntimeComponents = [
+  "accordion",
+  "alert",
+  "badge",
+  "card",
+  "button",
+  "checkbox",
+  "dialog",
+  "dropdown-menu",
+  "input",
+  "select",
+  "separator",
+  "table",
+  "tabs",
+  "textarea",
+  "tooltip",
+]
 
 export async function resolveRuntimeSetup({
   options = {},
@@ -118,6 +139,14 @@ export function createPromptUiManifest({
   }
 }
 
+export function formatSetupHeader() {
+  return "ahtml setup"
+}
+
+export function formatSetupControls() {
+  return "Use Up/Down to choose. Press Enter to accept."
+}
+
 function createAgentComponentManifest(schema) {
   const components = Array.isArray(schema?.components) ? schema.components : []
 
@@ -138,7 +167,7 @@ function createAgentComponentManifest(schema) {
 
   return components.map((component) => ({
     name: component.name,
-    source: component.name === "card" ? "shadcn" : "ahtml-standard",
+    source: getAgentComponentSource(component.name),
     props: component.props.map((prop) => prop.name),
     children: component.allowedChildren ?? [],
   }))
@@ -185,16 +214,13 @@ function assertRuntimeSetup({
 }
 
 async function promptForRuntimeSetup() {
-  intro("ahtml managed runtime setup")
+  intro(formatSetupHeader())
+  log.message(formatSetupControls())
 
-  const uiLibrary = await chooseOption({
-    label: "UI library",
-    options: supportedUiLibraries,
-    defaultValue: defaultRuntimeSetup.uiLibrary,
-  })
+  const uiLibrary = defaultRuntimeSetup.uiLibrary
   const componentSource = await chooseOption({
     label: "Component source",
-    options: supportedComponentSources,
+    options: ["shadcn-cli", "bundled"],
     defaultValue: defaultRuntimeSetup.componentSource,
   })
   const installMode = await chooseOption({
@@ -204,16 +230,15 @@ async function promptForRuntimeSetup() {
   })
   const preset =
     installMode === "preset"
-      ? await chooseOption({
+      ? await chooseText({
           label: "shadcn preset",
-          options: listShadcnPresets(),
           defaultValue: defaultRuntimeSetup.preset,
+          placeholder: defaultRuntimeSetup.preset,
         })
       : "custom"
-  const componentCatalog = await getComponentCatalog(componentSource)
   const components =
     installMode === "custom"
-      ? await chooseComponents(componentCatalog)
+      ? await chooseComponentSet(await getComponentCatalog(componentSource))
       : defaultRuntimeSetup.components
 
   outro("Runtime setup choices captured.")
@@ -228,27 +253,43 @@ async function promptForRuntimeSetup() {
 }
 
 async function chooseOption({ label, options, defaultValue }) {
-  const answer = await select({
-    message: label,
-    options: options.map((option) => ({ value: option, label: option })),
-    initialValue: defaultValue,
-  })
-
-  return unwrapPromptValue(answer)
+  return unwrapPromptValue(
+    await select({
+      message: label,
+      options: options.map((option) => ({ value: option, label: option })),
+      initialValue: defaultValue,
+    }),
+  )
 }
 
-async function chooseComponents(componentCatalog) {
-  const answer = await multiselect({
-    message: "shadcn components",
-    options: componentCatalog.map((component) => ({
-      value: component,
-      label: component,
-    })),
-    initialValues: componentCatalog,
-    required: true,
+async function chooseText({ label, defaultValue, placeholder }) {
+  return unwrapPromptValue(
+    await text({
+      message: label,
+      defaultValue,
+      placeholder,
+    }),
+  )
+}
+
+async function chooseComponentSet(componentCatalog) {
+  const componentSet = await chooseOption({
+    label: "shadcn components",
+    options: ["minimal", "recommended", "all"],
+    defaultValue: "recommended",
   })
 
-  return unwrapPromptValue(answer)
+  if (componentSet === "all") {
+    return componentCatalog
+  }
+
+  if (componentSet === "recommended") {
+    return recommendedRuntimeComponents.filter((component) =>
+      componentCatalog.includes(component),
+    )
+  }
+
+  return requiredShadcnRuntimeComponents
 }
 
 function unwrapPromptValue(value) {
@@ -297,7 +338,7 @@ function normalizeComponents(
 }
 
 function withRequiredRuntimeComponents(components) {
-  return [...new Set([...components, ...requiredRuntimeComponents])]
+  return [...new Set([...components, ...requiredShadcnRuntimeComponents])]
 }
 
 async function getComponentCatalog(componentSource) {

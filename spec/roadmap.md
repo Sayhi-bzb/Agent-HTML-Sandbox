@@ -1,237 +1,85 @@
-# ahtml Managed Runtime Roadmap
+# agent-html Roadmap
 
-本文记录 `ahtml` 从 project-local integration 重构为全局 managed runtime 的路线。重构完成后不保留旧 project-local 架构兼容路径。
-
-## Product Direction
-
-`ahtml` 是 agent artifact runtime。
-
-默认用户故事是：
+本轮目标：先修正 runtime 底座，再继续推进 schema、renderer 和 artifact 验证。
 
 ```txt
-user asks for an artifact
-        ↓
-agent writes agent-html
-        ↓
-ahtml validates and renders in an isolated runtime
-        ↓
-user receives portable static HTML
+shadcn template / init / registry
+  -> shadcn-native managed runtime
+  -> ahtml renderer injection
+  -> capability schema
+  -> .agent.html
+  -> shadcn/native artifact
 ```
 
-`ahtml` 不是前端库、shadcn 模板生成器或业务 repo 接入器。
+## Phase 1: Stop Local Runtime Expansion
 
-当前工作目录默认只承载输入和输出：
+- 停止扩展 package-local shadcn 组件副本。
+- 停止用手写 CSS、补丁 CSS、截断 CSS 修视觉问题。
+- 把现有 `runtime-template` 视为迁移债，不作为目标架构继续扩展。
 
-- `.agent.html`
-- static artifact output
+Done when:
 
-renderer、generated runtime files、cache、logs 和 runtime config 默认收纳到用户级 `.ahtml`。当前工作目录不是 frontend project scaffold 目标。
+- 新增 UI 能力不再通过复制 shadcn 组件或补写 shadcn CSS 实现。
 
-## Runtime Layout
+## Phase 2: Build Shadcn-Native Runtime
 
-默认 runtime root：
+- runtime 初始化必须走 shadcn template / init / registry。
+- shadcn 负责 `components.json`、CSS、base layer、Tailwind entry、依赖、组件源码、style、base、iconLibrary。
+- ahtml 只注入 renderer app、capability data、sanitized document、diagnostics、build / preview wiring。
+- `shadcn add` 只用于安装 required registry items，不作为完整初始化。
 
-```txt
-~/.ahtml
-```
+Done when:
 
-Windows 等价：
+- 从零创建的 managed runtime 不依赖 package-local shadcn UI kit 或手写 shadcn CSS。
 
-```txt
-%USERPROFILE%\.ahtml
-```
+## Phase 3: Add Runtime Completeness Checks
 
-环境变量覆盖：
+- `status` / `doctor` 检查 shadcn runtime 是否完整。
+- 检查 `components.json`、CSS entry、base layer、Tailwind entry、required registry items、required exports、style、base、iconLibrary。
+- 检查 built CSS 是否包含 shadcn base surface，避免 DOM 已渲染但视觉偏离 shadcn。
 
-```txt
-AHTML_HOME
-```
+Done when:
 
-建议目录结构：
+- “组件 DOM 存在但 shadcn 视觉不对”会变成明确诊断错误。
 
-```txt
-~/.ahtml/
-  runtime/
-  cache/
-  logs/
-  config/
-```
+## Phase 4: Reconnect Schema And Renderer
 
-## Phase 0: Spec And Vocabulary Reset
+- prompt schema 只暴露可渲染能力。
+- `<ui>` / `<slot>` 作为通用协议主线。
+- semantic tags 只能作为 sugar，必须归一到同一 capability model。
+- 移除的自定义控件不回到 schema，除非作为真实 shadcn-backed capability 重新接入。
 
-目标：先统一产品边界和术语，再迁移实现。
+Done when:
 
-工作项：
+- agent 按 prompt schema 写出的组件都有明确 renderer capability。
 
-- 使用 `managed runtime` 表示用户级隔离渲染环境。
-- 使用 `runtime root` 表示 `.ahtml` 根目录。
-- 使用 `portable artifact` 表示最终静态交付物。
-- 使用 `removed project mode` 表示已删除的旧架构。
-- 不再把 `project integration` 作为默认路径名称。
-- 不引入 `--local-project`、`--scaffold`、`--apply` 等兼容开关。
+## Phase 5: Remove Old Runtime Debt
 
-验收：
+- 移除 package-local shadcn UI kit 作为主路径。
+- 移除手写 shadcn CSS / pseudo template 作为主路径。
+- 如需短期 fallback，必须默认关闭、可诊断、可删除。
 
-- blueprint、spec、README、docs-web 和 ahtml skill 的默认路径术语一致。
-- 旧 project-local 术语只出现在 migration history 或 forbidden 语境。
+Done when:
 
-## Phase 1: Runtime Path And Config
+- 删除旧 shadcn 组件副本和手写 CSS 不会破坏 runtime source of truth。
 
-目标：让 CLI 先认识 managed runtime，而不是先检查当前 repo。
+## Phase 6: Verify End To End
 
-工作项：
+- build / preview 使用同一 renderer path。
+- 样例 artifact 必须有真实 shadcn/native DOM、完整 shadcn CSS、正确视觉。
+- tabs / accordion 保持真实交互；无 JS 时内容仍可读。
+- static artifact 仍是默认交付形态。
 
-- 新增 runtime path resolver。
-- resolver 优先使用 `AHTML_HOME`。
-- 未设置 `AHTML_HOME` 时使用 `os.homedir()/.ahtml`。
-- 引入 `AhtmlRuntimeConfig`。
-- 将默认 readiness 从 `agent-html.project.json` / `components.json` / Vite config 改为 runtime readiness。
-- `status` 显示 runtime、output writability 和 package update 状态。
-- `doctor` 诊断 runtime root、runtime config、renderer adapter、package root 和 output path。
+Done when:
 
-验收：
+- 从零安装到生成 artifact 的完整流程可复现，并且视觉来自 shadcn-native runtime。
 
-- 空目录运行 `ahtml status` 不再提示初始化当前项目。
-- 空目录运行 `ahtml doctor` 不要求存在 `components.json` 或 Vite config。
-- `AHTML_HOME` 指向临时目录时，status / doctor 使用该目录。
+## Phase 7: Expand Through The Generic Path
 
-## Phase 2: Managed Runtime Bootstrap
+- 新组件只通过 capability data、safe props、slot rules、runtime requirements、doctor checks、artifact tests 接入。
+- 不为单个 shadcn 组件新增手写 adapter，除非明确记录为临时例外。
+- button、toggle group、slider、textarea、progress、checkbox、forms 等未来能力必须作为 shadcn-backed 或明确 native capability 返回。
 
-目标：移除当前工作目录 scaffold，并由 managed runtime 收纳渲染状态。
+Done when:
 
-工作项：
-
-- runtime bootstrap 生成 runtime manifest、runtime directories 和 generated document 文件。
-- `ahtml setup` 提供显式 guided runtime setup，记录 shadcn preset、自定义组件选择和 component source。
-- component source 支持 bundled alpha template 和 managed runtime 内的 `shadcn` CLI 安装路径。
-- `status` / `doctor` / `build` / `preview` 默认自动初始化或修复 managed runtime。
-- 不保留 `ahtml init`；runtime repair 由 `setup` 或 `status` / `doctor` / `build` / `preview` 自动触发。
-- runtime setup 生成 prompt-ui manifest，供 agent 读取可用 UI 底座、组件清单和安全边界。
-- `build` / `preview` 首次运行可以自动 bootstrap。
-- bootstrap 失败时输出明确修复命令。
-
-验收：
-
-- 空 repo 中运行 `ahtml status` 不生成 `src/`、`components.json`、`vite.config.ts`。
-- 空 repo 中运行 `ahtml build --input artifact.agent.html --out dist/html` 不生成项目 scaffold 文件。
-- runtime 文件只出现在 `.ahtml` 下。
-
-## Phase 3: Build And Preview Rewire
-
-目标：默认 build / preview 通过 managed runtime 生成 portable artifact。
-
-工作项：
-
-- `build` 读取当前工作目录中的 input。
-- `build` 将 sanitized document 写入 runtime generated document。
-- renderer 在 managed runtime 边界内执行。
-- build output 写入用户指定 `--out`。
-- `preview` 继续服务 build 产物。
-- `preview` 不启动独立 renderer。
-- `inspect --dir` 继续读取 artifact metadata。
-
-验收：
-
-- 全局安装后可以在任意目录 build artifact。
-- 当前目录只新增用户指定 output。
-- `preview` 服务的内容与 `build` 输出一致。
-- `inspect --dir` 对 managed runtime build 产物可用。
-
-## Phase 4: Remove Project Mode
-
-目标：删除旧 project-local 能力，不留下兼容开关。
-
-工作项：
-
-- 删除 `src/config/project.mjs`。
-- 删除 `src/cli/scaffold.mjs`。
-- 删除 `init --template`、`init --preset`、`init --components`、`init --out`、`init --scaffold`、`init --apply`。
-- 删除 `agent-html.project.json` readiness。
-- 默认 `status` / `doctor` 不再以 project config 判断 readiness。
-- `build` 不读取当前目录的 Vite、React、Tailwind、shadcn 或 renderer adapter。
-
-验收：
-
-- 默认命令不污染当前 repo。
-- 没有 `--local-project` 或等价兼容模式。
-- 旧项目配置不会参与 managed runtime 默认路径。
-
-## Phase 5: Docs, Skill, And Pack Verification
-
-目标：发布前把外部入口全部切到 managed runtime 心智。
-
-工作项：
-
-- README 主推全局安装：
-
-```bash
-npm install -g @agent-html/ahtml
-ahtml build --input artifact.agent.html --out dist/html
-```
-
-- docs-web quick start 使用 managed runtime。
-- ahtml skill install / usage / debug references 使用 managed runtime。
-- bug-reporting 收集 runtime root、`AHTML_HOME`、status 和 doctor 输出。
-- packed verification 改为 empty consumer directory workflow。
-- packed verification 断言 consumer dir 不出现 project scaffold 文件。
-
-验收：
-
-- `npm run verify:pack` 在空 consumer dir 中完成 validate、build、inspect、preview。
-- consumer dir 不出现 `src/`、`vite.config.ts`、`components.json`、`agent-html.project.json`。
-- docs 不再把 project-local setup 当作 happy path。
-
-## Public Interface Changes
-
-`ahtml status`：
-
-- 新默认语义：显示 runtime readiness、output writability 和 package update。
-
-`ahtml doctor`：
-
-- 新默认语义：诊断 runtime、package、config 和 output path。
-
-`ahtml build` / `ahtml preview`：
-
-- 默认使用 managed runtime。
-- 不要求当前目录存在 Vite/shadcn 项目。
-
-## Test Plan
-
-Unit tests：
-
-- runtime path resolver honors `AHTML_HOME`。
-- runtime path resolver falls back to `~/.ahtml`。
-- status / doctor do not require current-directory project files。
-- build writes generated document into runtime。
-- build writes artifact output to user-selected `--out`。
-- old project-local flags are rejected。
-
-Pack verification：
-
-- installed package builds artifact in an empty consumer dir。
-- consumer dir does not receive `src/`、`vite.config.ts`、`components.json`、`agent-html.project.json`。
-- preview serves the same static output produced by build。
-
-Documentation checks：
-
-```bash
-npm run docs:lint
-npm run format:check:source
-```
-
-Release readiness:
-
-```bash
-npm run check:ready
-npm run docs:web:check
-```
-
-## Assumptions
-
-- `spec/roadmap.md` is the single active roadmap.
-- managed runtime is the default path.
-- old project-local integration is removed, not retained as advanced compatibility.
-- runtime dependency installation can initially use npm inside `.ahtml/runtime`.
-- package manager abstraction for runtime installation can come later.
-- code migration happens after this roadmap is reviewed.
+- 扩展组件目录不会重新长出第二套 ahtml UI framework。

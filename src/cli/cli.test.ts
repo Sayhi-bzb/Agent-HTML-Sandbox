@@ -25,6 +25,28 @@ const validAgentHtmlFixtures = [
 type CliSchemaOutput = {
   readonly kind: string
   readonly components: readonly { readonly name: string }[]
+  readonly uiCapabilities: {
+    readonly components: readonly {
+      readonly name: string
+      readonly renderKind: string
+      readonly source: string
+      readonly slots: readonly {
+        readonly name: string
+        readonly children: readonly string[]
+      }[]
+    }[]
+  }
+  readonly rendererSpec: {
+    readonly components: readonly {
+      readonly name: string
+      readonly kind: string
+      readonly renderKind: string
+      readonly slots: readonly {
+        readonly name: string
+        readonly children: readonly string[]
+      }[]
+    }[]
+  }
   readonly forbidden: string
   readonly safetyPolicy: {
     readonly blockedNames: readonly string[]
@@ -63,6 +85,8 @@ type RuntimeSetupModule = {
     readonly preset: string
     readonly components: readonly string[]
   }>
+  readonly formatSetupControls: () => string
+  readonly formatSetupHeader: () => string
 }
 
 type ShadcnApiModule = {
@@ -122,10 +146,47 @@ describe("agent-html CLI", () => {
 
     expect(schema.kind).toBe("agent-html-cli-schema")
     expect(schema.components.some((item) => item.name === "page")).toBe(true)
+    expect(schema.uiCapabilities.components).toContainEqual(
+      expect.objectContaining({
+        name: "tabs",
+        renderKind: "tabs",
+        source: "shadcn",
+        slots: expect.arrayContaining([
+          expect.objectContaining({
+            name: "tabs-content",
+            children: expect.arrayContaining(["card", "accordion"]),
+          }),
+        ]),
+      }),
+    )
+    expect(schema.rendererSpec.components).toContainEqual(
+      expect.objectContaining({
+        name: "tabs",
+        kind: "tabs",
+        renderKind: "tabs",
+        slots: expect.arrayContaining([
+          expect.objectContaining({
+            name: "tab",
+            children: expect.arrayContaining(["card", "accordion"]),
+          }),
+        ]),
+      }),
+    )
     expect(serializedComponents).not.toContain('"className"')
     expect(serializedComponents).not.toContain('"style"')
     expect(schema.safetyPolicy.blockedNames).toContain("className")
     expect(schema.forbidden).toBe(schema.safetyPolicy.forbidden)
+  })
+
+  it("prints generic ui slot syntax before semantic compatibility tags", async () => {
+    const { stdout } = await runCli(["schema", "--format", "prompt"])
+
+    expect(stdout).toContain("Preferred generic ui/slot syntax:")
+    expect(stdout).toContain('<ui name="tabs" default-value="id">')
+    expect(stdout).toContain('<slot name="tabs-content" value="id">')
+    expect(stdout.indexOf("Preferred generic ui/slot syntax:")).toBeLessThan(
+      stdout.indexOf("Semantic compatibility tags:"),
+    )
   })
 
   it("rejects the removed init command without creating project files", async () => {
@@ -159,8 +220,14 @@ describe("agent-html CLI", () => {
     expect(missingStatus.stdout).toContain("runtime manifest: ok")
     expect(missingStatus.stdout).toContain("ui library: shadcn")
     expect(missingStatus.stdout).toContain("component source: bundled")
+    expect(missingStatus.stdout).toContain("runtime base: radix")
     expect(missingStatus.stdout).toContain("runtime preset: nova")
+    expect(missingStatus.stdout).toContain(
+      "installed ui components: accordion, alert, badge, card, separator, table, tabs",
+    )
+    expect(missingStatus.stdout).toContain("renderable agent components:")
     expect(missingStatus.stdout).toContain("prompt-ui manifest: ok")
+    expect(missingStatus.stdout).toContain("render capabilities: ok")
     expect(missingStatus.stdout).toContain(
       "Next: ahtml build --input artifact.agent.html --out dist/html",
     )
@@ -171,6 +238,10 @@ describe("agent-html CLI", () => {
     await expectFile(
       path.join(runtimeHome, "config", "prompt-ui.manifest.json"),
       "ahtml-prompt-ui-manifest",
+    )
+    await expectFile(
+      path.join(runtimeHome, "runtime", "render-capabilities.generated.json"),
+      "ahtml-runtime-render-capabilities",
     )
     await expectPathMissing(path.join(tempDir, "src"))
     await expectPathMissing(path.join(tempDir, "dist"))
@@ -213,11 +284,27 @@ describe("agent-html CLI", () => {
     expect(setup.stdout).toContain("ahtml runtime ready")
     expect(setup.stdout).toContain("ui library: shadcn")
     expect(setup.stdout).toContain("component source: bundled")
+    expect(setup.stdout).toContain("runtime base: radix")
     expect(setup.stdout).toContain("preset: custom")
-    expect(setup.stdout).toContain("components: card")
+    expect(setup.stdout).toContain(
+      "components: accordion, alert, badge, card, separator, table, tabs",
+    )
+    expect(setup.stdout).toContain("renderable agent components:")
     await expectFile(
       path.join(runtimeHome, "config", "runtime.json"),
       '"preset": "custom"',
+    )
+    await expectFile(
+      path.join(runtimeHome, "config", "runtime.json"),
+      '"runtimeBase": "radix"',
+    )
+    await expectFile(
+      path.join(runtimeHome, "config", "runtime.json"),
+      '"installedUiComponents"',
+    )
+    await expectFile(
+      path.join(runtimeHome, "config", "runtime.json"),
+      '"renderableAgentComponents"',
     )
     await expectFile(
       path.join(runtimeHome, "config", "prompt-ui.manifest.json"),
@@ -241,7 +328,7 @@ describe("agent-html CLI", () => {
     await rm(tempDir, { force: true, recursive: true })
   })
 
-  it("uses shadcn API for runtime setup catalogs and keeps bundled fallback minimal", async () => {
+  it("uses shadcn API for runtime setup catalogs and keeps bundled fallback renderable", async () => {
     const { resolveRuntimeSetup } = await importRuntimeSetupModule()
     const {
       getShadcnComponentCatalog,
@@ -257,7 +344,15 @@ describe("agent-html CLI", () => {
         components: "all",
       },
     })
-    expect(bundled.components).toEqual(["card"])
+    expect(bundled.components).toEqual([
+      "accordion",
+      "alert",
+      "badge",
+      "card",
+      "separator",
+      "table",
+      "tabs",
+    ])
 
     const catalog = await getShadcnComponentCatalog()
     expect(catalog.source).toBe("shadcn-api")
@@ -275,6 +370,14 @@ describe("agent-html CLI", () => {
     ).rejects.toThrow("Unsupported shadcn preset")
   }, 30000)
 
+  it("renders minimal setup guidance", async () => {
+    const { formatSetupControls, formatSetupHeader } =
+      await importRuntimeSetupModule()
+
+    expect(formatSetupHeader()).toContain("ahtml setup")
+    expect(formatSetupControls()).toContain("Up/Down")
+  })
+
   it("builds from an empty consumer directory and writes runtime state outside the project", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
     const runtimeHome = path.join(tempDir, "runtime-home")
@@ -287,7 +390,20 @@ describe("agent-html CLI", () => {
       inputPath,
       [
         '<meta-agent theme="neutral" density="compact" tone="dashboard" width="dashboard" />',
-        '<page title="Managed Runtime"><card title="Overview">Built by managed runtime.</card></page>',
+        [
+          '<page title="Managed Runtime">',
+          '<card title="Overview">',
+          "Built by managed runtime.",
+          '<alert title="State" tone="danger">Needs attention.</alert>',
+          '<badge tone="success">Ready</badge>',
+          "<separator />",
+          '<table><row kind="header"><cell>Name</cell><cell>Status</cell></row><row><cell>Runtime</cell><cell>Ready</cell></row></table>',
+          '<list variant="unordered"><item>Portable output</item><item>Readable content</item></list>',
+          '<tabs default="summary"><tab value="summary" label="Summary"><card title="Tab card">Tab content.</card></tab></tabs>',
+          '<accordion><accordion-item value="details" title="Details">Accordion content.</accordion-item></accordion>',
+          "</card>",
+          "</page>",
+        ].join(""),
       ].join("\n"),
     )
 
@@ -303,7 +419,28 @@ describe("agent-html CLI", () => {
       path.join(outputDir, "index.html"),
       "Built by managed runtime.",
     )
+    await expectFile(path.join(outputDir, "index.html"), 'data-slot="tabs"')
+    await expectFile(path.join(outputDir, "index.html"), 'data-slot="table"')
+    await expectFile(
+      path.join(outputDir, "index.html"),
+      'data-slot="accordion"',
+    )
+    await expectFile(path.join(outputDir, "index.html"), 'data-slot="alert"')
+    await expectFile(path.join(outputDir, "index.html"), 'data-slot="badge"')
+    await expectFileMissingText(
+      path.join(outputDir, "index.html"),
+      'class="ahtml-section" data-agent-html-component="tab"',
+    )
+    await expectFileMissingText(
+      path.join(outputDir, "index.html"),
+      'class="ahtml-section" data-agent-html-component="accordion-item"',
+    )
     await expectFile(path.join(outputDir, "assets", "ahtml.css"), "ahtml-card")
+    await expectFile(path.join(outputDir, "assets", "ahtml.css"), ".flex")
+    await expectFile(path.join(outputDir, "assets", "ahtml.css"), ".gap-6")
+    await expectFile(path.join(outputDir, "assets", "ahtml.css"), ".rounded-lg")
+    await expectFile(path.join(outputDir, "assets", "ahtml.css"), ".border")
+    await expectFile(path.join(outputDir, "assets", "ahtml.css"), ".shadow-sm")
     await expectFile(
       path.join(outputDir, "agent-html.inspect.json"),
       "agent-html-inspection",
@@ -312,7 +449,121 @@ describe("agent-html CLI", () => {
       path.join(runtimeHome, "runtime", "document.generated.json"),
       "Managed Runtime",
     )
+    await expectFile(
+      path.join(runtimeHome, "runtime", "render-capabilities.generated.json"),
+      '"uiCapabilities"',
+    )
     await assertNoProjectScaffold(consumerDir)
+    await rm(tempDir, { force: true, recursive: true })
+  })
+
+  it("builds generic ui slot syntax into real shadcn/native artifact structure", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
+    const runtimeHome = path.join(tempDir, "runtime-home")
+    const inputPath = path.join(tempDir, "artifact.agent.html")
+    const outputDir = path.join(tempDir, "html")
+
+    await writeFile(
+      inputPath,
+      [
+        '<meta-agent theme="neutral" density="compact" tone="report" width="article" />',
+        [
+          '<ui name="page" title="Generic Artifact">',
+          '<ui name="tabs" default-value="summary">',
+          '<slot name="tabs-list">',
+          '<slot name="tabs-trigger" value="summary">Summary</slot>',
+          '<slot name="tabs-trigger" value="details">Details</slot>',
+          "</slot>",
+          '<slot name="tabs-content" value="summary">',
+          '<ui name="card" title="Overview">Built from ui slot syntax.</ui>',
+          "</slot>",
+          '<slot name="tabs-content" value="details">',
+          '<ui name="accordion">',
+          '<slot name="accordion-item" value="runtime" title="Runtime">',
+          '<ui name="table">',
+          '<slot name="row" kind="header"><slot name="cell">Layer</slot><slot name="cell">Status</slot></slot>',
+          '<slot name="row"><slot name="cell">Renderer</slot><slot name="cell">Ready</slot></slot>',
+          "</ui>",
+          "</slot>",
+          "</ui>",
+          "</slot>",
+          "</ui>",
+          "</ui>",
+        ].join(""),
+      ].join("\n"),
+    )
+
+    await runCli(
+      ["build", "--input", inputPath, "--out", outputDir],
+      { AHTML_HOME: runtimeHome },
+      tempDir,
+    )
+
+    await expectFile(path.join(outputDir, "index.html"), "Generic Artifact")
+    await expectFile(path.join(outputDir, "index.html"), 'data-slot="tabs"')
+    await expectFile(
+      path.join(outputDir, "index.html"),
+      'data-slot="tabs-trigger"',
+    )
+    await expectFile(
+      path.join(outputDir, "index.html"),
+      'data-slot="accordion"',
+    )
+    await expectFile(path.join(outputDir, "index.html"), 'data-slot="table"')
+    await expectFile(
+      path.join(outputDir, "index.html"),
+      "Built from ui slot syntax.",
+    )
+    await rm(tempDir, { force: true, recursive: true })
+  })
+
+  it("fails build when runtime renderer spec drifts from capabilities", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
+    const runtimeHome = path.join(tempDir, "runtime-home")
+    const inputPath = path.join(tempDir, "artifact.agent.html")
+    const outputDir = path.join(tempDir, "html")
+    const capabilitiesPath = path.join(
+      runtimeHome,
+      "runtime",
+      "render-capabilities.generated.json",
+    )
+
+    await runCli(["status"], { AHTML_HOME: runtimeHome }, tempDir)
+    await writeFile(
+      inputPath,
+      '<page title="Drift"><card title="Summary">Slot drift.</card></page>',
+    )
+
+    const capabilities = parseJson<{
+      rendererSpec: {
+        components: {
+          name: string
+          kind: string
+        }[]
+      }
+    }>(await readFile(capabilitiesPath, "utf8"))
+    const card = capabilities.rendererSpec.components.find(
+      (component) => component.name === "card",
+    )
+
+    if (!card) {
+      throw new Error("Expected card renderer spec in runtime capabilities.")
+    }
+
+    card.kind = "primitive"
+    await writeFile(
+      capabilitiesPath,
+      `${JSON.stringify(capabilities, null, 2)}\n`,
+    )
+
+    await expectCliFailure(
+      runCli(
+        ["build", "--input", inputPath, "--out", outputDir],
+        { AHTML_HOME: runtimeHome },
+        tempDir,
+      ),
+      "Kind mismatch: card kind: primitive expected compound",
+    )
     await rm(tempDir, { force: true, recursive: true })
   })
 
@@ -374,7 +625,7 @@ describe("agent-html CLI", () => {
       "config accepts only get",
     )
     await rm(tempDir, { force: true, recursive: true })
-  })
+  }, 60000)
 
   it("runs managed runtime doctor checks", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
@@ -389,13 +640,97 @@ describe("agent-html CLI", () => {
     expect(stdout).toContain("ok environment:node")
     expect(stdout).toContain("ok runtime:root")
     expect(stdout).toContain("ok runtime:manifest shadcn-runtime")
+    expect(stdout).toContain("ok runtime:base radix")
+    expect(stdout).toContain("ok runtime:schema-renderer-parity")
     expect(stdout).toContain("ok runtime:renderer-adapter")
-    expect(stdout).toContain("ok runtime:shadcn-card")
+    expect(stdout).toContain("ok runtime:shadcn-components")
     expect(stdout).toContain("ok runtime:prompt-ui-manifest")
+    expect(stdout).toContain("ok runtime:render-capabilities")
+    expect(stdout).toContain("ok runtime:render-capability-parity")
+    expect(stdout).toContain("ok runtime:renderer-spec-parity")
     expect(stdout).toContain("ok runtime:vite-config")
     expect(stdout).toContain("ok artifact:output-dir")
     expect(stdout).not.toContain("project-config")
-    expect(stdout).not.toContain("shadcn-components")
+    await rm(tempDir, { force: true, recursive: true })
+  })
+
+  it("fails doctor when runtime capabilities drift from schema", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
+    const runtimeHome = path.join(tempDir, ".ahtml")
+    const capabilitiesPath = path.join(
+      runtimeHome,
+      "runtime",
+      "render-capabilities.generated.json",
+    )
+
+    await runCli(["status"], { AHTML_HOME: runtimeHome }, tempDir)
+
+    const capabilities = parseJson<{
+      uiCapabilities: {
+        components: {
+          name: string
+          slots: { name: string; children: string[] }[]
+        }[]
+      }
+    }>(await readFile(capabilitiesPath, "utf8"))
+    const card = capabilities.uiCapabilities.components.find(
+      (component) => component.name === "card",
+    )
+
+    if (!card) {
+      throw new Error("Expected card capability in runtime capabilities.")
+    }
+
+    card.slots.push({ name: "actions", children: [] })
+    await writeFile(
+      capabilitiesPath,
+      `${JSON.stringify(capabilities, null, 2)}\n`,
+    )
+
+    await expectCliFailure(
+      runCli(["doctor"], { AHTML_HOME: runtimeHome }, tempDir),
+      "fail runtime:render-capability-parity runtime render capabilities card slots does not match schema uiCapabilities card slots.",
+    )
+    await rm(tempDir, { force: true, recursive: true })
+  })
+
+  it("fails doctor when runtime renderer spec drifts from schema", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
+    const runtimeHome = path.join(tempDir, ".ahtml")
+    const capabilitiesPath = path.join(
+      runtimeHome,
+      "runtime",
+      "render-capabilities.generated.json",
+    )
+
+    await runCli(["status"], { AHTML_HOME: runtimeHome }, tempDir)
+
+    const capabilities = parseJson<{
+      rendererSpec: {
+        components: {
+          name: string
+          slots: { name: string; children: string[] }[]
+        }[]
+      }
+    }>(await readFile(capabilitiesPath, "utf8"))
+    const card = capabilities.rendererSpec.components.find(
+      (component) => component.name === "card",
+    )
+
+    if (!card) {
+      throw new Error("Expected card renderer spec in runtime capabilities.")
+    }
+
+    card.slots.push({ name: "actions", children: [] })
+    await writeFile(
+      capabilitiesPath,
+      `${JSON.stringify(capabilities, null, 2)}\n`,
+    )
+
+    await expectCliFailure(
+      runCli(["doctor"], { AHTML_HOME: runtimeHome }, tempDir),
+      "fail runtime:renderer-spec-parity runtime renderer spec card slots does not match schema rendererSpec card slots.",
+    )
     await rm(tempDir, { force: true, recursive: true })
   })
 
@@ -674,6 +1009,12 @@ async function expectFile(filePath: string, expected: string) {
   const source = await readFile(filePath, "utf8")
 
   expect(source).toContain(expected)
+}
+
+async function expectFileMissingText(filePath: string, expected: string) {
+  const source = await readFile(filePath, "utf8")
+
+  expect(source).not.toContain(expected)
 }
 
 async function expectPathMissing(filePath: string) {

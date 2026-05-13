@@ -1,6 +1,10 @@
 # agent-html
 
-agent-html is a local CLI engine for producing safe, inspectable static artifacts from a constrained agent-facing document format.
+agent-html helps agents replace long Markdown outputs with stable, shareable HTML artifacts.
+
+Markdown is easy to write, but it breaks down when agent work becomes dense: implementation plans, PR explainers, research reports, decision records, design comparisons, and feedback loops need layout, visual hierarchy, tables, controlled interaction, and a result people will actually open. agent-html gives agents an AI-native authoring format for that job: write semantic `.agent.html`, validate it against a stable schema, and render a portable HTML artifact for humans to read, share, archive, and hand back into the agent loop.
+
+The constraint is the point. Agents do not write arbitrary CSS, JavaScript, Tailwind classes, event handlers, or renderer props. They write content structure; `ahtml` turns that structure into a consistent HTML artifact.
 
 Docs: [agent-html.pages.dev/docs](https://agent-html.pages.dev/docs)
 
@@ -43,7 +47,7 @@ Create `artifact.agent.html`:
 
 <page title="Review">
   <card title="Summary">
-    This artifact was written with standard agent-html components.
+    This review is a stable HTML artifact instead of a long Markdown note.
   </card>
 </page>
 ```
@@ -58,6 +62,18 @@ ahtml inspect --input artifact.agent.html
 ```
 
 Open the preview URL printed by `ahtml preview` to review the output.
+
+## How It Works
+
+```txt
+agent work
+  -> semantic .agent.html
+  -> schema validation
+  -> managed runtime render
+  -> portable HTML artifact
+```
+
+The schema is the public contract for what agents can write. The runtime implementation can use React, Vite, Tailwind, and shadcn-backed components internally, but those details do not become the agent-facing language.
 
 ## CLI Commands
 
@@ -86,12 +102,11 @@ Defaults:
 
 ## Rules
 
-- `ahtml setup` guides managed runtime installation. `ahtml status`, `ahtml doctor`, `ahtml build`, and `ahtml preview` can bootstrap or repair it automatically with bundled defaults when no guided setup has run.
-- shadcn component catalogs and preset names come from shadcn APIs at setup time; ahtml should not maintain parallel shadcn component or preset lists.
-- shadcn/ui is an internal renderer implementation detail; do not initialize shadcn in the current project for normal `ahtml` use.
 - Treat `ahtml schema --format prompt` as the source of truth.
 - Use only registered agent-html components, props, children, and render config values.
 - Do not write Tailwind classes, `className`, `style`, CSS, scripts, event handlers, shadcn props, Radix props, arbitrary HTML attributes, external resource passthrough, or raw HTML.
+- `ahtml setup` guides managed runtime installation. `ahtml status`, `ahtml doctor`, `ahtml build`, and `ahtml preview` can bootstrap or repair it automatically with bundled defaults when no guided setup has run.
+- shadcn/ui is an internal renderer implementation detail; do not initialize shadcn in the current project for normal `ahtml` use.
 
 ## More
 

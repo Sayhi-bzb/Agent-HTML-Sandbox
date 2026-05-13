@@ -1,9 +1,9 @@
 ---
-title: Example
-description: Copy small artifact patterns and adapt their content.
+title: Examples
+description: Copy HTML artifact patterns for common agent outputs.
 ---
 
-# Example
+# Examples
 
 Check setup before using these examples:
 
@@ -12,7 +12,7 @@ ahtml status
 ahtml doctor
 ```
 
-## Minimal artifact [#minimal-artifact]
+## Planning artifact [#planning-artifact]
 
 ```html title="artifact.agent.html"
 <meta-agent
@@ -22,8 +22,18 @@ ahtml doctor
   width="article"
 />
 
-<page title="Minimal Artifact">
-  <card title="Overview"> A compact artifact with one card. </card>
+<page title="Implementation Plan">
+  <card title="Goal">
+    Replace a long Markdown plan with a readable HTML artifact.
+  </card>
+
+  <card title="Review Focus">
+    <list variant="unordered">
+      <item>Confirm the intended behavior before implementation.</item>
+      <item>Compare tradeoffs without scanning a wall of text.</item>
+      <item>Keep the plan easy to share with reviewers.</item>
+    </list>
+  </card>
 </page>
 ```
 
@@ -32,7 +42,7 @@ ahtml validate --input artifact.agent.html
 ahtml build --input artifact.agent.html --out dist/html
 ```
 
-## Report artifact [#report-artifact]
+## Code review explainer [#code-review-explainer]
 
 ```html title="report.agent.html"
 <meta-agent
@@ -42,16 +52,17 @@ ahtml build --input artifact.agent.html --out dist/html
   width="article"
 />
 
-<page title="Quarterly Review">
-  <card title="Executive Summary">
-    Revenue improved while support volume remained stable.
+<page title="Streaming Review">
+  <card title="Summary">
+    The change improves streaming reliability, but reviewers should focus on
+    backpressure handling and retry behavior.
   </card>
 
-  <card title="Key Evidence">
+  <card title="Review Notes">
     <list variant="unordered">
-      <item>Activation increased in the first two weeks.</item>
-      <item>Churn risk is concentrated in unmanaged accounts.</item>
-      <item>Support tickets stayed within normal range.</item>
+      <item>Check whether slow consumers can block the producer.</item>
+      <item>Confirm retry state is reset after a successful stream.</item>
+      <item>Keep the explanation shareable outside the Git diff view.</item>
     </list>
   </card>
 </page>
@@ -102,33 +113,34 @@ ahtml validate --input decision.agent.html
 ahtml build --input decision.agent.html --out dist/html
 ```
 
-## Feedback artifact [#feedback-artifact]
+## Multi-view artifact [#multi-view-artifact]
 
-```html title="feedback.agent.html"
-<meta-agent
-  theme="neutral"
-  density="comfortable"
-  tone="dashboard"
-  width="wide"
-/>
+```html title="multi-view.agent.html"
+<meta-agent theme="neutral" density="comfortable" tone="report" width="wide" />
 
 <page title="Review Workspace">
-  <choice-group title="Decision" mode="single" default="approve">
-    <choice value="approve" label="Approve"> Ready to proceed. </choice>
-    <choice value="revise" label="Revise"> Needs another pass. </choice>
-  </choice-group>
-
-  <feedback-box
-    title="Reviewer Notes"
-    placeholder="Add notes for the agent..."
-    copy-label="Copy notes"
-  >
-    Summarize what should change before the next iteration.
-  </feedback-box>
+  <tabs default="summary">
+    <tab value="summary" label="Summary">
+      <alert title="Decision">Ready to proceed with the current plan.</alert>
+    </tab>
+    <tab value="details" label="Details">
+      <accordion>
+        <accordion-item value="risks" title="Risks">
+          <list variant="unordered">
+            <item
+              >Confirm renderer support before exposing new schema
+              entries.</item
+            >
+            <item>Keep custom controls out of the public prompt schema.</item>
+          </list>
+        </accordion-item>
+      </accordion>
+    </tab>
+  </tabs>
 </page>
 ```
 
 ```bash
-ahtml validate --input feedback.agent.html
-ahtml build --input feedback.agent.html --out dist/html
+ahtml validate --input multi-view.agent.html
+ahtml build --input multi-view.agent.html --out dist/html
 ```

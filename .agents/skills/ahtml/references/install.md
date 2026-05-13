@@ -4,7 +4,7 @@ Use this when the user asks to install, check, repair, or isolate `ahtml`.
 
 ## Mental Model
 
-`ahtml` is an agent artifact runtime. It validates agent-html input and renders portable static output through a shadcn-backed managed runtime.
+`ahtml` is the runtime for turning semantic `.agent.html` into portable HTML artifacts. It is used when agent output needs to be easier to read, share, and round-trip than long Markdown.
 
 Default runtime home:
 

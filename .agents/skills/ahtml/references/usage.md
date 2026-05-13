@@ -1,16 +1,17 @@
 # ahtml Usage
 
-Use this when the user wants to produce, validate, build, preview, or inspect an artifact.
+Use this when the user wants to replace a long Markdown-style agent output with a richer HTML artifact, or when they need to validate, build, preview, or inspect one.
 
 ## User Flow
 
 ```txt
 user asks
+  -> agent decides the output needs more than Markdown
   -> agent reads ahtml schema
-  -> agent writes .agent.html
+  -> agent writes semantic .agent.html
   -> ahtml validates and sanitizes
   -> managed runtime renders
-  -> static artifact directory
+  -> stable static HTML artifact
 ```
 
 ## Commands
@@ -65,7 +66,7 @@ ahtml config get
 
 ## Document Shape
 
-Use finite metadata and standard agent-html components. Keep implementation details out of the document.
+Use finite metadata and standard agent-html components. The agent writes information structure, not page implementation.
 
 ```html
 <meta-agent

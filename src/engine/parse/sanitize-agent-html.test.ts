@@ -40,17 +40,17 @@ const collaborationWorkbenchSource = `
         </accordion>
       </tab>
       <tab value="decide" label="Decide">
-        <choice-group title="Direction" mode="single" default="ship">
-          <choice value="ship" label="Ship">Use the current direction.</choice>
-          <choice value="revise" label="Revise">Ask for another pass.</choice>
-        </choice-group>
-        <slider-control label="Review strictness" value="70" min="0" max="100" step="5" unit="%">
-          Increase this when the artifact drives implementation.
-        </slider-control>
-        <feedback-box title="Export prompt" copy-label="Copy">
-          Implement the selected direction with the chosen strictness.
-        </feedback-box>
-        <progress-meter label="Decision confidence" value="82" detail="Enough signal to continue." />
+        <alert title="Decision">Ship the current direction.</alert>
+        <table>
+          <row kind="header">
+            <cell>Signal</cell>
+            <cell>Status</cell>
+          </row>
+          <row>
+            <cell>Review confidence</cell>
+            <cell>Enough signal to continue.</cell>
+          </row>
+        </table>
       </tab>
     </tabs>
   </page>
@@ -374,7 +374,7 @@ describe("sanitizeAgentHtml", () => {
     })
   })
 
-  it("accepts controlled interactive agent-html components", () => {
+  it("accepts first-pass interactive structure components", () => {
     const result = sanitizeAgentHtml(`
       <page title="Interactive Workbench">
         <tabs default="decide">
@@ -388,17 +388,17 @@ describe("sanitizeAgentHtml", () => {
             </accordion>
           </tab>
           <tab value="decide" label="Decide">
-            <choice-group title="Direction" mode="single" default="ship">
-              <choice value="ship" label="Ship">Use the current direction.</choice>
-              <choice value="revise" label="Revise">Ask for another pass.</choice>
-            </choice-group>
-            <slider-control label="Review strictness" value="70" min="0" max="100" step="5" unit="%">
-              Increase this when the artifact drives implementation.
-            </slider-control>
-            <feedback-box title="Export prompt" copy-label="Copy">
-              Implement the selected direction with the chosen strictness.
-            </feedback-box>
-            <progress-meter label="Decision confidence" value="82" detail="Enough signal to continue." />
+            <alert title="Decision">Ship the current direction.</alert>
+            <table>
+              <row kind="header">
+                <cell>Signal</cell>
+                <cell>Status</cell>
+              </row>
+              <row>
+                <cell>Review confidence</cell>
+                <cell>Enough signal to continue.</cell>
+              </row>
+            </table>
           </tab>
         </tabs>
       </page>
@@ -409,6 +409,169 @@ describe("sanitizeAgentHtml", () => {
       type: "component",
       name: "tabs",
     })
+  })
+
+  it("normalizes generic ui/slot tabs into the current renderer model", () => {
+    const result = sanitizeAgentHtml(`
+      <ui name="page" title="Generic Protocol">
+        <ui name="tabs" default-value="bio">
+          <slot name="tabs-list">
+            <slot name="tabs-trigger" value="bio">Bio</slot>
+            <slot name="tabs-trigger" value="work">Work</slot>
+          </slot>
+          <slot name="tabs-content" value="bio">
+            <ui name="card" title="Biography">Readable biography.</ui>
+          </slot>
+          <slot name="tabs-content" value="work" label="Work">
+            <ui name="alert" title="Focus">Relativity.</ui>
+          </slot>
+        </ui>
+      </ui>
+    `)
+
+    expect(result.diagnostics).toEqual([])
+    expect(result.document?.components[0]).toMatchObject({
+      type: "component",
+      name: "page",
+      props: {
+        title: "Generic Protocol",
+      },
+      children: [
+        {
+          type: "component",
+          name: "tabs",
+          props: {
+            default: "bio",
+          },
+          children: [
+            {
+              type: "component",
+              name: "tab",
+              props: {
+                value: "bio",
+                label: "Bio",
+              },
+            },
+            {
+              type: "component",
+              name: "tab",
+              props: {
+                value: "work",
+                label: "Work",
+              },
+            },
+          ],
+        },
+      ],
+    })
+  })
+
+  it("normalizes generic ui/slot table, list, and accordion structures", () => {
+    const result = sanitizeAgentHtml(`
+      <ui name="page" title="Generic Structures">
+        <ui name="list">
+          <slot name="item">Readable item.</slot>
+        </ui>
+        <ui name="table">
+          <slot name="row" kind="header">
+            <slot name="cell">Name</slot>
+            <slot name="cell">Status</slot>
+          </slot>
+          <slot name="row">
+            <slot name="cell">Runtime</slot>
+            <slot name="cell">Ready</slot>
+          </slot>
+        </ui>
+        <ui name="accordion">
+          <slot name="accordion-item" value="details" title="Details">
+            Expanded content.
+          </slot>
+        </ui>
+      </ui>
+    `)
+
+    expect(result.diagnostics).toEqual([])
+    const children = result.document?.components[0]?.children
+
+    expect(children?.[0]).toMatchObject({
+      type: "component",
+      name: "list",
+      children: [
+        {
+          type: "component",
+          name: "item",
+        },
+      ],
+    })
+    expect(children?.[1]).toMatchObject({
+      type: "component",
+      name: "table",
+    })
+    expect(children?.[1]?.type).toBe("component")
+
+    if (children?.[1]?.type !== "component") {
+      throw new Error("Expected table component.")
+    }
+
+    expect(children[1].children[0]).toMatchObject({
+      type: "component",
+      name: "row",
+      props: {
+        kind: "header",
+      },
+    })
+    expect(children?.[2]).toMatchObject({
+      type: "component",
+      name: "accordion",
+      children: [
+        {
+          type: "component",
+          name: "accordion-item",
+          props: {
+            value: "details",
+            title: "Details",
+          },
+        },
+      ],
+    })
+  })
+
+  it("rejects unknown generic ui slots instead of flattening them", () => {
+    const result = sanitizeAgentHtml(`
+      <ui name="page" title="Generic Slot Guard">
+        <ui name="card" title="Summary">
+          <slot name="actions">This slot is not registered.</slot>
+        </ui>
+      </ui>
+    `)
+
+    expect(result.document).toBeUndefined()
+    expect(result.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "unknown-slot",
+          message: '"actions" is not a registered slot on <ui name="card">.',
+        }),
+      ]),
+    )
+  })
+
+  it("rejects removed custom controls", () => {
+    const result = sanitizeAgentHtml(`
+      <page title="Removed Controls">
+        <choice-group title="Direction" mode="single" default="ship">
+          <choice value="ship" label="Ship">Use the current direction.</choice>
+        </choice-group>
+        <slider-control label="Review strictness" value="70" />
+        <feedback-box title="Export prompt">Notes</feedback-box>
+        <progress-meter label="Decision confidence" value="82" />
+      </page>
+    `)
+
+    expect(result.document).toBeUndefined()
+    expect(result.diagnostics.map((diagnostic) => diagnostic.code)).toContain(
+      "unknown-component",
+    )
   })
 
   it("accepts a representative interactive collaboration workbench", () => {

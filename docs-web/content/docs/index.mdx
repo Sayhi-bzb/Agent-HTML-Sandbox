@@ -1,19 +1,20 @@
 ---
 title: Quick Start
-description: Learn the agent-html workflow for writing safe artifacts.
+description: Write AI-native HTML artifacts instead of long Markdown outputs.
 ---
 
 # Getting Started with agent-html
 
-agent-html is a local CLI engine for agents that need to produce safe, inspectable static artifacts.
+agent-html helps agents replace long Markdown outputs with stable, shareable HTML artifacts.
 
-The `ahtml` package owns the config, engine, CLI, and shadcn-backed managed artifact runtime. Runtime files live under `~/.ahtml` or `%USERPROFILE%\.ahtml` by default, with `AHTML_HOME` as an override. Agents do not write arbitrary HTML, CSS, Tailwind classes, scripts, event handlers, React props, Radix props, or shadcn props.
+Markdown is a good scratchpad, but it is a weak final surface for dense agent work. Plans, PR explainers, research reports, design comparisons, decisions, and feedback loops need visual hierarchy, tables, controlled interaction, and a result people can open and share.
+
+agent-html gives agents an AI-native authoring format for that job. The agent writes semantic `.agent.html`; `ahtml` validates it against a stable schema and renders a portable HTML artifact. The final artifact is for humans to read, compare, share, archive, and hand back into the agent loop.
 
 <Callout title="Primary rule">
-  Install `ahtml`, then treat the schema as the source of truth for component
-  names, props, children, and render config values. Use `ahtml setup` when you
-  want guided runtime setup; runtime-aware commands can still repair defaults
-  automatically.
+  Read the schema first so the agent writes semantic artifact structure instead
+  of raw HTML, CSS, JavaScript, Tailwind classes, event handlers, React props,
+  Radix props, or shadcn props.
 </Callout>
 
 ## 1. Install the CLI [#install-the-cli]
@@ -73,7 +74,7 @@ ahtml doctor
   </CodeBlockTab>
 </CodeBlockTabs>
 
-`ahtml setup` configures the managed runtime under `~/.ahtml`, currently with a shadcn-backed renderer. Guided setup reads shadcn component and preset metadata from shadcn package APIs, then installs selected runtime components through shadcn CLI inside the managed runtime. `ahtml status`, `ahtml doctor`, `ahtml build`, and `ahtml preview` initialize or repair the managed runtime automatically with bundled defaults when setup has not run. They do not write `src/`, `components.json`, `vite.config.ts`, or `agent-html.project.json` into the current repository.
+`ahtml setup` configures the managed runtime under `~/.ahtml`, currently with a shadcn-backed renderer. `ahtml status`, `ahtml doctor`, `ahtml build`, and `ahtml preview` initialize or repair the managed runtime automatically with bundled defaults when setup has not run. They do not write `src/`, `components.json`, `vite.config.ts`, or `agent-html.project.json` into the current repository.
 
 `ahtml status` and `ahtml doctor` can show a non-blocking package update hint. Set `AHTML_NO_UPDATE_CHECK=1` to disable that check.
 
@@ -99,7 +100,7 @@ A valid document needs a `<page>` root.
 
 <page title="Review">
   <card title="Summary">
-    This artifact was written with standard agent-html components.
+    This review is a stable HTML artifact instead of a long Markdown note.
   </card>
 </page>
 ```

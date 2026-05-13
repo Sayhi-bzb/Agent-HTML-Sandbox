@@ -29,6 +29,11 @@ export function getRuntimePaths(env = process.env) {
       "prompt-ui.manifest.json",
     ),
     runtimePackageJsonPath: path.join(runtimeRoot, "runtime", "package.json"),
+    runtimeCapabilitiesPath: path.join(
+      runtimeRoot,
+      "runtime",
+      "render-capabilities.generated.json",
+    ),
     runtimeViteConfigPath: path.join(runtimeRoot, "runtime", "vite.config.mjs"),
     runtimeSsrDir: path.join(runtimeRoot, "runtime", ".ahtml-ssr"),
     runtimeSrcDir: path.join(runtimeRoot, "runtime", "src"),

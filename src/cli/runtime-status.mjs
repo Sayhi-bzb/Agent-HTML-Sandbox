@@ -15,6 +15,7 @@ import {
   runtimeRenderer,
   runtimeVersion,
 } from "./runtime-paths.mjs"
+import { supportedRuntimeBase } from "../config/render-capabilities.mjs"
 import {
   bundledRuntimeSetup,
   createPromptUiManifest,
@@ -32,7 +33,12 @@ export async function bootstrapManagedRuntime({
   await mkdir(paths.cacheDir, { recursive: true })
   await mkdir(paths.logsDir, { recursive: true })
   await mkdir(paths.configDir, { recursive: true })
-  await writeRuntimeTemplate({ packageRoot, paths, setup })
+  await writeRuntimeTemplate({ packageRoot, paths, schema, setup })
+  const promptUiManifest = createPromptUiManifest({
+    packageVersion,
+    setup,
+    schema,
+  })
 
   const manifest = {
     kind: "ahtml-managed-runtime",
@@ -41,9 +47,14 @@ export async function bootstrapManagedRuntime({
     packageVersion,
     uiLibrary: setup.uiLibrary,
     componentSource: setup.componentSource,
+    runtimeBase: supportedRuntimeBase,
     installMode: setup.installMode,
     preset: setup.preset,
     components: setup.components,
+    installedUiComponents: setup.components,
+    renderableAgentComponents: promptUiManifest.agentComponents.map(
+      (component) => component.name,
+    ),
     paths: {
       runtime: paths.runtimeDir,
       cache: paths.cacheDir,
@@ -53,11 +64,15 @@ export async function bootstrapManagedRuntime({
   }
 
   await writeJsonFile(paths.manifestPath, manifest)
-  await writeJsonFile(
-    paths.promptUiManifestPath,
-    createPromptUiManifest({ packageVersion, setup, schema }),
-  )
-  return manifest
+  await writeJsonFile(paths.promptUiManifestPath, promptUiManifest)
+  return {
+    ...manifest,
+    runtimeBase: manifest.runtimeBase ?? supportedRuntimeBase,
+    installedUiComponents:
+      manifest.installedUiComponents ?? manifest.components,
+    renderableAgentComponents:
+      manifest.renderableAgentComponents ?? manifest.components,
+  }
 }
 
 export async function readRuntimeManifest(paths = getRuntimePaths()) {
@@ -72,7 +87,14 @@ export async function readRuntimeManifest(paths = getRuntimePaths()) {
     throw new Error(`${runtimeManifestName} was not written by ahtml.`)
   }
 
-  return manifest
+  return {
+    ...manifest,
+    runtimeBase: manifest.runtimeBase ?? supportedRuntimeBase,
+    installedUiComponents:
+      manifest.installedUiComponents ?? manifest.components,
+    renderableAgentComponents:
+      manifest.renderableAgentComponents ?? manifest.components,
+  }
 }
 
 export async function getRuntimeStatus({
@@ -90,10 +112,9 @@ export async function getRuntimeStatus({
     rendererAdapter: await pathExists(
       path.join(paths.runtimeSrcDir, "main.tsx"),
     ),
-    shadcnCard: await pathExists(
-      path.join(paths.runtimeComponentsDir, "card.tsx"),
-    ),
+    shadcnComponents: false,
     promptUiManifest: await pathExists(paths.promptUiManifestPath),
+    runtimeCapabilities: await pathExists(paths.runtimeCapabilitiesPath),
     viteConfig: await pathExists(paths.runtimeViteConfigPath),
     outputWritable: false,
   }
@@ -103,6 +124,10 @@ export async function getRuntimeStatus({
   try {
     manifest = await readRuntimeManifest(paths)
     checks.manifest = true
+    checks.shadcnComponents = await runtimeComponentFilesExist({
+      components: manifest.installedUiComponents ?? manifest.components ?? [],
+      paths,
+    })
   } catch (error) {
     manifestError = error instanceof Error ? error.message : String(error)
   }
@@ -119,8 +144,9 @@ export async function getRuntimeStatus({
     checks.config &&
     checks.manifest &&
     checks.rendererAdapter &&
-    checks.shadcnCard &&
+    checks.shadcnComponents &&
     checks.promptUiManifest &&
+    checks.runtimeCapabilities &&
     checks.viteConfig
 
   return {
@@ -194,6 +220,20 @@ async function pathExists(filePath) {
 
     throw error
   }
+}
+
+async function runtimeComponentFilesExist({ components, paths }) {
+  for (const component of components) {
+    if (
+      !(await pathExists(
+        path.join(paths.runtimeComponentsDir, `${component}.tsx`),
+      ))
+    ) {
+      return false
+    }
+  }
+
+  return true
 }
 
 async function writeJsonFile(filePath, value) {

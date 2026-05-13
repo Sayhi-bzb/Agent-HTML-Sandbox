@@ -1,7 +1,7 @@
 {
   "name": "@agent-html/ahtml",
   "version": "0.1.0-alpha.11",
-  "description": "Sanitized agent-html artifact CLI.",
+  "description": "AI-native HTML artifacts for replacing long Markdown outputs.",
   "license": "MIT",
   "type": "module",
   "publishConfig": {
@@ -63,12 +63,17 @@
   },
   "dependencies": {
     "@clack/prompts": "^1.4.0",
+    "@tailwindcss/vite": "^4.3.0",
+    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "lucide-react": "^1.14.0",
     "parse5": "^8.0.1",
+    "radix-ui": "^1.4.3",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "shadcn": "^4.7.0",
     "tailwind-merge": "^3.4.0",
+    "tailwindcss": "^4.3.0",
     "typescript": "latest",
     "vite": "^7.3.0",
     "zod": "^4.4.3"
@@ -93,6 +98,10 @@
     "ahtml",
     "cli",
     "artifact",
+    "html-artifact",
+    "agent-native",
+    "markdown-alternative",
+    "static-artifact",
     "shadcn"
   ],
   "author": "",

@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest"
+import path from "node:path"
+import { pathToFileURL } from "node:url"
 
 import {
   BLOCKED_AGENT_FACING_PROP_NAMES,
@@ -12,6 +14,7 @@ import {
   TEXT_CHILD,
   VALIDATED_STANDARD_COMPONENT_SCHEMAS,
 } from "./component-schema"
+import { UI_PROTOCOL_SLOT_NAMES } from "./parse/validate-agent-html"
 
 describe("standard component schema", () => {
   it("includes exactly the MVP standard components", () => {
@@ -30,13 +33,61 @@ describe("standard component schema", () => {
       "tab",
       "accordion",
       "accordion-item",
-      "choice-group",
-      "choice",
-      "slider-control",
-      "feedback-box",
-      "progress-meter",
     ])
-    expect(VALIDATED_STANDARD_COMPONENT_SCHEMAS).toHaveLength(19)
+    expect(VALIDATED_STANDARD_COMPONENT_SCHEMAS).toHaveLength(14)
+  })
+
+  it("keeps schema components aligned with render capability state", async () => {
+    const capabilities = (await import(
+      pathToFileURL(
+        path.join(process.cwd(), "src/config/render-capabilities.mjs"),
+      ).href
+    )) as {
+      readonly createUiCapabilities: (
+        components: typeof STANDARD_COMPONENT_SCHEMAS,
+      ) => {
+        readonly components: readonly {
+          readonly name: string
+          readonly renderKind: string
+          readonly slots: readonly { readonly name: string }[]
+        }[]
+      }
+      readonly schemaRenderableComponents: readonly string[]
+    }
+
+    expect([...STANDARD_COMPONENT_NAMES].sort()).toEqual(
+      [...capabilities.schemaRenderableComponents].sort(),
+    )
+    expect(
+      Object.fromEntries(
+        capabilities
+          .createUiCapabilities(STANDARD_COMPONENT_SCHEMAS)
+          .components.map((component) => [
+            component.name,
+            component.slots.map((slot) => slot.name),
+          ]),
+      ),
+    ).toEqual(UI_PROTOCOL_SLOT_NAMES)
+    expect(
+      Object.fromEntries(
+        capabilities
+          .createUiCapabilities(STANDARD_COMPONENT_SCHEMAS)
+          .components.map((component) => [
+            component.name,
+            component.renderKind,
+          ]),
+      ),
+    ).toEqual({
+      accordion: "interactive-collection",
+      alert: "compound",
+      badge: "primitive",
+      card: "compound",
+      list: "collection",
+      page: "compound",
+      separator: "primitive",
+      table: "table",
+      tabs: "tabs",
+    })
   })
 
   it("keeps generated shadcn introspection available as draft facts", () => {
@@ -72,23 +123,6 @@ describe("standard component schema", () => {
       "label",
       "value",
       "title",
-      "title",
-      "mode",
-      "default",
-      "value",
-      "label",
-      "label",
-      "value",
-      "min",
-      "max",
-      "step",
-      "unit",
-      "title",
-      "placeholder",
-      "copy-label",
-      "label",
-      "value",
-      "detail",
     ])
 
     for (const blockedName of BLOCKED_AGENT_FACING_PROP_NAMES) {
@@ -105,10 +139,6 @@ describe("standard component schema", () => {
       "list",
       "tabs",
       "accordion",
-      "choice-group",
-      "slider-control",
-      "feedback-box",
-      "progress-meter",
     ])
     expect(getComponentSchema("alert")?.allowedChildren).toEqual([TEXT_CHILD])
     expect(getComponentSchema("separator")?.allowedChildren).toEqual([])
@@ -125,17 +155,11 @@ describe("standard component schema", () => {
       "table",
       "list",
       "accordion",
-      "choice-group",
-      "slider-control",
-      "feedback-box",
-      "progress-meter",
     ])
     expect(getComponentSchema("accordion")?.allowedChildren).toEqual([
       "accordion-item",
     ])
-    expect(getComponentSchema("choice-group")?.allowedChildren).toEqual([
-      "choice",
-    ])
+    expect(getComponentSchema("choice-group")).toBeUndefined()
   })
 
   it("looks up standard components and props", () => {
@@ -149,9 +173,6 @@ describe("standard component schema", () => {
       "header",
       "body",
     ])
-    expect(
-      getComponentPropSchema(getComponentSchema("choice-group")!, "mode")
-        ?.enumValues,
-    ).toEqual(["single", "multiple"])
+    expect(getComponentSchema("slider-control")).toBeUndefined()
   })
 })

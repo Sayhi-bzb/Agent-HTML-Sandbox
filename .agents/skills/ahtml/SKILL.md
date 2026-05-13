@@ -5,7 +5,7 @@ description: Write, validate, build, preview, inspect, install, and debug ahtml 
 
 # ahtml
 
-Use this skill when the goal is to turn agent-facing work into a portable HTML artifact that is easier to read, inspect, share, and hand back into the agent loop.
+Use this skill when the goal is to replace long Markdown agent output with a portable HTML artifact that is easier to read, inspect, share, and hand back into the agent loop.
 
 ## Core path
 

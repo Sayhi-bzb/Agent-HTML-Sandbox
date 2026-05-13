@@ -5,6 +5,8 @@ description: Follow the writing rules agents should use by default.
 
 # Best Practice
 
+Write artifacts for people who need to read, compare, decide, and respond. agent-html is not a prettier Markdown wrapper; it is a stable HTML surface for agent work that would otherwise become a long, fragile Markdown file.
+
 ## Check the managed runtime [#check-the-managed-runtime]
 
 Normal commands bootstrap the user-level managed runtime automatically. Use checks before debugging:
@@ -22,13 +24,13 @@ Start every generation task with `ahtml schema --format prompt`. The schema is t
 
 ## Use semantic components [#use-semantic-components]
 
-Choose components by meaning:
+The agent should describe information structure, not page implementation. Pick components by the role they play in the artifact:
 
 - `card` for grouped content.
 - `alert` for important notes.
 - `table` for structured evidence.
 - `list` for ordered or unordered points.
-- `choice-group` and `feedback-box` when the artifact needs controlled user input.
+- `tabs` and `accordion` when the artifact needs multiple readable views or expandable sections.
 
 ## Keep structure simple [#keep-structure-simple]
 
@@ -43,6 +45,8 @@ page
 Use deeper structures only when the content genuinely needs sections, tabs, or expandable groups.
 
 ## Do not write implementation details [#do-not-write-implementation-details]
+
+The HTML artifact should feel stable across runs. Keep low-level implementation details out of the agent-facing document so the renderer can preserve visual consistency, safety, and portability.
 
 Never use these in agent-facing documents:
 
@@ -63,6 +67,16 @@ unknown HTML attributes
 ```
 
 agent-html is not a raw HTML escape hatch.
+
+## Prefer HTML-worthy outputs [#prefer-html-worthy-outputs]
+
+Use agent-html when the result benefits from more than a wall of Markdown:
+
+- Planning and specification artifacts.
+- PR and code-review explainers.
+- Research reports and incident reports.
+- Decision records with evidence.
+- Feedback artifacts that return choices or notes to the agent.
 
 ## Repair validation errors [#repair-validation-errors]
 

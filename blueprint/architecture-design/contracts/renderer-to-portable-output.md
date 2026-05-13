@@ -13,8 +13,10 @@ portable output 层消费 renderer 产物，并生成可打开、可分享、可
 ## Rules
 
 - renderer adapter output 必须来自已检查的 SanitizedAgentHtml。
-- React output 使用内部标准组件实现。
+- React output 使用内部标准组件实现，并优先来自通用 renderer registry / resolver。
 - HTML output 是标准组件渲染后的可检查底层 HTML。
+- HTML output 必须保留标准组件语义。list/table/tabs/accordion 等组件不得在正常路径退化为无语义 section 树。
+- HTML output 必须能证明 agent-html 语义进入了 shadcn/native 组件结构，而不是只保留 `data-agent-html-component` 标记。
 - 默认交付物是 static artifact directory。
 - static artifact directory 必须包含 `index.html`、CSS / JS bundle 和声明过的 assets。
 - dev preview 和 final artifact 必须共用同一 renderer adapter、ComponentSchema、RenderConfig 和样式系统。
@@ -35,3 +37,4 @@ portable output 层消费 renderer 产物，并生成可打开、可分享、可
 - 让交付物隐式依赖难以迁移的运行环境。
 - 让未声明 CDN、远程字体、外部 worker 或绝对资源路径成为最终视觉假设。
 - 让 portable output 成为额外的样式、脚本或外部资源逃逸口。
+- 让已注册标准组件在最终 HTML 中丢失其主要阅读或交互语义。

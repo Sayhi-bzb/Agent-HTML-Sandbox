@@ -2,6 +2,10 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 import { formatForbiddenPolicy } from "../config/defaults.mjs"
+import {
+  createRendererSpec,
+  createUiCapabilities,
+} from "../config/render-capabilities.mjs"
 import { loadCoreModule } from "./module-loader.mjs"
 
 const packageRoot = path.resolve(
@@ -43,6 +47,8 @@ export async function getCliSchemaOutput(root = packageRoot) {
     kind: "agent-html-cli-schema",
     version: 1,
     components,
+    uiCapabilities: createUiCapabilities(components),
+    rendererSpec: createRendererSpec(components),
     renderConfig,
     safetyPolicy,
     forbidden: safetyPolicy.forbidden,
@@ -56,7 +62,10 @@ export function formatPrompt(schema) {
     "Header:",
     formatMetaAgentTemplate(schema.renderConfig.values),
     "",
-    "Standard components:",
+    "Preferred generic ui/slot syntax:",
+    ...formatGenericUiSlotSyntax(),
+    "",
+    "Semantic compatibility tags:",
     ...schema.components.map(formatComponent),
     "",
     "Forbidden:",
@@ -64,6 +73,20 @@ export function formatPrompt(schema) {
   ]
 
   return lines.join("\n")
+}
+
+function formatGenericUiSlotSyntax() {
+  return [
+    '<ui name="page" title="...">...</ui>',
+    '<ui name="card" title="...">text or child ui</ui>',
+    '<ui name="alert" title="..." tone="neutral|danger">text</ui>',
+    '<ui name="badge" tone="neutral|success|warning|danger">text</ui>',
+    '<ui name="separator"></ui>',
+    '<ui name="list" variant="ordered|unordered"><slot name="item">text</slot></ui>',
+    '<ui name="table"><slot name="row" kind="header|body"><slot name="cell">text</slot></slot></ui>',
+    '<ui name="tabs" default-value="id"><slot name="tabs-list"><slot name="tabs-trigger" value="id">Label</slot></slot><slot name="tabs-content" value="id">child ui</slot></ui>',
+    '<ui name="accordion"><slot name="accordion-item" value="id" title="...">text or child ui</slot></ui>',
+  ]
 }
 
 function formatMetaAgentTemplate(values) {

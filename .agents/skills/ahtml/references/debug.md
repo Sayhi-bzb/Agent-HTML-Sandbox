@@ -2,6 +2,8 @@
 
 Use this when setup, validation, build, preview, or managed runtime rendering fails.
 
+Debug with the product shape in mind: agents write semantic `.agent.html`; `ahtml` validates it and renders a stable HTML artifact. Do not fix failures by turning agent input into raw HTML, CSS, or JavaScript.
+
 ## First Checks
 
 Run:
