@@ -78,14 +78,14 @@ The schema is the public contract for what agents can write. The runtime impleme
 ## CLI Commands
 
 ```bash
+ahtml setup [--yes] [--force] [--ui shadcn] [--component-source shadcn-cli] [--preset <name|custom>] [--components <list|all>]
 ahtml schema [--format prompt|json] [--out <path>]
-ahtml setup [--yes] [--force] [--ui shadcn] [--component-source bundled|shadcn-cli] [--preset <name|custom>] [--components <list|all>]
 ahtml validate --input <path>
 ahtml build --input <path> [--out <dir>]
 ahtml inspect --input <path>|--dir <dir> [--format summary|json]
-ahtml status
-ahtml doctor
 ahtml preview --input <path> [--out <dir>] [--port <port>]
+ahtml doctor
+ahtml status
 ahtml config get
 ```
 
@@ -93,7 +93,7 @@ Defaults:
 
 - Runtime home: `~/.ahtml` or `%USERPROFILE%\.ahtml`
 - Runtime renderer: internal shadcn-backed React/Vite renderer
-- Runtime setup: guided setup reads shadcn component and preset metadata from the `shadcn` package APIs, then uses shadcn CLI inside the managed runtime; runtime-aware commands repair with bundled defaults when they must bootstrap non-interactively
+- Runtime setup: guided setup reads shadcn component and preset metadata from the `shadcn` package APIs, then uses shadcn CLI inside the managed runtime; runtime-aware commands bootstrap or repair the managed shadcn runtime when setup has not run
 - Runtime override: `AHTML_HOME`
 - Document: `artifact.agent.html`
 - Build output: `dist/html`
@@ -105,7 +105,7 @@ Defaults:
 - Treat `ahtml schema --format prompt` as the source of truth.
 - Use only registered agent-html components, props, children, and render config values.
 - Do not write Tailwind classes, `className`, `style`, CSS, scripts, event handlers, shadcn props, Radix props, arbitrary HTML attributes, external resource passthrough, or raw HTML.
-- `ahtml setup` guides managed runtime installation. `ahtml status`, `ahtml doctor`, `ahtml build`, and `ahtml preview` can bootstrap or repair it automatically with bundled defaults when no guided setup has run.
+- `ahtml setup` guides managed runtime installation. `ahtml status`, `ahtml doctor`, `ahtml build`, and `ahtml preview` can bootstrap or repair the managed shadcn runtime when no guided setup has run.
 - shadcn/ui is an internal renderer implementation detail; do not initialize shadcn in the current project for normal `ahtml` use.
 
 ## More

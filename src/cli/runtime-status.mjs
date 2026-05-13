@@ -16,24 +16,27 @@ import {
   runtimeVersion,
 } from "./runtime-paths.mjs"
 import { supportedRuntimeBase } from "../config/render-capabilities.mjs"
-import {
-  bundledRuntimeSetup,
-  createPromptUiManifest,
-} from "./runtime-setup.mjs"
+import { createPromptUiManifest, nativeRuntimeSetup } from "./runtime-setup.mjs"
+import { runtimeCssEntryExists } from "./runtime-surface.mjs"
 import { writeRuntimeTemplate } from "./runtime-template.mjs"
 
 export async function bootstrapManagedRuntime({
   packageVersion = "0.0.0",
   packageRoot = runtimePackageRoot,
   paths = getRuntimePaths(),
-  setup = bundledRuntimeSetup,
+  setup = nativeRuntimeSetup,
   schema,
 } = {}) {
   await mkdir(paths.runtimeDir, { recursive: true })
   await mkdir(paths.cacheDir, { recursive: true })
   await mkdir(paths.logsDir, { recursive: true })
   await mkdir(paths.configDir, { recursive: true })
-  await writeRuntimeTemplate({ packageRoot, paths, schema, setup })
+  const shadcnRuntimeSurface = await writeRuntimeTemplate({
+    packageRoot,
+    paths,
+    schema,
+    setup,
+  })
   const promptUiManifest = createPromptUiManifest({
     packageVersion,
     setup,
@@ -48,6 +51,7 @@ export async function bootstrapManagedRuntime({
     uiLibrary: setup.uiLibrary,
     componentSource: setup.componentSource,
     runtimeBase: supportedRuntimeBase,
+    shadcnRuntimeSurface,
     installMode: setup.installMode,
     preset: setup.preset,
     components: setup.components,
@@ -113,6 +117,10 @@ export async function getRuntimeStatus({
       path.join(paths.runtimeSrcDir, "main.tsx"),
     ),
     shadcnComponents: false,
+    componentsJson: await pathExists(
+      path.join(paths.runtimeDir, "components.json"),
+    ),
+    shadcnCssEntry: false,
     promptUiManifest: await pathExists(paths.promptUiManifestPath),
     runtimeCapabilities: await pathExists(paths.runtimeCapabilitiesPath),
     viteConfig: await pathExists(paths.runtimeViteConfigPath),
@@ -128,6 +136,7 @@ export async function getRuntimeStatus({
       components: manifest.installedUiComponents ?? manifest.components ?? [],
       paths,
     })
+    checks.shadcnCssEntry = await runtimeCssEntryExists({ manifest, paths })
   } catch (error) {
     manifestError = error instanceof Error ? error.message : String(error)
   }
@@ -145,6 +154,8 @@ export async function getRuntimeStatus({
     checks.manifest &&
     checks.rendererAdapter &&
     checks.shadcnComponents &&
+    checks.componentsJson &&
+    checks.shadcnCssEntry &&
     checks.promptUiManifest &&
     checks.runtimeCapabilities &&
     checks.viteConfig

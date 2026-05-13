@@ -5,6 +5,8 @@ import path from "node:path"
 import { pathToFileURL } from "node:url"
 import { promisify } from "node:util"
 
+import { startShadcnTestServer } from "./shadcn-test-server.mjs"
+
 const execFileAsync = promisify(execFile)
 const root = process.cwd()
 const npmCommand = "npm"
@@ -14,6 +16,7 @@ const tempRoot = await mkdtemp(path.join(os.tmpdir(), "ahtml-pack-"))
 const packDir = path.join(tempRoot, "pack")
 const consumerDir = path.join(tempRoot, "consumer")
 const runtimeHome = path.join(tempRoot, "runtime-home")
+const shadcnTestServer = await startShadcnTestServer()
 let ahtmlCommand
 let ahtmlScriptPath
 
@@ -70,17 +73,17 @@ try {
   await expectStdout(["schema", "--format", "json"], '"components"')
 
   await expectStdout(
-    ["setup", "--yes", "--component-source", "bundled"],
+    ["setup", "--yes", "--component-source", "shadcn-cli"],
     "ahtml runtime ready",
   )
   await expectStdout(
-    ["setup", "--yes", "--component-source", "bundled"],
+    ["setup", "--yes", "--component-source", "shadcn-cli"],
     "ahtml runtime already ready",
   )
   await expectStdout(["status"], "ready: yes")
   await expectStdout(["status"], "runtime manifest: ok")
   await expectStdout(["status"], "ui library: shadcn")
-  await expectStdout(["status"], "component source: bundled")
+  await expectStdout(["status"], "component source: shadcn-cli")
   await expectStdout(["status"], "prompt-ui manifest: ok")
   await expectStdout(
     ["status"],
@@ -164,6 +167,7 @@ try {
 
   console.log("Packed ahtml verification passed.")
 } finally {
+  await shadcnTestServer.close()
   await rm(tempRoot, { force: true, recursive: true })
 }
 
@@ -219,8 +223,13 @@ function assertPackBoundary(files) {
     "src/cli/runtime-setup.mjs",
     "src/cli/runtime-status.mjs",
     "src/cli/runtime-build.mjs",
+    "src/cli/shadcn-template/vite-app/index.html",
+    "src/cli/shadcn-template/vite-app/src/index.css",
+    "src/cli/shadcn-template/vite-app/tsconfig.json",
+    "src/cli/shadcn-template/vite-app/vite.config.ts",
     "src/cli/runtime-template.mjs",
     "src/cli/runtime-template/src/app.tsx",
+    "src/config/component-capabilities.mjs",
     "src/cli/schema.mjs",
     "src/cli/shadcn-api.mjs",
     "src/cli/validate.mjs",
@@ -395,5 +404,6 @@ function getAhtmlEnv() {
     ...process.env,
     AHTML_HOME: runtimeHome,
     AHTML_NO_UPDATE_CHECK: "1",
+    REGISTRY_URL: shadcnTestServer.registryUrl,
   }
 }

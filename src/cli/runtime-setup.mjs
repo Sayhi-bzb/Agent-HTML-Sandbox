@@ -35,13 +35,10 @@ const defaultRuntimeSetup = {
   components: requiredShadcnRuntimeComponents,
 }
 
-export const bundledRuntimeSetup = {
-  ...defaultRuntimeSetup,
-  componentSource: "bundled",
-}
+export const nativeRuntimeSetup = defaultRuntimeSetup
 
 const supportedUiLibraries = ["shadcn"]
-const supportedComponentSources = ["bundled", "shadcn-cli"]
+const supportedComponentSources = ["shadcn-cli"]
 const recommendedRuntimeComponents = [
   "accordion",
   "alert",
@@ -81,7 +78,7 @@ export async function resolveRuntimeSetup({
     installMode === "preset"
       ? (options.preset ?? answers.preset ?? defaultRuntimeSetup.preset)
       : "custom"
-  const componentCatalog = await getComponentCatalog(componentSource)
+  const componentCatalog = await getComponentCatalog()
   const shadcnPresets = listShadcnPresets()
   const components = withRequiredRuntimeComponents(
     normalizeComponents(
@@ -220,7 +217,7 @@ async function promptForRuntimeSetup() {
   const uiLibrary = defaultRuntimeSetup.uiLibrary
   const componentSource = await chooseOption({
     label: "Component source",
-    options: ["shadcn-cli", "bundled"],
+    options: ["shadcn-cli"],
     defaultValue: defaultRuntimeSetup.componentSource,
   })
   const installMode = await chooseOption({
@@ -238,7 +235,7 @@ async function promptForRuntimeSetup() {
       : "custom"
   const components =
     installMode === "custom"
-      ? await chooseComponentSet(await getComponentCatalog(componentSource))
+      ? await chooseComponentSet(await getComponentCatalog())
       : defaultRuntimeSetup.components
 
   outro("Runtime setup choices captured.")
@@ -341,11 +338,7 @@ function withRequiredRuntimeComponents(components) {
   return [...new Set([...components, ...requiredShadcnRuntimeComponents])]
 }
 
-async function getComponentCatalog(componentSource) {
-  if (componentSource !== "shadcn-cli") {
-    return fallbackShadcnComponents
-  }
-
+async function getComponentCatalog() {
   const catalog = await getShadcnComponentCatalog()
   return catalog.components
 }

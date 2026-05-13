@@ -9,7 +9,7 @@ import path from "node:path"
 import { pathToFileURL } from "node:url"
 import { promisify } from "node:util"
 
-import { describe, expect, it } from "vitest"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 const execFileAsync = promisify(execFile)
 const root = process.cwd()
@@ -74,6 +74,11 @@ type ValidateModule = {
 
 type CommandMetadataModule = {
   readonly commandMetadata: Readonly<Record<string, unknown>>
+  readonly formatCliCommandUsageBlock: () => string
+}
+
+type RenderCapabilitiesModule = {
+  readonly requiredShadcnRuntimeComponents: readonly string[]
 }
 
 type RuntimeSetupModule = {
@@ -97,6 +102,29 @@ type ShadcnApiModule = {
   readonly listShadcnPresets: () => readonly string[]
   readonly validateShadcnPreset: (value: string) => boolean
 }
+
+type ShadcnTestServerModule = {
+  readonly startShadcnTestServer: () => Promise<ShadcnTestServer>
+}
+
+type ShadcnTestServer = {
+  readonly registryUrl: string
+  readonly close: () => Promise<void>
+}
+
+let shadcnTestServer: ShadcnTestServer | undefined
+
+beforeAll(async () => {
+  const { startShadcnTestServer } = (await import(
+    pathToFileURL(path.join(root, "scripts", "shadcn-test-server.mjs")).href
+  )) as ShadcnTestServerModule
+
+  shadcnTestServer = await startShadcnTestServer()
+})
+
+afterAll(async () => {
+  await shadcnTestServer?.close()
+})
 
 describe("agent-html CLI", () => {
   it("keeps the checked-in schema prompt in sync with the CLI schema formatter", async () => {
@@ -130,7 +158,8 @@ describe("agent-html CLI", () => {
       expect(result.stdout).not.toContain("--scaffold")
     }
 
-    const commands = Object.keys(await importCommandMetadata())
+    const { commandMetadata } = await importCommandMetadata()
+    const commands = Object.keys(commandMetadata)
     for (const command of commands) {
       const { stdout } = await runCli([command, "--help"])
 
@@ -139,6 +168,16 @@ describe("agent-html CLI", () => {
     }
   }, 30000)
 
+  it("keeps the README CLI command block in sync with command metadata", async () => {
+    const { formatCliCommandUsageBlock } = await importCommandMetadata()
+    const readme = await readFile(path.join(root, "README.md"), "utf8")
+    const commandBlock = readme.match(
+      /## CLI Commands\s+```bash\n(?<commands>[\s\S]*?)\n```/,
+    )?.groups?.commands
+
+    expect(commandBlock).toBe(formatCliCommandUsageBlock())
+  })
+
   it("prints agent-facing schema without implementation props", async () => {
     const { stdout } = await runCli(["schema", "--format", "json"])
     const schema = parseJson<CliSchemaOutput>(stdout)
@@ -146,31 +185,30 @@ describe("agent-html CLI", () => {
 
     expect(schema.kind).toBe("agent-html-cli-schema")
     expect(schema.components.some((item) => item.name === "page")).toBe(true)
-    expect(schema.uiCapabilities.components).toContainEqual(
-      expect.objectContaining({
-        name: "tabs",
-        renderKind: "tabs",
-        source: "shadcn",
-        slots: expect.arrayContaining([
-          expect.objectContaining({
-            name: "tabs-content",
-            children: expect.arrayContaining(["card", "accordion"]),
-          }),
-        ]),
-      }),
+    const tabsCapability = schema.uiCapabilities.components.find(
+      (component) => component.name === "tabs",
     )
-    expect(schema.rendererSpec.components).toContainEqual(
-      expect.objectContaining({
-        name: "tabs",
-        kind: "tabs",
-        renderKind: "tabs",
-        slots: expect.arrayContaining([
-          expect.objectContaining({
-            name: "tab",
-            children: expect.arrayContaining(["card", "accordion"]),
-          }),
-        ]),
-      }),
+    expect(tabsCapability).toBeDefined()
+    expect(tabsCapability?.renderKind).toBe("tabs")
+    expect(tabsCapability?.source).toBe("shadcn")
+    const tabsContentSlot = tabsCapability?.slots.find(
+      (slot) => slot.name === "tabs-content",
+    )
+    expect(tabsContentSlot?.children).toEqual(
+      expect.arrayContaining(["card", "accordion"]),
+    )
+
+    const tabsRendererSpec = schema.rendererSpec.components.find(
+      (component) => component.name === "tabs",
+    )
+    expect(tabsRendererSpec).toBeDefined()
+    expect(tabsRendererSpec?.kind).toBe("tabs")
+    expect(tabsRendererSpec?.renderKind).toBe("tabs")
+    const tabRendererSlot = tabsRendererSpec?.slots.find(
+      (slot) => slot.name === "tab",
+    )
+    expect(tabRendererSlot?.children).toEqual(
+      expect.arrayContaining(["card", "accordion"]),
     )
     expect(serializedComponents).not.toContain('"className"')
     expect(serializedComponents).not.toContain('"style"')
@@ -209,6 +247,8 @@ describe("agent-html CLI", () => {
   it("bootstraps managed runtime from status without creating project scaffold files", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
     const runtimeHome = path.join(tempDir, ".ahtml")
+    const { requiredShadcnRuntimeComponents } =
+      await importRenderCapabilitiesModule()
 
     const missingStatus = await runCli(
       ["status"],
@@ -219,11 +259,12 @@ describe("agent-html CLI", () => {
     expect(missingStatus.stdout).toContain("ready: yes")
     expect(missingStatus.stdout).toContain("runtime manifest: ok")
     expect(missingStatus.stdout).toContain("ui library: shadcn")
-    expect(missingStatus.stdout).toContain("component source: bundled")
+    expect(missingStatus.stdout).toContain("component source: shadcn-cli")
     expect(missingStatus.stdout).toContain("runtime base: radix")
+    expect(missingStatus.stdout).toContain("runtime surface: shadcn-init")
     expect(missingStatus.stdout).toContain("runtime preset: nova")
     expect(missingStatus.stdout).toContain(
-      "installed ui components: accordion, alert, badge, card, separator, table, tabs",
+      `installed ui components: ${requiredShadcnRuntimeComponents.join(", ")}`,
     )
     expect(missingStatus.stdout).toContain("renderable agent components:")
     expect(missingStatus.stdout).toContain("prompt-ui manifest: ok")
@@ -265,13 +306,15 @@ describe("agent-html CLI", () => {
   it("sets up the managed shadcn runtime explicitly", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
     const runtimeHome = path.join(tempDir, ".ahtml")
+    const { requiredShadcnRuntimeComponents } =
+      await importRenderCapabilitiesModule()
 
     const setup = await runCli(
       [
         "setup",
         "--yes",
         "--component-source",
-        "bundled",
+        "shadcn-cli",
         "--preset",
         "custom",
         "--components",
@@ -283,11 +326,12 @@ describe("agent-html CLI", () => {
 
     expect(setup.stdout).toContain("ahtml runtime ready")
     expect(setup.stdout).toContain("ui library: shadcn")
-    expect(setup.stdout).toContain("component source: bundled")
+    expect(setup.stdout).toContain("component source: shadcn-cli")
     expect(setup.stdout).toContain("runtime base: radix")
+    expect(setup.stdout).toContain("runtime surface: shadcn-init")
     expect(setup.stdout).toContain("preset: custom")
     expect(setup.stdout).toContain(
-      "components: accordion, alert, badge, card, separator, table, tabs",
+      `components: ${requiredShadcnRuntimeComponents.join(", ")}`,
     )
     expect(setup.stdout).toContain("renderable agent components:")
     await expectFile(
@@ -312,7 +356,7 @@ describe("agent-html CLI", () => {
     )
     await expectFile(
       path.join(runtimeHome, "config", "prompt-ui.manifest.json"),
-      '"componentSource": "bundled"',
+      '"componentSource": "shadcn-cli"',
     )
     await expectFile(
       path.join(runtimeHome, "config", "prompt-ui.manifest.json"),
@@ -328,31 +372,25 @@ describe("agent-html CLI", () => {
     await rm(tempDir, { force: true, recursive: true })
   })
 
-  it("uses shadcn API for runtime setup catalogs and keeps bundled fallback renderable", async () => {
+  it("uses shadcn API for runtime setup catalogs and keeps required runtime components renderable", async () => {
     const { resolveRuntimeSetup } = await importRuntimeSetupModule()
+    const { requiredShadcnRuntimeComponents } =
+      await importRenderCapabilitiesModule()
     const {
       getShadcnComponentCatalog,
       listShadcnPresets,
       validateShadcnPreset,
     } = await importShadcnApiModule()
 
-    const bundled = await resolveRuntimeSetup({
+    const setup = await resolveRuntimeSetup({
       interactive: false,
       options: {
-        "component-source": "bundled",
+        "component-source": "shadcn-cli",
         preset: "custom",
-        components: "all",
+        components: "accordion",
       },
     })
-    expect(bundled.components).toEqual([
-      "accordion",
-      "alert",
-      "badge",
-      "card",
-      "separator",
-      "table",
-      "tabs",
-    ])
+    expect(setup.components).toEqual(requiredShadcnRuntimeComponents)
 
     const catalog = await getShadcnComponentCatalog()
     expect(catalog.source).toBe("shadcn-api")
@@ -643,6 +681,10 @@ describe("agent-html CLI", () => {
     expect(stdout).toContain("ok runtime:base radix")
     expect(stdout).toContain("ok runtime:schema-renderer-parity")
     expect(stdout).toContain("ok runtime:renderer-adapter")
+    expect(stdout).toContain("ok runtime:components-json")
+    expect(stdout).toContain("ok runtime:shadcn-css-entry")
+    expect(stdout).toContain("ok runtime:shadcn-css-base")
+    expect(stdout).toContain("ok runtime:shadcn-surface")
     expect(stdout).toContain("ok runtime:shadcn-components")
     expect(stdout).toContain("ok runtime:prompt-ui-manifest")
     expect(stdout).toContain("ok runtime:render-capabilities")
@@ -853,6 +895,9 @@ describe("agent-html CLI", () => {
           ...process.env,
           AHTML_HOME: runtimeHome,
           AHTML_NO_UPDATE_CHECK: "1",
+          ...(shadcnTestServer
+            ? { REGISTRY_URL: shadcnTestServer.registryUrl }
+            : {}),
         },
         stdio: ["ignore", "pipe", "pipe"],
       },
@@ -926,6 +971,9 @@ function runCli(
     env: {
       ...process.env,
       AHTML_NO_UPDATE_CHECK: "1",
+      ...(shadcnTestServer
+        ? { REGISTRY_URL: shadcnTestServer.registryUrl }
+        : {}),
       ...env,
     },
   })
@@ -943,11 +991,15 @@ async function importCommandMetadata() {
   const commandModuleUrl = pathToFileURL(
     path.join(root, "src", "cli", "commands.mjs"),
   ).href
-  const { commandMetadata } = (await import(
-    commandModuleUrl
-  )) as CommandMetadataModule
+  return (await import(commandModuleUrl)) as CommandMetadataModule
+}
 
-  return commandMetadata
+async function importRenderCapabilitiesModule(): Promise<RenderCapabilitiesModule> {
+  const renderCapabilitiesUrl = pathToFileURL(
+    path.join(root, "src", "config", "render-capabilities.mjs"),
+  ).href
+
+  return (await import(renderCapabilitiesUrl)) as RenderCapabilitiesModule
 }
 
 async function importRuntimeSetupModule(): Promise<RuntimeSetupModule> {

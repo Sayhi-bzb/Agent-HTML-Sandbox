@@ -57,7 +57,7 @@ Runtime setup is guided by `ahtml setup`. Runtime-aware commands can still insta
 ahtml setup --force
 ```
 
-Do not use removed project-local commands or flags such as `init`, `--template`, `--apply`, or `--scaffold`. `ahtml setup` may read shadcn component and preset metadata from shadcn APIs, then uses shadcn CLI inside the managed runtime. `ahtml setup --preset`, `ahtml setup --components`, and `ahtml setup --component-source bundled` configure the managed runtime under `.ahtml`; they do not configure the current project.
+Do not use removed project-local commands or flags such as `init`, `--template`, `--apply`, or `--scaffold`. `ahtml setup` may read shadcn component and preset metadata from shadcn APIs, then uses shadcn CLI inside the managed runtime. `ahtml setup --preset`, `ahtml setup --components`, and `ahtml setup --component-source shadcn-cli` configure the managed runtime under `.ahtml`; they do not configure the current project.
 
 ## After Install
 

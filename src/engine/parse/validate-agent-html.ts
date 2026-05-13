@@ -389,14 +389,16 @@ function getSlotDescendants(
 function normalizeUiAttrs(
   attrs: Readonly<Record<string, string>>,
 ): Readonly<Record<string, string>> {
-  const { name, ...rest } = attrs
+  const rest = { ...attrs }
+  delete rest.name
   return normalizeKnownAttrAliases(rest)
 }
 
 function normalizeSlotAttrs(
   attrs: Readonly<Record<string, string>>,
 ): Readonly<Record<string, string>> {
-  const { name, ...rest } = attrs
+  const rest = { ...attrs }
+  delete rest.name
   return normalizeKnownAttrAliases(rest)
 }
 

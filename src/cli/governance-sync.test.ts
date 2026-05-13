@@ -68,8 +68,11 @@ describe("code governance sync blocks", () => {
     expect(managedRuntimeSource).not.toContain("--local-project")
     expect(managedRuntimeSource).not.toContain("--scaffold")
     expect(managedRuntimeSource).not.toContain("--apply")
-    expect(managedRuntimeSource).not.toContain("--template")
-    expect(managedRuntimeSource).not.toContain("--components")
+    const commandUsage = Object.values(commandModule.commandMetadata)
+      .map((definition) => definition.usage)
+      .join("\n")
+
+    expect(commandUsage).not.toContain("--template")
     expect(managedRuntimeSource).not.toContain("src/cli/scaffold.mjs")
   })
 

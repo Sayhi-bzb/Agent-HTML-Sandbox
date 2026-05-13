@@ -20,8 +20,10 @@ export default {
       clsx: dependencies.clsxRoot,
       "lucide-react": dependencies.lucideReactRoot,
       "radix-ui": dependencies.radixUiRoot,
+      "shadcn/tailwind.css": dependencies.shadcnTailwindStylesheet,
       "tailwind-merge": dependencies.tailwindMergeRoot,
       tailwindcss: dependencies.tailwindcssStylesheet,
+      "tw-animate-css": dependencies.twAnimateCssStylesheet,
     },
   },
   ssr: {

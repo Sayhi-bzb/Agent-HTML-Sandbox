@@ -6,7 +6,7 @@ export const commandMetadata = {
     purpose:
       "Interactively configure or repair the user-level managed runtime.",
     usage:
-      "ahtml setup [--yes] [--force] [--ui shadcn] [--component-source bundled|shadcn-cli] [--preset <name|custom>] [--components <list|all>]",
+      "ahtml setup [--yes] [--force] [--ui shadcn] [--component-source shadcn-cli] [--preset <name|custom>] [--components <list|all>]",
     options: [
       {
         name: "yes",
@@ -171,6 +171,13 @@ Safety:
 
 Run "ahtml <command> --help" for command details.
 `
+}
+
+export function formatCliCommandUsageBlock() {
+  return Object.entries(commandMetadata)
+    .filter(([, definition]) => !definition.hidden)
+    .map(([, definition]) => definition.usage.split("\n")[0])
+    .join("\n")
 }
 
 export function formatCommandHelp(commandName, definition) {

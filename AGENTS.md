@@ -4,7 +4,7 @@
 
 `AGENTS.md` is the maintainer's relay to coding agents started by other developers and contributors. Treat it as the first-stop governance file for prompt guidance, contribution constraints, repo navigation, documentation ownership, verification expectations, issue handling, and GitNexus usage.
 
-Keep end-user product instructions in `README.md` and `docs-web/content/`. Keep detailed recurring maintenance, release, and deployment procedures in `spec/maintenance-checklist.md`.
+Keep end-user product instructions in `README.md` and `docs-web/content/`. Keep architecture and checkpoint material in `blueprint/` and `spec/`.
 
 ## Project Goal
 
@@ -28,7 +28,7 @@ Architecture principles live under `blueprint/`; start at `blueprint/index.md`. 
 - `src/cli`: command orchestration, local IO, init/build/preview/inspect/status/doctor/config.
 - `docs-web/content/`: public documentation content.
 - `.agents/skills/ahtml/`: agent-facing skill guidance for install, usage, debug, and bug-reporting behavior.
-- `spec/maintenance-checklist.md`: recurring development, release, docs, and governance checks.
+- `spec/`: roadmap, map, checkpoints, and architecture-adjacent planning notes.
 - `blueprint/`: architecture principles, design boundaries, and tool decisions.
 
 ## Agent Workflow
@@ -38,12 +38,26 @@ Architecture principles live under `blueprint/`; start at `blueprint/index.md`. 
 - Keep changes narrow and aligned with the package boundary.
 - Do not mix unrelated code, docs, spec, blueprint, release, or generated-output edits.
 - Do not silently expand scope when you find adjacent problems. Report the problem, then fix it only when it is required for the requested task or explicitly approved.
-- Use GitNexus for unfamiliar code paths, impact analysis, refactors, and pre-commit scope checks.
-- Before editing a function, class, or method, run GitNexus impact analysis on that symbol and review direct callers.
-- Before refactors or renames, use GitNexus context/rename flows instead of plain find-and-replace.
+- Work in explicit stages. Do not mix architecture planning, code implementation, test repair, and real end-to-end runtime probing in the same loop unless the task explicitly requires it.
+- Before running a heavy command, state what requirement it verifies and what result will stop the loop. Do not repeat a slow command merely for reassurance after small unrelated edits.
+- Use GitNexus for unfamiliar code paths, public API changes, shared runtime / CLI flows, impact analysis, refactors, and pre-commit scope checks.
+- Before editing a public function, shared runtime / CLI flow, or unfamiliar symbol, run GitNexus impact analysis and review direct callers. For small copy edits, local test assertions, or clearly local helpers, read the surrounding code instead of forcing GitNexus.
+- Before refactors or renames, use GitNexus context / rename flows instead of plain find-and-replace.
 - Before committing, run GitNexus `detect_changes` and confirm affected symbols and flows are expected.
 - Do not run bare `npx gitnexus analyze` in this repo; it rewrites `AGENTS.md` and `CLAUDE.md`.
 - Update the GitNexus index with `npm run gitnexus:analyze` or `npm run gitnexus:analyze:force`, which pass `--skip-agents-md`.
+
+## Verification Rhythm
+
+- Match verification weight to change risk. Small docs or prompt copy changes should not trigger CLI runtime E2E tests.
+- For pure governance docs or ordinary Markdown paragraph changes, read the final diff only. Do not run Prettier, lint, tests, build, or runtime commands.
+- For docs changes that touch tables, code blocks, generated snippets, command output, MDX structure, routes, or examples, run only the targeted formatting, markdown, or docs check that covers the changed surface.
+- For ordinary CLI/runtime code changes, run `npm run build` once, then the narrowest relevant test file or test name once. Re-run only after a code change that could affect the failing area.
+- For lint and formatting on code changes, start with touched files: `npx eslint <files>` and `npx prettier --check <files>`. Use full `npm run lint` or broader checks as a final gate, not after every small edit.
+- Treat `npm run test:run -- src/cli/cli.test.ts` as a heavy CLI/runtime gate. Use it for changes to setup, status, doctor, build, preview, schema output, or runtime rendering, not for unrelated copy edits.
+- Treat real shadcn init, registry access, build/preview servers, and browser visual checks as explicit E2E gates. Run them with an isolated `AHTML_HOME`, a clear timeout, and a concrete success criterion.
+- If a command fails because of network restrictions, sandbox limits, Windows file locks, registry availability, or a long-running external tool, record the blocker and switch to the smallest useful local verification. Do not keep retrying the same heavy command without changing the conditions.
+- Do not leave long-running dev servers, preview servers, or test sessions active when finishing a turn.
 
 ## Issue And Suggestion Protocol
 
@@ -96,9 +110,9 @@ Architecture principles live under `blueprint/`; start at `blueprint/index.md`. 
 - Keep commits scoped to one concern.
 - Do not include generated output unless it is required for the change.
 - Check `git status --short` before committing so unrelated worktree changes are not swept in.
-- For ordinary code or docs edits, run `npm run check:commit`.
-- For package-boundary, runtime, CLI build, release, or dependency changes, run the relevant targeted checks from `spec/maintenance-checklist.md`.
-- For docs-web site changes, run `npm run check:docs`.
-- Before release or after broad cross-layer changes, use `spec/maintenance-checklist.md` as the release surface and run only the checks it names.
+- Treat `npm run check:commit` as a pre-commit gate, not the default verification after every ordinary edit.
+- For package-boundary, runtime, CLI build, release, or dependency changes, run the narrow checks that prove the touched surface first; use broader package checks only as the final gate.
+- For docs-web changes, run `npm run check:docs` only when the change touches MDX structure, examples, routes, build behavior, or generated output. For small copy changes, inspect the diff.
+- Before release or after broad cross-layer changes, define the required gate explicitly and run only the checks needed for that release surface.
 - For package-boundary changes, verify `package.json.files` and `scripts/verify-packed-ahtml.mjs` still agree.
 - Before committing, run GitNexus `detect_changes` and confirm affected symbols and flows are expected.
