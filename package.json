@@ -1,6 +1,6 @@
 {
   "name": "@agent-html/ahtml",
-  "version": "0.1.0-alpha.10",
+  "version": "0.1.0-alpha.11",
   "description": "Sanitized agent-html artifact CLI.",
   "license": "MIT",
   "type": "module",
