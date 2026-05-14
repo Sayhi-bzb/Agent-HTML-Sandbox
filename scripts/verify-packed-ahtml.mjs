@@ -64,13 +64,13 @@ try {
     pathToFileURL(commandMetadataPath).href
   )
 
-  await expectStdout(["schema", "--format", "prompt"], "Write agent-html only.")
-  await expectStdout(["--help"], "Closed-loop workflow:")
-  await expectStdout(["--help"], "ahtml setup --yes")
+  await expectStdout(["prompt", "--format", "prompt"], "Write agent-html only.")
+  await expectStdout(["--help"], "Main workflow:")
+  await expectStdout(["--help"], "ahtml prompt")
   for (const command of Object.keys(commandMetadata)) {
     await expectStdout([command, "--help"], `ahtml ${command}`)
   }
-  await expectStdout(["schema", "--format", "json"], '"components"')
+  await expectStdout(["prompt", "--format", "json"], '"components"')
 
   await expectStdout(
     ["setup", "--yes", "--component-source", "shadcn-cli"],
@@ -98,12 +98,6 @@ try {
     path.join(runtimeHome, "config", "prompt-ui.manifest.json"),
     "ahtml-prompt-ui-manifest",
   )
-  await expectStdout(["status"], "ready: yes")
-  await expectStdout(
-    ["status"],
-    "Next: ahtml build --input artifact.agent.html --out dist/html",
-  )
-
   const documentPath = path.join(consumerDir, "artifact.agent.html")
   const outputDir = path.join(consumerDir, "dist", "html")
   await writeFile(
@@ -135,24 +129,23 @@ try {
   )
   await assertNoProjectScaffold(consumerDir)
 
-  await expectStdout(["validate", "--input", documentPath], "agent-html valid")
   await expectStdout(["inspect", "--input", documentPath], "card: 1")
   await expectStdout(["inspect", "--dir", outputDir], "card: 1")
   await expectStdout(["doctor"], "ok environment:node")
   await expectStdout(["doctor"], "ok runtime:manifest")
   await expectPreview(documentPath, path.join(consumerDir, "dist", "preview"))
 
-  await expectStdout(["config", "get"], '"report-default"')
-  await expectFailure(
-    ["config", "set", "density", "compact"],
-    "config accepts only get",
-  )
-  await expectFailure(
-    ["schema", "--input", documentPath],
-    "does not accept --input",
-  )
+  await expectFailure(["config", "get"], 'Unknown command "config"')
   await expectFailure(["init"], 'Unknown command "init"')
   await expectFailure(["compose"], 'Unknown command "compose"')
+  await expectFailure(
+    ["schema", "--input", documentPath],
+    'Unknown command "schema"',
+  )
+  await expectFailure(
+    ["validate", "--input", documentPath],
+    'Unknown command "validate"',
+  )
 
   await expectFailure(
     [

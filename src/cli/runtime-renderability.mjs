@@ -39,7 +39,11 @@ const rendererSpecScalarFields = [
   "itemHeadingProp",
   "childMode",
 ]
-const rendererSpecStructuredFields = ["requiredExports", "rootByProp", "propMappings"]
+const rendererSpecStructuredFields = [
+  "requiredExports",
+  "rootByProp",
+  "propMappings",
+]
 
 export async function readRuntimeCapabilities(paths) {
   return parseJson(
@@ -294,7 +298,12 @@ export function assertRuntimeRendererRegistryParity(runtimeCapabilities) {
   }
 }
 
-export function assertSameStringSet({ actual, actualName, expected, expectedName }) {
+export function assertSameStringSet({
+  actual,
+  actualName,
+  expected,
+  expectedName,
+}) {
   const actualSet = new Set(actual)
   const expectedSet = new Set(expected)
   const missing = expected.filter((item) => !actualSet.has(item))
@@ -313,7 +322,12 @@ export function assertSameStringSet({ actual, actualName, expected, expectedName
   }
 }
 
-export function assertSameValue({ actual, actualName, expected, expectedName }) {
+export function assertSameValue({
+  actual,
+  actualName,
+  expected,
+  expectedName,
+}) {
   if (actual !== expected) {
     throw new Error(
       `${actualName} does not match ${expectedName}. Actual: ${String(actual)} Expected: ${String(expected)}.`,
@@ -321,7 +335,12 @@ export function assertSameValue({ actual, actualName, expected, expectedName }) 
   }
 }
 
-function assertRendererSpecFields({ actual, actualName, expected, expectedName }) {
+function assertRendererSpecFields({
+  actual,
+  actualName,
+  expected,
+  expectedName,
+}) {
   for (const fieldName of rendererSpecScalarFields) {
     assertSameValue({
       actual: actual?.[fieldName],
@@ -341,10 +360,7 @@ function assertRendererSpecFields({ actual, actualName, expected, expectedName }
   }
 }
 
-function assertRendererSpecComponentRequirements({
-  component,
-  componentName,
-}) {
+function assertRendererSpecComponentRequirements({ component, componentName }) {
   const issues = collectRendererSpecComponentIssues(component)
 
   if (issues.length > 0) {

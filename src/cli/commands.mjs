@@ -179,9 +179,7 @@ export function formatCommandHelp(commandName, definition) {
       "Options:",
       ...definition.options
         .filter((option) => !option.hidden)
-        .map(
-        (option) => `  --${option.name.padEnd(7)} ${option.description}`,
-        ),
+        .map((option) => `  --${option.name.padEnd(7)} ${option.description}`),
     )
   }
 

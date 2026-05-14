@@ -31,21 +31,16 @@ const registryNames = [
   "toggle",
   "tooltip",
 ]
-const blockedPropCandidates = [
-  "asChild",
-  "class",
-  "className",
-  "style",
-]
+const blockedPropCandidates = ["asChild", "class", "className", "style"]
 
 const overlays = await loadOverlays()
 const registryItems = await getRegistryItems(
   registryNames.map((name) => `@shadcn/${name}`),
   { useCache: true },
 )
-const introspections = registryItems.map(createIntrospection).sort((left, right) =>
-  left.registryName.localeCompare(right.registryName),
-)
+const introspections = registryItems
+  .map(createIntrospection)
+  .sort((left, right) => left.registryName.localeCompare(right.registryName))
 const schemas = overlays
   .filter((overlay) => overlay.expose)
   .map((overlay) => ({
@@ -125,7 +120,9 @@ function extractExports(sourceFile) {
       const clause = node.exportClause
       const elements = ts.isNamedExports(clause) ? clause.elements : []
       exports.push(
-        ...elements.map((element) => (element.propertyName ?? element.name).text),
+        ...elements.map(
+          (element) => (element.propertyName ?? element.name).text,
+        ),
       )
     }
 
@@ -176,7 +173,10 @@ function extractVariantProps(sourceFile) {
         )
 
         if (variantProperty && ts.isPropertyAssignment(variantProperty)) {
-          Object.assign(variants, extractObjectKeysByProperty(variantProperty.initializer))
+          Object.assign(
+            variants,
+            extractObjectKeysByProperty(variantProperty.initializer),
+          )
         }
       }
     }
@@ -219,10 +219,7 @@ function extractBlockedProps(sourceFile) {
   return [...found]
 
   function visit(node) {
-    if (
-      ts.isIdentifier(node) &&
-      blockedPropCandidates.includes(node.text)
-    ) {
+    if (ts.isIdentifier(node) && blockedPropCandidates.includes(node.text)) {
       found.add(node.text)
     }
 
@@ -250,9 +247,9 @@ function extractObjectKeysByProperty(objectNode) {
 function isExportedDeclaration(node) {
   return Boolean(
     ts.canHaveModifiers(node) &&
-      ts
-        .getModifiers(node)
-        ?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword),
+    ts
+      .getModifiers(node)
+      ?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword),
   )
 }
 

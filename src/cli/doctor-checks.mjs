@@ -14,7 +14,6 @@ import {
   assertRuntimeCssEntry,
   assertRuntimeCssImports,
   getShadcnRuntimeProvenanceState,
-  formatShadcnRuntimeProvenance,
   assertRuntimeSurface,
   formatShadcnRuntimeSurface,
   MissingBuiltArtifactCssError,
@@ -338,7 +337,6 @@ function getDeclarationName(node) {
 
   return undefined
 }
-
 
 async function runDoctorCheck(category, name, check, options = {}) {
   try {

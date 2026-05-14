@@ -95,7 +95,9 @@ describe("createRuntimeElementRegistrySpec", () => {
     const rendererMapping = createRendererMapping([
       {
         name: "list",
-        props: [{ name: "variant", valueKind: "enum", enumValues: ["ordered"] }],
+        props: [
+          { name: "variant", valueKind: "enum", enumValues: ["ordered"] },
+        ],
         allowedChildren: ["item"],
       },
       {
@@ -138,19 +140,25 @@ describe("createRuntimeElementRegistrySpec", () => {
       },
     ])
 
-    const list = rendererMapping.components.find((component) => component.name === "list")
+    const list = rendererMapping.components.find(
+      (component) => component.name === "list",
+    )
     const itemSlot = list?.slots.find((slot) => slot.name === "item")
     expect(itemSlot?.childNames).toEqual(["item"])
     expect(itemSlot?.children).toEqual(["text"])
 
-    const tabs = rendererMapping.components.find((component) => component.name === "tabs")
+    const tabs = rendererMapping.components.find(
+      (component) => component.name === "tabs",
+    )
     const tabSlot = tabs?.slots.find((slot) => slot.name === "tab")
     expect(tabSlot?.childNames).toEqual(["tab"])
     expect(tabSlot?.children).toEqual(["card"])
     expect(tabs?.itemValueProp).toBe("value")
     expect(tabs?.itemHeadingProp).toBe("label")
 
-    const table = rendererMapping.components.find((component) => component.name === "table")
+    const table = rendererMapping.components.find(
+      (component) => component.name === "table",
+    )
     expect(table?.kindProp).toBe("kind")
 
     for (const component of rendererMapping.components) {
@@ -159,6 +167,8 @@ describe("createRuntimeElementRegistrySpec", () => {
   })
 
   it("keeps runtime renderer kind template in sync with shared kind definitions", () => {
-    expect(createRuntimeRendererKindSpec().kinds).toEqual([...runtimeRendererKinds])
+    expect(createRuntimeRendererKindSpec().kinds).toEqual([
+      ...runtimeRendererKinds,
+    ])
   })
 })

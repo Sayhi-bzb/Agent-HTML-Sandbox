@@ -58,7 +58,9 @@ type LoadedModules = {
     readonly manifest: RuntimeManifest
     readonly paths: RuntimePaths
   }) => Promise<string>
-  readonly getShadcnRuntimeProvenanceState: (surface: Record<string, unknown>) => {
+  readonly getShadcnRuntimeProvenanceState: (
+    surface: Record<string, unknown>,
+  ) => {
     readonly state: string
     readonly detail: string
   }
@@ -101,9 +103,9 @@ type RuntimeManifest = {
 
 afterEach(async () => {
   await Promise.all(
-    temporaryDirectories.splice(0).map((directory) =>
-      rm(directory, { force: true, recursive: true }),
-    ),
+    temporaryDirectories
+      .splice(0)
+      .map((directory) => rm(directory, { force: true, recursive: true })),
   )
 })
 
@@ -147,7 +149,9 @@ describe("runtime surface completeness", () => {
     expect(output).toContain(
       "fail runtime:shadcn-css-imports shadcn CSS entry is missing required imports: tw-animate-css, shadcn/tailwind.css.",
     )
-    expect(output).toContain("skip artifact:built-css No built artifact CSS found")
+    expect(output).toContain(
+      "skip artifact:built-css No built artifact CSS found",
+    )
     expect(exitCode).toBe(1)
   })
 
@@ -411,7 +415,9 @@ async function createRuntimeFixture({
     preset: nativeRuntimeSetup.preset,
     components: [...nativeRuntimeSetup.components],
     installedUiComponents: [...nativeRuntimeSetup.components],
-    renderableAgentComponents: schema.components.map((component) => component.name),
+    renderableAgentComponents: schema.components.map(
+      (component) => component.name,
+    ),
     paths: {
       runtime: runtimePaths.runtimeDir,
       cache: runtimePaths.cacheDir,
@@ -525,14 +531,12 @@ function getRequiredComponentExports(component: string) {
 async function captureStdout(callback: () => Promise<void>) {
   let output = ""
   const originalExitCode = process.exitCode
-  const writeSpy = vi
-    .spyOn(process.stdout, "write")
-    .mockImplementation(
-      ((chunk: string | Uint8Array) => {
-        output += String(chunk)
-        return true
-      }) as typeof process.stdout.write,
-    )
+  const writeSpy = vi.spyOn(process.stdout, "write").mockImplementation(((
+    chunk: string | Uint8Array,
+  ) => {
+    output += String(chunk)
+    return true
+  }) as typeof process.stdout.write)
 
   process.exitCode = 0
   try {
@@ -556,15 +560,24 @@ async function loadModules(): Promise<LoadedModules> {
     schemaModule,
   ] = await Promise.all([
     import(
-      pathToFileURL(
-        path.join(root, "src", "config", "render-capabilities.mjs"),
-      ).href
+      pathToFileURL(path.join(root, "src", "config", "render-capabilities.mjs"))
+        .href
     ),
-    import(pathToFileURL(path.join(root, "src", "cli", "doctor-checks.mjs")).href),
-    import(pathToFileURL(path.join(root, "src", "cli", "runtime-paths.mjs")).href),
-    import(pathToFileURL(path.join(root, "src", "cli", "runtime-setup.mjs")).href),
-    import(pathToFileURL(path.join(root, "src", "cli", "runtime-surface.mjs")).href),
-    import(pathToFileURL(path.join(root, "src", "cli", "runtime-status.mjs")).href),
+    import(
+      pathToFileURL(path.join(root, "src", "cli", "doctor-checks.mjs")).href
+    ),
+    import(
+      pathToFileURL(path.join(root, "src", "cli", "runtime-paths.mjs")).href
+    ),
+    import(
+      pathToFileURL(path.join(root, "src", "cli", "runtime-setup.mjs")).href
+    ),
+    import(
+      pathToFileURL(path.join(root, "src", "cli", "runtime-surface.mjs")).href
+    ),
+    import(
+      pathToFileURL(path.join(root, "src", "cli", "runtime-status.mjs")).href
+    ),
     import(pathToFileURL(path.join(root, "src", "cli", "schema.mjs")).href),
   ])
 

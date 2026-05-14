@@ -38,34 +38,21 @@ jobs:
       - name: Run package release checks
         run: npm run release:check:ci
 
-      - name: Determine release metadata
-        id: release
-        shell: bash
-        run: |
-          version="$(npm run --silent release:metadata version)"
-          dist_tag="$(npm run --silent release:metadata distTag)"
-
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "dist_tag=$dist_tag" >> "$GITHUB_OUTPUT"
-          echo "Package version: $version"
-          echo "npm dist-tag: $dist_tag"
-
       - name: Verify tag matches package version
         if: ${{ github.event_name == 'push' }}
         shell: bash
-        env:
-          PACKAGE_VERSION: ${{ steps.release.outputs.version }}
         run: |
+          package_version="$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).version")"
           tag_version="${GITHUB_REF_NAME#v}"
 
-          if [[ "$tag_version" != "$PACKAGE_VERSION" ]]; then
-            echo "Tag version '$tag_version' does not match package.json version '$PACKAGE_VERSION'." >&2
+          if [[ "$tag_version" != "$package_version" ]]; then
+            echo "Tag version '$tag_version' does not match package.json version '$package_version'." >&2
             exit 1
           fi
 
       - name: Dry-run publish
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
-        run: npm publish --access public --tag ${{ steps.release.outputs.dist_tag }} --dry-run
+        run: npm publish --access public --tag latest --dry-run
 
       - name: Reject manual publish
         if: ${{ github.event_name == 'workflow_dispatch' && !inputs.dry_run }}
@@ -75,4 +62,4 @@ jobs:
 
       - name: Publish package
         if: ${{ github.event_name == 'push' }}
-        run: npm publish --access public --tag ${{ steps.release.outputs.dist_tag }}
+        run: npm publish --access public --tag latest

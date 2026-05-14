@@ -219,11 +219,7 @@ describe("agent-html CLI contracts", () => {
     )
 
     await expectCliFailure(
-      runCliWithServer(
-        ["build", inputPath, "--out", outputDir],
-        {},
-        tempDir,
-      ),
+      runCliWithServer(["build", inputPath, "--out", outputDir], {}, tempDir),
       "unknown-attr",
     )
     await expectPathMissing(path.join(outputDir, "index.html"))
@@ -244,7 +240,11 @@ describe("agent-html CLI contracts", () => {
       'Unknown command "schema"',
     )
     await expectCliFailure(
-      runCliWithServer(["validate", "--input", "artifact.agent.html"], {}, tempDir),
+      runCliWithServer(
+        ["validate", "--input", "artifact.agent.html"],
+        {},
+        tempDir,
+      ),
       'Unknown command "validate"',
     )
     await rm(tempDir, { force: true, recursive: true })
