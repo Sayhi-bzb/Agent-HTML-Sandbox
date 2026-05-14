@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process"
+import { existsSync } from "node:fs"
 import { createRequire } from "node:module"
 import { access, cp, mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import path from "node:path"
@@ -7,10 +8,15 @@ import { promisify } from "node:util"
 
 import {
   createUiCapabilities,
-  createRendererSpec,
+  createRendererMapping,
+  createRuntimeElementRegistrySpec,
+  createRuntimeRendererKindSpec,
   supportedRuntimeBase,
 } from "../config/render-capabilities.mjs"
-import { createShadcnRuntimeSurface } from "./runtime-surface.mjs"
+import {
+  createShadcnRuntimeSurface,
+  recordManagedRuntimeProof,
+} from "./runtime-surface.mjs"
 import { getDefaultShadcnPreset } from "./shadcn-api.mjs"
 
 const execFileAsync = promisify(execFile)
@@ -18,12 +24,11 @@ const templateDir = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "runtime-template",
 )
-const shadcnTemplateRoot = path.join(
+const rendererSourceDir = path.join(templateDir, "src")
+const shadcnTemplateRootDir = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "shadcn-template",
 )
-const shadcnBootstrapTemplateDir = path.join(shadcnTemplateRoot, "vite-app")
-const rendererSourceDir = path.join(templateDir, "src")
 
 export async function writeRuntimeTemplate({
   packageRoot,
@@ -32,9 +37,13 @@ export async function writeRuntimeTemplate({
   setup,
 }) {
   const dependencies = resolveRuntimeDependencies(packageRoot)
+  const components = Array.isArray(schema?.components) ? schema.components : []
+  const verificationData =
+    schema?.verificationData ?? createUiCapabilities(components)
+  const rendererMapping =
+    schema?.rendererMapping ?? createRendererMapping(components)
 
   await rm(paths.runtimeDir, { force: true, recursive: true })
-
   await seedRuntimeProjectShell({ packageRoot, paths })
   await initShadcnRuntime({ packageRoot, paths, setup })
 
@@ -49,16 +58,39 @@ export async function writeRuntimeTemplate({
     components: setup.components,
     paths,
   })
-  await injectRendererFiles({ paths, runtimeSurface })
+  await injectRendererFiles({
+    paths,
+    rendererMapping,
+    runtimeSurface,
+  })
   await renderViteConfig({ dependencies, paths })
-  await writeRuntimeCapabilities({ paths, schema, setup, runtimeSurface })
+  await cleanupRuntimeBootstrapArtifacts(paths)
+  const provenRuntimeSurface = await recordManagedRuntimeProof({
+    paths,
+    surface: runtimeSurface,
+  })
+  await writeRuntimeCapabilities({
+    components,
+    paths,
+    rendererMapping,
+    runtimeSurface: provenRuntimeSurface,
+    setup,
+    verificationData,
+  })
 
-  return runtimeSurface
+  return provenRuntimeSurface
 }
 
 async function seedRuntimeProjectShell({ packageRoot, paths }) {
-  await cp(shadcnBootstrapTemplateDir, paths.runtimeDir, { recursive: true })
+  await scaffoldManagedRuntimeShell({ paths })
   await writeRuntimePackageManifest({ packageRoot, paths })
+}
+
+async function scaffoldManagedRuntimeShell({ paths }) {
+  await mkdir(paths.runtimeSrcDir, { recursive: true })
+  await cp(path.join(shadcnTemplateRootDir, "vite-app"), paths.runtimeDir, {
+    recursive: true,
+  })
 }
 
 export function resolveRuntimeDependencies(packageRoot) {
@@ -94,14 +126,32 @@ export function resolveRuntimeDependencies(packageRoot) {
       "index.css",
     ),
     tailwindcssVitePlugin: packageRequire.resolve("@tailwindcss/vite"),
-    twAnimateCssStylesheet: path.join(
-      packageRoot,
-      "node_modules",
-      "tw-animate-css",
-      "dist",
-      "tw-animate.css",
-    ),
+    twAnimateCssStylesheet: resolvePackageSearchPathAsset({
+      assetPath: path.join("dist", "tw-animate.css"),
+      packageName: "tw-animate-css",
+      packageRequire,
+    }),
   }
+}
+
+function resolvePackageSearchPathAsset({
+  assetPath,
+  packageName,
+  packageRequire,
+}) {
+  const searchPaths = packageRequire.resolve.paths(packageName) ?? []
+
+  for (const searchPath of searchPaths) {
+    const candidate = path.join(searchPath, packageName, assetPath)
+
+    if (existsSync(candidate)) {
+      return candidate
+    }
+  }
+
+  throw new Error(
+    `Unable to resolve ${packageName}/${assetPath.replaceAll("\\", "/")} from Node search paths for managed runtime bootstrap.`,
+  )
 }
 
 async function initShadcnRuntime({ packageRoot, paths, setup }) {
@@ -116,6 +166,7 @@ async function initShadcnRuntime({ packageRoot, paths, setup }) {
     "--yes",
     "--force",
     "--no-reinstall",
+    "--no-monorepo",
     "--cwd",
     paths.runtimeDir,
     "--silent",
@@ -134,7 +185,7 @@ async function initShadcnRuntime({ packageRoot, paths, setup }) {
   }
 }
 
-async function injectRendererFiles({ paths, runtimeSurface }) {
+async function injectRendererFiles({ paths, rendererMapping, runtimeSurface }) {
   await mkdir(paths.runtimeSrcDir, { recursive: true })
   await cp(
     path.join(rendererSourceDir, "renderer"),
@@ -149,6 +200,8 @@ async function injectRendererFiles({ paths, runtimeSurface }) {
     path.join(rendererSourceDir, "ssr.tsx"),
     path.join(paths.runtimeSrcDir, "ssr.tsx"),
   )
+  await writeRuntimeRendererKindSource({ paths })
+  await writeRuntimeElementRegistrySource({ paths, rendererMapping })
   await writeAhtmlCss(paths)
   await writeRendererMain({ paths, cssPath: runtimeSurface.cssPath })
 }
@@ -243,6 +296,12 @@ async function writeAhtmlCss(paths) {
   await writeFile(path.join(paths.runtimeSrcDir, "ahtml.css"), source)
 }
 
+async function cleanupRuntimeBootstrapArtifacts(paths) {
+  await rm(path.join(paths.runtimeDir, "vite.config.ts"), {
+    force: true,
+  })
+}
+
 async function writeRuntimePackageManifest({ packageRoot, paths }) {
   const packageJsonPath = path.join(packageRoot, "package.json")
   const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"))
@@ -299,24 +358,6 @@ async function renderViteConfig({ dependencies, paths }) {
   await writeFile(paths.runtimeViteConfigPath, rendered)
 }
 
-function pickRuntimePackageVersions(versions, names) {
-  return Object.fromEntries(
-    names.map((name) => [name, requirePackageVersion(versions, name)]),
-  )
-}
-
-function requirePackageVersion(versions, name) {
-  const version = versions[name]
-
-  if (!version) {
-    throw new Error(
-      `Unable to resolve ${name} from package.json for managed runtime bootstrap.`,
-    )
-  }
-
-  return version
-}
-
 function withLocalNoProxy(value) {
   const entries = (value ?? "")
     .split(",")
@@ -346,19 +387,17 @@ function isLocalRegistryUrl(value) {
 }
 
 async function writeRuntimeCapabilities({
+  components,
   paths,
-  schema,
+  rendererMapping,
   setup,
   runtimeSurface,
+  verificationData,
 }) {
-  const components = Array.isArray(schema?.components) ? schema.components : []
-  const uiCapabilities =
-    schema?.uiCapabilities ?? createUiCapabilities(components)
-  const rendererSpec = schema?.rendererSpec ?? createRendererSpec(components)
   const renderableAgentComponents =
     components.length > 0
       ? components.map((component) => component.name)
-      : (uiCapabilities.components ?? []).map((component) => component.name)
+      : (verificationData.components ?? []).map((component) => component.name)
   const capabilities = {
     kind: "ahtml-runtime-render-capabilities",
     version: 1,
@@ -366,14 +405,87 @@ async function writeRuntimeCapabilities({
     shadcnRuntimeSurface: runtimeSurface,
     installedUiComponents: setup.components,
     renderableAgentComponents,
-    uiCapabilities,
-    rendererSpec,
+    verificationData,
+    rendererMapping,
   }
 
   await writeFile(
     paths.runtimeCapabilitiesPath,
     `${JSON.stringify(capabilities, null, 2)}\n`,
   )
+}
+
+async function writeRuntimeElementRegistrySource({ paths, rendererMapping }) {
+  const registrySpec = createRuntimeElementRegistrySpec(rendererMapping)
+  const source = createRuntimeElementRegistrySource(registrySpec)
+
+  await writeFile(
+    path.join(paths.runtimeSrcDir, "renderer", "elements.tsx"),
+    source,
+  )
+}
+
+async function writeRuntimeRendererKindSource({ paths }) {
+  const kindSpec = createRuntimeRendererKindSpec()
+  const source = createRuntimeRendererKindSource(kindSpec)
+
+  await writeFile(
+    path.join(paths.runtimeSrcDir, "renderer", "kinds.ts"),
+    source,
+  )
+}
+
+function createRuntimeElementRegistrySource(registrySpec) {
+  const imports = registrySpec.modules.map(({ registryItem, exports }) =>
+    formatRuntimeElementImport({ registryItem, exports }),
+  )
+  const registryEntries = [
+    ...registrySpec.nativeElements.map((name) => `  ${name}: "${name}",`),
+    ...registrySpec.modules.flatMap(({ exports }) =>
+      exports.map((name) => `  ${name},`),
+    ),
+  ]
+
+  return [
+    'import React from "react"',
+    ...imports,
+    "",
+    "const runtimeElementRegistry: Record<string, React.ElementType> = {",
+    ...registryEntries,
+    "}",
+    "",
+    "export function resolveElement(name: string | undefined): React.ElementType {",
+    "  if (!name) {",
+    "    return React.Fragment",
+    "  }",
+    "",
+    '  return runtimeElementRegistry[name] ?? (name as React.ElementType)',
+    "}",
+    "",
+  ].join("\n")
+}
+
+function createRuntimeRendererKindSource(kindSpec) {
+  return [
+    `export const runtimeRendererKinds = ${JSON.stringify(kindSpec.kinds)} as const`,
+    "",
+    "export type RendererKind = (typeof runtimeRendererKinds)[number]",
+    "",
+  ].join("\n")
+}
+
+function formatRuntimeElementImport({ registryItem, exports }) {
+  const specifier = `@/components/ui/${registryItem}`
+
+  if (exports.length === 1) {
+    return `import { ${exports[0]} } from "${specifier}"`
+  }
+
+  return [
+    "import {",
+    ...exports.map((name) => `  ${name},`),
+    `} from "${specifier}"`,
+  ].join("\n")
 }
 
 function normalizeDependencyPaths(dependencies) {
@@ -385,6 +497,24 @@ function normalizeDependencyPaths(dependencies) {
       : value.replaceAll("\\", "/"),
     ]),
   )
+}
+
+function pickRuntimePackageVersions(versions, names) {
+  return Object.fromEntries(
+    names.map((name) => [name, requirePackageVersion(versions, name)]),
+  )
+}
+
+function requirePackageVersion(versions, name) {
+  const version = versions[name]
+
+  if (!version) {
+    throw new Error(
+      `Unable to resolve ${name} from package.json for managed runtime bootstrap.`,
+    )
+  }
+
+  return version
 }
 
 async function installShadcnComponents({ packageRoot, components, paths }) {
@@ -409,8 +539,9 @@ function normalizeCssImportPath({ from, to }) {
   return relative.startsWith(".") ? relative : `./${relative}`
 }
 
-async function runShadcnCli(args, { packageRoot, paths }) {
+async function runShadcnCli(args, { cwd, env, packageRoot, paths }) {
   const command = await resolveShadcnCommand(packageRoot)
+  const commandCwd = cwd ?? paths.runtimeDir
   const localRegistryEnv = isLocalRegistryUrl(process.env.REGISTRY_URL)
     ? {
         ALL_PROXY: "",
@@ -426,12 +557,12 @@ async function runShadcnCli(args, { packageRoot, paths }) {
 
   try {
     await execFileAsync(command.file, [...command.args, ...args], {
-      cwd: paths.runtimeDir,
+      cwd: commandCwd,
       env: {
         ...process.env,
         AHTML_SHADCN_RUNTIME: "1",
-        SHADCN_TEMPLATE_DIR: shadcnTemplateRoot,
         ...localRegistryEnv,
+        ...env,
       },
     })
   } catch (error) {
@@ -468,10 +599,7 @@ async function resolveShadcnCommand(packageRoot) {
 }
 
 async function canContinueAfterInitInstallFailure(error, paths) {
-  const detail =
-    error instanceof Error && typeof error.message === "string"
-      ? error.message
-      : String(error)
+  const detail = getExecErrorDetail(error)
 
   if (!detail.includes("npm install")) {
     return false
@@ -483,4 +611,18 @@ async function canContinueAfterInitInstallFailure(error, paths) {
   } catch {
     return false
   }
+}
+
+function getExecErrorDetail(error) {
+  if (!error || typeof error !== "object") {
+    return String(error)
+  }
+
+  return [
+    typeof error.message === "string" ? error.message : "",
+    typeof error.stdout === "string" ? error.stdout : "",
+    typeof error.stderr === "string" ? error.stderr : "",
+  ]
+    .filter(Boolean)
+    .join("\n")
 }

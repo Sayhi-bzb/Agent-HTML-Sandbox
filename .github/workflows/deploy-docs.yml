@@ -52,7 +52,7 @@ jobs:
           install-docs: "true"
 
       - name: Check docs web
-        run: npm run check:docs
+        run: npm run check:docs:ci
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3

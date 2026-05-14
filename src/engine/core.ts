@@ -12,6 +12,7 @@ export {
 export {
   DEFAULT_RENDER_CONFIG,
   parseRenderConfig,
+  PUBLIC_RENDER_CONFIG_DEFAULTS,
   RENDER_CONFIG_KEYS,
   RENDER_CONFIG_VALUES,
   RenderConfigSchema,

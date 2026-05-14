@@ -1,6 +1,7 @@
 import React from "react"
 
 import { resolveElement } from "./elements"
+import type { RendererKind } from "./kinds"
 import type {
   AgentComponentNode,
   AgentNode,
@@ -34,24 +35,15 @@ export function createRendererNode(
     node: AgentComponentNode,
     rendererSpec: RendererSpecComponent,
   ) {
-    switch (rendererSpec.kind) {
-      case "primitive":
-        return renderPrimitiveComponent(node, rendererSpec)
-      case "compound":
-        return renderCompoundComponent(node, rendererSpec)
-      case "collection":
-        return renderCollectionComponent(node, rendererSpec)
-      case "table":
-        return renderTableComponent(node, rendererSpec)
-      case "interactive-collection":
-        return renderAccordionComponent(node, rendererSpec)
-      case "tabs":
-        return renderTabsComponent(node, rendererSpec)
-      default:
-        throw new Error(
-          `Unsupported renderer kind "${rendererSpec.kind}" for "${rendererSpec.name}".`,
-        )
+    const render = rendererKindHandlers[rendererSpec.kind as RendererKind]
+
+    if (render) {
+      return render(node, rendererSpec)
     }
+
+    throw new Error(
+      `Unsupported renderer kind "${rendererSpec.kind}" for "${rendererSpec.name}".`,
+    )
   }
 
   function renderPrimitiveComponent(
@@ -109,7 +101,9 @@ export function createRendererNode(
     rendererSpec: RendererSpecComponent,
     Title: React.ElementType | undefined,
   ) {
-    const titleProp = rendererSpec.titleProp ?? "title"
+    const titleProp = Title
+      ? requireRendererSpecField(rendererSpec, "titleProp")
+      : undefined
     const title = node.props[titleProp]
 
     if (!title || !Title) {
@@ -159,12 +153,16 @@ export function createRendererNode(
     const Root = resolveElement(rendererSpec.root)
     const Header = resolveElement(rendererSpec.header)
     const Body = resolveElement(rendererSpec.body)
-    const rows = getSlotChildren(node, rendererSpec.rowSlot)
+    const rowSlot = requireRendererSpecField(rendererSpec, "rowSlot")
+    const cellSlot = requireRendererSpecField(rendererSpec, "cellSlot")
+    const kindProp = requireRendererSpecField(rendererSpec, "kindProp")
+    const headerKind = requireRendererSpecField(rendererSpec, "headerKind")
+    const rows = getSlotChildren(node, rowSlot)
     const headerRows = rows.filter(
-      (row) => row.props.kind === rendererSpec.headerKind,
+      (row) => getConfiguredPropValue(row, kindProp) === headerKind,
     )
     const bodyRows = rows.filter(
-      (row) => row.props.kind !== rendererSpec.headerKind,
+      (row) => getConfiguredPropValue(row, kindProp) !== headerKind,
     )
 
     return (
@@ -172,13 +170,13 @@ export function createRendererNode(
         {headerRows.length > 0 ? (
           <Header>
             {headerRows.map((row, index) =>
-              renderTableRow(row, index, rendererSpec, true),
+              renderTableRow(row, index, rendererSpec, cellSlot, true),
             )}
           </Header>
         ) : null}
         <Body>
           {bodyRows.map((row, index) =>
-            renderTableRow(row, index, rendererSpec, false),
+            renderTableRow(row, index, rendererSpec, cellSlot, false),
           )}
         </Body>
       </Root>
@@ -189,6 +187,7 @@ export function createRendererNode(
     row: AgentComponentNode,
     index: number,
     rendererSpec: RendererSpecComponent,
+    cellSlot: string,
     isHeader: boolean,
   ) {
     const Row = resolveElement(rendererSpec.row)
@@ -198,7 +197,7 @@ export function createRendererNode(
 
     return (
       <Row key={index} data-agent-html-component={row.name}>
-        {getSlotChildren(row, rendererSpec.cellSlot).map((cell, cellIndex) => (
+        {getSlotChildren(row, cellSlot).map((cell, cellIndex) => (
           <Cell key={cellIndex} data-agent-html-component={cell.name}>
             {renderInlineChildren(cell)}
           </Cell>
@@ -215,25 +214,40 @@ export function createRendererNode(
     const Item = resolveElement(rendererSpec.item)
     const Trigger = resolveElement(rendererSpec.trigger)
     const Content = resolveElement(rendererSpec.content)
-    const items = getSlotChildren(node, rendererSpec.itemSlot)
-    const values = items.map(getAccordionItemValue)
+    const itemSlot = requireRendererSpecField(rendererSpec, "itemSlot")
+    const itemValueProp = requireRendererSpecField(
+      rendererSpec,
+      "itemValueProp",
+    )
+    const itemHeadingProp = requireRendererSpecField(
+      rendererSpec,
+      "itemHeadingProp",
+    )
+    const mode = requireRendererSpecField(rendererSpec, "mode")
+    const items = getSlotChildren(node, itemSlot)
+    const values = items.map((item) => getConfiguredPropValue(item, itemValueProp))
 
     return (
-      <Root
-        data-agent-html-component={node.name}
-        type={rendererSpec.mode ?? "multiple"}
-        defaultValue={values}
-      >
-        {items.map((item) => (
-          <Item
-            key={getAccordionItemValue(item)}
-            value={getAccordionItemValue(item)}
-          >
-            <Trigger>{item.props.title}</Trigger>
-            <Content>{renderChildren(item)}</Content>
-          </Item>
-        ))}
-      </Root>
+      <>
+        <Root
+          data-agent-html-component={node.name}
+          type={mode}
+          defaultValue={values}
+        >
+          {items.map((item) => (
+            <Item
+              key={getConfiguredPropValue(item, itemValueProp)}
+              value={getConfiguredPropValue(item, itemValueProp)}
+            >
+              <Trigger>{getConfiguredPropValue(item, itemHeadingProp)}</Trigger>
+              <Content>{renderChildren(item)}</Content>
+            </Item>
+          ))}
+        </Root>
+        {rendererSpec.fallback
+          ? renderNoScriptSectionFallback(items, itemValueProp, itemHeadingProp)
+          : null}
+      </>
     )
   }
 
@@ -245,44 +259,71 @@ export function createRendererNode(
     const List = resolveElement(rendererSpec.list)
     const Trigger = resolveElement(rendererSpec.trigger)
     const Content = resolveElement(rendererSpec.content)
-    const tabs = getSlotChildren(node, rendererSpec.itemSlot)
+    const itemSlot = requireRendererSpecField(rendererSpec, "itemSlot")
+    const itemValueProp = requireRendererSpecField(
+      rendererSpec,
+      "itemValueProp",
+    )
+    const itemHeadingProp = requireRendererSpecField(
+      rendererSpec,
+      "itemHeadingProp",
+    )
+    const defaultProp = requireRendererSpecField(rendererSpec, "defaultProp")
+    const tabs = getSlotChildren(node, itemSlot)
 
     if (tabs.length === 0) {
       return null
     }
 
-    const defaultProp = rendererSpec.defaultProp ?? "default"
-    const defaultValue = node.props[defaultProp] || getTabValue(tabs[0])
+    const defaultValue =
+      node.props[defaultProp] || getConfiguredPropValue(tabs[0], itemValueProp)
 
     return (
       <>
         <Root data-agent-html-component={node.name} defaultValue={defaultValue}>
           <List>
             {tabs.map((tab) => (
-              <Trigger key={getTabValue(tab)} value={getTabValue(tab)}>
-                {tab.props.label}
+              <Trigger
+                key={getConfiguredPropValue(tab, itemValueProp)}
+                value={getConfiguredPropValue(tab, itemValueProp)}
+              >
+                {getConfiguredPropValue(tab, itemHeadingProp)}
               </Trigger>
             ))}
           </List>
           {tabs.map((tab) => (
-            <Content key={getTabValue(tab)} value={getTabValue(tab)}>
+            <Content
+              key={getConfiguredPropValue(tab, itemValueProp)}
+              value={getConfiguredPropValue(tab, itemValueProp)}
+            >
               {renderChildren(tab)}
             </Content>
           ))}
         </Root>
-        {rendererSpec.fallback ? renderTabsNoScriptFallback(tabs) : null}
+        {rendererSpec.fallback
+          ? renderNoScriptSectionFallback(tabs, itemValueProp, itemHeadingProp)
+          : null}
       </>
     )
   }
 
-  function renderTabsNoScriptFallback(tabs: AgentComponentNode[]) {
+  function renderNoScriptSectionFallback(
+    items: AgentComponentNode[],
+    itemValueProp: string,
+    itemHeadingProp: string,
+  ) {
     return (
       <noscript>
         <section className="ahtml-section">
-          {tabs.map((tab) => (
-            <section className="ahtml-section" key={getTabValue(tab)}>
-              <h2 className="ahtml-section-title">{tab.props.label}</h2>
-              {renderChildren(tab)}
+          {items.map((item) => (
+            <section
+              className="ahtml-section"
+              key={getConfiguredPropValue(item, itemValueProp)}
+            >
+              <h2 className="ahtml-section-title">
+                {getConfiguredPropValue(item, itemHeadingProp)}
+              </h2>
+              {renderChildren(item)}
             </section>
           ))}
         </section>
@@ -325,15 +366,22 @@ export function createRendererNode(
     return rendererSpecByName.has(name)
   }
 
+  const rendererKindHandlers: Record<
+    RendererKind,
+    (
+      node: AgentComponentNode,
+      rendererSpec: RendererSpecComponent,
+    ) => React.ReactNode
+  > = {
+    primitive: renderPrimitiveComponent,
+    compound: renderCompoundComponent,
+    collection: renderCollectionComponent,
+    table: renderTableComponent,
+    "interactive-collection": renderAccordionComponent,
+    tabs: renderTabsComponent,
+  }
+
   return RendererNode
-}
-
-function getTabValue(tab: AgentComponentNode) {
-  return tab.props.value
-}
-
-function getAccordionItemValue(item: AgentComponentNode) {
-  return item.props.value
 }
 
 function applyPropMappings(
@@ -366,4 +414,26 @@ function resolveMappedProp(
   }
 
   return map[value] ?? defaultValue
+}
+
+function getConfiguredPropValue(
+  node: AgentComponentNode,
+  propName: string,
+) {
+  return node.props[propName]
+}
+
+function requireRendererSpecField(
+  rendererSpec: RendererSpecComponent,
+  fieldName: keyof RendererSpecComponent,
+) {
+  const value = rendererSpec[fieldName]
+
+  if (typeof value !== "string" || value.length === 0) {
+    throw new Error(
+      `Renderer spec "${rendererSpec.name}" is missing required field "${String(fieldName)}".`,
+    )
+  }
+
+  return value
 }

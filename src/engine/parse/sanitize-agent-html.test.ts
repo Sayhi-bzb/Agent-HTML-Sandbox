@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import { sanitizeAgentHtml } from "./sanitize-agent-html"
 
 const semanticReportSource = `
-  <meta-agent theme="neutral" density="comfortable" tone="report" width="wide" />
+  <meta-agent profile="report-default" />
   <page title="Semantic Report">
     <alert title="Thesis">HTML artifacts can stay readable without exposing implementation details.</alert>
     <card title="Executive Summary">
@@ -27,7 +27,7 @@ const semanticReportSource = `
 `
 
 const collaborationWorkbenchSource = `
-  <meta-agent theme="neutral" density="comfortable" tone="dashboard" width="wide" />
+  <meta-agent profile="ops-compact" />
   <page title="Human Agent Collaboration Workbench">
     <tabs default="decide">
       <tab value="explore" label="Explore">
@@ -59,7 +59,7 @@ const collaborationWorkbenchSource = `
 describe("sanitizeAgentHtml", () => {
   it("produces SanitizedAgentHtml for valid MVP agent-html", () => {
     const result = sanitizeAgentHtml(`
-      <meta-agent theme="neutral" density="compact" tone="report" width="article" />
+      <meta-agent profile="report-default" />
       <page title="Payment Review">
         <card title="High Risk">
           <badge tone="danger">Missing finance role check</badge>
@@ -85,8 +85,9 @@ describe("sanitizeAgentHtml", () => {
     expect(result.diagnostics).toEqual([])
     expect(result.document).toEqual({
       meta: {
+        profile: "report-default",
         theme: "neutral",
-        density: "compact",
+        density: "comfortable",
         tone: "report",
         width: "article",
       },
@@ -222,6 +223,7 @@ describe("sanitizeAgentHtml", () => {
 
     expect(result.diagnostics).toEqual([])
     expect(result.document?.meta).toEqual({
+      profile: "report-default",
       theme: "neutral",
       density: "comfortable",
       tone: "report",
@@ -231,7 +233,7 @@ describe("sanitizeAgentHtml", () => {
 
   it("keeps the page root after a self-closing meta-agent header", () => {
     const result = sanitizeAgentHtml(`
-      <meta-agent theme="neutral" density="compact" tone="report" width="article" />
+      <meta-agent profile="ops-compact" />
       <page title="Payment Review" />
     `)
 
@@ -337,7 +339,7 @@ describe("sanitizeAgentHtml", () => {
     )
   })
 
-  it("diagnoses CSS-like render config header values", () => {
+  it("rejects legacy finite render config header values", () => {
     const result = sanitizeAgentHtml(`
       <meta-agent theme="neutral" density="compact" tone="color:red" width="article" />
       <page title="Payment Review" />
@@ -409,151 +411,6 @@ describe("sanitizeAgentHtml", () => {
       type: "component",
       name: "tabs",
     })
-  })
-
-  it("normalizes generic ui/slot tabs into the current renderer model", () => {
-    const result = sanitizeAgentHtml(`
-      <ui name="page" title="Generic Protocol">
-        <ui name="tabs" default-value="bio">
-          <slot name="tabs-list">
-            <slot name="tabs-trigger" value="bio">Bio</slot>
-            <slot name="tabs-trigger" value="work">Work</slot>
-          </slot>
-          <slot name="tabs-content" value="bio">
-            <ui name="card" title="Biography">Readable biography.</ui>
-          </slot>
-          <slot name="tabs-content" value="work" label="Work">
-            <ui name="alert" title="Focus">Relativity.</ui>
-          </slot>
-        </ui>
-      </ui>
-    `)
-
-    expect(result.diagnostics).toEqual([])
-    expect(result.document?.components[0]).toMatchObject({
-      type: "component",
-      name: "page",
-      props: {
-        title: "Generic Protocol",
-      },
-      children: [
-        {
-          type: "component",
-          name: "tabs",
-          props: {
-            default: "bio",
-          },
-          children: [
-            {
-              type: "component",
-              name: "tab",
-              props: {
-                value: "bio",
-                label: "Bio",
-              },
-            },
-            {
-              type: "component",
-              name: "tab",
-              props: {
-                value: "work",
-                label: "Work",
-              },
-            },
-          ],
-        },
-      ],
-    })
-  })
-
-  it("normalizes generic ui/slot table, list, and accordion structures", () => {
-    const result = sanitizeAgentHtml(`
-      <ui name="page" title="Generic Structures">
-        <ui name="list">
-          <slot name="item">Readable item.</slot>
-        </ui>
-        <ui name="table">
-          <slot name="row" kind="header">
-            <slot name="cell">Name</slot>
-            <slot name="cell">Status</slot>
-          </slot>
-          <slot name="row">
-            <slot name="cell">Runtime</slot>
-            <slot name="cell">Ready</slot>
-          </slot>
-        </ui>
-        <ui name="accordion">
-          <slot name="accordion-item" value="details" title="Details">
-            Expanded content.
-          </slot>
-        </ui>
-      </ui>
-    `)
-
-    expect(result.diagnostics).toEqual([])
-    const children = result.document?.components[0]?.children
-
-    expect(children?.[0]).toMatchObject({
-      type: "component",
-      name: "list",
-      children: [
-        {
-          type: "component",
-          name: "item",
-        },
-      ],
-    })
-    expect(children?.[1]).toMatchObject({
-      type: "component",
-      name: "table",
-    })
-    expect(children?.[1]?.type).toBe("component")
-
-    if (children?.[1]?.type !== "component") {
-      throw new Error("Expected table component.")
-    }
-
-    expect(children[1].children[0]).toMatchObject({
-      type: "component",
-      name: "row",
-      props: {
-        kind: "header",
-      },
-    })
-    expect(children?.[2]).toMatchObject({
-      type: "component",
-      name: "accordion",
-      children: [
-        {
-          type: "component",
-          name: "accordion-item",
-          props: {
-            value: "details",
-            title: "Details",
-          },
-        },
-      ],
-    })
-  })
-
-  it("rejects unknown generic ui slots instead of flattening them", () => {
-    const result = sanitizeAgentHtml(`
-      <ui name="page" title="Generic Slot Guard">
-        <ui name="card" title="Summary">
-          <slot name="actions">This slot is not registered.</slot>
-        </ui>
-      </ui>
-    `)
-
-    expect(result.document).toBeUndefined()
-    expect(result.diagnostics).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: "unknown-slot",
-          message: '"actions" is not a registered slot on <ui name="card">.',
-        }),
-      ]),
-    )
   })
 
   it("rejects removed custom controls", () => {

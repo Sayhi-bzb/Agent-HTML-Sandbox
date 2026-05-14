@@ -38,12 +38,7 @@ npx skills add Sayhi-bzb/Agent-HTML --skill ahtml
 Create `artifact.agent.html`:
 
 ```html
-<meta-agent
-  theme="neutral"
-  density="comfortable"
-  tone="report"
-  width="article"
-/>
+<meta-agent profile="report-default" />
 
 <page title="Review">
   <card title="Summary">
@@ -103,7 +98,7 @@ Defaults:
 ## Rules
 
 - Treat `ahtml schema --format prompt` as the source of truth.
-- Use only registered agent-html components, props, children, and render config values.
+- Use only registered agent-html components, props, children, and approved presentation profile values.
 - Do not write Tailwind classes, `className`, `style`, CSS, scripts, event handlers, shadcn props, Radix props, arbitrary HTML attributes, external resource passthrough, or raw HTML.
 - `ahtml setup` guides managed runtime installation. `ahtml status`, `ahtml doctor`, `ahtml build`, and `ahtml preview` can bootstrap or repair the managed shadcn runtime when no guided setup has run.
 - shadcn/ui is an internal renderer implementation detail; do not initialize shadcn in the current project for normal `ahtml` use.

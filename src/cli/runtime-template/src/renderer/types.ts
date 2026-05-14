@@ -1,3 +1,5 @@
+import type { RendererKind } from "./kinds"
+
 export type AgentTextNode = {
   type: "text"
   value: string
@@ -24,6 +26,7 @@ export type AgentDocument = {
 
 export type RendererSlot = {
   name: string
+  children?: string[]
   childNames?: string[]
 }
 
@@ -43,15 +46,11 @@ export type RendererRootByProp = {
 
 export type RendererSpecComponent = {
   name: string
-  kind:
-    | "primitive"
-    | "compound"
-    | "collection"
-    | "table"
-    | "interactive-collection"
-    | "tabs"
-    | "structural"
+  source?: string
+  kind: RendererKind | "structural"
   renderKind: string
+  requiredRegistryItem?: string
+  requiredExports?: string[]
   slots: RendererSlot[]
   childMode?: "block" | "inline" | "none"
   component?: string
@@ -77,19 +76,22 @@ export type RendererSpecComponent = {
   fallback?: boolean
   mode?: string
   headerKind?: string
+  kindProp?: string
+  itemValueProp?: string
+  itemHeadingProp?: string
   rootByProp?: RendererRootByProp
   propMappings?: RendererPropMapping[]
 }
 
 export type RuntimeCapabilities = {
-  uiCapabilities: {
+  verificationData: {
     components: {
       name: string
       renderKind?: string
       slots?: RendererSlot[]
     }[]
   }
-  rendererSpec: {
+  rendererMapping: {
     version: number
     components: RendererSpecComponent[]
   }

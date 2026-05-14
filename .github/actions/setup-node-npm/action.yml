@@ -14,8 +14,16 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Setup Node
-      if: ${{ inputs.registry-url == '' }}
+    - name: Setup Node for package checks
+      if: ${{ inputs.registry-url == '' && inputs.install-docs != 'true' }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: 24
+        cache: npm
+        cache-dependency-path: package-lock.json
+
+    - name: Setup Node for docs-aware checks
+      if: ${{ inputs.registry-url == '' && inputs.install-docs == 'true' }}
       uses: actions/setup-node@v4
       with:
         node-version: 24
@@ -24,8 +32,17 @@ runs:
           package-lock.json
           docs-web/package-lock.json
 
-    - name: Setup Node with registry
-      if: ${{ inputs.registry-url != '' }}
+    - name: Setup Node with registry for package checks
+      if: ${{ inputs.registry-url != '' && inputs.install-docs != 'true' }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: 24
+        registry-url: ${{ inputs.registry-url }}
+        cache: npm
+        cache-dependency-path: package-lock.json
+
+    - name: Setup Node with registry for docs-aware checks
+      if: ${{ inputs.registry-url != '' && inputs.install-docs == 'true' }}
       uses: actions/setup-node@v4
       with:
         node-version: 24

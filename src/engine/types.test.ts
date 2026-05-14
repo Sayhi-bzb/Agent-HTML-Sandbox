@@ -11,6 +11,7 @@ import type {
 describe("agent-html public types", () => {
   it("models a finite render config and sanitized components", () => {
     const meta = {
+      profile: "ops-compact",
       theme: "neutral",
       density: "compact",
       tone: "report",
@@ -50,6 +51,7 @@ describe("agent-html public types", () => {
     } satisfies SanitizedAgentHtml
 
     expect(pageComponentSchema.name).toBe("page")
+    expect(document.meta.profile).toBe("ops-compact")
     expect(document.meta.density).toBe("compact")
     expect(document.components[0]?.name).toBe("page")
   })

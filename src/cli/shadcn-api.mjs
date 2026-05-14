@@ -1,3 +1,8 @@
+import { execFile } from "node:child_process"
+import { createRequire } from "node:module"
+import path from "node:path"
+import { promisify } from "node:util"
+
 import {
   DEFAULT_PRESET_CONFIG,
   PRESET_STYLES,
@@ -8,6 +13,7 @@ import {
 import { requiredShadcnRuntimeComponents } from "../config/render-capabilities.mjs"
 
 const shadcnRegistry = "@shadcn"
+const execFileAsync = promisify(execFile)
 export const fallbackShadcnComponents = requiredShadcnRuntimeComponents
 
 export function getDefaultShadcnPreset() {
@@ -59,6 +65,24 @@ export async function getShadcnComponentCatalog({ allowFallback = true } = {}) {
       error: error instanceof Error ? error.message : String(error),
     }
   }
+}
+
+export async function getShadcnProjectInfo({
+  cwd,
+  packageRoot = process.cwd(),
+}) {
+  const packageRequire = createRequire(path.join(packageRoot, "package.json"))
+  const shadcnBin = packageRequire.resolve("shadcn")
+  const result = await withLocalShadcnRegistryEnv(async () =>
+    execFileAsync(process.execPath, [shadcnBin, "info", "--cwd", cwd, "--json"], {
+      cwd,
+      env: {
+        ...process.env,
+      },
+    }),
+  )
+
+  return JSON.parse(result.stdout)
 }
 
 async function withLocalShadcnRegistryEnv(run) {

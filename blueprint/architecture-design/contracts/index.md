@@ -24,22 +24,36 @@ React output + HTML output
 portable output
 ```
 
-## Schema Maintenance Chain
+## Public Contract Chain
+
+```txt
+semantic component declaration
+        +
+presentation profile registry
+        ↓
+ComponentSchema + PresentationProfile
+        ↓
+CLI schema output
+        ↓
+agent-facing authoring contract
+```
+
+## Runtime Verification Chain
 
 ```txt
 managed runtime shadcn/ui implementation
         ↓
-generated shadcn introspection
+runtime capability facts
         ↓
-explicit schema overlay
+drift checks + renderer registry inputs
         ↓
-ComponentSchema
+contract verification
 ```
 
 ## Contracts
 
 - `cli-to-managed-runtime.md`: CLI 到 managed runtime、template 和 renderer adapter。
-- `shadcn-to-component-schema.md`: shadcn/ui 实现到标准组件 schema。
+- `shadcn-to-component-schema.md`: shadcn/ui 实现到标准组件 contract 和 runtime capability checks。
 - `component-schema-to-agent-html.md`: 标准组件 schema 到 agent-html 和 render config header。
 - `cli-to-artifact.md`: CLI 到 agent-html、renderer adapter 和 artifact。
 - `agent-html-to-renderer.md`: agent-html 经 core parse / sanitize 后到 renderer adapter。

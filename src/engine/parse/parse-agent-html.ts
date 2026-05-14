@@ -15,7 +15,6 @@ export type AgentHtmlDiagnostic = {
     | "unsupported-node"
     | "unknown-attr"
     | "unknown-component"
-    | "unknown-slot"
   readonly message: string
   readonly path: string
   readonly severity: AgentHtmlDiagnosticSeverity

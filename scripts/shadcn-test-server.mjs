@@ -17,6 +17,7 @@ const componentNames = [
   "table",
   "tabs",
 ]
+const styleNames = ["nova", "vega", "maia", "lyra", "mira", "luma", "sera"]
 
 export async function startShadcnTestServer() {
   const fixtures = await loadFixtures()
@@ -32,6 +33,7 @@ export async function startShadcnTestServer() {
         console.log(`[shadcn-test-server] ${url.pathname}${url.search}`)
       }
       const presetMatch = url.pathname === "/init"
+      const rootIndexMatch = url.pathname === "/r/index.json"
       const baseColorMatch = url.pathname === "/r/colors/neutral.json"
       const styleIndexMatch = url.pathname === "/r/styles/index.json"
       const styleComponentIndexMatch = url.pathname.match(
@@ -47,16 +49,20 @@ export async function startShadcnTestServer() {
         return
       }
 
+      if (rootIndexMatch) {
+        respondJson(response, 200, createRegistryIndex(fixtures))
+        return
+      }
+
       if (styleIndexMatch) {
-        respondJson(response, 200, [
-          { name: "nova", label: "Nova" },
-          { name: "vega", label: "Vega" },
-          { name: "maia", label: "Maia" },
-          { name: "lyra", label: "Lyra" },
-          { name: "mira", label: "Mira" },
-          { name: "luma", label: "Luma" },
-          { name: "sera", label: "Sera" },
-        ])
+        respondJson(
+          response,
+          200,
+          styleNames.map((name) => ({
+            name,
+            label: capitalize(name),
+          })),
+        )
         return
       }
 
@@ -180,6 +186,10 @@ function createPresetItem({ fixtures, style }) {
   }
 }
 
+function createRegistryIndex(fixtures) {
+  return styleNames.map((style) => createPresetItem({ fixtures, style }))
+}
+
 function createComponentItem({ componentName, componentSource }) {
   return {
     name: componentName,
@@ -202,6 +212,10 @@ function createStyleComponentIndex() {
     type: "registry:ui",
     title: name,
   }))
+}
+
+function capitalize(value) {
+  return value.charAt(0).toUpperCase() + value.slice(1)
 }
 
 function createNeutralBaseColor() {

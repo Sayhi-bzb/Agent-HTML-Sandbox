@@ -68,7 +68,7 @@ async function compileTsGraph(root, outRoot, sourcePath) {
     },
     fileName: resolvedSourcePath,
   }).outputText
-  const rewritten = rewriteImports(root, output)
+  const rewritten = rewriteImports(root, resolvedSourcePath, output)
   const outPath = getOutPath(root, outRoot, resolvedSourcePath)
 
   await mkdir(path.dirname(outPath), { recursive: true })
@@ -121,10 +121,17 @@ function assertInsideRoot(root, candidate) {
   )
 }
 
-function rewriteImports(root, output) {
+function rewriteImports(root, sourcePath, output) {
   return output.replace(importFromPattern, (match, specifier) => {
     if (!isLocalSpecifier(specifier)) {
       return match.replace(specifier, resolveBareSpecifier(root, specifier))
+    }
+
+    if (hasExecutableJavaScriptExtension(specifier)) {
+      return match.replace(
+        specifier,
+        pathToFileURL(resolveSourceImportPath(sourcePath, specifier)).href,
+      )
     }
 
     if (hasJavaScriptExtension(specifier)) {
@@ -139,6 +146,10 @@ function hasJavaScriptExtension(specifier) {
   return [".cjs", ".js", ".mjs", ".ts"].includes(path.extname(specifier))
 }
 
+function hasExecutableJavaScriptExtension(specifier) {
+  return [".cjs", ".js", ".mjs"].includes(path.extname(specifier))
+}
+
 function isLocalSpecifier(specifier) {
   return specifier.startsWith("./") || specifier.startsWith("../")
 }
@@ -150,6 +161,10 @@ function resolveBareSpecifier(root, specifier) {
 
   const require = createRequire(path.join(root, "package.json"))
   return pathToFileURL(require.resolve(specifier)).href
+}
+
+function resolveSourceImportPath(sourcePath, specifier) {
+  return path.resolve(path.dirname(sourcePath), specifier)
 }
 
 function getOutPath(root, outRoot, sourcePath) {

@@ -13,8 +13,8 @@
 ```txt
 shadcn template / init / registry supplies the complete runtime UI surface.
 managed runtime hosts that shadcn-native surface.
-standardized component schema exposes fixed components, props, and slots.
-RenderConfig may select approved shadcn-backed presentation profiles.
+standardized component schema exposes fixed components, semantic props, and slots.
+presentation profile registry exposes approved visual choices.
 ```
 
 shadcn template / init / registry 是 source of truth。ahtml 不维护平行的 shadcn UI kit、global CSS、base layer、component copy 或 pseudo template。
@@ -23,8 +23,8 @@ shadcn template / init / registry 是 source of truth。ahtml 不维护平行的
 
 shadcn/ui 对 agent-html 的价值在四处：
 
-- standard components: card、button、table、badge、tabs、alert 等可封装为固定结构组件。
-- render profiles: theme、density、tone 和 layout preset 可标准化为受控 RenderConfig。
+- standard components: card、button、table、badge、tabs、alert 等可封装为固定结构语义组件。
+- presentation profiles: 命名 profile 可在内部绑定 theme、density、card treatment、table treatment、badge treatment、emphasis 和 width 等受控 token。
 - open code: renderer adapter 可以通过受控 registry / resolver 封装 shadcn exports，但不接管 shadcn template surface。
 - design system base: theme tokens、base layer、primitive、icons、utility、CSS entry 和默认视觉质量可作为实现底座。
 - registry / CLI: 可分发 renderer component、theme、hook、lib 和 component 实现材料到 managed runtime。
@@ -38,7 +38,7 @@ shadcn-native managed runtime surface
         ↓
 ahtml-injected renderer adapter
         ↓
-standardized component schema
+semantic component contract + presentation profile registry
         ↓
 agent standard syntax
 ```
@@ -47,9 +47,9 @@ agent standard syntax
 
 `shadcn add` 只安装 registry item，不等于完整 initialization。`shadcn apply --only theme` 只更新有限 preset 部分，也不等于完整 CSS/base surface。managed runtime bootstrap 应使用 shadcn template / init / registry 建立完整 surface，再由 ahtml 注入 renderer app、capability data 和 artifact build wiring。
 
-`meta` 可辅助 schema 维护，但不能成为 ComponentSchema 的权威来源。
+registry metadata 和组件源码可辅助 contract 维护，但不能成为 ComponentSchema 的权威来源。
 
-RenderConfig 可选择 shadcn-backed profile，但不直接暴露 shadcn props、Tailwind class 或 CSS token 任意值。
+RenderConfig 可选择 approved profile，但不直接暴露 shadcn props、Tailwind class 或 CSS token 任意值。
 
 ## Not For
 
@@ -77,10 +77,10 @@ shadcn component source、global CSS、base layer、Tailwind entry 和 component
 - shadcn 自身自由度很高，若直接暴露 props 会把维护成本推给 agent 和 renderer。
 - 只运行 `add` 或 `apply --only theme` 会造成半初始化 runtime：组件 DOM 可能存在，但 global CSS/base layer 缺失，最终视觉偏离 shadcn。
 - ahtml 手写或截断 shadcn CSS 会制造长期技术债；doctor / tests 必须检查完整 shadcn runtime surface，而不只是组件文件存在。
-- render profiles 若直接照搬 shadcn theme / Tailwind config，会把实现接口泄漏给 agent。
+- 如果把 profile 直接摊平成 theme / Tailwind config / variant 选项，会把实现接口泄漏给 agent。
 - MCP、CLI 和 migrations 可辅助采购，但 artifact runtime 不应依赖这些能力。
 - CLI 写入 managed runtime 时必须区分 runtime files、user files 和 package files。
-- registry metadata 可辅助 schema 维护，但不能绕过标准组件声明。
+- registry metadata 可辅助 contract 维护，但不能绕过标准组件声明。
 
 ## Follow-up
 
@@ -90,5 +90,5 @@ shadcn component source、global CSS、base layer、Tailwind entry 和 component
 - managed runtime adapter 注入点：哪些文件由 shadcn 拥有，哪些文件由 ahtml 生成。
 - 标准组件的最小 agent-facing props。
 - 标准组件的固定 slot 结构。
-- shadcn-backed render profile 的最小枚举集合。
+- 命名 presentation profile 的最小字段集合。
 - renderer component registry 是否需要自建 custom registry。

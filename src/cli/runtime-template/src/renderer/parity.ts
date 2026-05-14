@@ -4,7 +4,7 @@ export function createRendererSpecMap(
   runtimeCapabilities: RuntimeCapabilities,
 ) {
   return new Map(
-    runtimeCapabilities.rendererSpec.components.map((component) => [
+    runtimeCapabilities.rendererMapping.components.map((component) => [
       component.name,
       component,
     ]),
@@ -15,8 +15,8 @@ export function assertRendererRegistryParity(
   runtimeCapabilities: RuntimeCapabilities,
   rendererSpecByName: Map<string, RendererSpecComponent>,
 ) {
-  const expected = runtimeCapabilities.uiCapabilities.components
-  const actual = runtimeCapabilities.rendererSpec.components
+  const expected = runtimeCapabilities.verificationData.components
+  const actual = runtimeCapabilities.rendererMapping.components
   const expectedNames = expected.map((component) => component.name)
   const actualNames = actual.map((component) => component.name)
   const missing = expectedNames.filter((name) => !actualNames.includes(name))
@@ -39,7 +39,7 @@ export function assertRendererRegistryParity(
   if (missing.length > 0 || extra.length > 0 || kindMismatches.length > 0) {
     throw new Error(
       [
-        "Runtime renderer registry does not match render capabilities.",
+        "Runtime renderer registry does not match runtime verification data.",
         missing.length > 0 ? `Missing: ${missing.join(", ")}` : "",
         extra.length > 0 ? `Extra: ${extra.join(", ")}` : "",
         kindMismatches.length > 0

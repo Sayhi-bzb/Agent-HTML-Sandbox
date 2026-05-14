@@ -135,9 +135,9 @@ export const commandMetadata = {
     example: "ahtml status",
   },
   config: {
-    summary: "Read default finite render config values.",
+    summary: "Read default presentation profile values.",
     purpose:
-      "Read the default finite presentation config values from the schema.",
+      "Read the default public presentation profile values from the schema.",
     usage: "ahtml config get",
     options: [],
     example: "ahtml config get",

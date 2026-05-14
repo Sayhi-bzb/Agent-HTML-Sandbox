@@ -17,5 +17,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["vitest.config.ts", "src/**/*.ts"]
+  "include": ["vitest.config.ts", "vitest.heavy.config.ts", "src/**/*.ts"]
 }

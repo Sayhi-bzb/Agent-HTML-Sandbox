@@ -4,7 +4,7 @@ import {
   getComponentSchema,
   TEXT_CHILD,
 } from "../component-schema"
-import { DEFAULT_RENDER_CONFIG, RenderConfigSchema } from "../render-config"
+import { DEFAULT_RENDER_CONFIG, parseRenderConfig } from "../render-config"
 import type { RenderConfig, SanitizedNode, StandardAgentNode } from "../types"
 import type {
   AgentHtmlDiagnostic,
@@ -22,20 +22,6 @@ type ValidatedAgentHtml = {
 const FORBIDDEN_ATTR_NAMES = new Set(
   BLOCKED_AGENT_FACING_PROP_NAMES.flatMap((name) => [name, name.toLowerCase()]),
 )
-
-export const UI_PROTOCOL_SLOT_NAMES: Readonly<
-  Record<string, readonly string[]>
-> = {
-  accordion: ["accordion-item"],
-  alert: ["children"],
-  badge: ["children"],
-  card: ["children"],
-  list: ["item"],
-  page: ["children"],
-  separator: ["children"],
-  table: ["row", "cell"],
-  tabs: ["tabs-list", "tabs-trigger", "tabs-content"],
-}
 
 export function validateAgentHtml(parsed: ParsedAgentHtml): ValidatedAgentHtml {
   const diagnostics = [...parsed.diagnostics]
@@ -57,16 +43,16 @@ function validateRenderConfig(
     return DEFAULT_RENDER_CONFIG
   }
 
-  const result = RenderConfigSchema.safeParse(attrs)
-
-  if (result.success) {
-    return result.data
+  try {
+    return parseRenderConfig(attrs)
+  } catch {
+    // fall through to structured diagnostics
   }
 
   diagnostics.push({
     code: "invalid-render-config",
     message:
-      "The <meta-agent /> header must use only registered render config enum values.",
+      "The <meta-agent /> header must use an approved profile.",
     path: "/meta-agent",
     severity: "error",
   })
@@ -78,12 +64,9 @@ function validateRootNodes(
   nodes: readonly ParsedAgentHtmlNode[],
   diagnostics: AgentHtmlDiagnostic[],
 ): readonly StandardAgentNode[] {
-  const normalizedNodes = nodes.map((node) =>
-    normalizeUiProtocolNode(node, diagnostics),
-  )
-  const elementNodes = normalizedNodes.filter(isParsedElementNode)
+  const elementNodes = nodes.filter(isParsedElementNode)
 
-  for (const node of normalizedNodes) {
+  for (const node of nodes) {
     if (node.type === "text") {
       diagnostics.push({
         code: "invalid-child",
@@ -131,305 +114,6 @@ function validateRootNodes(
   const sanitizedRoot = validateElementNode(root, undefined, diagnostics)
   return sanitizedRoot ? [sanitizedRoot] : []
 }
-
-function normalizeUiProtocolNode(
-  node: ParsedAgentHtmlNode,
-  diagnostics: AgentHtmlDiagnostic[],
-): ParsedAgentHtmlNode {
-  if (node.type === "text") {
-    return node
-  }
-
-  if (node.name !== "ui") {
-    return normalizeElementChildren(node, diagnostics)
-  }
-
-  const componentName = node.attrs.name
-
-  if (!componentName) {
-    return normalizeElementChildren(node, diagnostics)
-  }
-
-  diagnoseUnknownUiSlots(node, componentName, diagnostics)
-
-  if (componentName === "tabs") {
-    return normalizeTabsUiNode(node, diagnostics)
-  }
-
-  if (componentName === "accordion") {
-    return normalizeSlottedUiNode(
-      node,
-      {
-        componentName,
-        slotComponent: "accordion-item",
-        slotName: "accordion-item",
-      },
-      diagnostics,
-    )
-  }
-
-  if (componentName === "list") {
-    return normalizeSlottedUiNode(
-      node,
-      {
-        componentName,
-        slotComponent: "item",
-        slotName: "item",
-      },
-      diagnostics,
-    )
-  }
-
-  if (componentName === "table") {
-    return normalizeTableUiNode(node, diagnostics)
-  }
-
-  return {
-    ...node,
-    name: componentName,
-    attrs: normalizeUiAttrs(node.attrs),
-    children: node.children.flatMap((child) =>
-      normalizeUiProtocolChild(child, diagnostics),
-    ),
-  }
-}
-
-function normalizeElementChildren(
-  node: ParsedAgentHtmlElementNode,
-  diagnostics: AgentHtmlDiagnostic[],
-): ParsedAgentHtmlElementNode {
-  return {
-    ...node,
-    children: node.children.map((child) =>
-      normalizeUiProtocolNode(child, diagnostics),
-    ),
-  }
-}
-
-function normalizeUiProtocolChild(
-  node: ParsedAgentHtmlNode,
-  diagnostics: AgentHtmlDiagnostic[],
-): ParsedAgentHtmlNode[] {
-  const normalized = normalizeUiProtocolNode(node, diagnostics)
-
-  if (normalized.type !== "element" || normalized.name !== "slot") {
-    return [normalized]
-  }
-
-  return normalized.children.map((child) =>
-    normalizeUiProtocolNode(child, diagnostics),
-  )
-}
-
-function normalizeTabsUiNode(
-  node: ParsedAgentHtmlElementNode,
-  diagnostics: AgentHtmlDiagnostic[],
-): ParsedAgentHtmlElementNode {
-  const triggers = getSlotDescendants(node, "tabs-trigger")
-  const contents = getSlotChildren(node, "tabs-content")
-
-  return {
-    ...node,
-    name: "tabs",
-    attrs: normalizeUiAttrs(node.attrs),
-    children: contents.map((content) => {
-      const value = content.attrs.value
-      const trigger = triggers.find((item) => item.attrs.value === value)
-      const label =
-        content.attrs.label ??
-        trigger?.attrs.label ??
-        getTextContent(trigger) ??
-        value
-
-      return {
-        ...content,
-        name: "tab",
-        attrs: normalizeSlotAttrs({
-          ...content.attrs,
-          value,
-          label,
-        }),
-        children: content.children.flatMap((child) =>
-          normalizeUiProtocolChild(child, diagnostics),
-        ),
-      }
-    }),
-  }
-}
-
-function normalizeTableUiNode(
-  node: ParsedAgentHtmlElementNode,
-  diagnostics: AgentHtmlDiagnostic[],
-): ParsedAgentHtmlElementNode {
-  return {
-    ...node,
-    name: "table",
-    attrs: normalizeUiAttrs(node.attrs),
-    children: getSlotChildren(node, "row").map((row) => ({
-      ...row,
-      name: "row",
-      attrs: normalizeSlotAttrs(row.attrs),
-      children: getSlotChildren(row, "cell").map((cell) => ({
-        ...cell,
-        name: "cell",
-        attrs: normalizeSlotAttrs(cell.attrs),
-        children: cell.children.flatMap((child) =>
-          normalizeUiProtocolChild(child, diagnostics),
-        ),
-      })),
-    })),
-  }
-}
-
-function normalizeSlottedUiNode(
-  node: ParsedAgentHtmlElementNode,
-  {
-    componentName,
-    slotComponent,
-    slotName,
-  }: {
-    readonly componentName: string
-    readonly slotComponent: string
-    readonly slotName: string
-  },
-  diagnostics: AgentHtmlDiagnostic[],
-): ParsedAgentHtmlElementNode {
-  return {
-    ...node,
-    name: componentName,
-    attrs: normalizeUiAttrs(node.attrs),
-    children: getSlotChildren(node, slotName).map((slot) => ({
-      ...slot,
-      name: slotComponent,
-      attrs: normalizeSlotAttrs(slot.attrs),
-      children: slot.children.flatMap((child) =>
-        normalizeUiProtocolChild(child, diagnostics),
-      ),
-    })),
-  }
-}
-
-function diagnoseUnknownUiSlots(
-  node: ParsedAgentHtmlElementNode,
-  componentName: string,
-  diagnostics: AgentHtmlDiagnostic[],
-) {
-  const allowedSlots = UI_PROTOCOL_SLOT_NAMES[componentName]
-
-  if (!allowedSlots) {
-    return
-  }
-
-  for (const slot of getUiSlotDescendants(node)) {
-    const slotName = slot.attrs.name
-
-    if (slotName && allowedSlots.includes(slotName)) {
-      continue
-    }
-
-    diagnostics.push({
-      code: "unknown-slot",
-      message: `"${slotName || "missing"}" is not a registered slot on <ui name="${componentName}">.`,
-      path: slot.path,
-      severity: "error",
-    })
-  }
-}
-
-function getUiSlotDescendants(
-  node: ParsedAgentHtmlElementNode,
-): ParsedAgentHtmlElementNode[] {
-  return node.children.flatMap((child): ParsedAgentHtmlElementNode[] => {
-    if (child.type !== "element" || child.name === "ui") {
-      return []
-    }
-
-    const matched = child.name === "slot" ? [child] : []
-
-    return [...matched, ...getUiSlotDescendants(child)]
-  })
-}
-
-function getSlotChildren(
-  node: ParsedAgentHtmlElementNode | undefined,
-  slotName: string,
-): ParsedAgentHtmlElementNode[] {
-  if (!node) {
-    return []
-  }
-
-  return node.children.filter(
-    (child): child is ParsedAgentHtmlElementNode =>
-      child.type === "element" &&
-      child.name === "slot" &&
-      child.attrs.name === slotName,
-  )
-}
-
-function getSlotDescendants(
-  node: ParsedAgentHtmlElementNode | undefined,
-  slotName: string,
-): ParsedAgentHtmlElementNode[] {
-  if (!node) {
-    return []
-  }
-
-  return node.children.flatMap((child): ParsedAgentHtmlElementNode[] => {
-    if (child.type !== "element") {
-      return []
-    }
-
-    const matched =
-      child.name === "slot" && child.attrs.name === slotName ? [child] : []
-
-    return [...matched, ...getSlotDescendants(child, slotName)]
-  })
-}
-
-function normalizeUiAttrs(
-  attrs: Readonly<Record<string, string>>,
-): Readonly<Record<string, string>> {
-  const rest = { ...attrs }
-  delete rest.name
-  return normalizeKnownAttrAliases(rest)
-}
-
-function normalizeSlotAttrs(
-  attrs: Readonly<Record<string, string>>,
-): Readonly<Record<string, string>> {
-  const rest = { ...attrs }
-  delete rest.name
-  return normalizeKnownAttrAliases(rest)
-}
-
-function normalizeKnownAttrAliases(
-  attrs: Readonly<Record<string, string>>,
-): Readonly<Record<string, string>> {
-  const normalized = { ...attrs }
-
-  if ("default-value" in normalized && !("default" in normalized)) {
-    normalized.default = normalized["default-value"]
-    delete normalized["default-value"]
-  }
-
-  return normalized
-}
-
-function getTextContent(
-  node: ParsedAgentHtmlElementNode | undefined,
-): string | undefined {
-  const text = node?.children
-    .filter(
-      (child): child is Extract<ParsedAgentHtmlNode, { type: "text" }> =>
-        child.type === "text",
-    )
-    .map((child) => child.value)
-    .join(" ")
-    .trim()
-
-  return text || undefined
-}
-
 function validateElementNode(
   node: ParsedAgentHtmlElementNode,
   parent: ParsedAgentHtmlElementNode | undefined,

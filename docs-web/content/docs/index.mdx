@@ -84,19 +84,14 @@ ahtml doctor
 ahtml schema --format prompt
 ```
 
-Use the schema output to learn the registered components, allowed props, allowed children, and finite render config values.
+Use the schema output to learn the registered components, allowed props, allowed children, and approved presentation profile values.
 
 ## 3. Write a document [#write-a-document]
 
 A valid document needs a `<page>` root.
 
 ```html title="artifact.agent.html"
-<meta-agent
-  theme="neutral"
-  density="comfortable"
-  tone="report"
-  width="article"
-/>
+<meta-agent profile="report-default" />
 
 <page title="Review">
   <card title="Summary">
@@ -111,7 +106,7 @@ A valid document needs a `<page>` root.
 ahtml validate --input artifact.agent.html
 ```
 
-Validation catches unknown components, unknown props, blocked implementation details, invalid children, and invalid render config values before artifact generation.
+Validation catches unknown components, unknown props, blocked implementation details, invalid children, and invalid presentation profile values before artifact generation.
 
 ## 5. Build the artifact [#build-the-artifact]
 

@@ -10,6 +10,7 @@ import {
   writeGeneratedDocument,
 } from "./runtime-status.mjs"
 import { nativeRuntimeSetup, resolveRuntimeSetup } from "./runtime-setup.mjs"
+import { getRuntimeRenderDiagnostics } from "./runtime-renderability.mjs"
 import { validateAgentHtmlSource } from "./validate.mjs"
 import { parseJson, printDiagnostics, writeJsonFile } from "./cli-io.mjs"
 
@@ -31,7 +32,20 @@ export function createArtifactWorkflow({
     }
 
     const packageVersion = await readPackageVersion()
-    await ensureManagedRuntime(packageVersion)
+    const schema = await getCliSchemaOutput()
+    await ensureManagedRuntime(packageVersion, schema)
+    const runtimeDiagnostics = await getRuntimeRenderDiagnostics({
+      document: validation.document,
+      runtimePaths,
+      schema,
+    })
+
+    if (runtimeDiagnostics.length > 0) {
+      printDiagnostics(runtimeDiagnostics)
+      process.exitCode = 1
+      return undefined
+    }
+
     await writeGeneratedDocument(validation.document, runtimePaths)
 
     const outputDir = path.resolve(userRoot, outputPath ?? defaultOutputDir)
@@ -47,7 +61,7 @@ export function createArtifactWorkflow({
     return outputDir
   }
 
-  async function ensureManagedRuntime(packageVersion) {
+  async function ensureManagedRuntime(packageVersion, schema) {
     const status = await getRuntimeStatus({
       packageVersion,
       outputDir: defaultOutputDir,
@@ -72,7 +86,7 @@ export function createArtifactWorkflow({
         },
         interactive: false,
       }),
-      schema: await getCliSchemaOutput(),
+      schema: schema ?? (await getCliSchemaOutput()),
     })
   }
 
@@ -110,9 +124,14 @@ export function createInspection(document) {
     throw new Error("Cannot inspect an invalid agent-html document.")
   }
 
+  const { profile, ...resolvedConfig } = document.meta
+
   return {
     kind: "agent-html-inspection",
-    config: document.meta,
+    config: {
+      profile,
+    },
+    resolvedConfig,
     components: countComponents(document.components),
   }
 }
@@ -123,6 +142,14 @@ export function formatInspectionSummary(inspection) {
     ...Object.entries(inspection.config).map(
       ([key, value]) => `${key}: ${value}`,
     ),
+    ...(inspection.resolvedConfig
+      ? [
+          "resolved tokens:",
+          ...Object.entries(inspection.resolvedConfig).map(
+            ([key, value]) => `- ${key}: ${value}`,
+          ),
+        ]
+      : []),
     "components:",
   ]
 

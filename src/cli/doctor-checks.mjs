@@ -8,14 +8,26 @@ import {
 } from "../config/render-capabilities.mjs"
 import { getCliSchemaOutput } from "./schema.mjs"
 import {
+  assertBuiltArtifactCss,
   assertRuntimeComponentsJson,
   assertRuntimeCssBase,
   assertRuntimeCssEntry,
+  assertRuntimeCssImports,
+  getShadcnRuntimeProvenanceState,
+  formatShadcnRuntimeProvenance,
+  assertRuntimeSurface,
   formatShadcnRuntimeSurface,
+  MissingBuiltArtifactCssError,
 } from "./runtime-surface.mjs"
+import {
+  assertRendererSpecParity,
+  assertRuntimeRendererRegistryParity,
+  assertSameStringSet,
+  assertUiCapabilitiesParity,
+  readRuntimeCapabilities,
+} from "./runtime-renderability.mjs"
 import { checkForPackageUpdate } from "./update-check.mjs"
 import { readRuntimeManifest } from "./runtime-status.mjs"
-import { parseJson } from "./cli-io.mjs"
 
 export async function runDoctorCommand({
   commandArgs,
@@ -95,13 +107,20 @@ export async function runDoctorCommand({
   )
   checks.push(
     await runDoctorCheck("runtime", "components-json", async () => {
-      return assertRuntimeComponentsJson(runtimePaths)
+      const manifest = await readRuntimeManifest(runtimePaths)
+      return assertRuntimeComponentsJson({ manifest, paths: runtimePaths })
     }),
   )
   checks.push(
     await runDoctorCheck("runtime", "shadcn-css-entry", async () => {
       const manifest = await readRuntimeManifest(runtimePaths)
       return assertRuntimeCssEntry({ manifest, paths: runtimePaths })
+    }),
+  )
+  checks.push(
+    await runDoctorCheck("runtime", "shadcn-css-imports", async () => {
+      const manifest = await readRuntimeManifest(runtimePaths)
+      return assertRuntimeCssImports({ manifest, paths: runtimePaths })
     }),
   )
   checks.push(
@@ -113,7 +132,15 @@ export async function runDoctorCommand({
   checks.push(
     await runDoctorCheck("runtime", "shadcn-surface", async () => {
       const manifest = await readRuntimeManifest(runtimePaths)
+      await assertRuntimeSurface({ manifest, paths: runtimePaths })
       return formatShadcnRuntimeSurface(manifest.shadcnRuntimeSurface)
+    }),
+  )
+  checks.push(
+    await runDoctorProvenanceCheck(async () => {
+      const manifest = await readRuntimeManifest(runtimePaths)
+      await assertRuntimeSurface({ manifest, paths: runtimePaths })
+      return getShadcnRuntimeProvenanceState(manifest.shadcnRuntimeSurface)
     }),
   )
   checks.push(
@@ -141,39 +168,46 @@ export async function runDoctorCommand({
     }),
   )
   checks.push(
-    await runDoctorCheck("runtime", "render-capabilities", async () => {
+    await runDoctorCheck("runtime", "verification-data", async () => {
       await stat(runtimePaths.runtimeCapabilitiesPath)
       return runtimePaths.runtimeCapabilitiesPath
     }),
   )
   checks.push(
-    await runDoctorCheck("runtime", "render-capability-parity", async () => {
+    await runDoctorCheck("runtime", "verification-data-parity", async () => {
       const schema = await getCliSchemaOutput()
       const runtimeCapabilities = await readRuntimeCapabilities(runtimePaths)
 
       assertUiCapabilitiesParity({
-        actual: runtimeCapabilities.uiCapabilities,
-        actualName: "runtime render capabilities",
-        expected: schema.uiCapabilities,
-        expectedName: "schema uiCapabilities",
+        actual: runtimeCapabilities.verificationData,
+        actualName: "runtime verification data ui capabilities",
+        expected: schema.verificationData,
+        expectedName: "schema verificationData",
       })
 
-      return `${runtimeCapabilities.uiCapabilities.components.length} ui capabilities`
+      return `${runtimeCapabilities.verificationData.components.length} ui capabilities`
     }),
   )
   checks.push(
-    await runDoctorCheck("runtime", "renderer-spec-parity", async () => {
+    await runDoctorCheck("runtime", "renderer-mapping-parity", async () => {
       const schema = await getCliSchemaOutput()
       const runtimeCapabilities = await readRuntimeCapabilities(runtimePaths)
 
       assertRendererSpecParity({
-        actual: runtimeCapabilities.rendererSpec,
-        actualName: "runtime renderer spec",
-        expected: schema.rendererSpec,
-        expectedName: "schema rendererSpec",
+        actual: runtimeCapabilities.rendererMapping,
+        actualName: "runtime renderer mapping spec",
+        expected: schema.rendererMapping,
+        expectedName: "schema rendererMapping",
       })
 
-      return `${runtimeCapabilities.rendererSpec.components.length} renderer specs`
+      return `${runtimeCapabilities.rendererMapping.components.length} renderer specs`
+    }),
+  )
+  checks.push(
+    await runDoctorCheck("runtime", "renderer-registry-parity", async () => {
+      const runtimeCapabilities = await readRuntimeCapabilities(runtimePaths)
+      assertRuntimeRendererRegistryParity(runtimeCapabilities)
+      return `${runtimeCapabilities.rendererMapping.components.length} renderer entries`
     }),
   )
   checks.push(
@@ -188,6 +222,16 @@ export async function runDoctorCommand({
       await access(defaultOutputDir, constants.W_OK)
       return defaultOutputDir
     }),
+  )
+  checks.push(
+    await runDoctorCheck(
+      "artifact",
+      "built-css",
+      async () => assertBuiltArtifactCss(defaultOutputDir),
+      {
+        skip: (error) => error instanceof MissingBuiltArtifactCssError,
+      },
+    ),
   )
   checks.push(await runDoctorUpdateCheck(packageVersion))
 
@@ -219,13 +263,6 @@ async function assertRuntimeComponentExports({ component, componentPath }) {
       `${componentPath} is missing exports: ${missingExports.join(", ")}`,
     )
   }
-}
-
-async function readRuntimeCapabilities(paths) {
-  return parseJson(
-    await readFile(paths.runtimeCapabilitiesPath, "utf8"),
-    "render-capabilities.generated.json must be valid JSON.",
-  )
 }
 
 function hasNamedExport(source, exportName) {
@@ -302,147 +339,21 @@ function getDeclarationName(node) {
   return undefined
 }
 
-function assertSameStringSet({ actual, actualName, expected, expectedName }) {
-  const actualSet = new Set(actual)
-  const expectedSet = new Set(expected)
-  const missing = expected.filter((item) => !actualSet.has(item))
-  const extra = actual.filter((item) => !expectedSet.has(item))
 
-  if (missing.length > 0 || extra.length > 0) {
-    throw new Error(
-      [
-        `${actualName} does not match ${expectedName}.`,
-        missing.length > 0 ? `Missing: ${missing.join(", ")}` : "",
-        extra.length > 0 ? `Extra: ${extra.join(", ")}` : "",
-      ]
-        .filter(Boolean)
-        .join(" "),
-    )
-  }
-}
-
-function assertUiCapabilitiesParity({
-  actual,
-  actualName,
-  expected,
-  expectedName,
-}) {
-  const actualComponents = actual?.components ?? []
-  const expectedComponents = expected?.components ?? []
-
-  assertSameStringSet({
-    actual: actualComponents.map((component) => component.name),
-    actualName: `${actualName} components`,
-    expected: expectedComponents.map((component) => component.name),
-    expectedName: `${expectedName} components`,
-  })
-
-  for (const expectedComponent of expectedComponents) {
-    const actualComponent = actualComponents.find(
-      (component) => component.name === expectedComponent.name,
-    )
-
-    if (!actualComponent) {
-      continue
-    }
-
-    assertSameStringSet({
-      actual: actualComponent.props ?? [],
-      actualName: `${actualName} ${expectedComponent.name} props`,
-      expected: expectedComponent.props ?? [],
-      expectedName: `${expectedName} ${expectedComponent.name} props`,
-    })
-    assertSameValue({
-      actual: actualComponent.renderKind,
-      actualName: `${actualName} ${expectedComponent.name} renderKind`,
-      expected: expectedComponent.renderKind,
-      expectedName: `${expectedName} ${expectedComponent.name} renderKind`,
-    })
-    assertSameStringSet({
-      actual: (actualComponent.slots ?? []).map((slot) => slot.name),
-      actualName: `${actualName} ${expectedComponent.name} slots`,
-      expected: (expectedComponent.slots ?? []).map((slot) => slot.name),
-      expectedName: `${expectedName} ${expectedComponent.name} slots`,
-    })
-
-    for (const expectedSlot of expectedComponent.slots ?? []) {
-      const actualSlot = (actualComponent.slots ?? []).find(
-        (slot) => slot.name === expectedSlot.name,
-      )
-
-      if (!actualSlot) {
-        continue
-      }
-
-      assertSameStringSet({
-        actual: actualSlot.props ?? [],
-        actualName: `${actualName} ${expectedComponent.name}.${expectedSlot.name} props`,
-        expected: expectedSlot.props ?? [],
-        expectedName: `${expectedName} ${expectedComponent.name}.${expectedSlot.name} props`,
-      })
-      assertSameStringSet({
-        actual: actualSlot.children ?? [],
-        actualName: `${actualName} ${expectedComponent.name}.${expectedSlot.name} children`,
-        expected: expectedSlot.children ?? [],
-        expectedName: `${expectedName} ${expectedComponent.name}.${expectedSlot.name} children`,
-      })
-    }
-  }
-}
-
-function assertRendererSpecParity({
-  actual,
-  actualName,
-  expected,
-  expectedName,
-}) {
-  const actualComponents = actual?.components ?? []
-  const expectedComponents = expected?.components ?? []
-
-  assertSameStringSet({
-    actual: actualComponents.map((component) => component.name),
-    actualName: `${actualName} components`,
-    expected: expectedComponents.map((component) => component.name),
-    expectedName: `${expectedName} components`,
-  })
-
-  for (const expectedComponent of expectedComponents) {
-    const actualComponent = actualComponents.find(
-      (component) => component.name === expectedComponent.name,
-    )
-
-    if (!actualComponent) {
-      continue
-    }
-
-    assertSameValue({
-      actual: actualComponent.renderKind,
-      actualName: `${actualName} ${expectedComponent.name} renderKind`,
-      expected: expectedComponent.renderKind,
-      expectedName: `${expectedName} ${expectedComponent.name} renderKind`,
-    })
-    assertSameStringSet({
-      actual: (actualComponent.slots ?? []).map((slot) => slot.name),
-      actualName: `${actualName} ${expectedComponent.name} slots`,
-      expected: (expectedComponent.slots ?? []).map((slot) => slot.name),
-      expectedName: `${expectedName} ${expectedComponent.name} slots`,
-    })
-  }
-}
-
-function assertSameValue({ actual, actualName, expected, expectedName }) {
-  if (actual !== expected) {
-    throw new Error(
-      `${actualName} does not match ${expectedName}. Actual: ${String(actual)} Expected: ${String(expected)}.`,
-    )
-  }
-}
-
-async function runDoctorCheck(category, name, check) {
+async function runDoctorCheck(category, name, check, options = {}) {
   try {
     const detail = await check()
     return { category, name, status: "ok", detail }
   } catch (error) {
+    if (options.skip?.(error)) {
+      return {
+        category,
+        name,
+        status: "skip",
+        detail: error instanceof Error ? error.message : String(error),
+      }
+    }
+
     return {
       category,
       name,
@@ -478,5 +389,24 @@ async function runDoctorUpdateCheck(packageVersion) {
     name: "update",
     status: "skip",
     detail: update.reason,
+  }
+}
+
+async function runDoctorProvenanceCheck(check) {
+  try {
+    const result = await check()
+    return {
+      category: "runtime",
+      name: "shadcn-provenance",
+      status: result.state === "complete" ? "ok" : "warn",
+      detail: result.detail,
+    }
+  } catch (error) {
+    return {
+      category: "runtime",
+      name: "shadcn-provenance",
+      status: "fail",
+      detail: error instanceof Error ? error.message : String(error),
+    }
   }
 }

@@ -1,9 +1,105 @@
 const textChild = "#text"
+const uiProtocolDefinitions = {
+  page: {
+    promptOrder: 0,
+  },
+  card: {
+    promptOrder: 1,
+  },
+  alert: {
+    promptOrder: 2,
+  },
+  badge: {
+    promptOrder: 3,
+  },
+  separator: {
+    promptOrder: 4,
+  },
+  list: {
+    promptOrder: 5,
+    normalization: {
+      kind: "slotted",
+      slotName: "item",
+      childComponentName: "item",
+    },
+    slots: [
+      {
+        name: "item",
+        children: ["text"],
+      },
+    ],
+  },
+  table: {
+    promptOrder: 6,
+    normalization: {
+      kind: "table",
+      rowSlotName: "row",
+      rowComponentName: "row",
+      cellSlotName: "cell",
+      cellComponentName: "cell",
+    },
+    slots: [
+      {
+        name: "row",
+        props: ["kind"],
+        children: ["cell"],
+      },
+      {
+        name: "cell",
+        children: ["text"],
+      },
+    ],
+  },
+  tabs: {
+    promptOrder: 7,
+    attrAliases: {
+      default: "default-value",
+    },
+    normalization: {
+      kind: "tabs",
+      triggerSlotName: "tabs-trigger",
+      contentSlotName: "tabs-content",
+      childComponentName: "tab",
+    },
+    slots: [
+      {
+        name: "tabs-list",
+        children: ["tabs-trigger"],
+      },
+      {
+        name: "tabs-trigger",
+        props: ["value"],
+        children: ["text"],
+      },
+      {
+        name: "tabs-content",
+        props: ["value", "label"],
+        childrenFromComponent: "tab",
+      },
+    ],
+  },
+  accordion: {
+    promptOrder: 8,
+    normalization: {
+      kind: "slotted",
+      slotName: "accordion-item",
+      childComponentName: "accordion-item",
+    },
+    slots: [
+      {
+        name: "accordion-item",
+        props: ["value", "title"],
+        childrenFromComponent: "accordion-item",
+      },
+    ],
+  },
+}
 
 export const componentCapabilityDefinitions = {
   page: {
     source: "ahtml-standard",
     renderKind: "compound",
+    uiProtocol: uiProtocolDefinitions.page,
     renderer: {
       kind: "compound",
       root: "article",
@@ -17,6 +113,7 @@ export const componentCapabilityDefinitions = {
   alert: {
     source: "shadcn",
     renderKind: "compound",
+    uiProtocol: uiProtocolDefinitions.alert,
     requiredRegistryItem: "alert",
     requiredExports: ["Alert", "AlertDescription", "AlertTitle"],
     renderer: {
@@ -41,6 +138,7 @@ export const componentCapabilityDefinitions = {
   card: {
     source: "shadcn",
     renderKind: "compound",
+    uiProtocol: uiProtocolDefinitions.card,
     requiredRegistryItem: "card",
     requiredExports: ["Card", "CardContent", "CardHeader", "CardTitle"],
     renderer: {
@@ -56,6 +154,7 @@ export const componentCapabilityDefinitions = {
   separator: {
     source: "shadcn",
     renderKind: "primitive",
+    uiProtocol: uiProtocolDefinitions.separator,
     requiredRegistryItem: "separator",
     requiredExports: ["Separator"],
     renderer: {
@@ -67,6 +166,7 @@ export const componentCapabilityDefinitions = {
   badge: {
     source: "shadcn",
     renderKind: "primitive",
+    uiProtocol: uiProtocolDefinitions.badge,
     requiredRegistryItem: "badge",
     requiredExports: ["Badge"],
     renderer: {
@@ -90,6 +190,7 @@ export const componentCapabilityDefinitions = {
   table: {
     source: "shadcn",
     renderKind: "table",
+    uiProtocol: uiProtocolDefinitions.table,
     requiredRegistryItem: "table",
     requiredExports: [
       "Table",
@@ -108,6 +209,7 @@ export const componentCapabilityDefinitions = {
       headerCell: "TableHead",
       bodyCell: "TableCell",
       headerKind: "header",
+      kindProp: "kind",
       rowSlot: "row",
       cellSlot: "cell",
     },
@@ -115,6 +217,7 @@ export const componentCapabilityDefinitions = {
   list: {
     source: "ahtml-standard",
     renderKind: "collection",
+    uiProtocol: uiProtocolDefinitions.list,
     renderer: {
       kind: "collection",
       rootByProp: {
@@ -135,6 +238,7 @@ export const componentCapabilityDefinitions = {
   tabs: {
     source: "shadcn",
     renderKind: "tabs",
+    uiProtocol: uiProtocolDefinitions.tabs,
     requiredRegistryItem: "tabs",
     requiredExports: ["Tabs", "TabsContent", "TabsList", "TabsTrigger"],
     renderer: {
@@ -144,6 +248,8 @@ export const componentCapabilityDefinitions = {
       trigger: "TabsTrigger",
       content: "TabsContent",
       itemSlot: "tab",
+      itemValueProp: "value",
+      itemHeadingProp: "label",
       defaultProp: "default",
       fallback: true,
       slotMode: "standard-children",
@@ -152,6 +258,7 @@ export const componentCapabilityDefinitions = {
   accordion: {
     source: "shadcn",
     renderKind: "interactive-collection",
+    uiProtocol: uiProtocolDefinitions.accordion,
     requiredRegistryItem: "accordion",
     requiredExports: [
       "Accordion",
@@ -166,7 +273,10 @@ export const componentCapabilityDefinitions = {
       trigger: "AccordionTrigger",
       content: "AccordionContent",
       itemSlot: "accordion-item",
+      itemValueProp: "value",
+      itemHeadingProp: "title",
       mode: "multiple",
+      fallback: true,
     },
   },
 }
@@ -227,56 +337,13 @@ export function getAgentRenderKind(name) {
 }
 
 export function createUiSlots(component, componentMap) {
-  if (component.name === "tabs") {
-    return [
-      {
-        name: "tabs-list",
-        children: ["tabs-trigger"],
-      },
-      {
-        name: "tabs-trigger",
-        props: ["value"],
-        children: ["text"],
-      },
-      {
-        name: "tabs-content",
-        props: ["value", "label"],
-        children: getAllowedUiChildren(componentMap.get("tab")),
-      },
-    ]
-  }
+  const configuredSlots = componentCapabilityDefinitions[component.name]?.uiProtocol
+    ?.slots
 
-  if (component.name === "accordion") {
-    return [
-      {
-        name: "accordion-item",
-        props: ["value", "title"],
-        children: getAllowedUiChildren(componentMap.get("accordion-item")),
-      },
-    ]
-  }
-
-  if (component.name === "table") {
-    return [
-      {
-        name: "row",
-        props: ["kind"],
-        children: ["cell"],
-      },
-      {
-        name: "cell",
-        children: ["text"],
-      },
-    ]
-  }
-
-  if (component.name === "list") {
-    return [
-      {
-        name: "item",
-        children: ["text"],
-      },
-    ]
+  if (configuredSlots?.length) {
+    return configuredSlots.map((slot) =>
+      resolveUiProtocolSlot(slot, componentMap),
+    )
   }
 
   return [
@@ -285,6 +352,14 @@ export function createUiSlots(component, componentMap) {
       children: getAllowedUiChildren(component),
     },
   ]
+}
+
+export function getUiProtocolDefinition(name) {
+  return componentCapabilityDefinitions[name]?.uiProtocol
+}
+
+export function getUiProtocolAttrAliases(name) {
+  return getUiProtocolDefinition(name)?.attrAliases ?? {}
 }
 
 export function createStandardRendererSlots(component, componentMap) {
@@ -297,13 +372,36 @@ export function createStandardRendererSlots(component, componentMap) {
       .filter((child) => child !== "text")
       .map((child) => ({
         name: child,
+        childNames: [child],
         children: getAllowedUiChildren(componentMap.get(child)),
       })),
   ]
+}
+
+export function createRendererSlots(component, componentMap) {
+  return createUiSlots(component, componentMap).map((slot) =>
+    slot.name === "children"
+      ? slot
+      : {
+          ...slot,
+          childNames: [slot.name],
+        },
+  )
 }
 
 function getAllowedUiChildren(component) {
   return (component?.allowedChildren ?? []).map((child) =>
     child === textChild ? "text" : child,
   )
+}
+
+function resolveUiProtocolSlot(slot, componentMap) {
+  const { childrenFromComponent, ...rest } = slot
+
+  return {
+    ...rest,
+    children: childrenFromComponent
+      ? getAllowedUiChildren(componentMap.get(childrenFromComponent))
+      : [...(slot.children ?? [])],
+  }
 }

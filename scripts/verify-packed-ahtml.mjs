@@ -84,6 +84,7 @@ try {
   await expectStdout(["status"], "runtime manifest: ok")
   await expectStdout(["status"], "ui library: shadcn")
   await expectStdout(["status"], "component source: shadcn-cli")
+  await expectStdout(["status"], "runtime shell: ahtml-managed-shell")
   await expectStdout(["status"], "prompt-ui manifest: ok")
   await expectStdout(
     ["status"],
@@ -108,7 +109,7 @@ try {
   await writeFile(
     documentPath,
     [
-      '<meta-agent theme="neutral" density="compact" tone="dashboard" width="dashboard" />',
+      '<meta-agent profile="ops-compact" />',
       '<page title="Packed CLI"><card title="Overview">Built from an installed package.</card></page>',
     ].join("\n"),
   )
@@ -138,7 +139,7 @@ try {
   await expectStdout(["doctor"], "ok runtime:manifest")
   await expectPreview(documentPath, path.join(consumerDir, "dist", "preview"))
 
-  await expectStdout(["config", "get"], '"density"')
+  await expectStdout(["config", "get"], '"report-default"')
   await expectFailure(
     ["config", "set", "density", "compact"],
     "config accepts only get",
@@ -223,10 +224,6 @@ function assertPackBoundary(files) {
     "src/cli/runtime-setup.mjs",
     "src/cli/runtime-status.mjs",
     "src/cli/runtime-build.mjs",
-    "src/cli/shadcn-template/vite-app/index.html",
-    "src/cli/shadcn-template/vite-app/src/index.css",
-    "src/cli/shadcn-template/vite-app/tsconfig.json",
-    "src/cli/shadcn-template/vite-app/vite.config.ts",
     "src/cli/runtime-template.mjs",
     "src/cli/runtime-template/src/app.tsx",
     "src/config/component-capabilities.mjs",

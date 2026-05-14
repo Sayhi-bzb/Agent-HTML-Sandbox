@@ -4,40 +4,43 @@
 
 `AGENTS.md` is the maintainer's relay to coding agents started by other developers and contributors. Treat it as the first-stop governance file for prompt guidance, contribution constraints, repo navigation, documentation ownership, verification expectations, issue handling, and GitNexus usage.
 
-Keep end-user product instructions in `README.md` and `docs-web/content/`. Keep architecture and checkpoint material in `blueprint/` and `spec/`.
+## Documentation Layers
 
-## Project Goal
+Repository documentation is layered by audience and decision type.
 
-`agent-html` produces safe, inspectable, portable static artifacts from a constrained agent-facing document format. The package should let agents express content structure without exposing low-value or high-risk implementation details.
+- `blueprint/`: project direction, architecture, planning, design principles, roadmap, architecture boundaries, and stage decisions. Do not use it for daily development constraints.
+- `AGENTS.md`: working rules for development agents, including principles, pacing, change boundaries, verification selection, and repo operating rhythm.
+- `docs-web/content/`: concrete project and maintenance documentation.
+- `README.md`: visitor-facing product introduction and basic usage path. Keep it short, clean, and human-readable.
+- `.agents/skills/ahtml/`: usage guidance for user-side agents working with `ahtml`, not repository development rules.
 
-Architecture principles live under `blueprint/`; start at `blueprint/index.md`. The core direction is:
+## Project Context
 
-- Agent-friendly authoring with less style and implementation noise.
-- Portable artifacts that are easy to open, share, and archive.
-- Lightweight generation focused on understanding and collaboration.
-- Human-readable output first.
-- Round-trippable artifacts that can feed human feedback back into agent workflows.
-- Constrained freedom: semantic expression without arbitrary CSS, script, or component internals.
-- Stable visual semantics across artifacts.
-- Inspectable and safe outputs.
+`agent-html` produces safe, inspectable, portable static artifacts from a constrained agent-facing document format. Preserve that package boundary when making changes.
+
+For architecture principles, design rationale, and stage decisions, start at [`blueprint/index.md`](blueprint/index.md).
 
 ## Repository Map
 
-- `src/engine`: parse, validate, sanitize, ComponentSchema, render config, diagnostics, and shared agent-html types.
-- `src/config`: finite defaults and CLI config values.
-- `src/cli`: command orchestration, local IO, init/build/preview/inspect/status/doctor/config.
-- `docs-web/content/`: public documentation content.
-- `.agents/skills/ahtml/`: agent-facing skill guidance for install, usage, debug, and bug-reporting behavior.
-- `spec/`: roadmap, map, checkpoints, and architecture-adjacent planning notes.
-- `blueprint/`: architecture principles, design boundaries, and tool decisions.
+- `src/engine`: parsing, validation, sanitization, rendering core, and shared agent-html types.
+- `src/config`: default values and CLI config behavior.
+- `src/cli`: command orchestration and local runtime IO.
+- `README.md`: visitor-facing product overview and basic usage entry.
+- `docs-web/content/`: project and maintenance docs. Start at [`docs/index.mdx`](docs-web/content/docs/index.mdx).
+- `.agents/skills/ahtml/`: `ahtml` skill guidance. Start at [`SKILL.md`](.agents/skills/ahtml/SKILL.md).
+- `spec/`: planning checkpoints. Start at [`spec/map.md`](spec/map.md); use [`spec/roadmap.md`](spec/roadmap.md) when phase direction matters.
+- `blueprint/`: architecture decisions and boundaries. Start at [`blueprint/index.md`](blueprint/index.md).
 
 ## Agent Workflow
 
 - Read relevant repo context before editing; do not guess boundaries that are documented in `blueprint/`, `spec/`, or this file.
 - Confirm the target layer before changing code: engine, config, CLI, docs, skill, spec, or blueprint.
-- Keep changes narrow and aligned with the package boundary.
-- Do not mix unrelated code, docs, spec, blueprint, release, or generated-output edits.
-- Do not silently expand scope when you find adjacent problems. Report the problem, then fix it only when it is required for the requested task or explicitly approved.
+- For architecture or boundary decisions, start at [`blueprint/index.md`](blueprint/index.md).
+- For user-facing or maintenance docs work, start at [`docs-web/content/docs/index.mdx`](docs-web/content/docs/index.mdx).
+- For `ahtml` usage, debugging, build, preview, or artifact-delivery tasks, start at [`.agents/skills/ahtml/SKILL.md`](.agents/skills/ahtml/SKILL.md).
+- For checkpoints or staged delivery status, start at [`spec/map.md`](spec/map.md) and read [`spec/roadmap.md`](spec/roadmap.md) only when roadmap context is required.
+- Keep changes narrow. Do not mix unrelated code, docs, spec, blueprint, release, or generated-output edits, and do not silently expand scope.
+- Report adjacent problems, then fix them only when they are required for the requested task or explicitly approved.
 - Work in explicit stages. Do not mix architecture planning, code implementation, test repair, and real end-to-end runtime probing in the same loop unless the task explicitly requires it.
 - Before running a heavy command, state what requirement it verifies and what result will stop the loop. Do not repeat a slow command merely for reassurance after small unrelated edits.
 - Use GitNexus for unfamiliar code paths, public API changes, shared runtime / CLI flows, impact analysis, refactors, and pre-commit scope checks.
@@ -54,7 +57,7 @@ Architecture principles live under `blueprint/`; start at `blueprint/index.md`. 
 - For docs changes that touch tables, code blocks, generated snippets, command output, MDX structure, routes, or examples, run only the targeted formatting, markdown, or docs check that covers the changed surface.
 - For ordinary CLI/runtime code changes, run `npm run build` once, then the narrowest relevant test file or test name once. Re-run only after a code change that could affect the failing area.
 - For lint and formatting on code changes, start with touched files: `npx eslint <files>` and `npx prettier --check <files>`. Use full `npm run lint` or broader checks as a final gate, not after every small edit.
-- Treat `npm run test:run -- src/cli/cli.test.ts` as a heavy CLI/runtime gate. Use it for changes to setup, status, doctor, build, preview, schema output, or runtime rendering, not for unrelated copy edits.
+- Treat `npm run test:run:cli-heavy` as a heavy CLI/runtime gate. Use it for changes to setup, status, doctor, build, preview, schema output, or runtime rendering, not for unrelated copy edits.
 - Treat real shadcn init, registry access, build/preview servers, and browser visual checks as explicit E2E gates. Run them with an isolated `AHTML_HOME`, a clear timeout, and a concrete success criterion.
 - If a command fails because of network restrictions, sandbox limits, Windows file locks, registry availability, or a long-running external tool, record the blocker and switch to the smallest useful local verification. Do not keep retrying the same heavy command without changing the conditions.
 - Do not leave long-running dev servers, preview servers, or test sessions active when finishing a turn.
@@ -89,21 +92,12 @@ Architecture principles live under `blueprint/`; start at `blueprint/index.md`. 
 
 ## Documentation Rules
 
-- `README.md`: user operation manual only. Do not add repository development, release, deployment, package verification, or skill distribution instructions there.
-- `docs-web/content/`: public docs content, including quick start, best practice, examples, and developer docs.
-- `.agents/skills/ahtml/`: agent workflow guidance for installing, using, debugging, and reporting bugs around `ahtml`.
-- `spec/` and `blueprint/`: not routine documentation surfaces. Update them only when scope, checkpoints, architecture principles, or product boundaries change.
+- Edit `AGENTS.md` for repository working rules and agent-facing governance, not for detailed project facts or user workflows.
+- Edit `README.md` for visitor-facing product introduction and basic usage only. Do not add repository development, release, deployment, package verification, or skill distribution instructions there.
+- Edit `docs-web/content/` for concrete product and maintenance documentation. Do not put development-agent behavior rules there.
+- Edit `.agents/skills/ahtml/` for user-side agent usage, debugging, and bug-reporting guidance around `ahtml`, not repository development governance.
+- Edit `spec/` and `blueprint/` only when scope, checkpoints, architecture principles, or product boundaries change.
 - Keep `README.md`, `docs-web/content/`, and `.agents/skills/ahtml/` aligned when user-facing commands or workflows change.
-
-## Skill Writing Norms
-
-- Treat `SKILL.md` as the entrypoint, not the handbook. Keep it short, guide-like, and centered on the default user path.
-- For `ahtml`, keep the core path in `SKILL.md`: how an agent writes `.agent.html`, the minimal syntax and validation expectations, and how to hand the result back to the user.
-- Use progressive disclosure for everything else. Route install, repair, debugging, and bug-reporting detail into one-hop `references/` files and load them only when the task calls for them.
-- Write references with explicit trigger conditions in `SKILL.md`; do not list a file without saying when to read it.
-- Keep one stable vocabulary across skill files. Prefer `.agent.html`, artifact, schema, validate, build, preview, inspect, and managed runtime. Avoid parallel synonyms for the same concept.
-- Use a guide tone. Prefer concise, practical instruction over stiff policy language, and avoid repeating the same workflow in multiple files.
-- Keep skill content focused on helping the agent produce and deliver user results. If a section does not change how the agent should act, move it out of `SKILL.md`.
 
 ## Commit And PR Norms
 

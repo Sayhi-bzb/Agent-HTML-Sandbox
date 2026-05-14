@@ -14,7 +14,6 @@ import {
   TEXT_CHILD,
   VALIDATED_STANDARD_COMPONENT_SCHEMAS,
 } from "./component-schema"
-import { UI_PROTOCOL_SLOT_NAMES } from "./parse/validate-agent-html"
 
 describe("standard component schema", () => {
   it("includes exactly the MVP standard components", () => {
@@ -67,7 +66,17 @@ describe("standard component schema", () => {
             component.slots.map((slot) => slot.name),
           ]),
       ),
-    ).toEqual(UI_PROTOCOL_SLOT_NAMES)
+    ).toEqual({
+      accordion: ["accordion-item"],
+      alert: ["children"],
+      badge: ["children"],
+      card: ["children"],
+      list: ["item"],
+      page: ["children"],
+      separator: ["children"],
+      table: ["row", "cell"],
+      tabs: ["tabs-list", "tabs-trigger", "tabs-content"],
+    })
     expect(
       Object.fromEntries(
         capabilities

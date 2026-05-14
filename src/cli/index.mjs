@@ -28,6 +28,7 @@ import {
 } from "./commands.mjs"
 import { runDoctorCommand } from "./doctor-checks.mjs"
 import { formatPrompt, getCliSchemaOutput } from "./schema.mjs"
+import { getShadcnRuntimeProvenanceState } from "./runtime-surface.mjs"
 import { checkForPackageUpdate } from "./update-check.mjs"
 import { getRuntimePaths } from "./runtime-paths.mjs"
 import {
@@ -344,6 +345,10 @@ async function statusCommand(commandArgs) {
 }
 
 function formatRuntimeStatus(status, update) {
+  const formatCheck = (value) => (value ? "ok" : "incomplete")
+  const runtimeProvenance = status.manifest?.shadcnRuntimeSurface
+    ? getShadcnRuntimeProvenanceState(status.manifest.shadcnRuntimeSurface)
+    : null
   const lines = [
     "ahtml status",
     `ready: ${status.ready ? "yes" : "no"}`,
@@ -354,18 +359,27 @@ function formatRuntimeStatus(status, update) {
     `component source: ${status.manifest?.componentSource ?? "missing"}`,
     `runtime base: ${status.manifest?.runtimeBase ?? "missing"}`,
     `runtime surface: ${status.manifest?.shadcnRuntimeSurface?.source ?? "missing"}`,
+    `runtime shell: ${status.manifest?.shadcnRuntimeSurface?.shellSource ?? "missing"}`,
+    `runtime init: ${status.manifest?.shadcnRuntimeSurface?.initSource ?? "missing"}`,
+    `tailwind version: ${status.manifest?.shadcnRuntimeSurface?.tailwindVersion ?? "missing"}`,
+    `runtime provenance: ${runtimeProvenance?.state ?? "missing"}`,
     `runtime preset: ${status.manifest?.preset ?? "missing"}`,
     `installed ui components: ${status.manifest?.installedUiComponents?.join(", ") ?? "missing"}`,
     `renderable agent components: ${status.manifest?.renderableAgentComponents?.join(", ") ?? "missing"}`,
+    `components.json: ${formatCheck(status.checks.componentsJson)}`,
+    `shadcn css entry: ${formatCheck(status.checks.shadcnCssEntry)}`,
+    `shadcn css imports: ${formatCheck(status.checks.shadcnCssImports)}`,
+    `shadcn css base: ${formatCheck(status.checks.shadcnCssBase)}`,
+    `shadcn surface: ${formatCheck(status.checks.shadcnSurface)}`,
     `prompt-ui manifest: ${status.checks.promptUiManifest ? "ok" : "missing"}`,
-    `render capabilities: ${status.checks.runtimeCapabilities ? "ok" : "missing"}`,
+    `runtime verification data: ${status.checks.runtimeCapabilities ? "ok" : "missing"}`,
     `artifact output: ${cliDefaults.outputDir}`,
     `output writable: ${status.checks.outputWritable ? "yes" : "no"}`,
     `Next: ahtml build --input ${cliDefaults.documentPath} --out ${cliDefaults.outputDir}`,
   ]
 
-  if (!status.ready && status.manifestError) {
-    lines.push(`runtime detail: ${status.manifestError}`)
+  if (!status.ready && (status.runtimeDetail || status.manifestError)) {
+    lines.push(`runtime detail: ${status.runtimeDetail || status.manifestError}`)
   }
 
   if (update?.status === "available") {

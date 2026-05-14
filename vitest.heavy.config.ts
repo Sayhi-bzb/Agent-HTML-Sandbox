@@ -10,8 +10,8 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
-    include: ["src/**/*.test.ts"],
-    exclude: [...configDefaults.exclude, "src/**/*.heavy.test.ts"],
+    include: ["src/**/*.heavy.test.ts"],
+    exclude: configDefaults.exclude,
     testTimeout: 15000,
   },
 })

@@ -17,7 +17,13 @@ import {
 } from "./runtime-paths.mjs"
 import { supportedRuntimeBase } from "../config/render-capabilities.mjs"
 import { createPromptUiManifest, nativeRuntimeSetup } from "./runtime-setup.mjs"
-import { runtimeCssEntryExists } from "./runtime-surface.mjs"
+import {
+  assertRuntimeComponentsJson,
+  assertRuntimeCssBase,
+  assertRuntimeCssEntry,
+  assertRuntimeCssImports,
+  assertRuntimeSurface,
+} from "./runtime-surface.mjs"
 import { writeRuntimeTemplate } from "./runtime-template.mjs"
 
 export async function bootstrapManagedRuntime({
@@ -117,10 +123,11 @@ export async function getRuntimeStatus({
       path.join(paths.runtimeSrcDir, "main.tsx"),
     ),
     shadcnComponents: false,
-    componentsJson: await pathExists(
-      path.join(paths.runtimeDir, "components.json"),
-    ),
+    componentsJson: false,
     shadcnCssEntry: false,
+    shadcnCssImports: false,
+    shadcnCssBase: false,
+    shadcnSurface: false,
     promptUiManifest: await pathExists(paths.promptUiManifestPath),
     runtimeCapabilities: await pathExists(paths.runtimeCapabilitiesPath),
     viteConfig: await pathExists(paths.runtimeViteConfigPath),
@@ -128,6 +135,7 @@ export async function getRuntimeStatus({
   }
   let manifest
   let manifestError = ""
+  let runtimeDetail = ""
 
   try {
     manifest = await readRuntimeManifest(paths)
@@ -136,9 +144,41 @@ export async function getRuntimeStatus({
       components: manifest.installedUiComponents ?? manifest.components ?? [],
       paths,
     })
-    checks.shadcnCssEntry = await runtimeCssEntryExists({ manifest, paths })
   } catch (error) {
     manifestError = error instanceof Error ? error.message : String(error)
+  }
+
+  if (manifest) {
+    checks.componentsJson = await evaluateStatusCheck(
+      async () => assertRuntimeComponentsJson({ manifest, paths }),
+      (detail) => {
+        runtimeDetail ||= detail
+      },
+    )
+    checks.shadcnCssEntry = await evaluateStatusCheck(
+      async () => assertRuntimeCssEntry({ manifest, paths }),
+      (detail) => {
+        runtimeDetail ||= detail
+      },
+    )
+    checks.shadcnCssImports = await evaluateStatusCheck(
+      async () => assertRuntimeCssImports({ manifest, paths }),
+      (detail) => {
+        runtimeDetail ||= detail
+      },
+    )
+    checks.shadcnCssBase = await evaluateStatusCheck(
+      async () => assertRuntimeCssBase({ manifest, paths }),
+      (detail) => {
+        runtimeDetail ||= detail
+      },
+    )
+    checks.shadcnSurface = await evaluateStatusCheck(
+      async () => assertRuntimeSurface({ manifest, paths }),
+      (detail) => {
+        runtimeDetail ||= detail
+      },
+    )
   }
 
   if (outputDir) {
@@ -156,6 +196,9 @@ export async function getRuntimeStatus({
     checks.shadcnComponents &&
     checks.componentsJson &&
     checks.shadcnCssEntry &&
+    checks.shadcnCssImports &&
+    checks.shadcnCssBase &&
+    checks.shadcnSurface &&
     checks.promptUiManifest &&
     checks.runtimeCapabilities &&
     checks.viteConfig
@@ -165,6 +208,7 @@ export async function getRuntimeStatus({
     checks,
     manifest,
     manifestError,
+    runtimeDetail,
     packageVersion,
     paths,
   }
@@ -250,4 +294,14 @@ async function runtimeComponentFilesExist({ components, paths }) {
 async function writeJsonFile(filePath, value) {
   await mkdir(path.dirname(filePath), { recursive: true })
   await writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`)
+}
+
+async function evaluateStatusCheck(check, onError) {
+  try {
+    await check()
+    return true
+  } catch (error) {
+    onError?.(error instanceof Error ? error.message : String(error))
+    return false
+  }
 }

@@ -1,18 +1,7 @@
 Write agent-html only.
 
 Header:
-<meta-agent theme="neutral" density="compact|comfortable" tone="report|dashboard|decision" width="article|dashboard|wide" />
-
-Preferred generic ui/slot syntax:
-<ui name="page" title="...">...</ui>
-<ui name="card" title="...">text or child ui</ui>
-<ui name="alert" title="..." tone="neutral|danger">text</ui>
-<ui name="badge" tone="neutral|success|warning|danger">text</ui>
-<ui name="separator"></ui>
-<ui name="list" variant="ordered|unordered"><slot name="item">text</slot></ui>
-<ui name="table"><slot name="row" kind="header|body"><slot name="cell">text</slot></slot></ui>
-<ui name="tabs" default-value="id"><slot name="tabs-list"><slot name="tabs-trigger" value="id">Label</slot></slot><slot name="tabs-content" value="id">child ui</slot></ui>
-<ui name="accordion"><slot name="accordion-item" value="id" title="...">text or child ui</slot></ui>
+<meta-agent profile="report-default|ops-compact|review-dense" />
 
 Semantic compatibility tags:
 page(title*) -> alert/card/separator/table/list/tabs/accordion
