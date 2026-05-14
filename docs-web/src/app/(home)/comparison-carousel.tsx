@@ -139,18 +139,24 @@ function renderPreview(
       <div className="space-y-4 text-sm leading-7 text-foreground">
         <header>
           <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-            Queue patch review
+            {benchmarkCopy.summaryStatus}
           </p>
-          <h3 className="mt-2 text-xl font-semibold">Streaming review</h3>
+          <h3 className="mt-2 text-xl font-semibold">{benchmarkCopy.title}</h3>
           <p className="mt-3 text-muted-foreground">
-            Streaming reliability improved after the queue patch, but reviewers
-            should re-check backpressure and retry reset before merge.
+            {benchmarkCopy.subtitle}
           </p>
         </header>
 
         <section>
           <h4 className="text-sm font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            Review focus
+            Summary
+          </h4>
+          <p className="mt-3 text-muted-foreground">{benchmarkCopy.summary}</p>
+        </section>
+
+        <section>
+          <h4 className="text-sm font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Release checklist
           </h4>
           <ul className="mt-3 list-disc space-y-2 pl-5">
             {benchmarkCopy.checklist.map((item) => (
@@ -159,8 +165,33 @@ function renderPreview(
           </ul>
         </section>
 
+        <section>
+          <h4 className="text-sm font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Rollout steps
+          </h4>
+          <ol className="mt-3 list-decimal space-y-2 pl-5">
+            {benchmarkCopy.rolloutSteps.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ol>
+        </section>
+
+        <section>
+          <h4 className="text-sm font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Risks
+          </h4>
+          <div className="mt-3 space-y-3">
+            {benchmarkCopy.risks.map((risk) => (
+              <div key={risk.title}>
+                <p className="font-medium text-foreground">{risk.title}</p>
+                <p className="text-muted-foreground">{risk.body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
         <blockquote className="border-l-2 border-border pl-4 text-muted-foreground">
-          {benchmarkCopy.risk}
+          {benchmarkCopy.recommendation}
         </blockquote>
 
         <table className="w-full text-left text-sm">
@@ -188,19 +219,33 @@ function renderPreview(
       <div className="space-y-4 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm leading-7 text-slate-900">
         <header className="rounded-lg border border-sky-200 bg-white p-4">
           <p className="text-xs uppercase tracking-[0.18em] text-sky-700">
-            Queue patch review
+            {benchmarkCopy.summaryStatus}
           </p>
-          <h3 className="mt-2 text-xl font-semibold">Streaming review</h3>
+          <h3 className="mt-2 text-xl font-semibold">{benchmarkCopy.title}</h3>
           <p className="mt-3 text-slate-600">
-            Streaming reliability improved after the queue patch, but reviewers
-            should re-check backpressure and retry reset before merge.
+            {benchmarkCopy.summary}
           </p>
         </header>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="flex items-center gap-2 rounded-lg border border-sky-200 bg-white p-2">
+          {Object.values(benchmarkCopy.tabNames).map((name, index) => (
+            <span
+              key={name}
+              className={
+                index === 0
+                  ? "rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white"
+                  : "rounded-md px-3 py-1.5 text-xs font-medium text-slate-500"
+              }
+            >
+              {name}
+            </span>
+          ))}
+        </div>
+
+        <div className="grid gap-4">
           <section className="rounded-lg border border-sky-200 bg-white p-4">
             <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-sky-700">
-              Review focus
+              Release checklist
             </h4>
             <ul className="mt-3 space-y-2 text-slate-700">
               {benchmarkCopy.checklist.map((item) => (
@@ -214,10 +259,47 @@ function renderPreview(
 
           <aside className="rounded-lg border border-amber-200 bg-amber-50 p-4">
             <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">
-              Risk note
+              Recommendation
             </h4>
-            <p className="mt-3 text-slate-700">{benchmarkCopy.risk}</p>
+            <p className="mt-3 text-slate-700">{benchmarkCopy.recommendation}</p>
           </aside>
+        </div>
+
+        <section className="rounded-lg border border-sky-200 bg-white p-4">
+          <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-sky-700">
+            Rollout steps
+          </h4>
+          <ol className="mt-3 space-y-2 text-slate-700">
+            {benchmarkCopy.rolloutSteps.map((item) => (
+              <li key={item} className="ml-5 list-decimal">
+                {item}
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <div className="rounded-lg border border-sky-200 bg-white p-4">
+          <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-sky-700">
+            Risks
+          </h4>
+          <div className="mt-3 space-y-3">
+            {benchmarkCopy.risks.map((risk, index) => (
+              <div
+                key={risk.title}
+                className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-medium text-slate-900">{risk.title}</p>
+                  <span className="text-xs text-slate-500">
+                    {index === 0 ? "Expanded" : "Collapsed"}
+                  </span>
+                </div>
+                {index === 0 ? (
+                  <p className="mt-2 text-slate-600">{risk.body}</p>
+                ) : null}
+              </div>
+            ))}
+          </div>
         </div>
 
         <table className="w-full text-left text-sm">
@@ -244,12 +326,11 @@ function renderPreview(
     <div className="space-y-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-7 text-slate-900">
       <header className="rounded-lg border border-emerald-200 bg-white p-4">
         <p className="text-xs uppercase tracking-[0.18em] text-emerald-700">
-          Queue patch review
+          {benchmarkCopy.summaryStatus}
         </p>
-        <h3 className="mt-2 text-xl font-semibold">Streaming review</h3>
+        <h3 className="mt-2 text-xl font-semibold">{benchmarkCopy.title}</h3>
         <p className="mt-3 text-slate-600">
-          Streaming reliability improved after the queue patch, but reviewers
-          should re-check backpressure and retry reset before merge.
+          {benchmarkCopy.subtitle}
         </p>
       </header>
 
@@ -260,9 +341,24 @@ function renderPreview(
         <p className="mt-3 text-slate-700">{benchmarkCopy.summary}</p>
       </section>
 
+      <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2">
+        {Object.values(benchmarkCopy.tabNames).map((name, index) => (
+          <span
+            key={name}
+            className={
+              index === 0
+                ? "rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white"
+                : "rounded-md px-3 py-1.5 text-xs font-medium text-slate-500"
+            }
+          >
+            {name}
+          </span>
+        ))}
+      </div>
+
       <section className="rounded-lg border border-slate-200 bg-white p-4">
         <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-          Review focus
+          Release checklist
         </h4>
         <ul className="mt-3 space-y-2 text-slate-700">
           {benchmarkCopy.checklist.map((item) => (
@@ -274,11 +370,45 @@ function renderPreview(
         </ul>
       </section>
 
+      <section className="rounded-lg border border-slate-200 bg-white p-4">
+        <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+          Rollout steps
+        </h4>
+        <ol className="mt-3 space-y-2 text-slate-700">
+          {benchmarkCopy.rolloutSteps.map((item) => (
+            <li key={item} className="ml-5 list-decimal">
+              {item}
+            </li>
+          ))}
+        </ol>
+      </section>
+
       <section className="rounded-lg border border-amber-200 bg-amber-50 p-4">
         <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">
-          Risk note
+          Recommendation
         </h4>
-        <p className="mt-3 text-slate-700">{benchmarkCopy.risk}</p>
+        <p className="mt-3 text-slate-700">{benchmarkCopy.recommendation}</p>
+      </section>
+
+      <section className="rounded-lg border border-slate-200 bg-white p-4">
+        <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+          Risks
+        </h4>
+        <div className="mt-3 space-y-3">
+          {benchmarkCopy.risks.map((risk, index) => (
+            <div
+              key={risk.title}
+              className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
+            >
+              <p className="font-medium text-slate-900">{risk.title}</p>
+              {index === 0 ? (
+                <p className="mt-2 text-slate-600">{risk.body}</p>
+              ) : (
+                <p className="mt-2 text-slate-400">Collapsed in this view</p>
+              )}
+            </div>
+          ))}
+        </div>
       </section>
 
       <table className="w-full text-left text-sm">

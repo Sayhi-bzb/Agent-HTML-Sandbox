@@ -1,0 +1,22 @@
+{
+  "name": "vite-app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "tailwindcss": "^4.3.0",
+    "typescript": "latest",
+    "vite": "^7.3.0"
+  }
+}

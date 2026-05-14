@@ -1,0 +1,30 @@
+import { benchmarkCopy } from "./benchmark-copy"
+
+export const markdownSource = [
+  `# ${benchmarkCopy.title}`,
+  "",
+  benchmarkCopy.subtitle,
+  "",
+  "## Summary",
+  `Status: ${benchmarkCopy.summaryStatus}`,
+  "",
+  benchmarkCopy.summary,
+  "",
+  "## Release checklist",
+  ...benchmarkCopy.checklist.map((item) => `- ${item}`),
+  "",
+  "## Rollout steps",
+  ...benchmarkCopy.rolloutSteps.map((item, index) => `${index + 1}. ${item}`),
+  "",
+  "## Risks",
+  ...benchmarkCopy.risks.flatMap((risk) => [
+    `### ${risk.title}`,
+    risk.body,
+    "",
+  ]),
+  `> Recommendation: ${benchmarkCopy.recommendation}`,
+  "",
+  "| Evidence | Status |",
+  "| --- | --- |",
+  ...benchmarkCopy.evidence.map(([label, value]) => `| ${label} | ${value} |`),
+].join("\n")

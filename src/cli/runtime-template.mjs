@@ -165,13 +165,11 @@ async function initShadcnRuntime({ packageRoot, paths, setup }) {
   ]
 
   try {
-    await runShadcnCli(args, { packageRoot, paths })
+    await runShadcnCli(args, { cwd: runtimeParentDir, packageRoot, paths })
   } catch (error) {
-    if (await canContinueAfterInitInstallFailure(error, generatedRuntimeDir)) {
-      return
+    if (!(await canContinueAfterInitInstallFailure(error, generatedRuntimeDir))) {
+      throw error
     }
-
-    throw error
   }
 
   await rm(paths.runtimeDir, { force: true, recursive: true })

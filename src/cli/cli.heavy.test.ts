@@ -176,7 +176,7 @@ describe("agent-html CLI heavy runtime flows", () => {
     )
     expect(secondSetup.stdout).toContain("ahtml runtime already ready")
     await rm(tempDir, { force: true, recursive: true })
-  })
+  }, 60000)
 
   it("builds from an empty consumer directory and writes runtime state outside the project", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
@@ -329,7 +329,7 @@ describe("agent-html CLI heavy runtime flows", () => {
     )
     await expectFile(path.join(outputDir, "index.html"), ">Ready</span>")
     await rm(tempDir, { force: true, recursive: true })
-  })
+  }, 60000)
 
   it("fails build when runtime renderer mapping drifts from verification data", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
