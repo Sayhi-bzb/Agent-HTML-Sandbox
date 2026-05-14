@@ -1,6 +1,26 @@
+<p align="center">
+  <img src="assets/ghost.svg" alt="agent-html logo" width="72" />
+</p>
+
 # agent-html
 
 agent-html turns semantic `.agent.html` documents into stable, shareable HTML artifacts for dense agent work.
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/@agent-html/ahtml">
+    <img alt="npm version" src="https://img.shields.io/npm/v/%40agent-html%2Fahtml?label=npm&color=111827" />
+  </a>
+  <a href="./LICENSE">
+    <img alt="license: MIT" src="https://img.shields.io/badge/license-MIT-0f766e" />
+  </a>
+  <a href="https://agent-html.pages.dev/docs">
+    <img alt="docs" src="https://img.shields.io/badge/docs-agent--html.pages.dev-2563eb" />
+  </a>
+</p>
+
+<p align="center">
+  <img src="assets/omg.png" alt="agent-html hero" width="860" />
+</p>
 
 Docs: [agent-html.pages.dev/docs](https://agent-html.pages.dev/docs)
 
@@ -13,16 +33,15 @@ npm install -g @agent-html/ahtml
 ahtml
 ```
 
-Use the same npm package with other package managers:
+### 2. Optional: install the ahtml skill
 
-| Package manager | Install                             | Run `ahtml` |
-| --------------- | ----------------------------------- | ----------- |
-| npm             | `npm install -g @agent-html/ahtml`  | `ahtml`     |
-| pnpm            | `pnpm add -g @agent-html/ahtml`     | `ahtml`     |
-| yarn            | `yarn global add @agent-html/ahtml` | `ahtml`     |
-| bun             | `bun add -g @agent-html/ahtml`      | `ahtml`     |
+If you use the `skills` CLI with Codex or other agents, install the `ahtml` skill:
 
-### 2. Get the writing prompt and write a document
+```bash
+npx skills add Sayhi-bzb/Agent-HTML --skill ahtml
+```
+
+### 3. Get the writing prompt and write a document
 
 ```bash
 ahtml prompt
@@ -38,7 +57,7 @@ ahtml prompt
 </page>
 ```
 
-### 3. Render HTML
+### 4. Render HTML
 
 ```bash
 ahtml build artifact.agent.html

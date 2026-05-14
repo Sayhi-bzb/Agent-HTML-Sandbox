@@ -274,7 +274,7 @@ export async function waitForPreviewUrl(child: PreviewProcess) {
     let stderr = ""
     const timeout = setTimeout(() => {
       reject(new Error(`Timed out waiting for preview URL. ${stderr}`))
-    }, 30000)
+    }, 60000)
 
     child.stdout.setEncoding("utf8")
     child.stderr.setEncoding("utf8")

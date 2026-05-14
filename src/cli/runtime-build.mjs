@@ -1,5 +1,12 @@
 import { execFile } from "node:child_process"
-import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises"
+import {
+  copyFile,
+  mkdir,
+  readFile,
+  readdir,
+  rm,
+  writeFile,
+} from "node:fs/promises"
 import path from "node:path"
 import { promisify } from "node:util"
 
@@ -72,6 +79,7 @@ export async function buildRuntimeArtifact({
     html: ssr.stdout.trim(),
     outputDir,
   })
+  await copyDefaultBrandIcon({ outputDir, packageRoot })
 }
 
 async function patchBuiltIndexHtml({ html, outputDir }) {
@@ -81,15 +89,27 @@ async function patchBuiltIndexHtml({ html, outputDir }) {
   const titleTag = escapedTitle
     ? `    <title>${escapedTitle}</title>\n`
     : "    <title>agent-html artifact</title>\n"
+  const iconTag =
+    '    <link rel="icon" type="image/svg+xml" href="./ghost.svg">\n'
   const withTitle = source.includes("<title>")
     ? source.replace(/[ ]{4}<title>.*?<\/title>\n/s, titleTag)
     : source.replace("  </head>", `${titleTag}  </head>`)
-  const next = withTitle.replace(
+  const withIcon = withTitle.includes('rel="icon"')
+    ? withTitle.replace(/[ ]{4}<link[^>]*rel="icon"[^>]*>\n?/s, iconTag)
+    : withTitle.replace("  </head>", `${iconTag}  </head>`)
+  const next = withIcon.replace(
     '<div id="root"></div>',
     `<div id="root">${html}</div>`,
   )
 
   await writeFile(indexPath, next)
+}
+
+async function copyDefaultBrandIcon({ outputDir, packageRoot }) {
+  await copyFile(
+    path.join(packageRoot, "assets", "ghost.svg"),
+    path.join(outputDir, "ghost.svg"),
+  )
 }
 
 async function findSsrEntrypoint(directory) {

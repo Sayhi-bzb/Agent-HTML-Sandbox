@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { ComparisonCarousel } from "./comparison-carousel"
 import { benchmarkCopyData, comparisonEntries } from "./comparison-data"
+import { SkillInstallCommand } from "./skill-install-command"
 
 export default function HomePage() {
   return (
@@ -20,6 +21,7 @@ export default function HomePage() {
           . One card at a time keeps the comparison readable while still showing
           both the source and the rendered result.
         </p>
+        <SkillInstallCommand />
         <div className="mt-8">
           <Link
             href="/docs"

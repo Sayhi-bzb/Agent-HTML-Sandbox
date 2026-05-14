@@ -65,7 +65,15 @@ ahtml
 
 `ahtml` starts the guided entry flow. On first run it prepares the managed runtime under `~/.ahtml`. It does not write `src/`, `components.json`, `vite.config.ts`, or `agent-html.project.json` into the current repository.
 
-## 2. Get the writing prompt [#get-the-writing-prompt]
+## 2. Optional: install the ahtml skill [#install-the-ahtml-skill]
+
+If you use the `skills` CLI with Codex or other agents, install the `ahtml` skill:
+
+```bash
+npx skills add Sayhi-bzb/Agent-HTML --skill ahtml
+```
+
+## 3. Get the writing prompt [#get-the-writing-prompt]
 
 ```bash
 ahtml prompt
@@ -73,7 +81,7 @@ ahtml prompt
 
 Use the schema output as the source of truth for registered components, allowed props, allowed children, and presentation profile values.
 
-## 3. Write a document [#write-a-document]
+## 4. Write a document [#write-a-document]
 
 A valid document needs a `<page>` root.
 
@@ -87,7 +95,7 @@ A valid document needs a `<page>` root.
 </page>
 ```
 
-## 4. Build the artifact [#build-the-artifact]
+## 5. Build the artifact [#build-the-artifact]
 
 ```bash
 ahtml build artifact.agent.html
@@ -95,7 +103,7 @@ ahtml build artifact.agent.html
 
 `build` validates the document before generating the static artifact directory.
 
-## 5. Preview locally [#preview-locally]
+## 6. Preview locally [#preview-locally]
 
 ```bash
 ahtml preview artifact.agent.html

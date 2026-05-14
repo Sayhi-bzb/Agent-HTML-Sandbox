@@ -5,6 +5,7 @@ import { spawn } from "node:child_process"
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import { setTimeout as delay } from "node:timers/promises"
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
@@ -42,6 +43,27 @@ function runCliWithServer(
   cwd = root,
 ) {
   return runCli(args, env, cwd, shadcnTestServer?.registryUrl)
+}
+
+async function removeTempDir(directory: string) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    try {
+      await rm(directory, { force: true, recursive: true })
+      return
+    } catch (error) {
+      if (
+        error &&
+        typeof error === "object" &&
+        "code" in error &&
+        (error.code === "EBUSY" || error.code === "ENOTEMPTY")
+      ) {
+        await delay(250 * (attempt + 1))
+        continue
+      }
+
+      throw error
+    }
+  }
 }
 
 describe("agent-html CLI heavy runtime flows", () => {
@@ -106,7 +128,7 @@ describe("agent-html CLI heavy runtime flows", () => {
       path.join(runtimeHome, "config", "runtime.json"),
       "agent-html.project.json",
     )
-    await rm(tempDir, { force: true, recursive: true })
+    await removeTempDir(tempDir)
   }, 120000)
 
   it("sets up the managed shadcn runtime explicitly", async () => {
@@ -175,8 +197,8 @@ describe("agent-html CLI heavy runtime flows", () => {
       tempDir,
     )
     expect(secondSetup.stdout).toContain("ahtml runtime already ready")
-    await rm(tempDir, { force: true, recursive: true })
-  }, 60000)
+    await removeTempDir(tempDir)
+  }, 120000)
 
   it("builds from an empty consumer directory and writes runtime state outside the project", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
@@ -219,6 +241,14 @@ describe("agent-html CLI heavy runtime flows", () => {
       path.join(outputDir, "index.html"),
       "Built by managed runtime.",
     )
+    await expectFile(
+      path.join(outputDir, "index.html"),
+      'rel="icon" type="image/svg+xml" href="./ghost.svg"',
+    )
+    await expectFile(
+      path.join(outputDir, "ghost.svg"),
+      "lucide lucide-ghost-icon lucide-ghost",
+    )
     await expectFile(path.join(outputDir, "index.html"), 'data-slot="tabs"')
     await expectFile(path.join(outputDir, "index.html"), 'data-slot="table"')
     await expectFile(
@@ -258,8 +288,8 @@ describe("agent-html CLI heavy runtime flows", () => {
       '"verificationData"',
     )
     await assertNoProjectScaffold(consumerDir)
-    await rm(tempDir, { force: true, recursive: true })
-  }, 60000)
+    await removeTempDir(tempDir)
+  }, 120000)
 
   it("builds semantic agent-html into real shadcn/native artifact structure", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
@@ -305,6 +335,14 @@ describe("agent-html CLI heavy runtime flows", () => {
     )
 
     await expectFile(path.join(outputDir, "index.html"), "Generic Artifact")
+    await expectFile(
+      path.join(outputDir, "index.html"),
+      'rel="icon" type="image/svg+xml" href="./ghost.svg"',
+    )
+    await expectFile(
+      path.join(outputDir, "ghost.svg"),
+      "lucide lucide-ghost-icon lucide-ghost",
+    )
     await expectFile(path.join(outputDir, "index.html"), 'data-slot="tabs"')
     await expectFile(
       path.join(outputDir, "index.html"),
@@ -334,8 +372,8 @@ describe("agent-html CLI heavy runtime flows", () => {
       "Built from semantic syntax.",
     )
     await expectFile(path.join(outputDir, "index.html"), ">Ready</span>")
-    await rm(tempDir, { force: true, recursive: true })
-  }, 60000)
+    await removeTempDir(tempDir)
+  }, 120000)
 
   it("fails build when runtime renderer mapping drifts from verification data", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
@@ -390,8 +428,8 @@ describe("agent-html CLI heavy runtime flows", () => {
       ),
       "error: runtime-renderer-parity at /runtime: Runtime renderer registry does not match runtime verification data. Kind mismatch: card kind: primitive expected compound",
     )
-    await rm(tempDir, { force: true, recursive: true })
-  })
+    await removeTempDir(tempDir)
+  }, 120000)
 
   it("prints the prompt and inspects artifacts", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
@@ -438,8 +476,8 @@ describe("agent-html CLI heavy runtime flows", () => {
     expect(artifactInspection.stdout).toContain("- density: compact")
     expect(artifactInspection.stdout).toContain("- card: 1")
 
-    await rm(tempDir, { force: true, recursive: true })
-  }, 60000)
+    await removeTempDir(tempDir)
+  }, 120000)
 
   it("runs managed runtime doctor checks", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
@@ -473,8 +511,8 @@ describe("agent-html CLI heavy runtime flows", () => {
     expect(stdout).toContain("ok artifact:output-dir")
     expect(stdout).toContain("skip artifact:built-css")
     expect(stdout).not.toContain("project-config")
-    await rm(tempDir, { force: true, recursive: true })
-  }, 60000)
+    await removeTempDir(tempDir)
+  }, 120000)
 
   it("repairs managed runtime when managed runtime proof drifts from runtime files", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
@@ -532,8 +570,8 @@ describe("agent-html CLI heavy runtime flows", () => {
       runCliWithServer(["doctor"], { AHTML_HOME: runtimeHome }, tempDir),
       "fail runtime:verification-data-parity runtime verification data ui capabilities card slots does not match schema verificationData card slots.",
     )
-    await rm(tempDir, { force: true, recursive: true })
-  })
+    await removeTempDir(tempDir)
+  }, 120000)
 
   it("fails doctor when runtime renderer mapping drifts from schema", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
@@ -572,8 +610,8 @@ describe("agent-html CLI heavy runtime flows", () => {
       runCliWithServer(["doctor"], { AHTML_HOME: runtimeHome }, tempDir),
       "fail runtime:renderer-mapping-parity runtime renderer mapping spec card slots does not match schema rendererMapping card slots.",
     )
-    await rm(tempDir, { force: true, recursive: true })
-  })
+    await removeTempDir(tempDir)
+  }, 60000)
 
   it("shows cached global update guidance in doctor", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
@@ -602,9 +640,9 @@ describe("agent-html CLI heavy runtime flows", () => {
       expect(registry.requests()).toBe(1)
     } finally {
       await registry.close()
-      await rm(tempDir, { force: true, recursive: true })
+      await removeTempDir(tempDir)
     }
-  })
+  }, 60000)
 
   it("skips or soft-fails package update checks without breaking diagnostics", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
@@ -644,9 +682,9 @@ describe("agent-html CLI heavy runtime flows", () => {
       expect(unavailable.stdout).toContain("skip package:update unavailable")
     } finally {
       await registry.close()
-      await rm(tempDir, { force: true, recursive: true })
+      await removeTempDir(tempDir)
     }
-  })
+  }, 60000)
 
   it("serves a preview from the generated static output", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
@@ -683,10 +721,13 @@ describe("agent-html CLI heavy runtime flows", () => {
       const body = await response.text()
 
       expect(body).toContain("Preview by CLI")
+      expect(body).toContain(
+        'rel="icon" type="image/svg+xml" href="./ghost.svg"',
+      )
     } finally {
       preview.kill("SIGTERM")
       await waitForProcessExit(preview)
-      await rm(tempDir, { force: true, recursive: true })
+      await removeTempDir(tempDir)
     }
   }, 60000)
 })

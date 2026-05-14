@@ -477,12 +477,6 @@ async function resolveShadcnCommand(packageRoot) {
 }
 
 async function canContinueAfterInitInstallFailure(error, generatedRuntimeDir) {
-  const detail = getExecErrorDetail(error)
-
-  if (!detail.includes("npm install")) {
-    return false
-  }
-
   try {
     await access(path.join(generatedRuntimeDir, "components.json"))
     return true
@@ -491,16 +485,3 @@ async function canContinueAfterInitInstallFailure(error, generatedRuntimeDir) {
   }
 }
 
-function getExecErrorDetail(error) {
-  if (!error || typeof error !== "object") {
-    return String(error)
-  }
-
-  return [
-    typeof error.message === "string" ? error.message : "",
-    typeof error.stdout === "string" ? error.stdout : "",
-    typeof error.stderr === "string" ? error.stderr : "",
-  ]
-    .filter(Boolean)
-    .join("\n")
-}

@@ -80,15 +80,20 @@ try {
     ["setup", "--yes", "--component-source", "shadcn-cli"],
     "ahtml runtime already ready",
   )
-  await expectStdout(["status"], "ready: yes")
-  await expectStdout(["status"], "runtime manifest: ok")
-  await expectStdout(["status"], "ui library: shadcn")
-  await expectStdout(["status"], "component source: shadcn-cli")
-  await expectStdout(["status"], "runtime shell: shadcn-official-template")
-  await expectStdout(["status"], "prompt-ui manifest: ok")
+  await expectStdout(["doctor"], "ok runtime:manifest shadcn-runtime")
+  await expectStdout(["doctor"], "ok runtime:base radix")
   await expectStdout(
-    ["status"],
-    "Next: ahtml build --input artifact.agent.html --out dist/html",
+    ["doctor"],
+    "ok runtime:shadcn-surface shadcn-init/vite",
+  )
+  await expectStdout(
+    ["doctor"],
+    "ok runtime:shadcn-provenance shadcn-official-template/shadcn-cli/",
+  )
+  await expectStdout(["doctor"], "ok runtime:prompt-ui-manifest")
+  await expectStdout(
+    ["doctor"],
+    "skip artifact:built-css",
   )
   await expectFile(
     path.join(runtimeHome, "config", "runtime.json"),
@@ -97,6 +102,10 @@ try {
   await expectFile(
     path.join(runtimeHome, "config", "prompt-ui.manifest.json"),
     "ahtml-prompt-ui-manifest",
+  )
+  await expectFile(
+    path.join(runtimeHome, "config", "runtime.json"),
+    "shadcn-official-template",
   )
   const documentPath = path.join(consumerDir, "artifact.agent.html")
   const outputDir = path.join(consumerDir, "dist", "html")
@@ -133,8 +142,17 @@ try {
   await expectStdout(["inspect", "--dir", outputDir], "card: 1")
   await expectStdout(["doctor"], "ok environment:node")
   await expectStdout(["doctor"], "ok runtime:manifest")
+  await expectStdout(["doctor"], "ok artifact:built-css assets/")
   await expectPreview(documentPath, path.join(consumerDir, "dist", "preview"))
 
+  await expectFailure(
+    ["prompt", "--input", documentPath],
+    "ahtml prompt [--format prompt|json] [--out <path>] does not accept --input.",
+  )
+  await expectFailure(
+    ["inspect"],
+    "inspect requires --input <path> or --dir <dir>.",
+  )
   await expectFailure(["config", "get"], 'Unknown command "config"')
   await expectFailure(["init"], 'Unknown command "init"')
   await expectFailure(["compose"], 'Unknown command "compose"')

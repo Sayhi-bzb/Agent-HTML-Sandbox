@@ -12,6 +12,7 @@
   },
   "files": [
     "bin/",
+    "assets/ghost.svg",
     "src/config/",
     "src/engine/component-schema.ts",
     "src/engine/core.ts",
