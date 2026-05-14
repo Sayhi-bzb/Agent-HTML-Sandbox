@@ -1,52 +1,57 @@
 # ahtml Bug Reporting
 
-Use this when debugging indicates a likely `ahtml` product bug after normal setup, validation, and diagnostics checks.
+Use this when debugging indicates a likely `ahtml` product bug after normal checks.
 
-Product bugs are failures in the path from semantic `.agent.html` to stable, shareable HTML artifact. Invalid raw HTML, CSS, scripts, or unsupported renderer props are expected validation failures, not product bugs.
+Product bugs are failures in the path from semantic `.agent.html` to stable, shareable HTML artifact. Invalid raw HTML, CSS, scripts, or unsupported renderer props are expected input errors, not product bugs.
 
-## First Confirm It Is A Product Bug
+## First confirm it is a product bug
 
 Before drafting an issue, run or ask for results from:
 
 ```bash
-ahtml status
 ahtml doctor
-ahtml validate --input artifact.agent.html
+ahtml build artifact.agent.html
+```
+
+If preview is the failing surface, also run:
+
+```bash
+ahtml preview artifact.agent.html
 ```
 
 File a bug when the failure is reproducible and fits one of these cases:
 
-- CLI crash or unhandled exception.
-- Incorrect validation, parsing, or sanitization behavior.
-- `status` or `doctor` gives wrong or contradictory guidance.
-- Build or preview fails despite a valid document and ready managed runtime.
-- Managed runtime output contradicts the schema contract.
-- Published docs or README describe commands that do not work.
-- Package boundary regression, such as requiring current-directory Vite, React, Tailwind, shadcn/ui, `components.json`, `vite.config.ts`, or `agent-html.project.json`.
+- CLI crash or unhandled exception
+- incorrect validation, parsing, or sanitization behavior
+- `doctor` gives wrong or contradictory guidance
+- build or preview fails despite a valid document and ready managed runtime
+- managed runtime output contradicts the schema contract
+- published docs or skill instructions describe commands that do not work
+- package boundary regression, such as requiring current-directory Vite, React, Tailwind, shadcn/ui, `components.json`, `vite.config.ts`, or `agent-html.project.json`
 
 Do not file a bug for:
 
-- Invalid agent-facing input rejected by the schema.
-- Network, npm auth, GitHub auth, or Cloudflare auth failures.
-- Failures fixed by documented `status`, `doctor`, update, or validation guidance.
+- invalid agent-facing input rejected by the schema
+- network, npm auth, GitHub auth, or Cloudflare auth failures
+- failures fixed by documented `doctor`, update, or rebuild guidance
 
-## Collect Evidence
+## Collect evidence
 
 Include only relevant, redacted information:
 
-- Exact command and full error output.
-- `@agent-html/ahtml` version.
-- Node and npm versions.
-- OS and shell.
-- Minimal `.agent.html` that reproduces the issue.
-- Expected behavior and actual behavior.
-- Results from `ahtml status` and `ahtml doctor`.
-- Runtime home path and whether `AHTML_HOME` was set.
-- Whether `ahtml validate` passes or fails.
+- exact command and full error output
+- `@agent-html/ahtml` version
+- Node and npm versions
+- OS and shell
+- minimal `.agent.html` that reproduces the issue
+- expected behavior and actual behavior
+- results from `ahtml doctor`
+- runtime home path and whether `AHTML_HOME` was set
+- whether `ahtml build` passes or fails
 
 Redact secrets, tokens, private account names, private URLs, and unrelated user content. Keep file paths only when they help reproduce the issue.
 
-## Draft The Issue
+## Draft the issue
 
 Default to preparing an issue draft. Do not submit it automatically.
 

@@ -3,19 +3,16 @@ title: Quick Start
 description: Write AI-native HTML artifacts instead of long Markdown outputs.
 ---
 
-# Getting Started with agent-html
+# Quick Start
 
-agent-html helps agents replace long Markdown outputs with stable, shareable HTML artifacts.
+agent-html turns semantic `.agent.html` documents into stable, shareable HTML artifacts.
 
-Markdown is a good scratchpad, but it is a weak final surface for dense agent work. Plans, PR explainers, research reports, design comparisons, decisions, and feedback loops need visual hierarchy, tables, controlled interaction, and a result people can open and share.
+Most users only need this flow:
 
-agent-html gives agents an AI-native authoring format for that job. The agent writes semantic `.agent.html`; `ahtml` validates it against a stable schema and renders a portable HTML artifact. The final artifact is for humans to read, compare, share, archive, and hand back into the agent loop.
-
-<Callout title="Primary rule">
-  Read the schema first so the agent writes semantic artifact structure instead
-  of raw HTML, CSS, JavaScript, Tailwind classes, event handlers, React props,
-  Radix props, or shadcn props.
-</Callout>
+1. Run `ahtml`
+2. Get the writing prompt
+3. Write `.agent.html`
+4. Render HTML
 
 ## 1. Install the CLI [#install-the-cli]
 
@@ -33,9 +30,7 @@ agent-html gives agents an AI-native authoring format for that job. The agent wr
 
 ```bash
 npm install -g @agent-html/ahtml
-ahtml setup
-ahtml status
-ahtml doctor
+ahtml
 ```
 
   </CodeBlockTab>
@@ -44,9 +39,7 @@ ahtml doctor
 
 ```bash
 pnpm add -g @agent-html/ahtml
-ahtml setup
-ahtml status
-ahtml doctor
+ahtml
 ```
 
   </CodeBlockTab>
@@ -55,9 +48,7 @@ ahtml doctor
 
 ```bash
 yarn global add @agent-html/ahtml
-ahtml setup
-ahtml status
-ahtml doctor
+ahtml
 ```
 
   </CodeBlockTab>
@@ -66,25 +57,21 @@ ahtml doctor
 
 ```bash
 bun add -g @agent-html/ahtml
-ahtml setup
-ahtml status
-ahtml doctor
+ahtml
 ```
 
   </CodeBlockTab>
 </CodeBlockTabs>
 
-`ahtml setup` configures the managed runtime under `~/.ahtml`, currently with a shadcn-backed renderer. `ahtml status`, `ahtml doctor`, `ahtml build`, and `ahtml preview` initialize or repair the managed shadcn runtime when setup has not run. They do not write `src/`, `components.json`, `vite.config.ts`, or `agent-html.project.json` into the current repository.
+`ahtml` starts the guided entry flow. On first run it prepares the managed runtime under `~/.ahtml`. It does not write `src/`, `components.json`, `vite.config.ts`, or `agent-html.project.json` into the current repository.
 
-`ahtml status` and `ahtml doctor` can show a non-blocking package update hint. Set `AHTML_NO_UPDATE_CHECK=1` to disable that check.
-
-## 2. Read the schema [#read-the-schema]
+## 2. Get the writing prompt [#get-the-writing-prompt]
 
 ```bash
-ahtml schema --format prompt
+ahtml prompt
 ```
 
-Use the schema output to learn the registered components, allowed props, allowed children, and approved presentation profile values.
+Use the schema output as the source of truth for registered components, allowed props, allowed children, and presentation profile values.
 
 ## 3. Write a document [#write-a-document]
 
@@ -100,34 +87,24 @@ A valid document needs a `<page>` root.
 </page>
 ```
 
-## 4. Validate before building [#validate-before-building]
+## 4. Build the artifact [#build-the-artifact]
 
 ```bash
-ahtml validate --input artifact.agent.html
+ahtml build artifact.agent.html
 ```
 
-Validation catches unknown components, unknown props, blocked implementation details, invalid children, and invalid presentation profile values before artifact generation.
+`build` validates the document before generating the static artifact directory.
 
-## 5. Build the artifact [#build-the-artifact]
-
-```bash
-ahtml build --input artifact.agent.html --out dist/html
-```
-
-The output is a static artifact directory that can be opened, shared, deployed, or archived.
-
-## 6. Preview locally [#preview-locally]
+## 5. Preview locally [#preview-locally]
 
 ```bash
-ahtml preview --input artifact.agent.html --out dist/html --port 4173
+ahtml preview artifact.agent.html
 ```
 
 Preview serves the same static output produced by `build`. It does not use a separate renderer.
 
-## Inspect the result [#inspect-the-result]
+## Need more detail? [#need-more-detail]
 
-```bash
-ahtml inspect --input artifact.agent.html
-```
-
-Use `inspect` to review effective config and component usage without inspecting runtime files.
+- Writing rules and document structure: [Best Practice](/docs/best-practice)
+- Examples to copy: [Examples](/docs/example)
+- Troubleshooting, runtime details, and repository-level docs: [Dev Docs](/docs/dev-docs)

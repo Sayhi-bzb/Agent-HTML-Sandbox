@@ -12,7 +12,6 @@ Write artifacts for people who need to read, compare, decide, and respond. agent
 Normal commands bootstrap the user-level managed runtime automatically. Use checks before debugging:
 
 ```bash
-ahtml status
 ahtml doctor
 ```
 
@@ -20,7 +19,7 @@ Runtime files live under `~/.ahtml` or `%USERPROFILE%\.ahtml` by default. Set `A
 
 ## Read schema first [#read-schema-first]
 
-Start every generation task with `ahtml schema --format prompt`. The schema is the only public contract for components and config.
+Start every generation task with `ahtml prompt`. The schema prompt is the only public contract for components and config.
 
 ## Use semantic components [#use-semantic-components]
 
@@ -93,10 +92,9 @@ If validation fails, fix the document instead of bypassing the error.
 Use setup checks before changing documents:
 
 ```bash
-ahtml status
 ahtml doctor
 ```
 
-- If runtime checks fail, rerun `ahtml status` or `ahtml doctor`; they repair the managed runtime automatically.
-- If the package is outdated, follow the update command printed by `status` or `doctor`.
+- If runtime checks fail, rerun `ahtml doctor`; it repairs the managed runtime automatically.
+- If the package is outdated, follow the update command printed by `doctor`.
 - If validation fails, repair the agent-html document instead of bypassing validation or changing runtime behavior.

@@ -44,43 +44,25 @@ function runCliWithServer(
 }
 
 describe("agent-html CLI heavy runtime flows", () => {
-  it("bootstraps managed runtime from status without creating project scaffold files", async () => {
+  it("bootstraps managed runtime from doctor without creating project scaffold files", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
     const runtimeHome = path.join(tempDir, ".ahtml")
     const { requiredShadcnRuntimeComponents } =
       await importRenderCapabilitiesModule()
 
-    const missingStatus = await runCliWithServer(
-      ["status"],
+    const doctor = await runCliWithServer(
+      ["doctor"],
       { AHTML_HOME: runtimeHome },
       tempDir,
     )
 
-    expect(missingStatus.stdout).toContain("ready: yes")
-    expect(missingStatus.stdout).toContain("runtime manifest: ok")
-    expect(missingStatus.stdout).toContain("ui library: shadcn")
-    expect(missingStatus.stdout).toContain("component source: shadcn-cli")
-    expect(missingStatus.stdout).toContain("runtime base: radix")
-    expect(missingStatus.stdout).toContain("runtime surface: shadcn-init")
-    expect(missingStatus.stdout).toContain("runtime shell: ahtml-managed-shell")
-    expect(missingStatus.stdout).toContain("runtime init: shadcn-cli")
-    expect(missingStatus.stdout).toContain("tailwind version:")
-    expect(missingStatus.stdout).toContain("runtime provenance: partial")
-    expect(missingStatus.stdout).toContain("runtime preset: nova")
-    expect(missingStatus.stdout).toContain(
-      `installed ui components: ${requiredShadcnRuntimeComponents.join(", ")}`,
+    expect(doctor.stdout).toContain("ok runtime:manifest")
+    expect(doctor.stdout).toContain("ok runtime:base radix")
+    expect(doctor.stdout).toContain(
+      `ok runtime:shadcn-components ${requiredShadcnRuntimeComponents.join(", ")}`,
     )
-    expect(missingStatus.stdout).toContain("renderable agent components:")
-    expect(missingStatus.stdout).toContain("components.json: ok")
-    expect(missingStatus.stdout).toContain("shadcn css entry: ok")
-    expect(missingStatus.stdout).toContain("shadcn css imports: ok")
-    expect(missingStatus.stdout).toContain("shadcn css base: ok")
-    expect(missingStatus.stdout).toContain("shadcn surface: ok")
-    expect(missingStatus.stdout).toContain("prompt-ui manifest: ok")
-    expect(missingStatus.stdout).toContain("runtime verification data: ok")
-    expect(missingStatus.stdout).toContain(
-      "Next: ahtml build --input artifact.agent.html --out dist/html",
-    )
+    expect(doctor.stdout).toContain("ok runtime:prompt-ui-manifest")
+    expect(doctor.stdout).toContain("ok runtime:verification-data")
     await expectFile(
       path.join(runtimeHome, "config", "runtime.json"),
       "ahtml-managed-runtime",
@@ -225,7 +207,7 @@ describe("agent-html CLI heavy runtime flows", () => {
     )
 
     await runCliWithServer(
-      ["build", "--input", inputPath, "--out", outputDir],
+      ["build", inputPath, "--out", outputDir],
       { AHTML_HOME: runtimeHome },
       consumerDir,
     )
@@ -316,7 +298,7 @@ describe("agent-html CLI heavy runtime flows", () => {
     )
 
     await runCliWithServer(
-      ["build", "--input", inputPath, "--out", outputDir],
+      ["build", inputPath, "--out", outputDir],
       { AHTML_HOME: runtimeHome },
       tempDir,
     )
@@ -359,7 +341,7 @@ describe("agent-html CLI heavy runtime flows", () => {
       "render-capabilities.generated.json",
     )
 
-    await runCliWithServer(["status"], { AHTML_HOME: runtimeHome }, tempDir)
+    await runCliWithServer(["doctor"], { AHTML_HOME: runtimeHome }, tempDir)
     await writeFile(
       inputPath,
       '<page title="Drift"><card title="Summary">Slot drift.</card></page>',
@@ -395,7 +377,7 @@ describe("agent-html CLI heavy runtime flows", () => {
 
     await expectCliFailure(
       runCliWithServer(
-        ["build", "--input", inputPath, "--out", outputDir],
+        ["build", inputPath, "--out", outputDir],
         { AHTML_HOME: runtimeHome },
         tempDir,
       ),
@@ -404,7 +386,7 @@ describe("agent-html CLI heavy runtime flows", () => {
     await rm(tempDir, { force: true, recursive: true })
   })
 
-  it("validates, reads config defaults, and inspects artifacts", async () => {
+  it("prints the prompt and inspects artifacts", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
     const runtimeHome = path.join(tempDir, ".ahtml")
     const documentPath = path.join(tempDir, "artifact.agent.html")
@@ -418,15 +400,15 @@ describe("agent-html CLI heavy runtime flows", () => {
       ].join("\n"),
     )
 
-    const validation = await runCliWithServer(
-      ["validate", "--input", documentPath],
+    const prompt = await runCliWithServer(
+      ["prompt", "--format", "json"],
       { AHTML_HOME: runtimeHome },
       tempDir,
     )
-    expect(validation.stdout).toContain("agent-html valid")
+    expect(prompt.stdout).toContain('"kind": "agent-html-cli-schema"')
 
     await runCliWithServer(
-      ["build", "--input", documentPath, "--out", outputDir],
+      ["build", documentPath, "--out", outputDir],
       { AHTML_HOME: runtimeHome },
       tempDir,
     )
@@ -449,20 +431,6 @@ describe("agent-html CLI heavy runtime flows", () => {
     expect(artifactInspection.stdout).toContain("- density: compact")
     expect(artifactInspection.stdout).toContain("- card: 1")
 
-    const config = await runCliWithServer(
-      ["config", "get"],
-      { AHTML_HOME: runtimeHome },
-      tempDir,
-    )
-    expect(config.stdout).toContain('"report-default"')
-    await expectCliFailure(
-      runCliWithServer(
-        ["config", "set", "density", "compact"],
-        { AHTML_HOME: runtimeHome },
-        tempDir,
-      ),
-      "config accepts only get",
-    )
     await rm(tempDir, { force: true, recursive: true })
   }, 60000)
 
@@ -506,7 +474,7 @@ describe("agent-html CLI heavy runtime flows", () => {
     const runtimeHome = path.join(tempDir, ".ahtml")
     const appPath = path.join(runtimeHome, "runtime", "src", "app.tsx")
 
-    await runCliWithServer(["status"], { AHTML_HOME: runtimeHome }, tempDir)
+    await runCliWithServer(["doctor"], { AHTML_HOME: runtimeHome }, tempDir)
     await writeFile(appPath, "export function App() { return 'drifted' }\n")
 
     const doctor = await runCliWithServer(
@@ -529,7 +497,7 @@ describe("agent-html CLI heavy runtime flows", () => {
       "render-capabilities.generated.json",
     )
 
-    await runCliWithServer(["status"], { AHTML_HOME: runtimeHome }, tempDir)
+    await runCliWithServer(["doctor"], { AHTML_HOME: runtimeHome }, tempDir)
 
     const capabilities = parseJson<{
       verificationData: {
@@ -569,7 +537,7 @@ describe("agent-html CLI heavy runtime flows", () => {
       "render-capabilities.generated.json",
     )
 
-    await runCliWithServer(["status"], { AHTML_HOME: runtimeHome }, tempDir)
+    await runCliWithServer(["doctor"], { AHTML_HOME: runtimeHome }, tempDir)
 
     const capabilities = parseJson<{
       rendererMapping: {
@@ -600,31 +568,14 @@ describe("agent-html CLI heavy runtime flows", () => {
     await rm(tempDir, { force: true, recursive: true })
   })
 
-  it("shows cached global update guidance in status and doctor", async () => {
+  it("shows cached global update guidance in doctor", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
     const runtimeHome = path.join(tempDir, ".ahtml")
     const cacheDir = path.join(tempDir, "cache")
     const registry = await startPackageVersionServer("99.0.0")
 
     try {
-      await runCliWithServer(["status"], { AHTML_HOME: runtimeHome }, tempDir)
-
-      const status = await runCliWithServer(
-        ["status"],
-        {
-          AHTML_HOME: runtimeHome,
-          AHTML_NO_UPDATE_CHECK: "0",
-          AHTML_UPDATE_CHECK_CACHE_DIR: cacheDir,
-          AHTML_UPDATE_REGISTRY_URL: registry.url,
-          CI: "false",
-        },
-        tempDir,
-      )
-
-      expect(status.stdout).toContain(
-        "update: 99.0.0 available. Run: npm install -g @agent-html/ahtml@latest",
-      )
-      expect(registry.requests()).toBe(1)
+      await runCliWithServer(["doctor"], { AHTML_HOME: runtimeHome }, tempDir)
 
       const doctor = await runCliWithServer(
         ["doctor"],
@@ -655,7 +606,7 @@ describe("agent-html CLI heavy runtime flows", () => {
     const registry = await startPackageVersionServer("99.0.0", 500)
 
     try {
-      await runCliWithServer(["status"], { AHTML_HOME: runtimeHome }, tempDir)
+      await runCliWithServer(["doctor"], { AHTML_HOME: runtimeHome }, tempDir)
 
       const disabled = await runCliWithServer(
         ["doctor"],
@@ -706,7 +657,6 @@ describe("agent-html CLI heavy runtime flows", () => {
       [
         cliPath,
         "preview",
-        "--input",
         inputPath,
         "--out",
         outputDir,

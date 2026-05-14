@@ -1,20 +1,39 @@
 ---
 name: ahtml
-description: Write, validate, build, preview, inspect, install, and debug ahtml `.agent.html` artifact workflows. Use when producing agent-facing documents that need richer structure, clearer reading, interaction, or easier sharing than Markdown can provide; when installing or repairing the managed runtime; or when diagnosing runtime, build, preview, or validation failures.
+description: Use `ahtml` when a semantic `.agent.html` document should be rendered as an HTML artifact. It fits outputs that need more structure or reviewability than Markdown.
 ---
 
 # ahtml
 
-Use this skill when the goal is to replace long Markdown agent output with a portable HTML artifact that is easier to read, inspect, share, and hand back into the agent loop.
+Use this skill when a semantic `.agent.html` document is a better fit than Markdown.
+
+`ahtml` renders semantic `.agent.html` documents into HTML artifacts.
+
+## When to use it
+
+Use `ahtml` when the user needs:
+
+- an implementation plan people will review
+- a code-review explainer or PR summary
+- a research or investigation artifact
+- a decision record with evidence
+- a comparison or options document
+- a feedback-friendly artifact the user may return to the agent
+
+Do not use `ahtml` for:
+
+- a short answer that fits naturally in chat
+- plain machine output such as JSON
+- a tiny note that does not benefit from layout or structure
 
 ## Core path
 
-- Start with the schema: `ahtml schema --format prompt`.
-- Write a `.agent.html` document with registered components and finite metadata.
-- Keep agent-facing input free of Tailwind classes, `className`, `style`, scripts, event handlers, shadcn props, Radix props, arbitrary HTML attributes, and raw HTML passthrough.
-- Validate before building: `ahtml validate --input artifact.agent.html`.
-- Build or preview when the user needs a shareable artifact: `ahtml build --input ...` or `ahtml preview --input ...`.
-- When finishing, tell the user what you wrote, what passed validation, and where the artifact lives.
+For most tasks, use this path:
+
+1. Run `ahtml`
+2. Run `ahtml prompt`
+3. Write `artifact.agent.html`
+4. Run `ahtml build artifact.agent.html` or `ahtml preview artifact.agent.html`
 
 ## Minimal shape
 
@@ -26,11 +45,19 @@ Use this skill when the goal is to replace long Markdown agent output with a por
 </page>
 ```
 
+## Writing boundary
+
+Keep agent-facing input semantic.
+
+Do not write Tailwind classes, `className`, `style`, scripts, event handlers, shadcn props, Radix props, arbitrary HTML attributes, or raw HTML passthrough.
+
+The agent should describe information structure, not renderer implementation.
+
 ## Route by task
 
-- Runtime install, repair, or isolation -> `references/install.md`
-- Writing `.agent.html`, building, previewing, or inspecting an artifact -> `references/usage.md`
-- `status`, `doctor`, runtime setup, or config/build/preview failures -> `references/debug.md`
+- First install, repair, isolated runtime, or repo-local setup -> `references/install.md`
+- Writing `.agent.html`, building, previewing, or choosing whether `ahtml` fits -> `references/usage.md`
+- Build, preview, runtime, or environment failures -> `references/debug.md`
 - Reproducible product bug after normal checks -> `references/bug-reporting.md`
 
 Do not use removed project-local scaffold or init flows.

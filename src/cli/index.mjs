@@ -2,9 +2,9 @@ import {
   cancel as cancelPrompt,
   confirm,
   isCancel,
+  select,
   spinner,
 } from "@clack/prompts"
-import { readFile } from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -14,7 +14,6 @@ import {
   formatInspectionSummary,
 } from "./artifact-workflow.mjs"
 import {
-  printDiagnostics,
   readPackageVersion as readPackageVersionFromPackage,
   writeOrPrint,
 } from "./cli-io.mjs"
@@ -28,8 +27,6 @@ import {
 } from "./commands.mjs"
 import { runDoctorCommand } from "./doctor-checks.mjs"
 import { formatPrompt, getCliSchemaOutput } from "./schema.mjs"
-import { getShadcnRuntimeProvenanceState } from "./runtime-surface.mjs"
-import { checkForPackageUpdate } from "./update-check.mjs"
 import { getRuntimePaths } from "./runtime-paths.mjs"
 import {
   isInteractiveRuntimeSetup,
@@ -38,7 +35,6 @@ import {
 } from "./runtime-setup.mjs"
 import { bootstrapManagedRuntime, getRuntimeStatus } from "./runtime-status.mjs"
 import { parsePort, serveDirectory } from "./preview-server.mjs"
-import { validateAgentHtmlSource } from "./validate.mjs"
 
 const packageRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -68,14 +64,11 @@ const command = process.argv[2]
 const args = process.argv.slice(3)
 const commandHandlers = {
   setup: setupCommand,
-  schema: schemaCommand,
-  validate: validateCommand,
+  prompt: promptCommand,
   build: buildCommand,
   inspect: inspectCommand,
   preview: previewCommand,
   doctor: doctorCommand,
-  status: statusCommand,
-  config: configCommand,
 }
 const commandDefinitions = Object.fromEntries(
   Object.entries(commandMetadata).map(([name, definition]) => [
@@ -116,9 +109,14 @@ async function defaultCommand() {
   })
 
   if (status.ready || !isInteractiveRuntimeSetup()) {
+    if (status.ready && isInteractiveRuntimeSetup()) {
+      await defaultActionCommand()
+      return
+    }
+
     printGlobalHelp()
     if (!status.ready) {
-      process.stdout.write("\nRun ahtml setup for guided runtime setup.\n")
+      process.stdout.write("\nRun ahtml setup to prepare the runtime.\n")
     }
     return
   }
@@ -140,6 +138,7 @@ async function defaultCommand() {
   }
 
   await runSetup({})
+  await defaultActionCommand()
 }
 
 function printGlobalHelp() {
@@ -163,12 +162,15 @@ function printCommandHelp(commandName) {
   process.stdout.write(formatCommandHelp(commandName, commandDefinition))
 }
 
-async function schemaCommand(commandArgs, definition) {
-  const options = parseOptions(commandArgs, definition)
+async function promptCommand(commandArgs, definition) {
+  const { options, positionals } = parseOptions(commandArgs, definition)
+  if (positionals.length > 0) {
+    fail(`Unexpected argument "${positionals[0]}".`)
+  }
   const format = options.format ?? "prompt"
 
   if (format !== "prompt" && format !== "json") {
-    fail('schema --format must be "prompt" or "json".')
+    fail('prompt --format must be "prompt" or "json".')
   }
 
   const cliSchema = await getCliSchemaOutput()
@@ -181,7 +183,10 @@ async function schemaCommand(commandArgs, definition) {
 }
 
 async function setupCommand(commandArgs, definition) {
-  const options = parseOptions(commandArgs, definition)
+  const { options, positionals } = parseOptions(commandArgs, definition)
+  if (positionals.length > 0) {
+    fail(`Unexpected argument "${positionals[0]}".`)
+  }
   const packageVersion = await readPackageVersion()
   const status = await getRuntimeStatus({
     packageVersion,
@@ -241,46 +246,29 @@ async function runSetup(options) {
   process.stdout.write(
     `prompt-ui manifest: ${runtimePaths.promptUiManifestPath}\n`,
   )
-}
-
-async function validateCommand(commandArgs, definition) {
-  const options = parseOptions(commandArgs, definition)
-  const inputPath = options.input
-
-  if (!inputPath) {
-    fail("validate requires --input <path>.")
-  }
-
-  const source = await readFile(path.resolve(userRoot, inputPath), "utf8")
-  const validation = await validateAgentHtmlSource(source)
-
-  if (validation.diagnostics.length > 0) {
-    printDiagnostics(validation.diagnostics)
-    process.exitCode = 1
-    return
-  }
-
-  process.stdout.write("agent-html valid\n")
+  process.stdout.write("Next: run ahtml\n")
 }
 
 async function buildCommand(commandArgs, definition) {
-  const options = parseOptions(commandArgs, definition)
+  const { options, positionals } = parseOptions(commandArgs, definition)
+  const inputPath = options.input ?? positionals[0] ?? cliDefaults.documentPath
 
-  if (!options.input) {
-    fail("build requires --input <path>.")
+  if (positionals.length > 1) {
+    fail(`Unexpected argument "${positionals[1]}".`)
   }
 
-  await buildArtifact(options.input, options.out)
+  await buildArtifact(inputPath, options.out)
 }
 
 async function previewCommand(commandArgs, definition) {
-  const options = parseOptions(commandArgs, definition)
+  const { options, positionals } = parseOptions(commandArgs, definition)
+  const inputPath = options.input ?? positionals[0] ?? cliDefaults.documentPath
 
-  if (!options.input) {
-    fail("preview requires --input <path>.")
+  if (positionals.length > 1) {
+    fail(`Unexpected argument "${positionals[1]}".`)
   }
 
-  const outputDir = await buildArtifact(options.input, options.out)
+  const outputDir = await buildArtifact(inputPath, options.out)
   if (!outputDir) {
     return
   }
@@ -290,7 +278,10 @@ async function previewCommand(commandArgs, definition) {
 }
 
 async function inspectCommand(commandArgs, definition) {
-  const options = parseOptions(commandArgs, definition)
+  const { options, positionals } = parseOptions(commandArgs, definition)
+  if (positionals.length > 0) {
+    fail(`Unexpected argument "${positionals[0]}".`)
+  }
 
   if (options.input && options.dir) {
     fail("inspect accepts either --input or --dir, not both.")
@@ -328,87 +319,65 @@ async function doctorCommand(commandArgs) {
   })
 }
 
-async function statusCommand(commandArgs) {
-  if (commandArgs.length > 0) {
-    fail("status does not accept arguments.")
-  }
-
-  const packageVersion = await readPackageVersion()
-  await ensureManagedRuntime(packageVersion)
-  const status = await getRuntimeStatus({
-    packageVersion,
-    outputDir: defaultOutputDir,
-    paths: runtimePaths,
-  })
-  const update = await checkForPackageUpdate({ packageManager: "npm" })
-  process.stdout.write(formatRuntimeStatus(status, update))
-}
-
-function formatRuntimeStatus(status, update) {
-  const formatCheck = (value) => (value ? "ok" : "incomplete")
-  const runtimeProvenance = status.manifest?.shadcnRuntimeSurface
-    ? getShadcnRuntimeProvenanceState(status.manifest.shadcnRuntimeSurface)
-    : null
-  const lines = [
-    "ahtml status",
-    `ready: ${status.ready ? "yes" : "no"}`,
-    `runtime root: ${status.paths.runtimeRoot}`,
-    `runtime manifest: ${status.checks.manifest ? "ok" : "missing"}`,
-    `runtime renderer: ${status.manifest?.renderer ?? "missing"}`,
-    `ui library: ${status.manifest?.uiLibrary ?? "missing"}`,
-    `component source: ${status.manifest?.componentSource ?? "missing"}`,
-    `runtime base: ${status.manifest?.runtimeBase ?? "missing"}`,
-    `runtime surface: ${status.manifest?.shadcnRuntimeSurface?.source ?? "missing"}`,
-    `runtime shell: ${status.manifest?.shadcnRuntimeSurface?.shellSource ?? "missing"}`,
-    `runtime init: ${status.manifest?.shadcnRuntimeSurface?.initSource ?? "missing"}`,
-    `tailwind version: ${status.manifest?.shadcnRuntimeSurface?.tailwindVersion ?? "missing"}`,
-    `runtime provenance: ${runtimeProvenance?.state ?? "missing"}`,
-    `runtime preset: ${status.manifest?.preset ?? "missing"}`,
-    `installed ui components: ${status.manifest?.installedUiComponents?.join(", ") ?? "missing"}`,
-    `renderable agent components: ${status.manifest?.renderableAgentComponents?.join(", ") ?? "missing"}`,
-    `components.json: ${formatCheck(status.checks.componentsJson)}`,
-    `shadcn css entry: ${formatCheck(status.checks.shadcnCssEntry)}`,
-    `shadcn css imports: ${formatCheck(status.checks.shadcnCssImports)}`,
-    `shadcn css base: ${formatCheck(status.checks.shadcnCssBase)}`,
-    `shadcn surface: ${formatCheck(status.checks.shadcnSurface)}`,
-    `prompt-ui manifest: ${status.checks.promptUiManifest ? "ok" : "missing"}`,
-    `runtime verification data: ${status.checks.runtimeCapabilities ? "ok" : "missing"}`,
-    `artifact output: ${cliDefaults.outputDir}`,
-    `output writable: ${status.checks.outputWritable ? "yes" : "no"}`,
-    `Next: ahtml build --input ${cliDefaults.documentPath} --out ${cliDefaults.outputDir}`,
-  ]
-
-  if (!status.ready && (status.runtimeDetail || status.manifestError)) {
-    lines.push(`runtime detail: ${status.runtimeDetail || status.manifestError}`)
-  }
-
-  if (update?.status === "available") {
-    lines.push(
-      `update: ${update.latestVersion} available. Run: ${update.command}`,
-    )
-  }
-
-  return `${lines.join("\n")}\n`
-}
-
-async function configCommand(commandArgs) {
-  const [subcommand, ...rest] = commandArgs
-
-  if (rest.length > 0) {
-    fail("config accepts only get.")
-  }
-
-  if (subcommand === "get") {
-    const schema = await getCliSchemaOutput()
-    const config = schema.renderConfig.defaults
-    process.stdout.write(`${JSON.stringify(config, null, 2)}\n`)
-    return
-  }
-
-  fail("config accepts only get.")
-}
-
 function fail(message) {
   console.error(message)
   process.exit(1)
+}
+
+async function defaultActionCommand() {
+  const choice = await select({
+    message: "What do you want to do?",
+    options: [
+      {
+        value: "prompt",
+        label: "Print the writing prompt",
+        hint: "Show the agent-facing schema prompt",
+      },
+      {
+        value: "build",
+        label: `Build ${cliDefaults.documentPath}`,
+        hint: `Write static HTML to ${cliDefaults.outputDir}`,
+      },
+      {
+        value: "preview",
+        label: `Preview ${cliDefaults.documentPath}`,
+        hint: `Build and serve on port ${cliDefaults.previewPort}`,
+      },
+      {
+        value: "doctor",
+        label: "Run doctor",
+        hint: "Check runtime health and output paths",
+      },
+      {
+        value: "help",
+        label: "Show command help",
+        hint: "Print the compact command list",
+      },
+    ],
+  })
+
+  if (isCancel(choice)) {
+    cancelPrompt("No action selected.")
+    return
+  }
+
+  switch (choice) {
+    case "prompt":
+      await promptCommand([], commandDefinitions.prompt)
+      return
+    case "build":
+      await buildCommand([cliDefaults.documentPath], commandDefinitions.build)
+      return
+    case "preview":
+      await previewCommand(
+        [cliDefaults.documentPath],
+        commandDefinitions.preview,
+      )
+      return
+    case "doctor":
+      await doctorCommand([])
+      return
+    default:
+      printGlobalHelp()
+  }
 }

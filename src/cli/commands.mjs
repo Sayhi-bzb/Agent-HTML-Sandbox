@@ -2,7 +2,7 @@ import { cliDefaults, safetyHelpText } from "../config/defaults.mjs"
 
 export const commandMetadata = {
   setup: {
-    summary: "Configure the managed shadcn runtime.",
+    summary: "Prepare or repair the managed runtime.",
     purpose:
       "Interactively configure or repair the user-level managed runtime.",
     usage:
@@ -41,10 +41,10 @@ export const commandMetadata = {
     ],
     example: "ahtml setup --yes --preset nova",
   },
-  schema: {
-    summary: "Print the agent-facing component and config contract.",
-    purpose: "Print the dehydrated agent-facing contract.",
-    usage: "ahtml schema [--format prompt|json] [--out <path>]",
+  prompt: {
+    summary: "Print the agent-facing writing prompt.",
+    purpose: "Print the agent-facing component and config contract.",
+    usage: "ahtml prompt [--format prompt|json] [--out <path>]",
     options: [
       {
         name: "format",
@@ -57,31 +57,58 @@ export const commandMetadata = {
         value: true,
       },
     ],
-    example: "ahtml schema --format prompt",
-  },
-  validate: {
-    summary: "Validate an agent-html document without writing output.",
-    purpose:
-      "Validate a standard .agent.html document without generating an artifact.",
-    usage: "ahtml validate --input <path>",
-    options: [
-      { name: "input", description: "Agent-html document path.", value: true },
-    ],
-    example: `ahtml validate --input ${cliDefaults.documentPath}`,
+    example: "ahtml prompt",
   },
   build: {
-    summary: "Build a sanitized static artifact directory.",
+    summary: "Validate and build a static HTML artifact.",
     purpose: "Validate, sanitize, and build a static artifact directory.",
-    usage: "ahtml build --input <path> [--out <dir>]",
+    usage: "ahtml build [<input>] [--out <dir>]",
     options: [
-      { name: "input", description: "Agent-html document path.", value: true },
+      {
+        name: "input",
+        description: "Agent-html document path.",
+        value: true,
+        hidden: true,
+      },
       {
         name: "out",
         description: `Output directory. Defaults to ${cliDefaults.outputDir}.`,
         value: true,
       },
     ],
-    example: `ahtml build --input ${cliDefaults.documentPath} --out ${cliDefaults.outputDir}`,
+    example: `ahtml build ${cliDefaults.documentPath}`,
+  },
+  preview: {
+    summary: "Build and preview a static HTML artifact.",
+    purpose: "Build and serve the same static artifact output used by build.",
+    usage: "ahtml preview [<input>] [--out <dir>] [--port <port>]",
+    options: [
+      {
+        name: "input",
+        description: "Agent-html document path.",
+        value: true,
+        hidden: true,
+      },
+      {
+        name: "out",
+        description: `Output directory. Defaults to ${cliDefaults.outputDir}.`,
+        value: true,
+      },
+      {
+        name: "port",
+        description: `Local HTTP port. Defaults to ${cliDefaults.previewPort}.`,
+        value: true,
+      },
+    ],
+    example: `ahtml preview ${cliDefaults.documentPath}`,
+  },
+  doctor: {
+    summary: "Check runtime health and output paths.",
+    purpose:
+      "Check local runtime, config, package paths, and output path writability.",
+    usage: "ahtml doctor",
+    options: [],
+    example: "ahtml doctor",
   },
   inspect: {
     summary: "Summarize config and component usage.",
@@ -98,68 +125,23 @@ export const commandMetadata = {
       },
     ],
     example: `ahtml inspect --input ${cliDefaults.documentPath}`,
-  },
-  preview: {
-    summary: "Build and serve the static artifact over local HTTP.",
-    purpose: "Build and serve the same static artifact output used by build.",
-    usage: "ahtml preview --input <path> [--out <dir>] [--port <port>]",
-    options: [
-      { name: "input", description: "Agent-html document path.", value: true },
-      {
-        name: "out",
-        description: `Output directory. Defaults to ${cliDefaults.outputDir}.`,
-        value: true,
-      },
-      {
-        name: "port",
-        description: `Local HTTP port. Defaults to ${cliDefaults.previewPort}.`,
-        value: true,
-      },
-    ],
-    example: `ahtml preview --input ${cliDefaults.documentPath} --out ${cliDefaults.outputDir} --port ${cliDefaults.previewPort}`,
-  },
-  doctor: {
-    summary: "Check local runtime, config, and output path.",
-    purpose:
-      "Check local runtime, config, package paths, and output path writability.",
-    usage: "ahtml doctor",
-    options: [],
-    example: "ahtml doctor",
-  },
-  status: {
-    summary: "Show setup readiness and the next command.",
-    purpose:
-      "Show managed runtime readiness, output writability, update status, and one recommended next command.",
-    usage: "ahtml status",
-    options: [],
-    example: "ahtml status",
-  },
-  config: {
-    summary: "Read default presentation profile values.",
-    purpose:
-      "Read the default public presentation profile values from the schema.",
-    usage: "ahtml config get",
-    options: [],
-    example: "ahtml config get",
+    hidden: true,
   },
 }
 
 export function formatGlobalHelp() {
   return `ahtml
 
-Sanitized agent-html artifact CLI.
+Interactive agent-html artifact CLI.
 
 Commands:
 ${formatCommandList()}
 
-Closed-loop workflow:
-  ahtml setup --yes
-  ahtml status
-  ahtml schema --format prompt
-  ahtml validate --input ${cliDefaults.documentPath}
-  ahtml build --input ${cliDefaults.documentPath} --out ${cliDefaults.outputDir}
-  ahtml inspect --input ${cliDefaults.documentPath}
-  ahtml preview --input ${cliDefaults.documentPath} --out ${cliDefaults.outputDir}
+Main workflow:
+  ahtml
+  ahtml prompt
+  ahtml build ${cliDefaults.documentPath}
+  ahtml preview ${cliDefaults.documentPath}
   ahtml doctor
 
 Defaults:
@@ -195,9 +177,11 @@ export function formatCommandHelp(commandName, definition) {
     sections.push(
       "",
       "Options:",
-      ...definition.options.map(
+      ...definition.options
+        .filter((option) => !option.hidden)
+        .map(
         (option) => `  --${option.name.padEnd(7)} ${option.description}`,
-      ),
+        ),
     )
   }
 

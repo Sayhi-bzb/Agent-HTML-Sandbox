@@ -1,10 +1,10 @@
 # ahtml Install And Runtime
 
-Use this when the user asks to install, check, repair, or isolate `ahtml`.
+Use this when the user wants to install `ahtml`, prepare the runtime, repair it, or isolate it.
 
-## Mental Model
+## Mental model
 
-`ahtml` is the runtime for turning semantic `.agent.html` into portable HTML artifacts. It is used when agent output needs to be easier to read, share, and round-trip than long Markdown.
+`ahtml` is the tool that renders semantic `.agent.html` into HTML artifacts.
 
 Default runtime home:
 
@@ -20,18 +20,16 @@ Windows equivalent:
 
 Set `AHTML_HOME` only when a task needs an isolated runtime.
 
-## Normal Setup
+## Normal install
 
 For a published package:
 
 ```bash
 npm install -g @agent-html/ahtml
-ahtml setup
-ahtml status
-ahtml doctor
+ahtml
 ```
 
-Use the same npmjs.com package with other package managers:
+Use the same npm package with other package managers:
 
 ```bash
 pnpm add -g @agent-html/ahtml
@@ -44,29 +42,39 @@ For local repository development:
 ```bash
 npm install
 npm link
-ahtml setup --yes
-ahtml status
-ahtml doctor
+ahtml
 ```
 
-## Runtime Repair
+For non-interactive setup, use:
 
-Runtime setup is guided by `ahtml setup`. Runtime-aware commands can still install defaults automatically. To force repair, run:
+```bash
+ahtml setup --yes
+```
+
+## Runtime repair
+
+The normal entrypoint is `ahtml`. Use explicit repair only when needed:
 
 ```bash
 ahtml setup --force
 ```
 
-Do not use removed project-local commands or flags such as `init`, `--template`, `--apply`, or `--scaffold`. `ahtml setup` may read shadcn component and preset metadata from shadcn APIs, then uses shadcn CLI inside the managed runtime. `ahtml setup --preset`, `ahtml setup --components`, and `ahtml setup --component-source shadcn-cli` configure the managed runtime under `.ahtml`; they do not configure the current project.
+`ahtml setup --preset`, `ahtml setup --components`, and `ahtml setup --component-source shadcn-cli` configure the managed runtime under `.ahtml`; they do not configure the current project.
 
-## After Install
+Do not use removed project-local commands or flags such as `init`, `--template`, `--apply`, or `--scaffold`.
 
-Run:
+## After install
+
+For a normal artifact workflow:
 
 ```bash
-ahtml status
-ahtml doctor
-ahtml schema --format prompt
+ahtml prompt
 ```
 
-If `status` prints a `Next:` command, follow that command before building.
+Then write `.agent.html`, and build or preview it.
+
+For runtime diagnostics:
+
+```bash
+ahtml doctor
+```

@@ -1,70 +1,65 @@
 # ahtml Usage
 
-Use this when the user wants to replace a long Markdown-style agent output with a richer HTML artifact, or when they need to validate, build, preview, or inspect one.
+Use this when the output needs more structure than Markdown.
 
-## User Flow
+## Typical outputs
+
+`ahtml` is strongest for:
+
+- implementation plans
+- code-review explainers
+- research or investigation reports
+- decision records
+- side-by-side comparisons
+- structured handoff or feedback artifacts
+
+If the result is only a short answer, stay in chat.
+
+## User flow
 
 ```txt
 user asks
-  -> agent decides the output needs more than Markdown
-  -> agent reads ahtml schema
+  -> agent decides Markdown is not enough
+  -> agent reads the ahtml prompt
   -> agent writes semantic .agent.html
-  -> ahtml validates and sanitizes
-  -> managed runtime renders
-  -> stable static HTML artifact
+  -> ahtml validates and renders
+  -> user gets a stable HTML artifact
 ```
 
-## Commands
+## Main commands
 
-Read the agent-facing contract first:
+Start with the writing prompt:
 
 ```bash
-ahtml schema --format prompt
+ahtml prompt
 ```
 
 Write a document:
 
-```bash
+```txt
 artifact.agent.html
-```
-
-Validate without building:
-
-```bash
-ahtml validate --input artifact.agent.html
 ```
 
 Build the static artifact:
 
 ```bash
-ahtml build --input artifact.agent.html --out dist/html
+ahtml build artifact.agent.html
 ```
 
 Preview locally:
 
 ```bash
-ahtml preview --input artifact.agent.html --out dist/html --port 4173
+ahtml preview artifact.agent.html
 ```
 
-Inspect the source document:
+Use `inspect` only when you need deeper diagnostics:
 
 ```bash
 ahtml inspect --input artifact.agent.html
-```
-
-Inspect a built artifact:
-
-```bash
 ahtml inspect --dir dist/html
 ```
 
-Read default finite render config values:
-
-```bash
-ahtml config get
-```
-
-## Document Shape
+## Document shape
 
 Use a named presentation profile and standard agent-html components. The agent writes information structure, not page implementation.
 

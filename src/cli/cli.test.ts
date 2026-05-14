@@ -63,10 +63,10 @@ describe("agent-html CLI contracts", () => {
     const namedHelp = await runCliWithServer(["help"])
 
     for (const result of [defaultHelp, longHelp, shortHelp, namedHelp]) {
-      expect(result.stdout).toContain("Closed-loop workflow:")
-      expect(result.stdout).toContain("ahtml setup --yes")
-      expect(result.stdout).toContain("ahtml status")
-      expect(result.stdout).toContain("ahtml build --input")
+      expect(result.stdout).toContain("Main workflow:")
+      expect(result.stdout).toContain("ahtml prompt")
+      expect(result.stdout).toContain("ahtml build artifact.agent.html")
+      expect(result.stdout).toContain("ahtml preview artifact.agent.html")
       expect(result.stdout).not.toContain("agent-html.project.json")
       expect(result.stdout).not.toContain("--scaffold")
     }
@@ -81,18 +81,15 @@ describe("agent-html CLI contracts", () => {
     }
   }, 30000)
 
-  it("keeps the README CLI command block in sync with command metadata", async () => {
-    const { formatCliCommandUsageBlock } = await importCommandMetadata()
+  it("keeps the README quick-start commands aligned with the CLI", async () => {
     const readme = await readFile(path.join(root, "README.md"), "utf8")
-    const commandBlock = readme.match(
-      /## CLI Commands\s+```bash\n(?<commands>[\s\S]*?)\n```/,
-    )?.groups?.commands
-
-    expect(commandBlock).toBe(formatCliCommandUsageBlock())
+    expect(readme).toContain("ahtml prompt")
+    expect(readme).toContain("ahtml build artifact.agent.html")
+    expect(readme).toContain("ahtml preview artifact.agent.html")
   })
 
   it("prints agent-facing schema without implementation props", async () => {
-    const { stdout } = await runCliWithServer(["schema", "--format", "json"])
+    const { stdout } = await runCliWithServer(["prompt", "--format", "json"])
     const schema = parseJson<CliSchemaOutput>(stdout)
     const serializedComponents = JSON.stringify(schema.components)
 
@@ -160,8 +157,8 @@ describe("agent-html CLI contracts", () => {
       tempDir,
     )
 
-    expect(help.stdout).toContain("Closed-loop workflow:")
-    expect(help.stdout).toContain("Run ahtml setup for guided runtime setup.")
+    expect(help.stdout).toContain("Main workflow:")
+    expect(help.stdout).toContain("Run ahtml setup to prepare the runtime.")
     await expectPathMissing(path.join(runtimeHome, "config", "runtime.json"))
     await expectPathMissing(path.join(tempDir, "src"))
     await rm(tempDir, { force: true, recursive: true })
@@ -223,7 +220,7 @@ describe("agent-html CLI contracts", () => {
 
     await expectCliFailure(
       runCliWithServer(
-        ["build", "--input", inputPath, "--out", outputDir],
+        ["build", inputPath, "--out", outputDir],
         {},
         tempDir,
       ),
@@ -231,7 +228,7 @@ describe("agent-html CLI contracts", () => {
     )
     await expectPathMissing(path.join(outputDir, "index.html"))
     await expectCliFailure(
-      runCliWithServer(["schema", "--format"]),
+      runCliWithServer(["prompt", "--format"]),
       "--format requires",
     )
     await expectCliFailure(
@@ -243,12 +240,12 @@ describe("agent-html CLI contracts", () => {
       'Unknown command "compose"',
     )
     await expectCliFailure(
-      runCliWithServer(
-        ["schema", "--input", "artifact.agent.html"],
-        {},
-        tempDir,
-      ),
-      "does not accept --input",
+      runCliWithServer(["schema"], {}, tempDir),
+      'Unknown command "schema"',
+    )
+    await expectCliFailure(
+      runCliWithServer(["validate", "--input", "artifact.agent.html"], {}, tempDir),
+      'Unknown command "validate"',
     )
     await rm(tempDir, { force: true, recursive: true })
   })

@@ -1,5 +1,6 @@
 export function parseOptions(commandArgs, definition) {
   const options = {}
+  const positionals = []
   const optionDefinitions = new Map(
     definition.options.map((option) => [option.name, option]),
   )
@@ -8,7 +9,8 @@ export function parseOptions(commandArgs, definition) {
     const arg = commandArgs[index]
 
     if (!arg.startsWith("--")) {
-      throw new Error(`Unexpected argument "${arg}".`)
+      positionals.push(arg)
+      continue
     }
 
     const key = arg.slice(2)
@@ -34,5 +36,5 @@ export function parseOptions(commandArgs, definition) {
     index += 1
   }
 
-  return options
+  return { options, positionals }
 }

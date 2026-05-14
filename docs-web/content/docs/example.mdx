@@ -8,8 +8,7 @@ description: Copy HTML artifact patterns for common agent outputs.
 Check setup before using these examples:
 
 ```bash
-ahtml status
-ahtml doctor
+ahtml
 ```
 
 ## Planning artifact [#planning-artifact]
@@ -33,8 +32,7 @@ ahtml doctor
 ```
 
 ```bash
-ahtml validate --input artifact.agent.html
-ahtml build --input artifact.agent.html --out dist/html
+ahtml build artifact.agent.html
 ```
 
 ## Code review explainer [#code-review-explainer]
@@ -59,8 +57,7 @@ ahtml build --input artifact.agent.html --out dist/html
 ```
 
 ```bash
-ahtml validate --input report.agent.html
-ahtml build --input report.agent.html --out dist/html
+ahtml build report.agent.html
 ```
 
 ## Decision artifact [#decision-artifact]
@@ -94,8 +91,7 @@ ahtml build --input report.agent.html --out dist/html
 ```
 
 ```bash
-ahtml validate --input decision.agent.html
-ahtml build --input decision.agent.html --out dist/html
+ahtml build decision.agent.html
 ```
 
 ## Multi-view artifact [#multi-view-artifact]
@@ -126,6 +122,5 @@ ahtml build --input decision.agent.html --out dist/html
 ```
 
 ```bash
-ahtml validate --input multi-view.agent.html
-ahtml build --input multi-view.agent.html --out dist/html
+ahtml build multi-view.agent.html
 ```

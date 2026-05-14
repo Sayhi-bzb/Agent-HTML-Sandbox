@@ -12,15 +12,14 @@ agent-html exists to replace long Markdown agent outputs with AI-native HTML art
 ```bash
 npm install
 npm link
-ahtml status
 ahtml doctor
-ahtml schema --format prompt
+ahtml prompt
 ```
 
 Repository fallback:
 
 ```bash
-npm run agent -- schema --format prompt
+npm run agent -- prompt
 ```
 
 Local check levels:
@@ -43,7 +42,7 @@ While editing, prefer the narrowest useful check:
 - For pure governance docs or ordinary copy edits, inspect the final diff only.
 - For docs changes that alter MDX structure, examples, routes, generated output, or docs build behavior, run the smallest relevant docs gate.
 - For ordinary CLI/runtime code changes, run `npm run build` once, then `npm run test:run -- <affected test file or -t pattern>`.
-- Run `npm run test:run:cli-heavy` only when changes touch setup, status, doctor, build, preview, schema output, or runtime rendering.
+- Run `npm run test:run:cli-heavy` only when changes touch setup, doctor, prompt output, build, preview, or runtime rendering.
 - Use `npm run check:package` as the package CI gate, not as the default edit loop.
 - Use `npm run check:package:release` only for release-boundary validation. It adds `knip` and `verify:pack`.
 
@@ -158,7 +157,7 @@ Use direct references instead of maintaining parallel facts:
 
 - Verification gate names live in `package.json`; CI/release usage lives in `.github/workflows/`.
 - Verification timing and scope live in `AGENTS.md`.
-- Agent-facing component and prop choices live in `ahtml schema --format prompt`, generated through `scripts/generate-component-schema-prompt.mjs`.
+- Agent-facing component and prop choices live in `ahtml prompt`, generated through `scripts/generate-component-schema-prompt.mjs`.
 - Renderable component capability and runtime export requirements live in `src/config/component-capabilities.mjs` and `src/config/render-capabilities.mjs`.
 - Managed runtime completeness checks live in `src/cli/runtime-surface.mjs` and `ahtml doctor`.
 
