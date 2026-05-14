@@ -459,7 +459,7 @@ function createRuntimeElementRegistrySource(registrySpec) {
     "    return React.Fragment",
     "  }",
     "",
-    '  return runtimeElementRegistry[name] ?? (name as React.ElementType)',
+    "  return runtimeElementRegistry[name] ?? (name as React.ElementType)",
     "}",
     "",
   ].join("\n")
@@ -494,7 +494,7 @@ function normalizeDependencyPaths(dependencies) {
       key,
       key === "tailwindcssVitePlugin"
         ? pathToFileURL(value).href
-      : value.replaceAll("\\", "/"),
+        : value.replaceAll("\\", "/"),
     ]),
   )
 }

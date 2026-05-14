@@ -74,12 +74,16 @@ export async function getShadcnProjectInfo({
   const packageRequire = createRequire(path.join(packageRoot, "package.json"))
   const shadcnBin = packageRequire.resolve("shadcn")
   const result = await withLocalShadcnRegistryEnv(async () =>
-    execFileAsync(process.execPath, [shadcnBin, "info", "--cwd", cwd, "--json"], {
-      cwd,
-      env: {
-        ...process.env,
+    execFileAsync(
+      process.execPath,
+      [shadcnBin, "info", "--cwd", cwd, "--json"],
+      {
+        cwd,
+        env: {
+          ...process.env,
+        },
       },
-    }),
+    ),
   )
 
   return JSON.parse(result.stdout)

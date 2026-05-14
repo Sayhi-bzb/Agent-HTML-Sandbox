@@ -233,7 +233,9 @@ export async function assertRuntimeCssImports({ manifest, paths }) {
 export async function assertRuntimeCssBase({ manifest, paths }) {
   const cssPath = await assertRuntimeCssEntry({ manifest, paths })
   const css = await readFile(path.join(paths.runtimeDir, cssPath), "utf8")
-  const missingTokens = requiredCssTokens.filter((token) => !css.includes(token))
+  const missingTokens = requiredCssTokens.filter(
+    (token) => !css.includes(token),
+  )
   const hasBaseBorder =
     css.includes("border-border") || css.includes("border-color: var(--border)")
   const hasBaseBody =
@@ -276,7 +278,9 @@ export async function assertRuntimeSurface({ manifest, paths }) {
   }
 
   if (surface.template !== "vite") {
-    issues.push(`surface template must be vite, got ${String(surface.template)}.`)
+    issues.push(
+      `surface template must be vite, got ${String(surface.template)}.`,
+    )
   }
 
   if (surface.preset !== manifest.preset) {
@@ -381,7 +385,9 @@ export async function assertRuntimeSurface({ manifest, paths }) {
   await assertManagedRuntimeProof({ paths, surface })
 
   if (issues.length > 0) {
-    throw new Error(`Runtime shadcn surface is inconsistent. ${issues.join(" ")}`)
+    throw new Error(
+      `Runtime shadcn surface is inconsistent. ${issues.join(" ")}`,
+    )
   }
 
   return formatShadcnRuntimeSurface(surface)
@@ -400,7 +406,9 @@ export function formatShadcnRuntimeProvenance(surface) {
     throw new Error("Runtime manifest does not record shadcn surface.")
   }
 
-  const proofCount = Object.keys(surface.managedRuntimeProof?.files ?? {}).length
+  const proofCount = Object.keys(
+    surface.managedRuntimeProof?.files ?? {},
+  ).length
 
   return `${String(surface.shellSource ?? "missing")}/${String(surface.initSource ?? "missing")}/${String(surface.tailwindVersion ?? "missing")} files:${proofCount}`
 }
@@ -425,7 +433,9 @@ export function getShadcnRuntimeProvenanceState(surface) {
 
 export class MissingBuiltArtifactCssError extends Error {
   constructor(outputDir) {
-    super(`No built artifact CSS found under ${outputDir}. Run ahtml build first.`)
+    super(
+      `No built artifact CSS found under ${outputDir}. Run ahtml build first.`,
+    )
     this.name = "MissingBuiltArtifactCssError"
   }
 }
@@ -434,13 +444,14 @@ export async function assertBuiltArtifactCss(outputDir) {
   const cssPath = await findBuiltArtifactCss(outputDir)
   const css = await readFile(cssPath, "utf8")
   const normalized = normalizeCssForComparison(css)
-  const missingTokens = requiredCssTokens.filter((token) => !css.includes(token))
-  const hasBodyBase =
-    hasBuiltBodyBase({
-      backgroundPattern: /(?:background-color|background):var\(--background\)/,
-      colorPattern: /color:var\(--foreground\)/,
-      normalizedCss: normalized,
-    })
+  const missingTokens = requiredCssTokens.filter(
+    (token) => !css.includes(token),
+  )
+  const hasBodyBase = hasBuiltBodyBase({
+    backgroundPattern: /(?:background-color|background):var\(--background\)/,
+    colorPattern: /color:var\(--foreground\)/,
+    normalizedCss: normalized,
+  })
 
   if (missingTokens.length > 0 || !hasBodyBase) {
     throw new Error(
@@ -598,10 +609,7 @@ async function assertManagedRuntimeProof({ paths, surface }) {
 
 function hasCssImport(css, specifier) {
   const escapedSpecifier = specifier.replaceAll("/", "\\/")
-  const expression = new RegExp(
-    `@import\\s+["']${escapedSpecifier}["'];?`,
-    "m",
-  )
+  const expression = new RegExp(`@import\\s+["']${escapedSpecifier}["'];?`, "m")
   return expression.test(css)
 }
 
@@ -688,7 +696,10 @@ async function findBuiltArtifactCss(outputDir) {
 
     return path.join(assetsDir, cssEntry)
   } catch (error) {
-    if (error?.code === "ENOENT" || error instanceof MissingBuiltArtifactCssError) {
+    if (
+      error?.code === "ENOENT" ||
+      error instanceof MissingBuiltArtifactCssError
+    ) {
       throw new MissingBuiltArtifactCssError(outputDir)
     }
 

@@ -27,7 +27,9 @@ const PROFILE_PRESETS = {
     tone: "decision",
     width: "wide",
   },
-} as const satisfies Readonly<Record<(typeof RENDER_PROFILE_VALUES)[number], Omit<RenderConfig, "profile">>>
+} as const satisfies Readonly<
+  Record<(typeof RENDER_PROFILE_VALUES)[number], Omit<RenderConfig, "profile">>
+>
 
 const ProfileRenderConfigInputSchema = z
   .object({
@@ -57,9 +59,9 @@ export const DEFAULT_RENDER_CONFIG = resolveProfile(
   PUBLIC_RENDER_CONFIG_DEFAULTS.profile,
 )
 
-export const RENDER_CONFIG_KEYS = Object.keys(RENDER_CONFIG_VALUES) as readonly (
-  keyof typeof RENDER_CONFIG_VALUES
-)[]
+export const RENDER_CONFIG_KEYS = Object.keys(
+  RENDER_CONFIG_VALUES,
+) as readonly (keyof typeof RENDER_CONFIG_VALUES)[]
 
 export function parseRenderConfig(input: unknown): RenderConfig {
   const profileInput = ProfileRenderConfigInputSchema.safeParse(input)
@@ -71,7 +73,9 @@ export function parseRenderConfig(input: unknown): RenderConfig {
   throw new Error("Invalid render config.")
 }
 
-function resolveProfile(profile: (typeof RENDER_PROFILE_VALUES)[number]): RenderConfig {
+function resolveProfile(
+  profile: (typeof RENDER_PROFILE_VALUES)[number],
+): RenderConfig {
   return {
     profile,
     ...PROFILE_PRESETS[profile],

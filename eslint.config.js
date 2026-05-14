@@ -12,6 +12,7 @@ export default tseslint.config(
       ".gitnexus",
       ".claude",
       "docs-web",
+      "scripts/shadcn-test-fixtures",
     ],
   },
   js.configs.recommended,
@@ -28,6 +29,18 @@ export default tseslint.config(
         project: ["./tsconfig.node.json"],
         tsconfigRootDir: import.meta.dirname,
       },
+    },
+  },
+  {
+    files: ["**/*.test.ts"],
+    rules: {
+      "@typescript-eslint/ban-ts-comment": "off",
+      "@typescript-eslint/no-unnecessary-type-assertion": "off",
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-unsafe-return": "off",
+      "@typescript-eslint/require-await": "off",
     },
   },
   {

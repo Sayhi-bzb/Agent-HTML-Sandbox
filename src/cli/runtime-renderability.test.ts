@@ -253,7 +253,9 @@ describe("createRuntimeRenderDiagnostics", () => {
         code: "runtime-renderer-mapping-parity",
         path: "/runtime",
         severity: "error",
-        message: expect.stringContaining('Missing required field "itemValueProp"'),
+        message: expect.stringContaining(
+          'Missing required field "itemValueProp"',
+        ),
       }),
     ])
   })

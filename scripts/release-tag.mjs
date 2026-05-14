@@ -1,10 +1,13 @@
 import { execFile } from "node:child_process"
+import { readFile } from "node:fs/promises"
+import path from "node:path"
 import { promisify } from "node:util"
 
-import { getReleaseMetadata } from "./release-shared.mjs"
-
 const execFileAsync = promisify(execFile)
-const { gitTag, version } = await getReleaseMetadata()
+const packagePath = path.join(process.cwd(), "package.json")
+const manifest = JSON.parse(await readFile(packagePath, "utf8"))
+const version = manifest.version
+const gitTag = `v${version}`
 
 await ensureTagMissing(gitTag)
 await execFileAsync("git", ["tag", gitTag])

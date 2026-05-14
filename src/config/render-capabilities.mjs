@@ -140,10 +140,12 @@ export function collectRendererSpecComponentIssues(component) {
   }
 
   for (const fieldGroup of kindDefinition.requiredAnyOf ?? []) {
-    if (!fieldGroup.some((fieldName) => hasRendererSpecValue(component?.[fieldName]))) {
-      issues.push(
-        `Missing one of required fields: ${fieldGroup.join(", ")}.`,
+    if (
+      !fieldGroup.some((fieldName) =>
+        hasRendererSpecValue(component?.[fieldName]),
       )
+    ) {
+      issues.push(`Missing one of required fields: ${fieldGroup.join(", ")}.`)
     }
   }
 
@@ -156,9 +158,7 @@ export function collectRendererSpecComponentIssues(component) {
 
     for (const requiredField of requiredFields) {
       if (!hasRendererSpecValue(component?.[requiredField])) {
-        issues.push(
-          `Field "${fieldName}" requires "${requiredField}".`,
-        )
+        issues.push(`Field "${fieldName}" requires "${requiredField}".`)
       }
     }
   }

@@ -89,13 +89,9 @@ Workflow filename: publish-npm.yml
 Release a package version:
 
 ```bash
-npm run release:stable
-```
-
-Create the next alpha prerelease from the current base version:
-
-```bash
-npm run release:alpha
+npm version patch --no-git-tag-version
+# or: npm version minor --no-git-tag-version
+# or: npm version major --no-git-tag-version
 ```
 
 Validate and publish the selected version:
@@ -108,9 +104,7 @@ npm run release:tag
 git push origin main --tags
 ```
 
-`release:stable` removes the prerelease suffix from the current version, for example `0.1.0-alpha.12` -> `0.1.0`.
-
-Tagged prereleases publish to the matching prerelease dist-tag, such as `alpha`. Stable releases publish to `latest`. `release:check` resolves the correct npm dist-tag from `package.json` version automatically. The publish workflow fails if the Git tag does not match `package.json` version.
+Stable releases publish only to npm `latest`. Prerelease channels are not maintained. The publish workflow fails if the Git tag does not match `package.json` version.
 
 `release:check` is the local package release gate. It runs the package CI checks, `knip`, `verify:pack`, and the npm dry-run publish. The GitHub Actions publish workflow runs the same package release gate again before tag-driven publish.
 

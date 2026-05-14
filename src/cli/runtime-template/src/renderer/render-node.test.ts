@@ -88,7 +88,7 @@ describe("createRendererNode", () => {
           itemSlot: "entry",
           defaultProp: "default",
           itemValueProp: "slug",
-          itemLabelProp: "heading",
+          itemHeadingProp: "heading",
           fallback: true,
         },
       ],
@@ -115,7 +115,7 @@ describe("createRendererNode", () => {
 
     expect(markup).toContain('value="alpha"')
     expect(markup).toContain(">Alpha</TabsTrigger>")
-    expect(markup).toContain("<h2 class=\"ahtml-section-title\">Alpha</h2>")
+    expect(markup).toContain('<h2 class="ahtml-section-title">Alpha</h2>')
   })
 
   it("renders a no-script fallback for accordion items when configured", () => {
@@ -139,7 +139,7 @@ describe("createRendererNode", () => {
           content: "AccordionContent",
           itemSlot: "accordion-item",
           itemValueProp: "slug",
-          itemTitleProp: "heading",
+          itemHeadingProp: "heading",
           mode: "multiple",
           fallback: true,
         },
@@ -166,7 +166,7 @@ describe("createRendererNode", () => {
     )
 
     expect(markup).toContain(">Details</AccordionTrigger>")
-    expect(markup).toContain("<h2 class=\"ahtml-section-title\">Details</h2>")
+    expect(markup).toContain('<h2 class="ahtml-section-title">Details</h2>')
     expect(markup).toContain("<noscript>")
   })
 })

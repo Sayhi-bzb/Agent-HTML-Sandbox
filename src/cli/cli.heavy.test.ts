@@ -277,16 +277,16 @@ describe("agent-html CLI heavy runtime flows", () => {
           '<card title="Overview">',
           '<alert title="State">Built from semantic syntax.</alert>',
           '<badge tone="success">Ready</badge>',
-          '<separator />',
+          "<separator />",
           "</card>",
           "</tab>",
           '<tab value="details" label="Details">',
-          '<accordion>',
+          "<accordion>",
           '<accordion-item value="runtime" title="Runtime">',
-          '<list><item>Portable output</item><item>Readable content</item></list>',
-          '<table>',
+          "<list><item>Portable output</item><item>Readable content</item></list>",
+          "<table>",
           '<row kind="header"><cell>Layer</cell><cell>Status</cell></row>',
-          '<row><cell>Renderer</cell><cell>Ready</cell></row>',
+          "<row><cell>Renderer</cell><cell>Ready</cell></row>",
           "</table>",
           "</accordion-item>",
           "</accordion>",
@@ -316,12 +316,18 @@ describe("agent-html CLI heavy runtime flows", () => {
     await expectFile(path.join(outputDir, "index.html"), 'data-slot="table"')
     await expectFile(path.join(outputDir, "index.html"), 'data-slot="alert"')
     await expectFile(path.join(outputDir, "index.html"), 'data-slot="badge"')
-    await expectFile(path.join(outputDir, "index.html"), 'data-slot="separator"')
+    await expectFile(
+      path.join(outputDir, "index.html"),
+      'data-slot="separator"',
+    )
     await expectFile(
       path.join(outputDir, "index.html"),
       '<ul data-agent-html-component="list" class="ahtml-list">',
     )
-    await expectFile(path.join(outputDir, "index.html"), "<li>Portable output</li>")
+    await expectFile(
+      path.join(outputDir, "index.html"),
+      "<li>Portable output</li>",
+    )
     await expectFile(
       path.join(outputDir, "index.html"),
       "Built from semantic syntax.",

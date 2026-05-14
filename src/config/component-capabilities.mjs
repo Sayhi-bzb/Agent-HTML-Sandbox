@@ -337,8 +337,8 @@ export function getAgentRenderKind(name) {
 }
 
 export function createUiSlots(component, componentMap) {
-  const configuredSlots = componentCapabilityDefinitions[component.name]?.uiProtocol
-    ?.slots
+  const configuredSlots =
+    componentCapabilityDefinitions[component.name]?.uiProtocol?.slots
 
   if (configuredSlots?.length) {
     return configuredSlots.map((slot) =>
