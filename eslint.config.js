@@ -13,6 +13,7 @@ export default tseslint.config(
       ".claude",
       "docs-web",
       "scripts/shadcn-test-fixtures",
+      "src/cli/shadcn-template/vite-app/**/*",
     ],
   },
   js.configs.recommended,

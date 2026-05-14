@@ -660,15 +660,7 @@ describe("agent-html CLI heavy runtime flows", () => {
 
     const preview = spawn(
       process.execPath,
-      [
-        cliPath,
-        "preview",
-        inputPath,
-        "--out",
-        outputDir,
-        "--port",
-        "0",
-      ],
+      [cliPath, "preview", inputPath, "--out", outputDir, "--port", "0"],
       {
         cwd: tempDir,
         env: {
