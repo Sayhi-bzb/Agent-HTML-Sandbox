@@ -13,6 +13,7 @@ const execFileAsync = promisify(execFile)
 
 export const root = process.cwd()
 export const cliPath = path.join(root, "bin", "ahtml.mjs")
+export const shadcnTemplateFixtureDir = path.join(root, "src", "cli", "shadcn-template")
 export const validAgentHtmlFixtures = [
   '<page title="Fixture"><card title="Summary">Valid text.</card></page>',
   [
@@ -122,6 +123,7 @@ export function runCli(
     env: {
       ...process.env,
       AHTML_NO_UPDATE_CHECK: "1",
+      AHTML_SHADCN_TEMPLATE_DIR: shadcnTemplateFixtureDir,
       ...(registryUrl ? { REGISTRY_URL: registryUrl } : {}),
       ...env,
     },

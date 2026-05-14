@@ -15,6 +15,7 @@
     "fumadocs-core": "16.8.8",
     "fumadocs-mdx": "15.0.0",
     "fumadocs-ui": "16.8.8",
+    "js-tiktoken": "^1.0.21",
     "lucide-react": "^1.14.0",
     "next": "16.2.4",
     "react": "^19.2.5",

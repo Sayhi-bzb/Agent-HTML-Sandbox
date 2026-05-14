@@ -20,6 +20,7 @@
     "src/engine/types.ts",
     "src/engine/parse/",
     "src/cli/",
+    "!src/cli/shadcn-template/",
     "!src/cli/cli-test-helpers.ts",
     "!src/**/*.test.ts",
     "tsconfig.json",

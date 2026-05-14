@@ -84,7 +84,7 @@ try {
   await expectStdout(["status"], "runtime manifest: ok")
   await expectStdout(["status"], "ui library: shadcn")
   await expectStdout(["status"], "component source: shadcn-cli")
-  await expectStdout(["status"], "runtime shell: ahtml-managed-shell")
+  await expectStdout(["status"], "runtime shell: shadcn-official-template")
   await expectStdout(["status"], "prompt-ui manifest: ok")
   await expectStdout(
     ["status"],
@@ -121,7 +121,10 @@ try {
     path.join(outputDir, "index.html"),
     "Built from an installed package.",
   )
-  await expectFile(path.join(outputDir, "assets", "ahtml.css"), "ahtml-card")
+  await expectFile(
+    path.join(outputDir, "assets", "ahtml.css"),
+    "background-color:var(--background)",
+  )
   await expectFile(
     path.join(outputDir, "agent-html.inspect.json"),
     "agent-html-inspection",
@@ -205,6 +208,7 @@ function assertPackBoundary(files) {
     "dist/",
     "build/",
     "coverage/",
+    "src/cli/shadcn-template/",
   ]
   const forbiddenFiles = [
     "agent-html.config.json",
@@ -401,6 +405,7 @@ function getAhtmlEnv() {
     ...process.env,
     AHTML_HOME: runtimeHome,
     AHTML_NO_UPDATE_CHECK: "1",
+    AHTML_SHADCN_TEMPLATE_DIR: path.join(root, "src", "cli", "shadcn-template"),
     REGISTRY_URL: shadcnTestServer.registryUrl,
   }
 }

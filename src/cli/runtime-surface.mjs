@@ -13,12 +13,9 @@ const requiredCssImports = [
 const requiredCssTokens = ["--background", "--foreground", "--border"]
 const requiredAliasKeys = ["components", "ui", "lib", "utils"]
 const managedRuntimeProofAlgorithm = "sha256"
-const managedRuntimeShellSource = "ahtml-managed-shell"
+const managedRuntimeShellSource = "shadcn-official-template"
 const managedRuntimeOwnedFiles = [
-  "index.html",
-  "tsconfig.json",
   "vite.config.mjs",
-  "src/ahtml.css",
   "src/app.tsx",
   "src/main.tsx",
   "src/ssr.tsx",
@@ -408,13 +405,6 @@ export function formatShadcnRuntimeProvenance(surface) {
 export function getShadcnRuntimeProvenanceState(surface) {
   if (!surface) {
     throw new Error("Runtime manifest does not record shadcn surface.")
-  }
-
-  if (surface.shellSource === managedRuntimeShellSource) {
-    return {
-      state: "partial",
-      detail: `${formatShadcnRuntimeProvenance(surface)} local checked-in shell mirror`,
-    }
   }
 
   return {

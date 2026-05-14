@@ -14,7 +14,7 @@ export function createRendererNode(
 ) {
   function RendererNode({ node }: { node: AgentNode }) {
     if (node.type === "text") {
-      return <p className="ahtml-text">{node.value}</p>
+      return <p className="m-0 whitespace-pre-wrap">{node.value}</p>
     }
 
     const rendererSpec = rendererSpecByName.get(node.name)
@@ -314,13 +314,13 @@ export function createRendererNode(
   ) {
     return (
       <noscript>
-        <section className="ahtml-section">
+        <section className="grid gap-3">
           {items.map((item) => (
             <section
-              className="ahtml-section"
+              className="grid gap-3"
               key={getConfiguredPropValue(item, itemValueProp)}
             >
-              <h2 className="ahtml-section-title">
+              <h2 className="m-0 text-lg font-medium leading-7">
                 {getConfiguredPropValue(item, itemHeadingProp)}
               </h2>
               {renderChildren(item)}

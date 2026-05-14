@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process"
 import { existsSync } from "node:fs"
 import { createRequire } from "node:module"
-import { access, cp, mkdir, readFile, rm, writeFile } from "node:fs/promises"
+import { access, cp, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { promisify } from "node:util"
@@ -25,10 +25,6 @@ const templateDir = path.join(
   "runtime-template",
 )
 const rendererSourceDir = path.join(templateDir, "src")
-const shadcnTemplateRootDir = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "shadcn-template",
-)
 
 export async function writeRuntimeTemplate({
   packageRoot,
@@ -44,7 +40,6 @@ export async function writeRuntimeTemplate({
     schema?.rendererMapping ?? createRendererMapping(components)
 
   await rm(paths.runtimeDir, { force: true, recursive: true })
-  await seedRuntimeProjectShell({ packageRoot, paths })
   await initShadcnRuntime({ packageRoot, paths, setup })
 
   const runtimeSurface = await createShadcnRuntimeSurface({
@@ -79,18 +74,6 @@ export async function writeRuntimeTemplate({
   })
 
   return provenRuntimeSurface
-}
-
-async function seedRuntimeProjectShell({ packageRoot, paths }) {
-  await scaffoldManagedRuntimeShell({ paths })
-  await writeRuntimePackageManifest({ packageRoot, paths })
-}
-
-async function scaffoldManagedRuntimeShell({ paths }) {
-  await mkdir(paths.runtimeSrcDir, { recursive: true })
-  await cp(path.join(shadcnTemplateRootDir, "vite-app"), paths.runtimeDir, {
-    recursive: true,
-  })
 }
 
 export function resolveRuntimeDependencies(packageRoot) {
@@ -159,8 +142,15 @@ async function initShadcnRuntime({ packageRoot, paths, setup }) {
     setup.preset && setup.preset !== "custom"
       ? setup.preset
       : getDefaultShadcnPreset()
+  const runtimeParentDir = path.dirname(paths.runtimeDir)
+  const generatedRuntimeDir = path.join(runtimeParentDir, "vite-app")
+
+  await mkdir(runtimeParentDir, { recursive: true })
+  await rm(generatedRuntimeDir, { force: true, recursive: true })
   const args = [
     "init",
+    "--template",
+    "vite",
     "--base",
     supportedRuntimeBase,
     "--yes",
@@ -168,7 +158,7 @@ async function initShadcnRuntime({ packageRoot, paths, setup }) {
     "--no-reinstall",
     "--no-monorepo",
     "--cwd",
-    paths.runtimeDir,
+    runtimeParentDir,
     "--silent",
     "--preset",
     preset,
@@ -177,12 +167,15 @@ async function initShadcnRuntime({ packageRoot, paths, setup }) {
   try {
     await runShadcnCli(args, { packageRoot, paths })
   } catch (error) {
-    if (await canContinueAfterInitInstallFailure(error, paths)) {
+    if (await canContinueAfterInitInstallFailure(error, generatedRuntimeDir)) {
       return
     }
 
     throw error
   }
+
+  await rm(paths.runtimeDir, { force: true, recursive: true })
+  await rename(generatedRuntimeDir, paths.runtimeDir)
 }
 
 async function injectRendererFiles({ paths, rendererMapping, runtimeSurface }) {
@@ -202,7 +195,6 @@ async function injectRendererFiles({ paths, rendererMapping, runtimeSurface }) {
   )
   await writeRuntimeRendererKindSource({ paths })
   await writeRuntimeElementRegistrySource({ paths, rendererMapping })
-  await writeAhtmlCss(paths)
   await writeRendererMain({ paths, cssPath: runtimeSurface.cssPath })
 }
 
@@ -216,7 +208,6 @@ async function writeRendererMain({ paths, cssPath }) {
     'import { createRoot } from "react-dom/client"',
     'import { App } from "./app"',
     `import "${cssImport}"`,
-    'import "./ahtml.css"',
     "",
     'createRoot(window.document.getElementById("root")!).render(',
     "  <React.StrictMode>",
@@ -229,115 +220,10 @@ async function writeRendererMain({ paths, cssPath }) {
   await writeFile(path.join(paths.runtimeSrcDir, "main.tsx"), source)
 }
 
-async function writeAhtmlCss(paths) {
-  const source = [
-    ".ahtml-shell {",
-    "  width: min(calc(100% - 32px), 1120px);",
-    "  margin: 0 auto;",
-    "  padding: 40px 0;",
-    "  display: grid;",
-    "  gap: 24px;",
-    "}",
-    "",
-    '.ahtml-shell[data-width="article"] {',
-    "  max-width: 860px;",
-    "}",
-    "",
-    '.ahtml-shell[data-width="wide"] {',
-    "  max-width: 1440px;",
-    "}",
-    "",
-    '.ahtml-shell[data-density="compact"] {',
-    "  gap: 16px;",
-    "}",
-    "",
-    ".ahtml-page {",
-    "  display: grid;",
-    "  gap: 20px;",
-    "}",
-    "",
-    ".ahtml-page-title {",
-    "  margin: 0;",
-    "  font-size: 2rem;",
-    "  line-height: 1.15;",
-    "  font-weight: 700;",
-    "}",
-    "",
-    ".ahtml-section {",
-    "  display: grid;",
-    "  gap: 12px;",
-    "}",
-    "",
-    ".ahtml-section-title {",
-    "  margin: 0;",
-    "  font-size: 1.125rem;",
-    "  line-height: 1.35;",
-    "  font-weight: 650;",
-    "}",
-    "",
-    ".ahtml-content {",
-    "  display: grid;",
-    "  gap: 12px;",
-    "  line-height: 1.7;",
-    "}",
-    "",
-    ".ahtml-text {",
-    "  margin: 0;",
-    "  white-space: pre-wrap;",
-    "}",
-    "",
-    ".ahtml-list {",
-    "  margin: 0;",
-    "  padding-left: 1.25rem;",
-    "}",
-    "",
-  ].join("\n")
-
-  await writeFile(path.join(paths.runtimeSrcDir, "ahtml.css"), source)
-}
-
 async function cleanupRuntimeBootstrapArtifacts(paths) {
   await rm(path.join(paths.runtimeDir, "vite.config.ts"), {
     force: true,
   })
-}
-
-async function writeRuntimePackageManifest({ packageRoot, paths }) {
-  const packageJsonPath = path.join(packageRoot, "package.json")
-  const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"))
-  const versions = {
-    ...(packageJson.dependencies ?? {}),
-    ...(packageJson.devDependencies ?? {}),
-  }
-  const manifest = {
-    name: "ahtml-runtime",
-    private: true,
-    version: "0.0.0",
-    type: "module",
-    scripts: {
-      build: "vite build",
-    },
-    dependencies: pickRuntimePackageVersions(versions, [
-      "class-variance-authority",
-      "clsx",
-      "lucide-react",
-      "radix-ui",
-      "react",
-      "react-dom",
-      "tailwind-merge",
-    ]),
-    devDependencies: pickRuntimePackageVersions(versions, [
-      "@tailwindcss/vite",
-      "tailwindcss",
-      "typescript",
-      "vite",
-    ]),
-  }
-
-  await writeFile(
-    paths.runtimePackageJsonPath,
-    `${JSON.stringify(manifest, null, 2)}\n`,
-  )
 }
 
 async function renderViteConfig({ dependencies, paths }) {
@@ -499,24 +385,6 @@ function normalizeDependencyPaths(dependencies) {
   )
 }
 
-function pickRuntimePackageVersions(versions, names) {
-  return Object.fromEntries(
-    names.map((name) => [name, requirePackageVersion(versions, name)]),
-  )
-}
-
-function requirePackageVersion(versions, name) {
-  const version = versions[name]
-
-  if (!version) {
-    throw new Error(
-      `Unable to resolve ${name} from package.json for managed runtime bootstrap.`,
-    )
-  }
-
-  return version
-}
-
 async function installShadcnComponents({ packageRoot, components, paths }) {
   const selectedComponents = components.length > 0 ? components : ["card"]
 
@@ -542,6 +410,7 @@ function normalizeCssImportPath({ from, to }) {
 async function runShadcnCli(args, { cwd, env, packageRoot, paths }) {
   const command = await resolveShadcnCommand(packageRoot)
   const commandCwd = cwd ?? paths.runtimeDir
+  const shadcnTemplateDir = resolveShadcnTemplateDir()
   const localRegistryEnv = isLocalRegistryUrl(process.env.REGISTRY_URL)
     ? {
         ALL_PROXY: "",
@@ -561,6 +430,7 @@ async function runShadcnCli(args, { cwd, env, packageRoot, paths }) {
       env: {
         ...process.env,
         AHTML_SHADCN_RUNTIME: "1",
+        ...(shadcnTemplateDir ? { SHADCN_TEMPLATE_DIR: shadcnTemplateDir } : {}),
         ...localRegistryEnv,
         ...env,
       },
@@ -585,6 +455,16 @@ async function runShadcnCli(args, { cwd, env, packageRoot, paths }) {
   }
 }
 
+function resolveShadcnTemplateDir() {
+  const templateDir = process.env.AHTML_SHADCN_TEMPLATE_DIR?.trim()
+
+  if (!templateDir) {
+    return undefined
+  }
+
+  return path.resolve(templateDir)
+}
+
 async function resolveShadcnCommand(packageRoot) {
   const packageRequire = createRequire(path.join(packageRoot, "package.json"))
   const shadcnBin = packageRequire.resolve("shadcn")
@@ -598,7 +478,7 @@ async function resolveShadcnCommand(packageRoot) {
   return { file: process.execPath, args: [shadcnBin] }
 }
 
-async function canContinueAfterInitInstallFailure(error, paths) {
+async function canContinueAfterInitInstallFailure(error, generatedRuntimeDir) {
   const detail = getExecErrorDetail(error)
 
   if (!detail.includes("npm install")) {
@@ -606,7 +486,7 @@ async function canContinueAfterInitInstallFailure(error, paths) {
   }
 
   try {
-    await access(path.join(paths.runtimeDir, "components.json"))
+    await access(path.join(generatedRuntimeDir, "components.json"))
     return true
   } catch {
     return false

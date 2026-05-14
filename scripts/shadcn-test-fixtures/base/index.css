@@ -71,82 +71,10 @@ body {
   color: var(--foreground);
 }
 
-.ahtml-shell {
-  width: min(calc(100% - 32px), 1120px);
-  margin: 0 auto;
-  padding: 40px 0;
-  display: grid;
-  gap: 24px;
-}
-
-.ahtml-shell[data-width="article"] {
-  max-width: 860px;
-}
-
-.ahtml-shell[data-width="wide"] {
-  max-width: 1440px;
-}
-
-.ahtml-shell[data-density="compact"] {
-  gap: 16px;
-}
-
-.ahtml-page {
-  display: grid;
-  gap: 20px;
-}
-
-.ahtml-page-title {
-  margin: 0;
-  font-size: 2rem;
-  line-height: 1.15;
-  font-weight: 700;
-  color: #111827;
-}
-
 .bg-card {
   background-color: var(--card);
 }
 
 .text-card-foreground {
   color: var(--card-foreground);
-}
-
-.ahtml-card {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: #ffffff;
-  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04);
-}
-
-.ahtml-card-title {
-  margin: 0;
-  font-size: 1.125rem;
-  line-height: 1.35;
-  font-weight: 650;
-  color: #111827;
-}
-
-.ahtml-section {
-  display: grid;
-  gap: 12px;
-}
-
-.ahtml-section-title {
-  margin: 0;
-  font-size: 1.125rem;
-  line-height: 1.35;
-  font-weight: 650;
-  color: #111827;
-}
-
-.ahtml-content {
-  display: grid;
-  gap: 12px;
-  line-height: 1.7;
-}
-
-.ahtml-text {
-  margin: 0;
-  white-space: pre-wrap;
 }

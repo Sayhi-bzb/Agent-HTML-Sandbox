@@ -19,6 +19,7 @@ import {
   parseJson,
   root,
   runCli,
+  shadcnTemplateFixtureDir,
   startPackageVersionServer,
   startShadcnTestServer,
   waitForPreviewUrl,
@@ -236,13 +237,13 @@ describe("agent-html CLI heavy runtime flows", () => {
     )
     await expectFile(
       path.join(outputDir, "index.html"),
-      '<noscript><section class="ahtml-section"><section class="ahtml-section"><h2 class="ahtml-section-title">Details</h2>',
+      '<noscript><section class="grid gap-3"><section class="grid gap-3"><h2 class="m-0 text-lg font-medium leading-7">Details</h2>',
     )
-    await expectFile(path.join(outputDir, "assets", "ahtml.css"), "ahtml-card")
-    await expectFile(path.join(outputDir, "assets", "ahtml.css"), ".flex")
-    await expectFile(path.join(outputDir, "assets", "ahtml.css"), ".gap-6")
+    await expectFile(
+      path.join(outputDir, "assets", "ahtml.css"),
+      "background-color:var(--background)",
+    )
     await expectFile(path.join(outputDir, "assets", "ahtml.css"), ".rounded-lg")
-    await expectFile(path.join(outputDir, "assets", "ahtml.css"), ".border")
     await expectFile(path.join(outputDir, "assets", "ahtml.css"), ".shadow-sm")
     await expectFile(
       path.join(outputDir, "agent-html.inspect.json"),
@@ -319,7 +320,7 @@ describe("agent-html CLI heavy runtime flows", () => {
     await expectFile(path.join(outputDir, "index.html"), 'data-slot="separator"')
     await expectFile(
       path.join(outputDir, "index.html"),
-      '<ul data-agent-html-component="list" class="ahtml-list">',
+      '<ul data-agent-html-component="list" class="space-y-2 pl-5 marker:text-muted-foreground">',
     )
     await expectFile(path.join(outputDir, "index.html"), "<li>Portable output</li>")
     await expectFile(
@@ -455,7 +456,7 @@ describe("agent-html CLI heavy runtime flows", () => {
     expect(stdout).toContain("ok runtime:shadcn-css-imports")
     expect(stdout).toContain("ok runtime:shadcn-css-base")
     expect(stdout).toContain("ok runtime:shadcn-surface")
-    expect(stdout).toContain("warn runtime:shadcn-provenance")
+    expect(stdout).toContain("ok runtime:shadcn-provenance")
     expect(stdout).toContain("ok runtime:shadcn-components")
     expect(stdout).toContain("ok runtime:prompt-ui-manifest")
     expect(stdout).toContain("ok runtime:verification-data")
@@ -669,6 +670,7 @@ describe("agent-html CLI heavy runtime flows", () => {
           ...process.env,
           AHTML_HOME: runtimeHome,
           AHTML_NO_UPDATE_CHECK: "1",
+          AHTML_SHADCN_TEMPLATE_DIR: shadcnTemplateFixtureDir,
           ...(shadcnTestServer
             ? { REGISTRY_URL: shadcnTestServer.registryUrl }
             : {}),

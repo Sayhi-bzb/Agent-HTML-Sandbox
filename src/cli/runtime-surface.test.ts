@@ -178,7 +178,7 @@ describe("runtime surface completeness", () => {
           ...fixture.manifest.shadcnRuntimeSurface.managedRuntimeProof,
           files: {
             ...fixture.manifest.shadcnRuntimeSurface.managedRuntimeProof.files,
-            "index.html": "drifted-proof",
+            "src/app.tsx": "drifted-proof",
           },
         },
       },
@@ -190,7 +190,7 @@ describe("runtime surface completeness", () => {
         paths: fixture.runtimePaths,
       }),
     ).rejects.toThrow(
-      "surface managedRuntimeProof index.html does not match runtime file hash",
+      "surface managedRuntimeProof src/app.tsx does not match runtime file hash",
     )
   })
 
@@ -208,14 +208,14 @@ describe("runtime surface completeness", () => {
     )
   })
 
-  it("reports checked-in shell provenance as partial", async () => {
+  it("reports official shell provenance as complete", async () => {
     const { getShadcnRuntimeProvenanceState } = await loadModules()
     const fixture = await createRuntimeFixture()
 
     expect(
       getShadcnRuntimeProvenanceState(fixture.manifest.shadcnRuntimeSurface),
     ).toMatchObject({
-      state: "partial",
+      state: "complete",
     })
   })
 })
@@ -279,7 +279,7 @@ async function createRuntimeFixture({
     style: componentsJson.style,
     base: supportedRuntimeBase,
     iconLibrary: componentsJson.iconLibrary,
-    shellSource: "shadcn-template-mirror",
+    shellSource: "shadcn-official-template",
     initSource: "shadcn-cli",
     tailwindVersion: "^4.3.0",
     tailwindCss: "src/styles.css",
@@ -340,19 +340,7 @@ async function createRuntimeFixture({
       2,
     )}\n`,
   )
-  await writeFile(
-    path.join(runtimePaths.runtimeDir, "index.html"),
-    "<!doctype html><html><body><div id=\"root\"></div></body></html>\n",
-  )
-  await writeFile(
-    path.join(runtimePaths.runtimeDir, "tsconfig.json"),
-    "{\n  \"compilerOptions\": {}\n}\n",
-  )
   await writeFile(runtimePaths.runtimeViteConfigPath, "export default {}\n")
-  await writeFile(
-    path.join(runtimePaths.runtimeSrcDir, "ahtml.css"),
-    ".ahtml-shell { display: block; }\n",
-  )
   await writeFile(
     path.join(runtimePaths.runtimeSrcDir, "app.tsx"),
     "export function App() { return null }\n",

@@ -19,6 +19,7 @@ assertRendererRegistryParity(runtimeRenderCapabilities, rendererSpecByName)
 
 export function App() {
   const title = getDocumentTitle(agentDocument)
+  const shellClassName = getShellClassName(agentDocument)
 
   React.useEffect(() => {
     if (title && typeof window !== "undefined") {
@@ -28,7 +29,7 @@ export function App() {
 
   return (
     <main
-      className="ahtml-shell"
+      className={shellClassName}
       data-theme={agentDocument.meta.theme}
       data-density={agentDocument.meta.density}
       data-tone={agentDocument.meta.tone}
@@ -39,6 +40,30 @@ export function App() {
       ))}
     </main>
   )
+}
+
+function getShellClassName(agentDocument: AgentDocument) {
+  const { density, tone, width } = agentDocument.meta
+  const widthClassName =
+    width === "wide"
+      ? "max-w-7xl"
+      : width === "dashboard"
+        ? "max-w-6xl"
+        : "max-w-4xl"
+  const densityClassName = density === "compact" ? "gap-4 py-8" : "gap-6 py-10"
+  const toneClassName =
+    tone === "dashboard"
+      ? "items-stretch"
+      : tone === "decision"
+        ? "items-start"
+        : "items-stretch"
+
+  return [
+    "mx-auto grid min-h-screen w-full px-4 sm:px-6",
+    widthClassName,
+    densityClassName,
+    toneClassName,
+  ].join(" ")
 }
 
 function getDocumentTitle(agentDocument: AgentDocument) {
