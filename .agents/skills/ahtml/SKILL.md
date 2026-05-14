@@ -18,13 +18,8 @@ Use this skill when the goal is to replace long Markdown agent output with a por
 
 ## Minimal shape
 
-```bash
-<meta-agent
-  theme="neutral"
-  density="comfortable"
-  tone="report"
-  width="article"
-/>
+```html
+<meta-agent profile="report-default" />
 
 <page title="Review">
   <card title="Summary">...</card>

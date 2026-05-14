@@ -1,6 +1,6 @@
 {
   "name": "@agent-html/ahtml",
-  "version": "0.1.0-alpha.11",
+  "version": "0.1.0-alpha.12",
   "description": "AI-native HTML artifacts for replacing long Markdown outputs.",
   "license": "MIT",
   "type": "module",

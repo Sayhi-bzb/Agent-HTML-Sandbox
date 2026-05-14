@@ -66,15 +66,10 @@ ahtml config get
 
 ## Document Shape
 
-Use finite metadata and standard agent-html components. The agent writes information structure, not page implementation.
+Use a named presentation profile and standard agent-html components. The agent writes information structure, not page implementation.
 
 ```html
-<meta-agent
-  theme="neutral"
-  density="comfortable"
-  tone="report"
-  width="article"
-/>
+<meta-agent profile="report-default" />
 
 <page title="CLI Demo">
   <card title="Overview">Generated from agent-html.</card>
