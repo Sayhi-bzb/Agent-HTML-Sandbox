@@ -22,6 +22,13 @@ export const rendererKindDefinitions = {
   primitive: {
     requiredFields: ["component"],
   },
+  "field-control": {
+    requiredFields: ["root", "label", "control", "labelProp"],
+    requiredWhenPresent: {
+      description: ["descriptionProp"],
+      item: ["itemSlot", "itemValueProp", "itemHeadingProp"],
+    },
+  },
   compound: {
     requiredFields: ["root"],
     requiredWhenPresent: {
@@ -168,6 +175,9 @@ export function collectRendererSpecComponentIssues(component) {
 
 const rendererElementKeys = [
   "component",
+  "control",
+  "label",
+  "description",
   "root",
   "title",
   "titleContainer",

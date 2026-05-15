@@ -436,7 +436,7 @@ async function createRuntimeFixture({
   )
   await writeFile(
     path.join(runtimePaths.runtimeSrcDir, "renderer", "kinds.ts"),
-    'export const runtimeRendererKinds = ["collection","compound","interactive-collection","primitive","table","tabs"] as const\nexport type RendererKind = (typeof runtimeRendererKinds)[number]\n',
+    'export const runtimeRendererKinds = ["collection","compound","field-control","interactive-collection","primitive","table","tabs"] as const\nexport type RendererKind = (typeof runtimeRendererKinds)[number]\n',
   )
   await writeFile(
     path.join(runtimePaths.runtimeSrcDir, "renderer", "parity.ts"),
@@ -608,6 +608,10 @@ function getRequiredComponentExports(component: string) {
     alert: ["Alert", "AlertDescription", "AlertTitle"],
     badge: ["Badge"],
     card: ["Card", "CardContent", "CardHeader", "CardTitle"],
+    checkbox: ["Checkbox"],
+    input: ["Input"],
+    progress: ["Progress"],
+    "radio-group": ["RadioGroup", "RadioGroupItem"],
     separator: ["Separator"],
     table: [
       "Table",
@@ -617,6 +621,7 @@ function getRequiredComponentExports(component: string) {
       "TableHeader",
       "TableRow",
     ],
+    textarea: ["Textarea"],
     tabs: ["Tabs", "TabsContent", "TabsList", "TabsTrigger"],
   }
   const exports = exportMap[component]

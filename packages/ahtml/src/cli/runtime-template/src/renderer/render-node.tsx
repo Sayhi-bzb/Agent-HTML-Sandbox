@@ -6,6 +6,7 @@ import type {
   AgentComponentNode,
   AgentNode,
   RendererPropMapping,
+  RendererPropValue,
   RendererSpecComponent,
 } from "./types"
 
@@ -92,6 +93,82 @@ export function createRendererNode(
           title
         )}
         {Content ? <Content>{content}</Content> : content}
+      </Root>
+    )
+  }
+
+  function renderFieldControlComponent(
+    node: AgentComponentNode,
+    rendererSpec: RendererSpecComponent,
+  ) {
+    const Root = resolveElement(rendererSpec.root)
+    const Label = resolveElement(rendererSpec.label)
+    const Control = resolveElement(rendererSpec.control)
+    const Description = resolveElement(rendererSpec.description)
+    const labelProp = requireRendererSpecField(rendererSpec, "labelProp")
+    const descriptionProp = rendererSpec.description
+      ? requireRendererSpecField(rendererSpec, "descriptionProp")
+      : undefined
+    const Item = rendererSpec.item ? resolveElement(rendererSpec.item) : undefined
+    const label = node.props[labelProp]
+    const description = descriptionProp
+      ? node.props[descriptionProp]
+      : undefined
+    const itemSlot = rendererSpec.item
+      ? requireRendererSpecField(rendererSpec, "itemSlot")
+      : undefined
+    const itemValueProp = rendererSpec.item
+      ? requireRendererSpecField(rendererSpec, "itemValueProp")
+      : undefined
+    const itemHeadingProp = rendererSpec.item
+      ? requireRendererSpecField(rendererSpec, "itemHeadingProp")
+      : undefined
+    const items =
+      itemSlot && Item ? getSlotChildren(node, itemSlot) : undefined
+    const controlProps = applyPropMappings(node.props, rendererSpec.propMappings)
+
+    return (
+      <Root
+        data-agent-html-component={node.name}
+        className={rendererSpec.rootClassName}
+      >
+        {label ? (
+          <Label className={rendererSpec.labelClassName}>{label}</Label>
+        ) : null}
+        {Item && items && itemValueProp && itemHeadingProp ? (
+          <Control {...controlProps}>
+            {items.map((item) => {
+              const itemValue = getConfiguredPropValue(item, itemValueProp)
+              const itemHeading = getConfiguredPropValue(item, itemHeadingProp)
+
+              return (
+                <label
+                  className="flex items-start gap-3"
+                  key={itemValue || itemHeading}
+                >
+                  <Item aria-label={itemHeading} value={itemValue} />
+                  <span className="grid gap-1">
+                    <span className={rendererSpec.labelClassName}>
+                      {itemHeading}
+                    </span>
+                    {item.children.length > 0 ? (
+                      <span className={rendererSpec.descriptionClassName}>
+                        {renderInlineChildren(item)}
+                      </span>
+                    ) : null}
+                  </span>
+                </label>
+              )
+            })}
+          </Control>
+        ) : (
+          <Control {...controlProps} />
+        )}
+        {description && Description ? (
+          <Description className={rendererSpec.descriptionClassName}>
+            {description}
+          </Description>
+        ) : null}
       </Root>
     )
   }
@@ -374,6 +451,7 @@ export function createRendererNode(
     ) => React.ReactNode
   > = {
     primitive: renderPrimitiveComponent,
+    "field-control": renderFieldControlComponent,
     compound: renderCompoundComponent,
     collection: renderCollectionComponent,
     table: renderTableComponent,
@@ -388,7 +466,7 @@ function applyPropMappings(
   props: Record<string, string>,
   propMappings?: RendererPropMapping[],
 ) {
-  const mapped: Record<string, string> = {}
+  const mapped: Record<string, RendererPropValue> = {}
 
   for (const mapping of propMappings ?? []) {
     const value = props[mapping.prop]
@@ -397,19 +475,35 @@ function applyPropMappings(
       continue
     }
 
-    if (!mapping.map) {
-      mapped[mapping.target] = value
+    if (mapping.map) {
+      const targetValue = mapping.map[value] ?? mapping.default
+
+      if (targetValue !== undefined) {
+        mapped[mapping.target] = targetValue
+      }
       continue
     }
 
-    const targetValue = mapping.map[value] ?? mapping.default
-
-    if (targetValue !== undefined) {
-      mapped[mapping.target] = targetValue
+    if (mapping.coerce) {
+      mapped[mapping.target] = coercePropValue(value, mapping.coerce)
+      continue
     }
+
+    mapped[mapping.target] = value
   }
 
   return mapped
+}
+
+function coercePropValue(
+  value: string,
+  kind: NonNullable<RendererPropMapping["coerce"]>,
+) {
+  if (kind === "boolean") {
+    return value === "true"
+  }
+
+  return Number(value)
 }
 
 function resolveMappedProp(

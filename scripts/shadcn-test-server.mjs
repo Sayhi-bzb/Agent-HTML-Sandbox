@@ -13,9 +13,14 @@ const componentNames = [
   "badge",
   "button",
   "card",
+  "checkbox",
+  "input",
+  "progress",
+  "radio-group",
   "separator",
   "table",
   "tabs",
+  "textarea",
 ]
 const styleNames = ["nova", "vega", "maia", "lyra", "mira", "luma", "sera"]
 

@@ -98,7 +98,10 @@ The schema is the public contract. Agents write content structure, not raw HTML,
 │
 ╰──────────────
 ```
+thanks:
+- [Linux DO](linux.do)
 
+## Ref
 - [Quick Start](https://agent-html.pages.dev/docs)
 - [Best Practice](https://agent-html.pages.dev/docs/best-practice)
 - [Dev Docs](https://agent-html.pages.dev/docs/dev-docs)

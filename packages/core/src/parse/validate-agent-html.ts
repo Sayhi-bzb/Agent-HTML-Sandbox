@@ -199,6 +199,33 @@ function validateAttrs(
       continue
     }
 
+    if (
+      prop.valueKind === "boolean" &&
+      attrValue !== "true" &&
+      attrValue !== "false"
+    ) {
+      diagnostics.push({
+        code: "unknown-attr",
+        message: `"${attrValue}" is not an allowed boolean value for ${node.name}.${attrName}. Use "true" or "false".`,
+        path: node.path,
+        severity: "error",
+      })
+      continue
+    }
+
+    if (
+      prop.valueKind === "number" &&
+      (!Number.isFinite(Number(attrValue)) || attrValue.trim() === "")
+    ) {
+      diagnostics.push({
+        code: "unknown-attr",
+        message: `"${attrValue}" is not an allowed numeric value for ${node.name}.${attrName}.`,
+        path: node.path,
+        severity: "error",
+      })
+      continue
+    }
+
     sanitizedAttrs[attrName] = attrValue
   }
 

@@ -24,6 +24,11 @@ describe("standard component schema", () => {
       "separator",
       "badge",
       "progress",
+      "input",
+      "textarea",
+      "checkbox",
+      "radio-group",
+      "option",
       "table",
       "row",
       "cell",
@@ -34,7 +39,7 @@ describe("standard component schema", () => {
       "accordion",
       "accordion-item",
     ])
-    expect(VALIDATED_STANDARD_COMPONENT_SCHEMAS).toHaveLength(15)
+    expect(VALIDATED_STANDARD_COMPONENT_SCHEMAS).toHaveLength(20)
   })
 
   it("keeps schema components aligned with render capability state", async () => {
@@ -79,11 +84,15 @@ describe("standard component schema", () => {
       alert: ["children"],
       badge: ["children"],
       card: ["children"],
+      checkbox: ["children"],
+      input: ["children"],
       list: ["item"],
       page: ["children"],
       progress: ["children"],
+      "radio-group": ["option"],
       separator: ["children"],
       table: ["row", "cell"],
+      textarea: ["children"],
       tabs: ["tabs-list", "tabs-trigger", "tabs-content"],
     })
     expect(
@@ -100,11 +109,15 @@ describe("standard component schema", () => {
       alert: "compound",
       badge: "primitive",
       card: "compound",
+      checkbox: "field-control",
+      input: "field-control",
       list: "collection",
       page: "compound",
       progress: "primitive",
+      "radio-group": "field-control",
       separator: "primitive",
       table: "table",
+      textarea: "field-control",
       tabs: "tabs",
     })
   })
@@ -136,6 +149,20 @@ describe("standard component schema", () => {
       "title",
       "tone",
       "value",
+      "label",
+      "value",
+      "description",
+      "label",
+      "value",
+      "description",
+      "label",
+      "checked",
+      "description",
+      "label",
+      "value",
+      "description",
+      "value",
+      "label",
       "kind",
       "variant",
       "default",
@@ -164,9 +191,13 @@ describe("standard component schema", () => {
     expect(getComponentSchema("card")?.allowedChildren).toEqual([
       "alert",
       "badge",
+      "checkbox",
+      "input",
       "progress",
+      "radio-group",
       "separator",
       "table",
+      "textarea",
       "list",
       "tabs",
       "accordion",
@@ -175,6 +206,13 @@ describe("standard component schema", () => {
     expect(getComponentSchema("separator")?.allowedChildren).toEqual([])
     expect(getComponentSchema("badge")?.allowedChildren).toEqual([TEXT_CHILD])
     expect(getComponentSchema("progress")?.allowedChildren).toEqual([])
+    expect(getComponentSchema("input")?.allowedChildren).toEqual([])
+    expect(getComponentSchema("textarea")?.allowedChildren).toEqual([])
+    expect(getComponentSchema("checkbox")?.allowedChildren).toEqual([])
+    expect(getComponentSchema("radio-group")?.allowedChildren).toEqual([
+      "option",
+    ])
+    expect(getComponentSchema("option")?.allowedChildren).toEqual([TEXT_CHILD])
     expect(getComponentSchema("table")?.allowedChildren).toEqual(["row"])
     expect(getComponentSchema("row")?.allowedChildren).toEqual(["cell"])
     expect(getComponentSchema("cell")?.allowedChildren).toEqual([TEXT_CHILD])
@@ -183,9 +221,13 @@ describe("standard component schema", () => {
     expect(getComponentSchema("tab")?.allowedChildren).toEqual([
       "alert",
       "card",
+      "checkbox",
+      "input",
       "progress",
+      "radio-group",
       "separator",
       "table",
+      "textarea",
       "list",
       "accordion",
     ])
@@ -195,8 +237,12 @@ describe("standard component schema", () => {
     expect(getComponentSchema("accordion-item")?.allowedChildren).toEqual([
       "alert",
       "badge",
+      "checkbox",
+      "input",
       "progress",
+      "radio-group",
       "table",
+      "textarea",
       "list",
       TEXT_CHILD,
     ])
@@ -208,6 +254,7 @@ describe("standard component schema", () => {
 
     expect(isStandardComponentName("card")).toBe(true)
     expect(isStandardComponentName("script")).toBe(false)
+    expect(isStandardComponentName("option")).toBe(true)
     expect(row).toBeDefined()
     expect(row ? getAllowedPropNames(row) : []).toEqual(["kind"])
     expect(row ? getComponentPropSchema(row, "kind")?.enumValues : []).toEqual([

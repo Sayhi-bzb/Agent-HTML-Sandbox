@@ -26,6 +26,17 @@ export const validAgentHtmlFixtures = [
     '<meta-agent profile="ops-compact" />',
     '<page title="Dashboard"><card title="Queue">Ready.</card></page>',
   ].join("\n"),
+  [
+    '<page title="Review Form">',
+    '  <card title="Decision">',
+    '    <checkbox label="Ship now" checked="true" description="Boolean field." />',
+    '    <radio-group label="Direction" value="ship" description="Single-select field.">',
+    '      <option value="ship" label="Ship">Use the current direction.</option>',
+    '      <option value="hold" label="Hold">Wait for the guard.</option>',
+    "    </radio-group>",
+    "  </card>",
+    "</page>",
+  ].join("\n"),
 ]
 
 export type CliSchemaOutput = {

@@ -152,6 +152,180 @@ describe("createRendererNode", () => {
     expect(markup).toContain('value="0"')
   })
 
+  it("renders field-control components with visible labels and default values", () => {
+    const rendererSpecByName = new Map([
+      [
+        "textarea",
+        {
+          name: "textarea",
+          kind: "field-control",
+          renderKind: "field-control",
+          slots: [{ name: "children", children: [] }],
+          root: "div",
+          label: "p",
+          control: "textarea",
+          description: "p",
+          rootClassName: "grid gap-2",
+          labelClassName: "label",
+          descriptionClassName: "description",
+          labelProp: "label",
+          descriptionProp: "description",
+          propMappings: [
+            { prop: "value", target: "defaultValue" },
+            { prop: "label", target: "aria-label" },
+          ],
+        },
+      ],
+    ])
+
+    const RendererNode = createRendererNode(rendererSpecByName)
+    const markup = renderToStaticMarkup(
+      React.createElement(RendererNode, {
+        node: {
+          type: "component",
+          name: "textarea",
+          props: {
+            label: "Notes",
+            value: "Ship after the guard lands.",
+            description: "Long-form field.",
+          },
+          children: [],
+        },
+      }),
+    )
+
+    expect(markup).toContain('data-agent-html-component="textarea"')
+    expect(markup).toContain("<p class=\"label\">Notes</p>")
+    expect(markup).toContain(
+      "<textarea aria-label=\"Notes\">Ship after the guard lands.</textarea>",
+    )
+    expect(markup).toContain('aria-label="Notes"')
+    expect(markup).toContain("<p class=\"description\">Long-form field.</p>")
+  })
+
+  it("renders checkbox field-control components with boolean prop coercion", () => {
+    const rendererSpecByName = new Map([
+      [
+        "checkbox",
+        {
+          name: "checkbox",
+          kind: "field-control",
+          renderKind: "field-control",
+          slots: [{ name: "children", children: [] }],
+          root: "div",
+          label: "p",
+          control: "input",
+          description: "p",
+          rootClassName: "grid gap-2",
+          labelClassName: "label",
+          descriptionClassName: "description",
+          labelProp: "label",
+          descriptionProp: "description",
+          propMappings: [
+            { prop: "checked", target: "defaultChecked", coerce: "boolean" },
+            { prop: "label", target: "aria-label" },
+          ],
+        },
+      ],
+    ])
+
+    const RendererNode = createRendererNode(rendererSpecByName)
+    const markup = renderToStaticMarkup(
+      React.createElement(RendererNode, {
+        node: {
+          type: "component",
+          name: "checkbox",
+          props: {
+            label: "Ship now",
+            checked: "true",
+            description: "Boolean field.",
+          },
+          children: [],
+        },
+      }),
+    )
+
+    expect(markup).toContain("<p class=\"label\">Ship now</p>")
+    expect(markup).toContain("<input")
+    expect(markup).toContain('aria-label="Ship now"')
+    expect(markup).toContain("checked")
+    expect(markup).toContain("<p class=\"description\">Boolean field.</p>")
+  })
+
+  it("renders radio-group field-control components with option children", () => {
+    const rendererSpecByName = new Map([
+      [
+        "radio-group",
+        {
+          name: "radio-group",
+          kind: "field-control",
+          renderKind: "field-control",
+          slots: [
+            {
+              name: "option",
+              childNames: ["option"],
+              children: ["text"],
+            },
+          ],
+          root: "div",
+          label: "p",
+          control: "RadioGroup",
+          item: "RadioGroupItem",
+          itemSlot: "option",
+          itemValueProp: "value",
+          itemHeadingProp: "label",
+          description: "p",
+          rootClassName: "grid gap-3",
+          labelClassName: "label",
+          descriptionClassName: "description",
+          labelProp: "label",
+          descriptionProp: "description",
+          propMappings: [
+            { prop: "value", target: "defaultValue" },
+            { prop: "label", target: "aria-label" },
+          ],
+        },
+      ],
+    ])
+
+    const RendererNode = createRendererNode(rendererSpecByName)
+    const markup = renderToStaticMarkup(
+      React.createElement(RendererNode, {
+        node: {
+          type: "component",
+          name: "radio-group",
+          props: {
+            label: "Direction",
+            value: "ship",
+            description: "Single-select field.",
+          },
+          children: [
+            {
+              type: "component",
+              name: "option",
+              props: { value: "ship", label: "Ship" },
+              children: [{ type: "text", value: "Use the current direction." }],
+            },
+            {
+              type: "component",
+              name: "option",
+              props: { value: "hold", label: "Hold" },
+              children: [{ type: "text", value: "Wait for the guard." }],
+            },
+          ],
+        },
+      }),
+    )
+
+    expect(markup).toContain("<p class=\"label\">Direction</p>")
+    expect(markup).toContain("<RadioGroup")
+    expect(markup).toContain('aria-label="Direction"')
+    expect(markup).toContain("<RadioGroupItem")
+    expect(markup).toContain(">Ship</span>")
+    expect(markup).toContain("Use the current direction.")
+    expect(markup).toContain("<p class=\"description\">Single-select field.</p>")
+  })
+
   it("renders a no-script fallback for accordion items when configured", () => {
     const rendererSpecByName = new Map([
       [

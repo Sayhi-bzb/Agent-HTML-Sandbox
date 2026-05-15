@@ -40,8 +40,10 @@ semantic component contract
 
 - `progress` 已通过真实语义/runtime path 回归，证明新增只读显示型组件可以低成本
   进入 schema、renderer、runtime verification 和 artifact tests。
-- 当前下一步是补 `field/control` archetype，再按该 contract 成批接入 `textarea`、
-  `input`、`checkbox`、`radio-group`。
+- `field/control` archetype 的 text control 首轮已经完成，`textarea` 和 `input`
+  已进入 schema、renderer、runtime verification 和 artifact tests。
+- 当前下一步是沿同一 `field/control` archetype 继续接入 `checkbox`、
+  `radio-group`。
 - 再下一步补 `option-set` archetype，再按该 contract 成批接入 `toggle-group`、
   `select`、`combobox`。
 - `dialog`、`sheet`、`drawer`、`popover`、`tooltip`、menu、navigation 和
@@ -184,7 +186,9 @@ Done when:
 Current state:
 
 - 已完成 `progress` 的真实语义/runtime 回归；当前组件接入节奏已前移到
-  `field/control`，然后是 `option-set`，不直接扩到 overlay、menu 或 navigation。
+  `field/control`。其中 `textarea` / `input` 的 text control 首轮已经落地；下一步
+  是 `checkbox` / `radio-group`，然后才是 `option-set`，不直接扩到 overlay、
+  menu 或 navigation。
 - 已明确当前参数策略：继续收紧到语义字段，不继续扩张视觉实现字段或 raw shadcn
   props。
 - 已新增 `spec/components-adoption.md` 作为组件接入分组和优先级清单。

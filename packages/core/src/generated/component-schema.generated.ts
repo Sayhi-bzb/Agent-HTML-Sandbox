@@ -155,6 +155,19 @@ export const GENERATED_SHADCN_INTROSPECTIONS = [
     ]
   },
   {
+    "registryName": "input",
+    "componentName": "Input",
+    "exports": [
+      "Input"
+    ],
+    "slots": [
+      "input"
+    ],
+    "blockedProps": [
+      "className"
+    ]
+  },
+  {
     "registryName": "progress",
     "componentName": "Progress",
     "exports": [
@@ -409,9 +422,11 @@ export const GENERATED_STANDARD_COMPONENT_SCHEMAS = [
     "allowedChildren": [
       "alert",
       "badge",
+      "input",
       "progress",
       "separator",
       "table",
+      "textarea",
       "list",
       "tabs",
       "accordion",
@@ -453,6 +468,52 @@ export const GENERATED_STANDARD_COMPONENT_SCHEMAS = [
         "valueKind": "number",
         "required": true,
         "description": "Completion percentage from 0 to 100."
+      }
+    ],
+    "allowedChildren": []
+  },
+  {
+    "name": "input",
+    "description": "Single-line text field.",
+    "props": [
+      {
+        "name": "label",
+        "valueKind": "string",
+        "required": true,
+        "description": "Visible field label."
+      },
+      {
+        "name": "value",
+        "valueKind": "string",
+        "description": "Current field value."
+      },
+      {
+        "name": "description",
+        "valueKind": "string",
+        "description": "Helpful field note."
+      }
+    ],
+    "allowedChildren": []
+  },
+  {
+    "name": "textarea",
+    "description": "Multiline text field.",
+    "props": [
+      {
+        "name": "label",
+        "valueKind": "string",
+        "required": true,
+        "description": "Visible field label."
+      },
+      {
+        "name": "value",
+        "valueKind": "string",
+        "description": "Current field value."
+      },
+      {
+        "name": "description",
+        "valueKind": "string",
+        "description": "Helpful field note."
       }
     ],
     "allowedChildren": []
@@ -551,9 +612,11 @@ export const GENERATED_STANDARD_COMPONENT_SCHEMAS = [
     "allowedChildren": [
       "alert",
       "card",
+      "input",
       "progress",
       "separator",
       "table",
+      "textarea",
       "list",
       "accordion"
     ]
@@ -586,8 +649,10 @@ export const GENERATED_STANDARD_COMPONENT_SCHEMAS = [
     "allowedChildren": [
       "alert",
       "badge",
+      "input",
       "progress",
       "table",
+      "textarea",
       "list",
       "#text"
     ]

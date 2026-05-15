@@ -42,7 +42,7 @@ profile-first render config + semantic component schema
   -> agent writes valid .agent.html
   -> parse / validate / sanitize
   -> runtime renderer uses shared verification data and renderer mapping
-  -> first-pass shadcn/native components render as real structures
+  -> first-pass shadcn/native components render as real structures, including progress and text field controls
   -> portable HTML artifact with first-pass coverage
 ```
 
@@ -394,9 +394,10 @@ fields and generic ui/slot compatibility paths.
   composition without one-off adapters for each component.
 - Broader component coverage should follow grouped semantic adoption, not
   opportunistic shadcn install order. `progress` has now returned through the
-  real semantic/runtime path; the current next expansion path is
-  `field/control`, then `option-set`. Overlay, menu, navigation, and app-shell
-  semantics remain out of the near-term lane.
+  real semantic/runtime path, and `field/control` now has a first text-control
+  pass for `input` / `textarea`; the current next expansion path is
+  `checkbox` / `radio-group`, then `option-set`. Overlay, menu, navigation,
+  and app-shell semantics remain out of the near-term lane.
 - Generic fallback is no longer the renderer path for unsupported component
   names; build now emits structured runtime-render diagnostics before
   SSR/runtime failure.

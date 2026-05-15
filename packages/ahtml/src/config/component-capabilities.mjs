@@ -15,11 +15,35 @@ const uiProtocolDefinitions = {
   progress: {
     promptOrder: 4,
   },
-  separator: {
+  input: {
     promptOrder: 5,
   },
-  list: {
+  textarea: {
     promptOrder: 6,
+  },
+  checkbox: {
+    promptOrder: 7,
+  },
+  "radio-group": {
+    promptOrder: 8,
+    normalization: {
+      kind: "slotted",
+      slotName: "option",
+      childComponentName: "option",
+    },
+    slots: [
+      {
+        name: "option",
+        props: ["value", "label"],
+        children: ["text"],
+      },
+    ],
+  },
+  separator: {
+    promptOrder: 9,
+  },
+  list: {
+    promptOrder: 10,
     normalization: {
       kind: "slotted",
       slotName: "item",
@@ -33,7 +57,7 @@ const uiProtocolDefinitions = {
     ],
   },
   table: {
-    promptOrder: 7,
+    promptOrder: 11,
     normalization: {
       kind: "table",
       rowSlotName: "row",
@@ -54,7 +78,7 @@ const uiProtocolDefinitions = {
     ],
   },
   tabs: {
-    promptOrder: 8,
+    promptOrder: 12,
     attrAliases: {
       default: "default-value",
     },
@@ -82,7 +106,7 @@ const uiProtocolDefinitions = {
     ],
   },
   accordion: {
-    promptOrder: 9,
+    promptOrder: 13,
     normalization: {
       kind: "slotted",
       slotName: "accordion-item",
@@ -201,7 +225,103 @@ export const componentCapabilityDefinitions = {
       kind: "primitive",
       component: "Progress",
       childMode: "none",
-      propMappings: [{ prop: "value", target: "value" }],
+      propMappings: [{ prop: "value", target: "value", coerce: "number" }],
+    },
+  },
+  input: {
+    source: "shadcn",
+    renderKind: "field-control",
+    uiProtocol: uiProtocolDefinitions.input,
+    requiredRegistryItem: "input",
+    requiredExports: ["Input"],
+    renderer: {
+      kind: "field-control",
+      root: "div",
+      label: "p",
+      control: "Input",
+      description: "p",
+      rootClassName: "grid gap-2",
+      labelClassName: "m-0 text-sm font-medium leading-6 text-foreground",
+      descriptionClassName: "m-0 text-sm text-muted-foreground",
+      labelProp: "label",
+      descriptionProp: "description",
+      propMappings: [
+        { prop: "value", target: "defaultValue" },
+        { prop: "label", target: "aria-label" },
+      ],
+    },
+  },
+  textarea: {
+    source: "shadcn",
+    renderKind: "field-control",
+    uiProtocol: uiProtocolDefinitions.textarea,
+    requiredRegistryItem: "textarea",
+    requiredExports: ["Textarea"],
+    renderer: {
+      kind: "field-control",
+      root: "div",
+      label: "p",
+      control: "Textarea",
+      description: "p",
+      rootClassName: "grid gap-2",
+      labelClassName: "m-0 text-sm font-medium leading-6 text-foreground",
+      descriptionClassName: "m-0 text-sm text-muted-foreground",
+      labelProp: "label",
+      descriptionProp: "description",
+      propMappings: [
+        { prop: "value", target: "defaultValue" },
+        { prop: "label", target: "aria-label" },
+      ],
+    },
+  },
+  checkbox: {
+    source: "shadcn",
+    renderKind: "field-control",
+    uiProtocol: uiProtocolDefinitions.checkbox,
+    requiredRegistryItem: "checkbox",
+    requiredExports: ["Checkbox"],
+    renderer: {
+      kind: "field-control",
+      root: "div",
+      label: "p",
+      control: "Checkbox",
+      description: "p",
+      rootClassName: "grid gap-2",
+      labelClassName: "m-0 text-sm font-medium leading-6 text-foreground",
+      descriptionClassName: "m-0 text-sm text-muted-foreground",
+      labelProp: "label",
+      descriptionProp: "description",
+      propMappings: [
+        { prop: "checked", target: "defaultChecked", coerce: "boolean" },
+        { prop: "label", target: "aria-label" },
+      ],
+    },
+  },
+  "radio-group": {
+    source: "shadcn",
+    renderKind: "field-control",
+    uiProtocol: uiProtocolDefinitions["radio-group"],
+    requiredRegistryItem: "radio-group",
+    requiredExports: ["RadioGroup", "RadioGroupItem"],
+    renderer: {
+      kind: "field-control",
+      root: "div",
+      label: "p",
+      control: "RadioGroup",
+      item: "RadioGroupItem",
+      itemSlot: "option",
+      itemValueProp: "value",
+      itemHeadingProp: "label",
+      description: "p",
+      rootClassName: "grid gap-3",
+      labelClassName: "m-0 text-sm font-medium leading-6 text-foreground",
+      descriptionClassName: "m-0 text-sm text-muted-foreground",
+      labelProp: "label",
+      descriptionProp: "description",
+      propMappings: [
+        { prop: "value", target: "defaultValue" },
+        { prop: "label", target: "aria-label" },
+      ],
     },
   },
   table: {
@@ -302,6 +422,7 @@ export const structuralAgentComponents = [
   "accordion-item",
   "cell",
   "item",
+  "option",
   "row",
   "tab",
 ]
@@ -311,9 +432,13 @@ export const requiredShadcnRuntimeComponents = [
   "alert",
   "badge",
   "card",
+  "checkbox",
+  "input",
   "progress",
+  "radio-group",
   "separator",
   "table",
+  "textarea",
   "tabs",
 ]
 

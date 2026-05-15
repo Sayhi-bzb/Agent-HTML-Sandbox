@@ -439,6 +439,120 @@ describe("sanitizeAgentHtml", () => {
     })
   })
 
+  it("accepts text field controls inside supported content containers", () => {
+    const result = sanitizeAgentHtml(`
+      <page title="Reviewer Form">
+        <card title="Feedback">
+          <input label="Owner" value="Ops reviewer" description="Single-line field." />
+          <textarea label="Notes" value="Ship after the guard lands." description="Long-form field." />
+        </card>
+      </page>
+    `)
+
+    expect(result.diagnostics).toEqual([])
+    expect(result.document?.components[0]?.children[0]).toMatchObject({
+      type: "component",
+      name: "card",
+      children: [
+        {
+          type: "component",
+          name: "input",
+          props: {
+            label: "Owner",
+            value: "Ops reviewer",
+            description: "Single-line field.",
+          },
+          children: [],
+        },
+        {
+          type: "component",
+          name: "textarea",
+          props: {
+            label: "Notes",
+            value: "Ship after the guard lands.",
+            description: "Long-form field.",
+          },
+          children: [],
+        },
+      ],
+    })
+  })
+
+  it("accepts boolean and single-select field controls inside supported content containers", () => {
+    const result = sanitizeAgentHtml(`
+      <page title="Reviewer Form">
+        <card title="Decision">
+          <checkbox label="Ship now" checked="true" description="Boolean field." />
+          <radio-group label="Direction" value="ship" description="Single-select field.">
+            <option value="ship" label="Ship">Use the current direction.</option>
+            <option value="hold" label="Hold">Wait for the guard.</option>
+          </radio-group>
+        </card>
+      </page>
+    `)
+
+    expect(result.diagnostics).toEqual([])
+    expect(result.document?.components[0]?.children[0]).toMatchObject({
+      type: "component",
+      name: "card",
+      children: [
+        {
+          type: "component",
+          name: "checkbox",
+          props: {
+            label: "Ship now",
+            checked: "true",
+            description: "Boolean field.",
+          },
+          children: [],
+        },
+        {
+          type: "component",
+          name: "radio-group",
+          props: {
+            label: "Direction",
+            value: "ship",
+            description: "Single-select field.",
+          },
+          children: [
+            {
+              type: "component",
+              name: "option",
+              props: {
+                value: "ship",
+                label: "Ship",
+              },
+            },
+            {
+              type: "component",
+              name: "option",
+              props: {
+                value: "hold",
+                label: "Hold",
+              },
+            },
+          ],
+        },
+      ],
+    })
+  })
+
+  it("rejects invalid typed field values", () => {
+    const result = sanitizeAgentHtml(`
+      <page title="Invalid Fields">
+        <card title="Bad types">
+          <progress value="lots" />
+          <checkbox label="Ship now" checked="maybe" />
+        </card>
+      </page>
+    `)
+
+    expect(result.document).toBeUndefined()
+    expect(result.diagnostics.map((diagnostic) => diagnostic.code)).toEqual(
+      expect.arrayContaining(["unknown-attr"]),
+    )
+  })
+
   it("rejects removed custom controls", () => {
     const result = sanitizeAgentHtml(`
       <page title="Removed Controls">

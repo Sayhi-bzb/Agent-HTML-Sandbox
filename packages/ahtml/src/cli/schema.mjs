@@ -96,5 +96,9 @@ function formatProp(prop) {
     return `${name}=${prop.enumValues.join("|")}`
   }
 
+  if (prop.valueKind === "boolean") {
+    return `${name}=true|false`
+  }
+
   return name
 }
