@@ -3,6 +3,7 @@ export const runtimeRendererKinds = [
   "compound",
   "field-control",
   "interactive-collection",
+  "option-set",
   "primitive",
   "table",
   "tabs",

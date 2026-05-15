@@ -186,6 +186,67 @@ export const GENERATED_SHADCN_INTROSPECTIONS = [
     ]
   },
   {
+    "registryName": "radio-group",
+    "componentName": "RadioGroup",
+    "exports": [
+      "RadioGroup",
+      "RadioGroupItem"
+    ],
+    "slots": [
+      "radio-group",
+      "radio-group-item",
+      "radio-group-indicator"
+    ],
+    "blockedProps": [
+      "className"
+    ],
+    "dependencies": [
+      "radix-ui"
+    ]
+  },
+  {
+    "registryName": "select",
+    "componentName": "Select",
+    "exports": [
+      "Select",
+      "SelectContent",
+      "SelectGroup",
+      "SelectItem",
+      "SelectLabel",
+      "SelectScrollDownButton",
+      "SelectScrollUpButton",
+      "SelectSeparator",
+      "SelectTrigger",
+      "SelectValue"
+    ],
+    "slots": [
+      "select",
+      "select-group",
+      "select-value",
+      "select-trigger",
+      "select-content",
+      "select-label",
+      "select-item",
+      "select-item-indicator",
+      "select-separator",
+      "select-scroll-up-button",
+      "select-scroll-down-button"
+    ],
+    "unionProps": {
+      "size": [
+        "sm",
+        "default"
+      ]
+    },
+    "blockedProps": [
+      "className",
+      "asChild"
+    ],
+    "dependencies": [
+      "radix-ui"
+    ]
+  },
+  {
     "registryName": "separator",
     "componentName": "Separator",
     "exports": [
@@ -422,11 +483,15 @@ export const GENERATED_STANDARD_COMPONENT_SCHEMAS = [
     "allowedChildren": [
       "alert",
       "badge",
+      "checkbox",
       "input",
       "progress",
+      "radio-group",
       "separator",
+      "select",
       "table",
       "textarea",
+      "toggle-group",
       "list",
       "tabs",
       "accordion",
@@ -517,6 +582,125 @@ export const GENERATED_STANDARD_COMPONENT_SCHEMAS = [
       }
     ],
     "allowedChildren": []
+  },
+  {
+    "name": "checkbox",
+    "description": "Single boolean field.",
+    "props": [
+      {
+        "name": "label",
+        "valueKind": "string",
+        "required": true,
+        "description": "Visible field label."
+      },
+      {
+        "name": "checked",
+        "valueKind": "boolean",
+        "description": "Whether the field starts checked."
+      },
+      {
+        "name": "description",
+        "valueKind": "string",
+        "description": "Helpful field note."
+      }
+    ],
+    "allowedChildren": []
+  },
+  {
+    "name": "radio-group",
+    "description": "Single-select option field.",
+    "props": [
+      {
+        "name": "label",
+        "valueKind": "string",
+        "required": true,
+        "description": "Visible field label."
+      },
+      {
+        "name": "value",
+        "valueKind": "string",
+        "description": "Initially selected option value."
+      },
+      {
+        "name": "description",
+        "valueKind": "string",
+        "description": "Helpful field note."
+      }
+    ],
+    "allowedChildren": [
+      "option"
+    ]
+  },
+  {
+    "name": "toggle-group",
+    "description": "Inline single-select option set.",
+    "props": [
+      {
+        "name": "label",
+        "valueKind": "string",
+        "required": true,
+        "description": "Visible field label."
+      },
+      {
+        "name": "value",
+        "valueKind": "string",
+        "description": "Initially selected option value."
+      },
+      {
+        "name": "description",
+        "valueKind": "string",
+        "description": "Helpful field note."
+      }
+    ],
+    "allowedChildren": [
+      "option"
+    ]
+  },
+  {
+    "name": "select",
+    "description": "Single-select option picker.",
+    "props": [
+      {
+        "name": "label",
+        "valueKind": "string",
+        "required": true,
+        "description": "Visible field label."
+      },
+      {
+        "name": "value",
+        "valueKind": "string",
+        "description": "Initially selected option value."
+      },
+      {
+        "name": "description",
+        "valueKind": "string",
+        "description": "Helpful field note."
+      }
+    ],
+    "allowedChildren": [
+      "option"
+    ]
+  },
+  {
+    "name": "option",
+    "description": "Single selectable option.",
+    "props": [
+      {
+        "name": "value",
+        "valueKind": "string",
+        "required": true,
+        "description": "Stable option value."
+      },
+      {
+        "name": "label",
+        "valueKind": "string",
+        "required": true,
+        "description": "Visible option label."
+      }
+    ],
+    "allowedChildren": [
+      "#text"
+    ]
   },
   {
     "name": "table",
@@ -612,11 +796,15 @@ export const GENERATED_STANDARD_COMPONENT_SCHEMAS = [
     "allowedChildren": [
       "alert",
       "card",
+      "checkbox",
       "input",
       "progress",
+      "radio-group",
       "separator",
+      "select",
       "table",
       "textarea",
+      "toggle-group",
       "list",
       "accordion"
     ]
@@ -649,10 +837,14 @@ export const GENERATED_STANDARD_COMPONENT_SCHEMAS = [
     "allowedChildren": [
       "alert",
       "badge",
+      "checkbox",
       "input",
       "progress",
+      "radio-group",
+      "select",
       "table",
       "textarea",
+      "toggle-group",
       "list",
       "#text"
     ]

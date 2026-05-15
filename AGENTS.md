@@ -25,11 +25,12 @@ For architecture principles, design rationale, and stage decisions, start at [`b
 - `packages/core/src`: parsing, validation, sanitization, render config, and shared agent-html types.
 - `packages/ahtml/src/config`: CLI defaults and runtime capability behavior.
 - `packages/ahtml/src/cli`: command orchestration and managed runtime IO.
+- `apps/agent-html-app`: local-first desktop workbench for `ahtml` sessions. Start at [`README.md`](apps/agent-html-app/README.md) and [`blueprint/index.md`](apps/agent-html-app/blueprint/index.md).
 - `package.json`: private workspace root for package scripts, verification, and release orchestration.
 - `README.md`: visitor-facing product overview and basic usage entry.
 - `docs-web/content/`: project and maintenance docs. Start at [`docs/index.mdx`](docs-web/content/docs/index.mdx).
 - `.agents/skills/ahtml/`: `ahtml` skill guidance. Start at [`SKILL.md`](.agents/skills/ahtml/SKILL.md).
-- `spec/`: planning checkpoints. Start at [`spec/map.md`](spec/map.md); use [`spec/roadmap.md`](spec/roadmap.md) when phase direction matters.
+- `spec/`: planning checkpoints. Start at [`spec/map.md`](spec/map.md); use [`spec/roadmap.md`](spec/roadmap.md) when phase direction matters, and [`spec/app-dev.md`](spec/app-dev.md) for app workbench status.
 - `blueprint/`: architecture decisions and boundaries. Start at [`blueprint/index.md`](blueprint/index.md).
 
 ## Agent Workflow
@@ -39,7 +40,7 @@ For architecture principles, design rationale, and stage decisions, start at [`b
 - For architecture or boundary decisions, start at [`blueprint/index.md`](blueprint/index.md).
 - For user-facing or maintenance docs work, start at [`docs-web/content/docs/index.mdx`](docs-web/content/docs/index.mdx).
 - For `ahtml` usage, debugging, build, preview, or artifact-delivery tasks, start at [`.agents/skills/ahtml/SKILL.md`](.agents/skills/ahtml/SKILL.md).
-- For checkpoints or staged delivery status, start at [`spec/map.md`](spec/map.md) and read [`spec/roadmap.md`](spec/roadmap.md) only when roadmap context is required.
+- For checkpoints or staged delivery status, start at [`spec/map.md`](spec/map.md), read [`spec/roadmap.md`](spec/roadmap.md) when roadmap context is required, and use [`spec/app-dev.md`](spec/app-dev.md) for `agent-html-app` progress.
 - Keep changes narrow. Do not mix unrelated code, docs, spec, blueprint, release, or generated-output edits, and do not silently expand scope.
 - Report adjacent problems, then fix them only when they are required for the requested task or explicitly approved.
 - Work in explicit stages. Do not mix architecture planning, code implementation, test repair, and real end-to-end runtime probing in the same loop unless the task explicitly requires it.
@@ -57,6 +58,7 @@ For architecture principles, design rationale, and stage decisions, start at [`b
 - For pure governance docs or ordinary Markdown paragraph changes, read the final diff only. Do not run Prettier, lint, tests, build, or runtime commands.
 - For docs changes that touch tables, code blocks, generated snippets, command output, MDX structure, routes, or examples, run only the targeted formatting, markdown, or docs check that covers the changed surface.
 - For ordinary CLI/runtime code changes, run `npm run build` once, then the narrowest relevant test file or test name once. Re-run only after a code change that could affect the failing area.
+- For `apps/agent-html-app` changes, prefer `npm run app:build` for frontend/type coverage and `cargo check --manifest-path apps/agent-html-app/src-tauri/Cargo.toml` for the Tauri/Rust side. Use `npm run app:check` only when both halves changed or the boundary between them changed.
 - For lint and formatting on code changes, start with touched files: `npx eslint <files>` and `npx prettier --check <files>`. Use full `npm run lint` or broader checks as a final gate, not after every small edit.
 - Treat `npm run test:run:cli-heavy` as a heavy CLI/runtime gate. Use it for changes to setup, status, doctor, build, preview, schema output, or runtime rendering, not for unrelated copy edits.
 - Treat real shadcn init, registry access, build/preview servers, and browser visual checks as explicit E2E gates. Run them with an isolated `AHTML_HOME`, a clear timeout, and a concrete success criterion.
@@ -75,12 +77,13 @@ For architecture principles, design rationale, and stage decisions, start at [`b
 
 - Keep this repo as a private npm workspace rooted at `package.json`.
 - Keep publishable package source focused on `packages/core` and `packages/ahtml`.
+- Keep product apps under `apps/*`, separate from publishable packages.
 - Keep parser, validation, sanitization, render config, and shared contract code in `packages/core/src`.
 - Keep CLI defaults, managed runtime orchestration, and local runtime IO in `packages/ahtml/src/config` and `packages/ahtml/src/cli`.
-- Keep any product app or frontend shell outside this repo unless a spec explicitly changes that boundary.
+- Keep `apps/agent-html-app` as a workspace app, not as a publishable package and not under `packages/*`.
 - Keep managed runtime state under `~/.ahtml`, `%USERPROFILE%\.ahtml`, or `AHTML_HOME`; do not write frontend scaffold files into the current project.
 - Do not restore `agent-html.project.json`, `init --scaffold`, `init --apply`, a root Vite app, current-directory Vite builder, package-local Vite builder, package-local renderer, package-local shadcn UI kit, or root `src/components/ui/`.
-- Do not add more workspace packages, or move the app into this repo, unless a spec explicitly changes that direction.
+- Do not move the app into `packages/*`, and do not add new publishable workspace packages unless a spec explicitly changes that direction.
 
 ## Code Rules
 

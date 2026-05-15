@@ -42,7 +42,7 @@ profile-first render config + semantic component schema
   -> agent writes valid .agent.html
   -> parse / validate / sanitize
   -> runtime renderer uses shared verification data and renderer mapping
-  -> first-pass shadcn/native components render as real structures, including progress and text field controls
+  -> first-pass shadcn/native components render as real structures, including progress, field controls, and first option-set controls
   -> portable HTML artifact with first-pass coverage
 ```
 
@@ -123,12 +123,14 @@ not own a parallel shadcn UI kit or pseudo template.
 
 ### Repository packaging
 
-Repository packaging is a private npm workspace, not the product app itself.
+Repository packaging is a private npm workspace with separate package and app lanes.
 
 `@agent-html/core` owns parse / validate / sanitize and shared contract code.
 `@agent-html/ahtml` owns CLI, config, managed runtime orchestration, and the
-published `ahtml` bin. Product apps stay outside this repository unless a
-future spec explicitly changes that boundary.
+published `ahtml` bin. `apps/agent-html-app` now lives in the same monorepo,
+but it remains a workspace app rather than a publishable package and continues
+to integrate through the CLI boundary instead of importing `packages/*/src`
+implementation code.
 
 ### Internal capability verification
 
@@ -316,8 +318,10 @@ Current code: first-pass components route through a centralized renderer
 registry; slot child selection now goes through registry metadata instead of
 direct per-renderer literals. Simple primitives such as `badge` and
 `separator`, title/content components such as `card` and `alert`, native `list`,
-`table`, `accordion`, `tabs`, and `page` all render through shared render-kind
-machinery instead of bespoke per-component render functions.
+`table`, `accordion`, `tabs`, `page`, grouped fields such as `checkbox` /
+`radio-group`, and the first `option-set` component `toggle-group` all render
+through shared render-kind machinery instead of bespoke per-component render
+functions.
 
 Primary gap: the direction is correct, but parts of the resolver behavior still
 live in runtime TypeScript and still reflect legacy compatibility scaffolding.
@@ -330,7 +334,8 @@ Target: render first-pass shadcn/native components with stable style and real
 semantics.
 
 Current code: `card`, `tabs`, `accordion`, `alert`, `badge`, `separator`,
-`table`, and native `list` render as real structures.
+`table`, native `list`, field controls, and `toggle-group` render as real
+structures.
 
 Primary gap: broader component expansion and full contract/profile alignment
 remain pending.
@@ -394,10 +399,11 @@ fields and generic ui/slot compatibility paths.
   composition without one-off adapters for each component.
 - Broader component coverage should follow grouped semantic adoption, not
   opportunistic shadcn install order. `progress` has now returned through the
-  real semantic/runtime path, and `field/control` now has a first text-control
-  pass for `input` / `textarea`; the current next expansion path is
-  `checkbox` / `radio-group`, then `option-set`. Overlay, menu, navigation,
-  and app-shell semantics remain out of the near-term lane.
+  real semantic/runtime path, and `field/control` now covers `input` /
+  `textarea` plus `checkbox` / `radio-group`; `option-set` now has its first
+  real semantic/runtime pass with `toggle-group`; the current next expansion
+  path is `select` / `combobox`. Overlay, menu, navigation, and app-shell
+  semantics remain out of the near-term lane.
 - Generic fallback is no longer the renderer path for unsupported component
   names; build now emits structured runtime-render diagnostics before
   SSR/runtime failure.

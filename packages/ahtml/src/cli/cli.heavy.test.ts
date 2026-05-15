@@ -236,6 +236,7 @@ describe("agent-html CLI heavy runtime flows", () => {
           '<alert title="State" tone="danger">Needs attention.</alert>',
           '<badge tone="success">Ready</badge>',
           "<separator />",
+          '<select label="Deployment Window" value="today" description="Choose a release window."><option value="today" label="Today">Ship in the current window.</option><option value="tomorrow" label="Tomorrow">Wait for the next window.</option></select>',
           '<table><row kind="header"><cell>Name</cell><cell>Status</cell></row><row><cell>Runtime</cell><cell>Ready</cell></row></table>',
           '<list variant="unordered"><item>Portable output</item><item>Readable content</item></list>',
           '<tabs default="summary"><tab value="summary" label="Summary"><card title="Tab card">Tab content.</card></tab></tabs>',
@@ -272,6 +273,7 @@ describe("agent-html CLI heavy runtime flows", () => {
       path.join(outputDir, "index.html"),
       'data-slot="accordion"',
     )
+    await expectFile(path.join(outputDir, "index.html"), 'data-slot="select"')
     await expectFile(path.join(outputDir, "index.html"), 'data-slot="alert"')
     await expectFile(path.join(outputDir, "index.html"), 'data-slot="badge"')
     await expectFileMissingText(
@@ -285,6 +287,10 @@ describe("agent-html CLI heavy runtime flows", () => {
     await expectFile(
       path.join(outputDir, "index.html"),
       '<noscript><section class="grid gap-3"><section class="grid gap-3"><h2 class="m-0 text-lg font-medium leading-7">Details</h2>',
+    )
+    await expectFile(
+      path.join(outputDir, "index.html"),
+      "Today (selected)",
     )
     await expectFile(
       path.join(outputDir, "assets", "ahtml.css"),

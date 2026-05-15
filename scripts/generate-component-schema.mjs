@@ -31,6 +31,7 @@ const registryNames = [
   "input",
   "progress",
   "radio-group",
+  "select",
   "separator",
   "slider",
   "table",

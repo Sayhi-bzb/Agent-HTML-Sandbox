@@ -173,6 +173,91 @@ export function createRendererNode(
     )
   }
 
+  function renderOptionSetComponent(
+    node: AgentComponentNode,
+    rendererSpec: RendererSpecComponent,
+  ) {
+    const Root = resolveElement(rendererSpec.root)
+    const Label = resolveElement(rendererSpec.label)
+    const Control = resolveElement(rendererSpec.control)
+    const ControlTrigger = resolveElement(rendererSpec.controlTrigger)
+    const ControlValue = resolveElement(rendererSpec.controlValue)
+    const ControlContent = resolveElement(rendererSpec.controlContent)
+    const Item = resolveElement(rendererSpec.item)
+    const Description = resolveElement(rendererSpec.description)
+    const labelProp = requireRendererSpecField(rendererSpec, "labelProp")
+    const descriptionProp = rendererSpec.description
+      ? requireRendererSpecField(rendererSpec, "descriptionProp")
+      : undefined
+    const itemSlot = requireRendererSpecField(rendererSpec, "itemSlot")
+    const itemValueProp = requireRendererSpecField(rendererSpec, "itemValueProp")
+    const itemHeadingProp = requireRendererSpecField(
+      rendererSpec,
+      "itemHeadingProp",
+    )
+    const label = node.props[labelProp]
+    const description = descriptionProp
+      ? node.props[descriptionProp]
+      : undefined
+    const items = getSlotChildren(node, itemSlot)
+    const controlProps = getRendererProps(node.props, rendererSpec)
+    const selectedValue = controlProps.defaultValue
+
+    return (
+      <>
+        <Root
+          data-agent-html-component={node.name}
+          className={rendererSpec.rootClassName}
+        >
+          {label ? (
+            <Label className={rendererSpec.labelClassName}>{label}</Label>
+          ) : null}
+          <Control {...controlProps}>
+            {rendererSpec.controlTrigger && rendererSpec.controlContent ? (
+              <>
+                <ControlTrigger>
+                  {rendererSpec.controlValue ? <ControlValue /> : null}
+                </ControlTrigger>
+                <ControlContent>
+                  {items.map((item) =>
+                    renderOptionSetItem({
+                      Item,
+                      item,
+                      itemHeadingProp,
+                      itemValueProp,
+                    }),
+                  )}
+                </ControlContent>
+              </>
+            ) : (
+              items.map((item) =>
+                renderOptionSetItem({
+                  Item,
+                  item,
+                  itemHeadingProp,
+                  itemValueProp,
+                }),
+              )
+            )}
+          </Control>
+          {description && Description ? (
+            <Description className={rendererSpec.descriptionClassName}>
+              {description}
+            </Description>
+          ) : null}
+        </Root>
+        {rendererSpec.fallback
+          ? renderNoScriptOptionSetFallback({
+              items,
+              itemHeadingProp,
+              itemValueProp,
+              selectedValue,
+            })
+          : null}
+      </>
+    )
+  }
+
   function renderCompoundTitle(
     node: AgentComponentNode,
     rendererSpec: RendererSpecComponent,
@@ -408,6 +493,71 @@ export function createRendererNode(
     )
   }
 
+  function renderNoScriptOptionSetFallback({
+    items,
+    itemHeadingProp,
+    itemValueProp,
+    selectedValue,
+  }: {
+    items: AgentComponentNode[]
+    itemHeadingProp: string
+    itemValueProp: string
+    selectedValue?: RendererPropValue
+  }) {
+    return (
+      <noscript>
+        <section className="grid gap-3">
+          {items.map((item) => {
+            const itemValue = getConfiguredPropValue(item, itemValueProp)
+            const itemHeading = getConfiguredPropValue(item, itemHeadingProp)
+            const selected = selectedValue === itemValue
+
+            return (
+              <section className="grid gap-1" key={itemValue || itemHeading}>
+                <h2 className="m-0 text-lg font-medium leading-7">
+                  {itemHeading}
+                  {selected ? " (selected)" : ""}
+                </h2>
+                {item.children.length > 0 ? (
+                  <p className="m-0 text-sm text-muted-foreground">
+                    {renderInlineChildren(item)}
+                  </p>
+                ) : null}
+              </section>
+            )
+          })}
+        </section>
+      </noscript>
+    )
+  }
+
+  function renderOptionSetItem({
+    Item,
+    item,
+    itemHeadingProp,
+    itemValueProp,
+  }: {
+    Item: React.ElementType
+    item: AgentComponentNode
+    itemHeadingProp: string
+    itemValueProp: string
+  }) {
+    const itemValue = getConfiguredPropValue(item, itemValueProp)
+    const itemHeading = getConfiguredPropValue(item, itemHeadingProp)
+
+    return (
+      <Item key={itemValue || itemHeading} value={itemValue}>
+        {itemHeading}
+        {item.children.length > 0 ? (
+          <>
+            {": "}
+            {renderInlineChildren(item)}
+          </>
+        ) : null}
+      </Item>
+    )
+  }
+
   function renderChildren(node: AgentComponentNode) {
     return node.children.map((child, index) => (
       <RendererNode key={index} node={child} />
@@ -456,6 +606,7 @@ export function createRendererNode(
     collection: renderCollectionComponent,
     table: renderTableComponent,
     "interactive-collection": renderAccordionComponent,
+    "option-set": renderOptionSetComponent,
     tabs: renderTabsComponent,
   }
 
@@ -493,6 +644,16 @@ function applyPropMappings(
   }
 
   return mapped
+}
+
+function getRendererProps(
+  props: Record<string, string>,
+  rendererSpec: RendererSpecComponent,
+) {
+  return {
+    ...(rendererSpec.staticProps ?? {}),
+    ...applyPropMappings(props, rendererSpec.propMappings),
+  }
 }
 
 function coercePropValue(

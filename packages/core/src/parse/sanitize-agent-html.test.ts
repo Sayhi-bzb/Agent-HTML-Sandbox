@@ -478,7 +478,7 @@ describe("sanitizeAgentHtml", () => {
     })
   })
 
-  it("accepts boolean and single-select field controls inside supported content containers", () => {
+  it("accepts boolean, single-select, and option-set controls inside supported content containers", () => {
     const result = sanitizeAgentHtml(`
       <page title="Reviewer Form">
         <card title="Decision">
@@ -487,6 +487,14 @@ describe("sanitizeAgentHtml", () => {
             <option value="ship" label="Ship">Use the current direction.</option>
             <option value="hold" label="Hold">Wait for the guard.</option>
           </radio-group>
+          <toggle-group label="Rollout Mode" value="fast" description="Inline option set.">
+            <option value="fast" label="Fast">Prefer speed.</option>
+            <option value="safe" label="Safe">Prefer guardrails.</option>
+          </toggle-group>
+          <select label="Deployment Window" value="today" description="Choose a release window.">
+            <option value="today" label="Today">Ship in the current window.</option>
+            <option value="tomorrow" label="Tomorrow">Wait for the next window.</option>
+          </select>
         </card>
       </page>
     `)
@@ -529,6 +537,60 @@ describe("sanitizeAgentHtml", () => {
               props: {
                 value: "hold",
                 label: "Hold",
+              },
+            },
+          ],
+        },
+        {
+          type: "component",
+          name: "toggle-group",
+          props: {
+            label: "Rollout Mode",
+            value: "fast",
+            description: "Inline option set.",
+          },
+          children: [
+            {
+              type: "component",
+              name: "option",
+              props: {
+                value: "fast",
+                label: "Fast",
+              },
+            },
+            {
+              type: "component",
+              name: "option",
+              props: {
+                value: "safe",
+                label: "Safe",
+              },
+            },
+          ],
+        },
+        {
+          type: "component",
+          name: "select",
+          props: {
+            label: "Deployment Window",
+            value: "today",
+            description: "Choose a release window.",
+          },
+          children: [
+            {
+              type: "component",
+              name: "option",
+              props: {
+                value: "today",
+                label: "Today",
+              },
+            },
+            {
+              type: "component",
+              name: "option",
+              props: {
+                value: "tomorrow",
+                label: "Tomorrow",
               },
             },
           ],

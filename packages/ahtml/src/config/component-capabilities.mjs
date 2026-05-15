@@ -39,11 +39,41 @@ const uiProtocolDefinitions = {
       },
     ],
   },
-  separator: {
+  "toggle-group": {
     promptOrder: 9,
+    normalization: {
+      kind: "slotted",
+      slotName: "option",
+      childComponentName: "option",
+    },
+    slots: [
+      {
+        name: "option",
+        props: ["value", "label"],
+        children: ["text"],
+      },
+    ],
+  },
+  select: {
+    promptOrder: 10,
+    normalization: {
+      kind: "slotted",
+      slotName: "option",
+      childComponentName: "option",
+    },
+    slots: [
+      {
+        name: "option",
+        props: ["value", "label"],
+        children: ["text"],
+      },
+    ],
+  },
+  separator: {
+    promptOrder: 11,
   },
   list: {
-    promptOrder: 10,
+    promptOrder: 12,
     normalization: {
       kind: "slotted",
       slotName: "item",
@@ -57,7 +87,7 @@ const uiProtocolDefinitions = {
     ],
   },
   table: {
-    promptOrder: 11,
+    promptOrder: 13,
     normalization: {
       kind: "table",
       rowSlotName: "row",
@@ -78,7 +108,7 @@ const uiProtocolDefinitions = {
     ],
   },
   tabs: {
-    promptOrder: 12,
+    promptOrder: 14,
     attrAliases: {
       default: "default-value",
     },
@@ -106,7 +136,7 @@ const uiProtocolDefinitions = {
     ],
   },
   accordion: {
-    promptOrder: 13,
+    promptOrder: 15,
     normalization: {
       kind: "slotted",
       slotName: "accordion-item",
@@ -324,6 +354,73 @@ export const componentCapabilityDefinitions = {
       ],
     },
   },
+  "toggle-group": {
+    source: "shadcn",
+    renderKind: "option-set",
+    uiProtocol: uiProtocolDefinitions["toggle-group"],
+    requiredRegistryItem: "toggle-group",
+    requiredExports: ["ToggleGroup", "ToggleGroupItem"],
+    renderer: {
+      kind: "option-set",
+      root: "div",
+      label: "p",
+      control: "ToggleGroup",
+      item: "ToggleGroupItem",
+      itemSlot: "option",
+      itemValueProp: "value",
+      itemHeadingProp: "label",
+      description: "p",
+      rootClassName: "grid gap-3",
+      labelClassName: "m-0 text-sm font-medium leading-6 text-foreground",
+      descriptionClassName: "m-0 text-sm text-muted-foreground",
+      labelProp: "label",
+      descriptionProp: "description",
+      staticProps: {
+        type: "single",
+      },
+      propMappings: [
+        { prop: "value", target: "defaultValue" },
+        { prop: "label", target: "aria-label" },
+      ],
+    },
+  },
+  select: {
+    source: "shadcn",
+    renderKind: "option-set",
+    uiProtocol: uiProtocolDefinitions.select,
+    requiredRegistryItem: "select",
+    requiredExports: [
+      "Select",
+      "SelectContent",
+      "SelectItem",
+      "SelectTrigger",
+      "SelectValue",
+    ],
+    renderer: {
+      kind: "option-set",
+      root: "div",
+      label: "p",
+      control: "Select",
+      controlTrigger: "SelectTrigger",
+      controlValue: "SelectValue",
+      controlContent: "SelectContent",
+      item: "SelectItem",
+      itemSlot: "option",
+      itemValueProp: "value",
+      itemHeadingProp: "label",
+      description: "p",
+      rootClassName: "grid gap-3",
+      labelClassName: "m-0 text-sm font-medium leading-6 text-foreground",
+      descriptionClassName: "m-0 text-sm text-muted-foreground",
+      labelProp: "label",
+      descriptionProp: "description",
+      fallback: true,
+      propMappings: [
+        { prop: "value", target: "defaultValue" },
+        { prop: "label", target: "aria-label" },
+      ],
+    },
+  },
   table: {
     source: "shadcn",
     renderKind: "table",
@@ -436,9 +533,11 @@ export const requiredShadcnRuntimeComponents = [
   "input",
   "progress",
   "radio-group",
+  "select",
   "separator",
   "table",
   "textarea",
+  "toggle-group",
   "tabs",
 ]
 

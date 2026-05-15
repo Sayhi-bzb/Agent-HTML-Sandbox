@@ -51,16 +51,45 @@ describe("createRuntimeElementRegistrySpec", () => {
           trigger: "TabsTrigger",
           content: "TabsContent",
         },
+        {
+          name: "select",
+          kind: "option-set",
+          requiredRegistryItem: "select",
+          requiredExports: [
+            "Select",
+            "SelectContent",
+            "SelectItem",
+            "SelectTrigger",
+            "SelectValue",
+          ],
+          root: "div",
+          label: "p",
+          control: "Select",
+          controlTrigger: "SelectTrigger",
+          controlValue: "SelectValue",
+          controlContent: "SelectContent",
+          item: "SelectItem",
+        },
       ],
     })
 
     expect(registrySpec).toEqual({
       version: 1,
-      nativeElements: ["article", "h1", "li", "ol", "ul"],
+      nativeElements: ["article", "div", "h1", "li", "ol", "p", "ul"],
       modules: [
         {
           registryItem: "card",
           exports: ["Card", "CardContent", "CardHeader", "CardTitle"],
+        },
+        {
+          registryItem: "select",
+          exports: [
+            "Select",
+            "SelectContent",
+            "SelectItem",
+            "SelectTrigger",
+            "SelectValue",
+          ],
         },
         {
           registryItem: "tabs",

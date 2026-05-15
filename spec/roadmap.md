@@ -3,9 +3,10 @@
 本轮目标：把新蓝图彻底下推到 spec，并让后续实现围绕“语义组件 + presentation
 profile”收敛，而不是继续扩张旧协议或旧配置口径。
 
-本轮仓库边界也已锁定：仓库本身是 private npm workspace，当前只维护
-`@agent-html/core` 和 `@agent-html/ahtml` 两个包；app 继续留在仓库外，除非后续
-spec 明确改边界。
+本轮仓库边界也已锁定：仓库本身是 private npm workspace。`packages/*` 继续维护
+`@agent-html/core` 和 `@agent-html/ahtml` 两个 publishable package；product app
+现在并入同一 monorepo 的 `apps/agent-html-app`，但继续通过稳定 CLI 边界集成
+`ahtml`。
 
 ```txt
 semantic component contract
@@ -39,13 +40,15 @@ semantic component contract
 ### Component Expansion Order
 
 - `progress` 已通过真实语义/runtime path 回归，证明新增只读显示型组件可以低成本
-  进入 schema、renderer、runtime verification 和 artifact tests。
+  进入 schema、renderer、runtime verification 和 targeted tests。
 - `field/control` archetype 的 text control 首轮已经完成，`textarea` 和 `input`
-  已进入 schema、renderer、runtime verification 和 artifact tests。
-- 当前下一步是沿同一 `field/control` archetype 继续接入 `checkbox`、
-  `radio-group`。
-- 再下一步补 `option-set` archetype，再按该 contract 成批接入 `toggle-group`、
-  `select`、`combobox`。
+  已进入 schema、renderer、runtime verification 和 targeted tests。
+- `field/control` archetype 的第二轮也已经完成，`checkbox` 和 `radio-group`
+  已进入 schema、renderer、runtime verification 和 targeted tests。
+- `option-set` archetype 的首轮也已经完成，`toggle-group` 已进入 schema、
+  renderer、runtime verification 和 targeted tests。
+- 当前下一步是沿同一 `option-set` contract 继续接入 `select`、`combobox`，
+  然后再回到 `switch`、`slider`。
 - `dialog`、`sheet`、`drawer`、`popover`、`tooltip`、menu、navigation 和
   app-shell 语义不属于当前近期开发表。
 
@@ -179,16 +182,17 @@ Done when:
 
 - 新组件只通过语义合同、profile 兼容性、runtime verification、doctor checks、
   artifact tests 接入。
-- button、toggle group、slider、textarea、progress、checkbox、forms 等未来能力
+- button、select、combobox、switch、slider、textarea、progress、checkbox、forms 等未来能力
   必须作为真实语义能力返回，而不是直接暴露底层 shadcn 细节。
 - 不重新长出第二套 ahtml UI framework，也不重新长出第二套对外 runtime 协议。
 
 Current state:
 
 - 已完成 `progress` 的真实语义/runtime 回归；当前组件接入节奏已前移到
-  `field/control`。其中 `textarea` / `input` 的 text control 首轮已经落地；下一步
-  是 `checkbox` / `radio-group`，然后才是 `option-set`，不直接扩到 overlay、
-  menu 或 navigation。
+  `field/control`。其中 `textarea` / `input` 的 text control 首轮已经落地，
+  `checkbox` / `radio-group` 的第二轮也已经落地；`option-set` 的首轮
+  `toggle-group` 也已经落地；下一步是 `select` / `combobox`，不直接扩到
+  overlay、menu 或 navigation。
 - 已明确当前参数策略：继续收紧到语义字段，不继续扩张视觉实现字段或 raw shadcn
   props。
 - 已新增 `spec/components-adoption.md` 作为组件接入分组和优先级清单。

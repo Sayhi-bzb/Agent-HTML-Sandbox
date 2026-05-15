@@ -28,6 +28,8 @@ describe("standard component schema", () => {
       "textarea",
       "checkbox",
       "radio-group",
+      "toggle-group",
+      "select",
       "option",
       "table",
       "row",
@@ -39,7 +41,7 @@ describe("standard component schema", () => {
       "accordion",
       "accordion-item",
     ])
-    expect(VALIDATED_STANDARD_COMPONENT_SCHEMAS).toHaveLength(20)
+    expect(VALIDATED_STANDARD_COMPONENT_SCHEMAS).toHaveLength(22)
   })
 
   it("keeps schema components aligned with render capability state", async () => {
@@ -91,8 +93,10 @@ describe("standard component schema", () => {
       progress: ["children"],
       "radio-group": ["option"],
       separator: ["children"],
+      select: ["option"],
       table: ["row", "cell"],
       textarea: ["children"],
+      "toggle-group": ["option"],
       tabs: ["tabs-list", "tabs-trigger", "tabs-content"],
     })
     expect(
@@ -116,8 +120,10 @@ describe("standard component schema", () => {
       progress: "primitive",
       "radio-group": "field-control",
       separator: "primitive",
+      select: "option-set",
       table: "table",
       textarea: "field-control",
+      "toggle-group": "option-set",
       tabs: "tabs",
     })
   })
@@ -161,6 +167,12 @@ describe("standard component schema", () => {
       "label",
       "value",
       "description",
+      "label",
+      "value",
+      "description",
+      "label",
+      "value",
+      "description",
       "value",
       "label",
       "kind",
@@ -196,8 +208,10 @@ describe("standard component schema", () => {
       "progress",
       "radio-group",
       "separator",
+      "select",
       "table",
       "textarea",
+      "toggle-group",
       "list",
       "tabs",
       "accordion",
@@ -212,6 +226,10 @@ describe("standard component schema", () => {
     expect(getComponentSchema("radio-group")?.allowedChildren).toEqual([
       "option",
     ])
+    expect(getComponentSchema("toggle-group")?.allowedChildren).toEqual([
+      "option",
+    ])
+    expect(getComponentSchema("select")?.allowedChildren).toEqual(["option"])
     expect(getComponentSchema("option")?.allowedChildren).toEqual([TEXT_CHILD])
     expect(getComponentSchema("table")?.allowedChildren).toEqual(["row"])
     expect(getComponentSchema("row")?.allowedChildren).toEqual(["cell"])
@@ -226,8 +244,10 @@ describe("standard component schema", () => {
       "progress",
       "radio-group",
       "separator",
+      "select",
       "table",
       "textarea",
+      "toggle-group",
       "list",
       "accordion",
     ])
@@ -241,8 +261,10 @@ describe("standard component schema", () => {
       "input",
       "progress",
       "radio-group",
+      "select",
       "table",
       "textarea",
+      "toggle-group",
       "list",
       TEXT_CHILD,
     ])

@@ -5,9 +5,13 @@
   "description": "Workspace for agent-html packages, docs, and verification.",
   "license": "MIT",
   "type": "module",
-  "workspaces": ["packages/*"],
+  "workspaces": ["packages/*", "apps/*"],
   "scripts": {
     "build": "tsc -b packages/core/tsconfig.json packages/ahtml/tsconfig.json",
+    "app:dev": "npm --workspace agent-html-app run dev",
+    "app:build": "npm --workspace agent-html-app run build",
+    "app:tauri": "npm --workspace agent-html-app run tauri",
+    "app:check": "npm --workspace agent-html-app run build && cargo check --manifest-path apps/agent-html-app/src-tauri/Cargo.toml",
     "lint": "eslint .",
     "lint:cache": "eslint . --cache --cache-location .cache/eslint",
     "format": "prettier . --write",
@@ -43,6 +47,7 @@
     "check:docs:ci": "npm run docs:lint && npm run docs:web:typecheck && npm run docs:web:build",
     "check:docs": "npm run docs:lint && npm run docs:web:check",
     "check:all": "npm run check:package:release && npm run check:docs",
+    "check:workspace": "npm run check:all && npm run app:check",
     "ci:check": "npm run check:package",
     "check": "npm run check:package:release"
   },

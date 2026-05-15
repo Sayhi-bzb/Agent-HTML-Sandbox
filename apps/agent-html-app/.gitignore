@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+src-tauri/target/
+.DS_Store

@@ -13,6 +13,9 @@ const rendererSpecScalarFields = [
   "kind",
   "component",
   "control",
+  "controlContent",
+  "controlTrigger",
+  "controlValue",
   "label",
   "description",
   "root",
@@ -50,6 +53,7 @@ const rendererSpecStructuredFields = [
   "requiredExports",
   "rootByProp",
   "propMappings",
+  "staticProps",
 ]
 
 export async function readRuntimeCapabilities(paths) {

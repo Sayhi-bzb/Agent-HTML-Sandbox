@@ -17,6 +17,7 @@ const componentNames = [
   "input",
   "progress",
   "radio-group",
+  "select",
   "separator",
   "table",
   "tabs",

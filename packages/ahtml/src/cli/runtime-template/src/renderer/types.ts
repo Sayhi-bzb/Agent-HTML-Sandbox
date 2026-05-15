@@ -58,6 +58,9 @@ export type RendererSpecComponent = {
   childMode?: "block" | "inline" | "none"
   component?: string
   control?: string
+  controlContent?: string
+  controlTrigger?: string
+  controlValue?: string
   label?: string
   description?: string
   root?: string
@@ -91,6 +94,7 @@ export type RendererSpecComponent = {
   itemHeadingProp?: string
   rootByProp?: RendererRootByProp
   propMappings?: RendererPropMapping[]
+  staticProps?: Record<string, RendererPropValue>
 }
 
 export type RuntimeCapabilities = {

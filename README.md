@@ -24,6 +24,8 @@ agent-html turns semantic `.agent.html` documents into stable, shareable HTML ar
 
 Docs: [agent-html.pages.dev/docs](https://agent-html.pages.dev/docs)
 
+Desktop workbench source: `apps/agent-html-app`
+
 ## Quick Start
 
 ### 1. Install the CLI

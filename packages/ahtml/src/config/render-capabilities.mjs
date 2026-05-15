@@ -29,6 +29,23 @@ export const rendererKindDefinitions = {
       item: ["itemSlot", "itemValueProp", "itemHeadingProp"],
     },
   },
+  "option-set": {
+    requiredFields: [
+      "root",
+      "label",
+      "control",
+      "item",
+      "itemSlot",
+      "itemValueProp",
+      "itemHeadingProp",
+      "labelProp",
+    ],
+    requiredWhenPresent: {
+      description: ["descriptionProp"],
+      controlTrigger: ["controlContent"],
+      controlValue: ["controlTrigger"],
+    },
+  },
   compound: {
     requiredFields: ["root"],
     requiredWhenPresent: {
@@ -176,6 +193,9 @@ export function collectRendererSpecComponentIssues(component) {
 const rendererElementKeys = [
   "component",
   "control",
+  "controlContent",
+  "controlTrigger",
+  "controlValue",
   "label",
   "description",
   "root",
