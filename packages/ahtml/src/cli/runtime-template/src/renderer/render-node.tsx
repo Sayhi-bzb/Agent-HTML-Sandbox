@@ -392,11 +392,19 @@ function applyPropMappings(
 
   for (const mapping of propMappings ?? []) {
     const value = props[mapping.prop]
-    const targetValue = value
-      ? (mapping.map[value] ?? mapping.default)
-      : undefined
 
-    if (targetValue) {
+    if (value === undefined) {
+      continue
+    }
+
+    if (!mapping.map) {
+      mapped[mapping.target] = value
+      continue
+    }
+
+    const targetValue = mapping.map[value] ?? mapping.default
+
+    if (targetValue !== undefined) {
       mapped[mapping.target] = targetValue
     }
   }

@@ -251,12 +251,71 @@ describe("agent-html CLI contracts", () => {
     )
     await expectCliFailure(
       runCliWithServer(
-        ["validate", "--input", "artifact.agent.html"],
+        ["validate", "--input", inputPath, "--format", "yaml"],
         {},
         tempDir,
       ),
-      'Unknown command "validate"',
+      'validate --format must be "text" or "json".',
     )
+    await expectCliFailure(
+      runCliWithServer(["validate"], {}, tempDir),
+      "validate requires --input <path>.",
+    )
+    await rm(tempDir, { force: true, recursive: true })
+  })
+
+  it("returns structured validation results without bootstrapping the runtime", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
+    const runtimeHome = path.join(tempDir, ".ahtml")
+    const validInputPath = path.join(tempDir, "valid.agent.html")
+    const invalidInputPath = path.join(tempDir, "invalid.agent.html")
+
+    await writeFile(
+      validInputPath,
+      '<page title="Valid"><card title="Summary">Ready.</card></page>',
+    )
+    await writeFile(
+      invalidInputPath,
+      '<page title="Bad"><card className="x" /></page>',
+    )
+
+    const validResult = await runCliWithServer(
+      ["validate", "--input", validInputPath, "--format", "json"],
+      { AHTML_HOME: runtimeHome },
+      tempDir,
+    )
+    const parsedValidResult = parseJson<{
+      kind: string
+      ok: boolean
+      inspection?: { components: Array<{ name: string; count: number }> }
+    }>(validResult.stdout)
+    expect(parsedValidResult.kind).toBe("agent-html-validation-result")
+    expect(parsedValidResult.ok).toBe(true)
+    expect(parsedValidResult.inspection?.components).toEqual([
+      { name: "card", count: 1 },
+      { name: "page", count: 1 },
+    ])
+    await expectPathMissing(path.join(runtimeHome, "config", "runtime.json"))
+
+    const invalidResult = await runCliWithServer(
+      ["validate", "--input", invalidInputPath, "--format", "json"],
+      { AHTML_HOME: runtimeHome },
+      tempDir,
+    ).catch((error) => error)
+    const parsedInvalidResult = parseJson<{
+      kind: string
+      ok: boolean
+      diagnostics?: Array<{ code: string; severity: string }>
+    }>(invalidResult.stdout)
+    expect(parsedInvalidResult.kind).toBe("agent-html-validation-result")
+    expect(parsedInvalidResult.ok).toBe(false)
+    expect(parsedInvalidResult.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "unknown-attr",
+        severity: "error",
+      }),
+    ])
+    await expectPathMissing(path.join(runtimeHome, "config", "runtime.json"))
     await rm(tempDir, { force: true, recursive: true })
   })
 

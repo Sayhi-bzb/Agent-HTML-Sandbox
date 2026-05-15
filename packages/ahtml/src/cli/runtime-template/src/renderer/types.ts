@@ -33,7 +33,7 @@ export type RendererSlot = {
 export type RendererPropMapping = {
   prop: string
   target: string
-  map: Record<string, string>
+  map?: Record<string, string>
   default?: string
 }
 

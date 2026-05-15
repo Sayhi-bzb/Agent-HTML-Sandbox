@@ -12,11 +12,14 @@ const uiProtocolDefinitions = {
   badge: {
     promptOrder: 3,
   },
-  separator: {
+  progress: {
     promptOrder: 4,
   },
-  list: {
+  separator: {
     promptOrder: 5,
+  },
+  list: {
+    promptOrder: 6,
     normalization: {
       kind: "slotted",
       slotName: "item",
@@ -30,7 +33,7 @@ const uiProtocolDefinitions = {
     ],
   },
   table: {
-    promptOrder: 6,
+    promptOrder: 7,
     normalization: {
       kind: "table",
       rowSlotName: "row",
@@ -51,7 +54,7 @@ const uiProtocolDefinitions = {
     ],
   },
   tabs: {
-    promptOrder: 7,
+    promptOrder: 8,
     attrAliases: {
       default: "default-value",
     },
@@ -79,7 +82,7 @@ const uiProtocolDefinitions = {
     ],
   },
   accordion: {
-    promptOrder: 8,
+    promptOrder: 9,
     normalization: {
       kind: "slotted",
       slotName: "accordion-item",
@@ -186,6 +189,19 @@ export const componentCapabilityDefinitions = {
           },
         },
       ],
+    },
+  },
+  progress: {
+    source: "shadcn",
+    renderKind: "primitive",
+    uiProtocol: uiProtocolDefinitions.progress,
+    requiredRegistryItem: "progress",
+    requiredExports: ["Progress"],
+    renderer: {
+      kind: "primitive",
+      component: "Progress",
+      childMode: "none",
+      propMappings: [{ prop: "value", target: "value" }],
     },
   },
   table: {
@@ -295,6 +311,7 @@ export const requiredShadcnRuntimeComponents = [
   "alert",
   "badge",
   "card",
+  "progress",
   "separator",
   "table",
   "tabs",

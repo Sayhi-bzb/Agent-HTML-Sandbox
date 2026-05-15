@@ -62,6 +62,7 @@ export const COMPONENT_SCHEMA_OVERLAYS = [
     allowedChildren: [
       "alert",
       "badge",
+      "progress",
       "separator",
       "table",
       "list",
@@ -94,6 +95,21 @@ export const COMPONENT_SCHEMA_OVERLAYS = [
     ],
     allowedChildren: [TEXT_CHILD],
     hiddenProps: ["variant"],
+  },
+  {
+    name: "progress",
+    description: "Read-only completion indicator.",
+    expose: true,
+    sourceComponents: ["Progress"],
+    props: [
+      {
+        name: "value",
+        valueKind: "number",
+        required: true,
+        description: "Completion percentage from 0 to 100.",
+      },
+    ],
+    allowedChildren: [],
   },
   {
     name: "table",
@@ -186,6 +202,7 @@ export const COMPONENT_SCHEMA_OVERLAYS = [
     allowedChildren: [
       "alert",
       "card",
+      "progress",
       "separator",
       "table",
       "list",
@@ -221,7 +238,7 @@ export const COMPONENT_SCHEMA_OVERLAYS = [
         description: "Visible section title.",
       },
     ],
-    allowedChildren: ["alert", "badge", "table", "list", TEXT_CHILD],
+    allowedChildren: ["alert", "badge", "progress", "table", "list", TEXT_CHILD],
     hiddenProps: ["value"],
   },
 ] as const satisfies readonly ComponentSchemaOverlay[]

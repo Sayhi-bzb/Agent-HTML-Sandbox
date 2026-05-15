@@ -23,6 +23,7 @@ describe("standard component schema", () => {
       "card",
       "separator",
       "badge",
+      "progress",
       "table",
       "row",
       "cell",
@@ -33,7 +34,7 @@ describe("standard component schema", () => {
       "accordion",
       "accordion-item",
     ])
-    expect(VALIDATED_STANDARD_COMPONENT_SCHEMAS).toHaveLength(14)
+    expect(VALIDATED_STANDARD_COMPONENT_SCHEMAS).toHaveLength(15)
   })
 
   it("keeps schema components aligned with render capability state", async () => {
@@ -80,6 +81,7 @@ describe("standard component schema", () => {
       card: ["children"],
       list: ["item"],
       page: ["children"],
+      progress: ["children"],
       separator: ["children"],
       table: ["row", "cell"],
       tabs: ["tabs-list", "tabs-trigger", "tabs-content"],
@@ -100,6 +102,7 @@ describe("standard component schema", () => {
       card: "compound",
       list: "collection",
       page: "compound",
+      progress: "primitive",
       separator: "primitive",
       table: "table",
       tabs: "tabs",
@@ -132,6 +135,7 @@ describe("standard component schema", () => {
       "tone",
       "title",
       "tone",
+      "value",
       "kind",
       "variant",
       "default",
@@ -157,8 +161,20 @@ describe("standard component schema", () => {
       "accordion",
     ])
     expect(getComponentSchema("alert")?.allowedChildren).toEqual([TEXT_CHILD])
+    expect(getComponentSchema("card")?.allowedChildren).toEqual([
+      "alert",
+      "badge",
+      "progress",
+      "separator",
+      "table",
+      "list",
+      "tabs",
+      "accordion",
+      TEXT_CHILD,
+    ])
     expect(getComponentSchema("separator")?.allowedChildren).toEqual([])
     expect(getComponentSchema("badge")?.allowedChildren).toEqual([TEXT_CHILD])
+    expect(getComponentSchema("progress")?.allowedChildren).toEqual([])
     expect(getComponentSchema("table")?.allowedChildren).toEqual(["row"])
     expect(getComponentSchema("row")?.allowedChildren).toEqual(["cell"])
     expect(getComponentSchema("cell")?.allowedChildren).toEqual([TEXT_CHILD])
@@ -167,6 +183,7 @@ describe("standard component schema", () => {
     expect(getComponentSchema("tab")?.allowedChildren).toEqual([
       "alert",
       "card",
+      "progress",
       "separator",
       "table",
       "list",
@@ -174,6 +191,14 @@ describe("standard component schema", () => {
     ])
     expect(getComponentSchema("accordion")?.allowedChildren).toEqual([
       "accordion-item",
+    ])
+    expect(getComponentSchema("accordion-item")?.allowedChildren).toEqual([
+      "alert",
+      "badge",
+      "progress",
+      "table",
+      "list",
+      TEXT_CHILD,
     ])
     expect(getComponentSchema("choice-group")).toBeUndefined()
   })

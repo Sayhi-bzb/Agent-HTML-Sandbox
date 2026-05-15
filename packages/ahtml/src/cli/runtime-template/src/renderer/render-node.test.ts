@@ -120,6 +120,38 @@ describe("createRendererNode", () => {
     )
   })
 
+  it("passes through primitive props without enum mapping and keeps zero values", () => {
+    const rendererSpecByName = new Map([
+      [
+        "progress",
+        {
+          name: "progress",
+          kind: "primitive",
+          renderKind: "primitive",
+          slots: [{ name: "children", children: [] }],
+          component: "Progress",
+          childMode: "none",
+          propMappings: [{ prop: "value", target: "value" }],
+        },
+      ],
+    ])
+
+    const RendererNode = createRendererNode(rendererSpecByName)
+    const markup = renderToStaticMarkup(
+      React.createElement(RendererNode, {
+        node: {
+          type: "component",
+          name: "progress",
+          props: { value: "0" },
+          children: [],
+        },
+      }),
+    )
+
+    expect(markup).toContain("<Progress")
+    expect(markup).toContain('value="0"')
+  })
+
   it("renders a no-script fallback for accordion items when configured", () => {
     const rendererSpecByName = new Map([
       [
