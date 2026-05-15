@@ -133,11 +133,36 @@ export function createArtifactWorkflow({
     return parseJson(source, "agent-html.inspect.json must be valid JSON.")
   }
 
+  async function validateDocument(inputPath, options = {}) {
+    const inputFilePath = path.resolve(userRoot, inputPath)
+    const source = await readFile(inputFilePath, "utf8")
+    const validation = await validateAgentHtmlSource(source)
+
+    if (validation.diagnostics.length > 0) {
+      if (options.printDiagnostics !== false) {
+        printDiagnostics(validation.diagnostics)
+      }
+      process.exitCode = 1
+      return createValidationResult({
+        diagnostics: validation.diagnostics,
+        inputPath: inputFilePath,
+        ok: false,
+      })
+    }
+
+    return createValidationResult({
+      inputPath: inputFilePath,
+      inspection: createInspection(validation.document),
+      ok: true,
+    })
+  }
+
   return {
     buildArtifact,
     ensureManagedRuntime,
     inspectArtifactDir,
     inspectDocument,
+    validateDocument,
   }
 }
 
@@ -175,6 +200,17 @@ function createBuildResult({
     outputDir,
     ...(inspection ? { inspection, inspectionPath } : {}),
     ...(diagnostics.length > 0 ? { diagnostics, stage } : {}),
+  }
+}
+
+function createValidationResult({ diagnostics = [], inputPath, inspection, ok }) {
+  return {
+    kind: "agent-html-validation-result",
+    version: 1,
+    ok,
+    inputPath,
+    ...(inspection ? { inspection } : {}),
+    ...(diagnostics.length > 0 ? { diagnostics } : {}),
   }
 }
 

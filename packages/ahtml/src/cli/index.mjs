@@ -53,6 +53,7 @@ const {
   ensureManagedRuntime,
   inspectArtifactDir,
   inspectDocument,
+  validateDocument,
 } = createArtifactWorkflow({
   userRoot,
   defaultOutputDir,
@@ -65,6 +66,7 @@ const args = process.argv.slice(3)
 const commandHandlers = {
   setup: setupCommand,
   prompt: promptCommand,
+  validate: validateCommand,
   build: buildCommand,
   inspect: inspectCommand,
   preview: previewCommand,
@@ -268,6 +270,37 @@ async function buildCommand(commandArgs, definition) {
 
   if (format === "json") {
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
+  }
+}
+
+async function validateCommand(commandArgs, definition) {
+  const { options, positionals } = parseOptions(commandArgs, definition)
+
+  if (positionals.length > 0) {
+    fail(`Unexpected argument "${positionals[0]}".`)
+  }
+
+  if (!options.input) {
+    fail("validate requires --input <path>.")
+  }
+
+  const format = options.format ?? "text"
+
+  if (format !== "text" && format !== "json") {
+    fail('validate --format must be "text" or "json".')
+  }
+
+  const result = await validateDocument(options.input, {
+    printDiagnostics: format !== "json",
+  })
+
+  if (format === "json") {
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
+    return
+  }
+
+  if (result.ok) {
+    process.stdout.write(formatInspectionSummary(result.inspection))
   }
 }
 

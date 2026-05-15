@@ -59,6 +59,22 @@ export const commandMetadata = {
     ],
     example: "ahtml prompt",
   },
+  validate: {
+    summary: "Validate a source document without building runtime output.",
+    purpose:
+      "Run source validation and return structured diagnostics or inspection metadata.",
+    usage: "ahtml validate --input <path> [--format text|json]",
+    options: [
+      { name: "input", description: "Agent-html document path.", value: true },
+      {
+        name: "format",
+        description: "Output format. Defaults to text.",
+        value: true,
+      },
+    ],
+    example: `ahtml validate --input ${cliDefaults.documentPath} --format json`,
+    hidden: true,
+  },
   build: {
     summary: "Validate and build a static HTML artifact.",
     purpose: "Validate, sanitize, and build a static artifact directory.",

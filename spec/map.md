@@ -54,6 +54,13 @@ components plus named presentation profiles on the public side, and
 shadcn-native template/init/registry plus internal capability verification on
 the runtime side.
 
+Current expansion posture: do not respond to that gap by expanding the public
+parameter bag or by adding isolated components one by one. The current
+execution rhythm is to keep the public contract semantic and profile-first,
+keep shadcn details inside the managed runtime, then expand breadth by adding
+shared renderer archetypes and admitting components in grouped waves. Detailed
+component grouping and sequencing now live in `spec/components-adoption.md`.
+
 ## Final Decisions
 
 These decisions are locked for the next implementation pass.
@@ -385,6 +392,10 @@ fields and generic ui/slot compatibility paths.
 - The generic registry / resolver layer remains the key product layer on the
   runtime side. It must map semantic agent-html into legal shadcn/native React
   composition without one-off adapters for each component.
+- Broader component coverage should follow grouped semantic adoption, not
+  opportunistic shadcn install order. The next expansion path is `progress`,
+  then `field/control`, then `option-set`; overlay, menu, navigation, and
+  app-shell semantics remain out of the near-term lane.
 - Generic fallback is no longer the renderer path for unsupported component
   names; build now emits structured runtime-render diagnostics before
   SSR/runtime failure.

@@ -15,6 +15,40 @@ semantic component contract
   -> shadcn/native artifact
 ```
 
+## Current Execution Rhythm
+
+当前主线不是继续扩张 public 参数数量，也不是直接铺开新组件数量。
+
+当前主线是：
+
+1. 继续收紧 public contract。
+2. 继续把 shadcn 细节留在 runtime 内部。
+3. 先补通用 renderer archetype，再按 archetype 成批扩组件。
+
+### Parameter And Data-Dimension Priorities
+
+- public 参数继续收敛到语义字段，而不是视觉实现字段。
+- 优先规范的内容维度是 `title`、`label`、`description`、`value`、`text`。
+- 优先规范的状态维度是 `tone`、`kind`、`default`、`required`、`disabled`、
+  `invalid`。
+- 优先规范的结构维度是 `item`、`row`、`cell`、`tab`、`accordion-item`，以及
+  未来 `option` 一类受控结构节点。
+- 当前不应继续扩张 `variant`、`size`、`surface`、`radius`、`spacing`、
+  `className` 或 raw shadcn props 这类 public 参数面。
+
+### Component Expansion Order
+
+- 第一步先接 `progress`，验证新增只读显示型组件能否低成本进入 schema、
+  renderer、runtime verification 和 artifact tests。
+- 第二步补 `field/control` archetype，再按该 contract 成批接入 `textarea`、
+  `input`、`checkbox`、`radio-group`。
+- 第三步补 `option-set` archetype，再按该 contract 成批接入 `toggle-group`、
+  `select`、`combobox`。
+- `dialog`、`sheet`、`drawer`、`popover`、`tooltip`、menu、navigation 和
+  app-shell 语义不属于当前近期开发表。
+
+Detailed component status and grouping now live in `spec/components-adoption.md`.
+
 ## Phase 1: Lock The Public Contract
 
 - 对外 authoring contract 只保留语义组件和 profile 选择。
@@ -147,6 +181,16 @@ Done when:
   必须作为真实语义能力返回，而不是直接暴露底层 shadcn 细节。
 - 不重新长出第二套 ahtml UI framework，也不重新长出第二套对外 runtime 协议。
 
+Current state:
+
+- 已明确当前组件接入节奏：先 `progress`，再 `field/control`，再 `option-set`，
+  不直接扩到 overlay、menu 或 navigation。
+- 已明确当前参数策略：继续收紧到语义字段，不继续扩张视觉实现字段或 raw shadcn
+  props。
+- 已新增 `spec/components-adoption.md` 作为组件接入分组和优先级清单。
+
 Done when:
 
 - 扩展组件目录不会重新把 agent-facing 合同拖回 runtime-first 思路。
+- 新增组件的实现顺序默认由 archetype 和 adoption status 驱动，而不是按 shadcn
+  安装便利度零散扩张。
