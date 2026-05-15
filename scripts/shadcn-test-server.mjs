@@ -9,8 +9,19 @@ const fixtureRoot = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "shadcn-test-fixtures",
 )
-const componentNames = ["button", ...requiredShadcnRuntimeComponents]
+const componentNames = [
+  ...new Set(["button", "input-group", ...requiredShadcnRuntimeComponents]),
+]
 const styleNames = ["nova", "vega", "maia", "lyra", "mira", "luma", "sera"]
+const registryComponentMetadata = {
+  combobox: {
+    dependencies: ["@base-ui/react"],
+    registryDependencies: ["button", "input-group"],
+  },
+  "input-group": {
+    registryDependencies: ["button", "input", "textarea"],
+  },
+}
 
 export async function startShadcnTestServer() {
   const fixtures = await loadFixtures()
@@ -188,6 +199,7 @@ function createComponentItem({ componentName, componentSource }) {
     name: componentName,
     type: "registry:ui",
     title: componentName,
+    ...(registryComponentMetadata[componentName] ?? {}),
     files: [
       {
         path: `ui/${componentName}.tsx`,

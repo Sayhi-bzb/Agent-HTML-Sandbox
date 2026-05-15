@@ -333,7 +333,13 @@ export const COMPONENT_SCHEMA_OVERLAYS = [
     name: "combobox",
     description: "Searchable single-select option picker.",
     expose: true,
-    sourceComponents: ["Input"],
+    sourceComponents: [
+      "Combobox",
+      "ComboboxInput",
+      "ComboboxContent",
+      "ComboboxList",
+      "ComboboxItem",
+    ],
     props: [
       {
         name: "label",

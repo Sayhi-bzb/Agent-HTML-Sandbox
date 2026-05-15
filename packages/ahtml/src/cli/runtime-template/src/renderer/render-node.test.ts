@@ -6,6 +6,19 @@ import { describe, expect, it, vi } from "vitest"
 
 vi.mock("./elements", () => ({
   resolveElement(name) {
+    if (name === "ComboboxInput") {
+      return ({
+        children,
+        ...props
+      }: React.PropsWithChildren<Record<string, unknown>>) =>
+        React.createElement(
+          "div",
+          null,
+          React.createElement("input", props),
+          children,
+        )
+    }
+
     if (name === "Input") {
       return "input"
     }
@@ -16,6 +29,22 @@ vi.mock("./elements", () => ({
 
     if (name === "Slider") {
       return "input"
+    }
+
+    if (name === "Combobox") {
+      return "div"
+    }
+
+    if (name === "ComboboxContent") {
+      return "section"
+    }
+
+    if (name === "ComboboxList") {
+      return "div"
+    }
+
+    if (name === "ComboboxItem") {
+      return "div"
     }
 
     return name ?? React.Fragment
@@ -618,9 +647,11 @@ describe("createRendererNode", () => {
           ],
           root: "div",
           label: "p",
-          control: "Input",
-          itemContainer: "datalist",
-          item: "option",
+          controlRoot: "Combobox",
+          control: "ComboboxInput",
+          controlContent: "ComboboxContent",
+          controlList: "ComboboxList",
+          item: "ComboboxItem",
           itemSlot: "option",
           itemValueProp: "value",
           itemHeadingProp: "label",
@@ -630,7 +661,6 @@ describe("createRendererNode", () => {
           descriptionClassName: "description",
           labelProp: "label",
           descriptionProp: "description",
-          controlListAttr: "list",
           fallback: true,
           propMappings: [
             { prop: "value", target: "defaultValue" },
@@ -676,9 +706,9 @@ describe("createRendererNode", () => {
     expect(markup).toContain("<input")
     expect(markup).toContain('aria-label="Owner"')
     expect(markup).toContain('value="Ops reviewer"')
-    expect(markup).toContain("<datalist")
-    expect(markup).toContain("<option")
-    expect(markup).toContain('value="Ops reviewer"')
+    expect(markup).toContain("<section")
+    expect(markup).toContain("<div")
+    expect(markup).toContain("Ops reviewer")
     expect(markup).toContain("<noscript>")
     expect(markup).toContain("Ops reviewer (selected)")
   })

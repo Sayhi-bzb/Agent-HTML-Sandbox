@@ -34,3 +34,13 @@ and reopen guide instead of a phase-by-phase execution log.
   heavy CLI scenario.
 - If spec reopens, re-establish proof at the smallest useful layer first:
   schema, sanitize, renderer mapping, runtime surface, then heavy CLI flows.
+
+## If Shadcn Debt Reopens
+
+- Inspect upstream shadcn docs and examples before changing runtime behavior.
+- Compare the current runtime implementation against the official shadcn
+  component composition, not just the current local fixture snapshot.
+- Update schema, renderer, runtime setup, doctor checks, and artifact proofs
+  together for any shadcn-alignment change.
+- Verify with narrow renderer tests first, then runtime surface checks, then
+  heavy CLI artifact flows.

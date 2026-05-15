@@ -155,6 +155,59 @@ export const GENERATED_SHADCN_INTROSPECTIONS = [
     ]
   },
   {
+    "registryName": "combobox",
+    "componentName": "Combobox",
+    "exports": [
+      "Combobox",
+      "ComboboxInput",
+      "ComboboxContent",
+      "ComboboxList",
+      "ComboboxItem",
+      "ComboboxGroup",
+      "ComboboxLabel",
+      "ComboboxCollection",
+      "ComboboxEmpty",
+      "ComboboxSeparator",
+      "ComboboxChips",
+      "ComboboxChip",
+      "ComboboxChipsInput",
+      "ComboboxTrigger",
+      "ComboboxValue",
+      "useComboboxAnchor"
+    ],
+    "slots": [
+      "combobox-value",
+      "combobox-trigger",
+      "combobox-trigger-icon",
+      "combobox-clear",
+      "input-group-button",
+      "combobox-content",
+      "combobox-list",
+      "combobox-item",
+      "combobox-item-indicator",
+      "combobox-group",
+      "combobox-label",
+      "combobox-collection",
+      "combobox-empty",
+      "combobox-separator",
+      "combobox-chips",
+      "combobox-chip",
+      "combobox-chip-remove",
+      "combobox-chip-input"
+    ],
+    "blockedProps": [
+      "className",
+      "asChild"
+    ],
+    "dependencies": [
+      "@base-ui/react"
+    ],
+    "registryDependencies": [
+      "button",
+      "input-group"
+    ]
+  },
+  {
     "registryName": "input",
     "componentName": "Input",
     "exports": [

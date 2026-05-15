@@ -104,6 +104,9 @@ export function resolveRuntimeDependencies(packageRoot) {
     ),
     reactDomClient: packageRequire.resolve("react-dom/client"),
     reactDomServer: packageRequire.resolve("react-dom/server"),
+    baseUiReactRoot: path.dirname(
+      packageRequire.resolve("@base-ui/react/package.json"),
+    ),
     classVarianceAuthorityRoot: packageRequire.resolve(
       "class-variance-authority",
     ),
@@ -332,7 +335,7 @@ async function writeRuntimeRendererKindSource({ paths }) {
   )
 }
 
-function createRuntimeElementRegistrySource(registrySpec) {
+export function createRuntimeElementRegistrySource(registrySpec) {
   const imports = registrySpec.modules.map(({ registryItem, exports }) =>
     formatRuntimeElementImport({ registryItem, exports }),
   )
@@ -362,7 +365,7 @@ function createRuntimeElementRegistrySource(registrySpec) {
   ].join("\n")
 }
 
-function createRuntimeRendererKindSource(kindSpec) {
+export function createRuntimeRendererKindSource(kindSpec) {
   return [
     `export const runtimeRendererKinds = ${JSON.stringify(kindSpec.kinds)} as const`,
     "",

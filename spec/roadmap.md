@@ -35,3 +35,15 @@ Reopen roadmap work only if one of these changes:
   semantics.
 - The public contract needs new data, action, media, or round-trip semantics
   that cannot be expressed through the current shared archetypes.
+
+## Reopen Candidates
+
+- If `combobox` must align with the official shadcn combobox implementation and
+  interaction model, reopen renderer/runtime work.
+- If checked-in runtime template sources must stay synchronized with the actual
+  generated runtime support surface, reopen renderer/runtime sync work.
+- If field/control rendering should follow more official shadcn composition
+  patterns instead of custom wrappers and fallback markup, reopen renderer
+  composition work.
+- If local fixture or registry snapshots become costly to maintain across
+  shadcn upgrades, reopen fixture and registry maintenance work.

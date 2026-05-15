@@ -527,14 +527,6 @@ button:disabled {
   margin-top: 8px;
 }
 
-.timeline-action-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
-}
-
 .draft-compare-card {
   display: grid;
   gap: 10px;
@@ -649,6 +641,25 @@ button:disabled {
   gap: 8px;
 }
 
+.proposal-decision-history {
+  display: grid;
+  gap: 8px;
+}
+
+.proposal-decision-history-item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.proposal-snapshot-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .proposal-readiness {
   display: grid;
   gap: 8px;
@@ -663,6 +674,33 @@ button:disabled {
   color: #30415f;
 }
 
+.proposal-stage-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.proposal-stage-chip {
+  border: 1px solid rgba(31, 41, 55, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 10px;
+  text-align: left;
+}
+
+.proposal-stage-chip.active {
+  border-color: rgba(20, 33, 61, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(20, 33, 61, 0.08);
+}
+
+.proposal-stage-name {
+  color: #22314d;
+  font-size: 0.82rem;
+}
+
 .proposal-compare-panel {
   display: grid;
   gap: 8px;
@@ -670,6 +708,13 @@ button:disabled {
   border-radius: 14px;
   background: rgba(255, 250, 235, 0.78);
   padding: 12px;
+}
+
+.proposal-decision-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .proposal-compare-summary {

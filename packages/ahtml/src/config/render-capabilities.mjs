@@ -34,6 +34,7 @@ export const rendererKindDefinitions = {
     requiredFields: [
       "root",
       "label",
+      "controlRoot",
       "control",
       "item",
       "itemSlot",
@@ -45,6 +46,7 @@ export const rendererKindDefinitions = {
       description: ["descriptionProp"],
       controlTrigger: ["controlContent"],
       controlValue: ["controlTrigger"],
+      controlList: ["controlContent"],
       itemContainer: ["controlListAttr"],
       controlListAttr: ["itemContainer"],
     },
@@ -196,7 +198,9 @@ export function collectRendererSpecComponentIssues(component) {
 const rendererElementKeys = [
   "component",
   "control",
+  "controlRoot",
   "controlContent",
+  "controlList",
   "controlTrigger",
   "controlValue",
   "label",

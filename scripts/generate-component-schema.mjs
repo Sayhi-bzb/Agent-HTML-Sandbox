@@ -28,6 +28,7 @@ const registryNames = [
   "button",
   "card",
   "checkbox",
+  "combobox",
   "input",
   "progress",
   "radio-group",

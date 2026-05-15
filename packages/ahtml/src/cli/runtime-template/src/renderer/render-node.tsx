@@ -191,10 +191,16 @@ export function createRendererNode(
   ) {
     const Root = resolveElement(rendererSpec.root)
     const Label = resolveElement(rendererSpec.label)
+    const ControlRoot = rendererSpec.controlRoot
+      ? resolveElement(rendererSpec.controlRoot)
+      : React.Fragment
     const Control = resolveElement(rendererSpec.control)
     const ControlTrigger = resolveElement(rendererSpec.controlTrigger)
     const ControlValue = resolveElement(rendererSpec.controlValue)
     const ControlContent = resolveElement(rendererSpec.controlContent)
+    const ControlList = rendererSpec.controlList
+      ? resolveElement(rendererSpec.controlList)
+      : undefined
     const ItemContainer = rendererSpec.itemContainer
       ? resolveElement(rendererSpec.itemContainer)
       : undefined
@@ -225,6 +231,20 @@ export function createRendererNode(
       props: node.props,
     })
     const selectedValue = controlProps.defaultValue
+    const renderedItems = renderOptionSetItems({
+      Item,
+      ItemContainer,
+      itemContainerId: optionSetContainerId,
+      itemHeadingProp,
+      items,
+      itemValueProp,
+    })
+    const renderedOptionSetContent =
+      ControlList && rendererSpec.controlContent ? (
+        <ControlList>{renderedItems}</ControlList>
+      ) : (
+        renderedItems
+      )
 
     return (
       <>
@@ -235,48 +255,29 @@ export function createRendererNode(
           {label ? (
             <Label className={rendererSpec.labelClassName}>{label}</Label>
           ) : null}
-          {rendererSpec.controlTrigger && rendererSpec.controlContent ? (
-            <Control {...controlProps}>
+          <ControlRoot>
+            {rendererSpec.controlTrigger && rendererSpec.controlContent ? (
+              <Control {...controlProps}>
+                <>
+                  <ControlTrigger>
+                    {rendererSpec.controlValue ? <ControlValue /> : null}
+                  </ControlTrigger>
+                  <ControlContent>{renderedOptionSetContent}</ControlContent>
+                </>
+              </Control>
+            ) : rendererSpec.controlContent ? (
+              <Control {...controlProps}>
+                <ControlContent>{renderedOptionSetContent}</ControlContent>
+              </Control>
+            ) : rendererSpec.itemContainer ? (
               <>
-                <ControlTrigger>
-                  {rendererSpec.controlValue ? <ControlValue /> : null}
-                </ControlTrigger>
-                <ControlContent>
-                  {items.map((item) =>
-                    renderOptionSetItem({
-                      Item,
-                      item,
-                      itemHeadingProp,
-                      itemValueProp,
-                    }),
-                  )}
-                </ControlContent>
+                <Control {...controlProps} />
+                {renderedOptionSetContent}
               </>
-            </Control>
-          ) : rendererSpec.itemContainer ? (
-            <>
-              <Control {...controlProps} />
-              {renderOptionSetItems({
-                Item,
-                ItemContainer,
-                itemContainerId: optionSetContainerId,
-                itemHeadingProp,
-                items,
-                itemValueProp,
-              })}
-            </>
-          ) : (
-            <Control {...controlProps}>
-              {renderOptionSetItems({
-                Item,
-                ItemContainer,
-                itemContainerId: optionSetContainerId,
-                itemHeadingProp,
-                items,
-                itemValueProp,
-              })}
-            </Control>
-          )}
+            ) : (
+              <Control {...controlProps}>{renderedOptionSetContent}</Control>
+            )}
+          </ControlRoot>
           {description && Description ? (
             <Description className={rendererSpec.descriptionClassName}>
               {description}

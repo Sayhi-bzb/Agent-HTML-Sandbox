@@ -46,6 +46,7 @@ type CommandState = {
   loading: boolean
   savingSource: boolean
   sendingMessage: boolean
+  recordingDecision: boolean
   draftingProposal: boolean
   runningBuild: boolean
   runningInspect: boolean
@@ -57,6 +58,7 @@ const initialCommandState: CommandState = {
   loading: true,
   savingSource: false,
   sendingMessage: false,
+  recordingDecision: false,
   draftingProposal: false,
   runningBuild: false,
   runningInspect: false,
@@ -82,6 +84,7 @@ export function App() {
     commandState.loading ||
     commandState.savingSource ||
     commandState.sendingMessage ||
+    commandState.recordingDecision ||
     commandState.draftingProposal ||
     commandState.runningBuild ||
     commandState.runningInspect ||
@@ -864,6 +867,47 @@ export function App() {
     setCommandState((current) => ({ ...current, draftingProposal: false }))
   }
 
+  async function handleRecordProposalDecision(
+    proposalText: string,
+    status: "approved" | "needs changes",
+  ) {
+    const decisionMessage = buildProposalDecisionMessage(proposalText, status)
+
+    if (!isTauriRuntime()) {
+      startTransition(() => {
+        setAppState((current) => ({
+          ...current,
+          chat: [...current.chat, createLocalChatMessage("system", decisionMessage, "context-card")],
+        }))
+      })
+      return
+    }
+
+    setCommandState((current) => ({ ...current, error: undefined, recordingDecision: true }))
+    try {
+      const updated = await appendChatMessage(appState.currentSession.summary.id, {
+        role: "system",
+        text: decisionMessage,
+        kind: "context-card",
+      })
+      startTransition(() => {
+        setAppState((current) => ({
+          ...current,
+          chat: updated,
+        }))
+      })
+    } catch (error) {
+      setCommandState((current) => ({
+        ...current,
+        recordingDecision: false,
+        error: formatError(error),
+      }))
+      return
+    }
+
+    setCommandState((current) => ({ ...current, recordingDecision: false }))
+  }
+
   function replaceCurrentSession(session: SessionDetail, nextChat?: AppState["chat"]) {
     startTransition(() => {
       setAppState((current) => ({
@@ -933,6 +977,7 @@ export function App() {
           isRunningInspect={commandState.runningInspect}
           isSavingSource={commandState.savingSource}
           onBuild={handleBuild}
+          onDecision={handleRecordProposalDecision}
           onInspect={handleInspect}
           onOpenView={handleViewChange}
           onSaveDraft={persistCurrentDraftIfNeeded}
@@ -1156,6 +1201,20 @@ function buildLocalProposalText(
   }
 
   return [`Proposal for ${session.summary.name}`, ...items.map((item) => `- ${item}`)].join("\n")
+}
+
+function buildProposalDecisionMessage(
+  proposalText: string,
+  status: "approved" | "needs changes",
+) {
+  const [titleLine] = proposalText.split(/\r?\n/).filter(Boolean)
+  const proposalTitle = titleLine?.replace(/^Proposal for\s+/, "").trim() || "Unknown proposal"
+
+  return [
+    "Proposal decision",
+    `- Proposal: ${proposalTitle}`,
+    `- Status: ${status}`,
+  ].join("\n")
 }
 
 function buildEventMessage(build: BuildRunSummary) {

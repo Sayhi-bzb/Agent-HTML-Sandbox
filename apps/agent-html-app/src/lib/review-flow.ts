@@ -77,6 +77,97 @@ export type ReviewTimelineActionConfig = {
     | "openPreview"
 }
 
+export type ProposalDecision = {
+  proposalTitle: string
+  status: "approved" | "needs-changes"
+}
+
+export type ProposalDecisionEntry = ProposalDecision & {
+  createdAt: string
+}
+
+export type ProposalDecisionTrend = {
+  label: "Approved" | "Needs changes" | "Mixed"
+  summary: string
+  pillClassName: "status-ready" | "status-dirty"
+}
+
+export function getSecondaryReadinessItems(
+  stage: ReviewTimelineItem["id"],
+  items: string[],
+) {
+  return items.filter((item) => {
+    switch (stage) {
+      case "source":
+        return !item.startsWith("Unsaved draft changes")
+      case "build":
+        return !(
+          item.startsWith("The latest build failed") ||
+          item.startsWith("A build is currently running.") ||
+          item.startsWith("No successful preview artifact is available yet.") ||
+          item.startsWith("Preview may lag behind the latest saved source.")
+        )
+      case "inspect":
+        return !item.includes("inspect diagnostic")
+      case "proposal":
+        return !(
+          item.startsWith("No proposal has been drafted") ||
+          item.startsWith("The latest proposal predates") ||
+          item.startsWith("The current source differs from the latest proposal snapshot")
+        )
+      default:
+        return true
+    }
+  })
+}
+
+export function getCurrentReviewStageGuidance({
+  stage,
+  latestProposalExists,
+  latestProposalIsStale,
+  latestProposalDecision,
+  proposalComparison,
+}: {
+  stage: ReviewTimelineItem["id"]
+  latestProposalExists: boolean
+  latestProposalIsStale: boolean
+  latestProposalDecision?: ProposalDecision
+  proposalComparison?: SourceComparisonSummary
+}) {
+  switch (stage) {
+    case "source":
+      return "Save the current draft first so every downstream review step uses session truth."
+    case "build":
+      return "Refresh the preview artifact before trusting proposal review or artifact-level comparison."
+    case "inspect":
+      return "Resolve or re-check diagnostics before trusting the proposal."
+    case "proposal":
+      if (!latestProposalExists) {
+        return "Draft the first proposal from the latest session state."
+      }
+
+      if (latestProposalIsStale) {
+        return "Redraft the proposal so it matches the current session state."
+      }
+
+      if (latestProposalDecision?.status === "needs-changes") {
+        return "The latest decision still requests changes, so review the proposal drift before proceeding."
+      }
+
+      if (proposalComparison?.changedLineCount) {
+        return "Review proposal drift against the current source before approving the next step."
+      }
+
+      if (latestProposalDecision?.status === "approved") {
+        return "The latest proposal has already been approved and is aligned enough with the current session state."
+      }
+
+      return "The proposal is aligned enough with the current session state for review."
+    default:
+      return "Review the current session state before proceeding."
+  }
+}
+
 export function getCurrentReviewStage({
   build,
   hasUnsavedSourceChanges,
@@ -135,6 +226,87 @@ export function parseStructuredMessageCard(text: string) {
   }
 }
 
+export function parseProposalDecision(text: string) {
+  const parsed = parseStructuredMessageCard(text)
+  if (parsed?.title !== "Proposal decision") {
+    return undefined
+  }
+
+  const proposalLine = parsed.items.find((item) => item.startsWith("Proposal: "))
+  const statusLine = parsed.items.find((item) => item.startsWith("Status: "))
+  if (!proposalLine || !statusLine) {
+    return undefined
+  }
+
+  const rawStatus = statusLine.replace("Status: ", "").trim().toLowerCase()
+  if (rawStatus !== "approved" && rawStatus !== "needs changes") {
+    return undefined
+  }
+
+  return {
+    proposalTitle: proposalLine.replace("Proposal: ", "").trim(),
+    status: rawStatus === "approved" ? "approved" : "needs-changes",
+  } satisfies ProposalDecision
+}
+
+export function findLatestProposalDecision(messages: AgentShellMessage[]) {
+  return [...messages]
+    .reverse()
+    .map((message) => parseProposalDecision(message.text))
+    .find((decision) => decision !== undefined)
+}
+
+export function findRecentProposalDecisions(messages: AgentShellMessage[], limit = 3) {
+  const decisions: ProposalDecisionEntry[] = []
+
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index]
+    const decision = parseProposalDecision(message.text)
+    if (!decision) {
+      continue
+    }
+
+    decisions.push({
+      ...decision,
+      createdAt: message.createdAt,
+    })
+
+    if (decisions.length >= limit) {
+      break
+    }
+  }
+
+  return decisions
+}
+
+export function getProposalDecisionTrend(decisions: ProposalDecisionEntry[]) {
+  if (decisions.length === 0) {
+    return undefined
+  }
+
+  const uniqueStatuses = new Set(decisions.map((decision) => decision.status))
+  if (uniqueStatuses.size === 1) {
+    const onlyStatus = decisions[0].status
+    return onlyStatus === "approved"
+      ? {
+          label: "Approved",
+          summary: "Recent decisions are consistently approving the proposal direction.",
+          pillClassName: "status-ready" as const,
+        }
+      : {
+          label: "Needs changes",
+          summary: "Recent decisions are consistently requesting more changes before approval.",
+          pillClassName: "status-dirty" as const,
+        }
+  }
+
+  return {
+    label: "Mixed",
+    summary: "Recent decisions changed direction, so review the latest drift and rationale before proceeding.",
+    pillClassName: "status-dirty" as const,
+  }
+}
+
 export function parseProposalChecklist(text: string) {
   const parsed = parseStructuredMessageCard(text)
   if (!parsed) {
@@ -186,6 +358,7 @@ export function getReviewTimeline({
   hasUnsavedSourceChanges,
   inspect,
   latestProposal,
+  latestProposalDecision,
   latestProposalIsStale,
   messages,
   proposalComparison,
@@ -196,6 +369,7 @@ export function getReviewTimeline({
   hasUnsavedSourceChanges: boolean
   inspect: InspectSnapshot
   latestProposal?: AgentShellMessage
+  latestProposalDecision?: ProposalDecision
   latestProposalIsStale: boolean
   messages: AgentShellMessage[]
   proposalComparison?: SourceComparisonSummary
@@ -278,8 +452,12 @@ export function getReviewTimeline({
         ? "No proposal has been drafted for the current session yet."
         : latestProposalIsStale
           ? "The latest proposal predates the current session state."
+          : latestProposalDecision?.status === "needs-changes"
+            ? "The latest recorded decision still requests changes on this proposal."
           : proposalComparison?.changedLineCount
             ? `The current source differs from the proposal snapshot by ${proposalComparison.changedLineCount} line(s).`
+            : latestProposalDecision?.status === "approved"
+              ? "The latest proposal has already been approved."
             : proposalProgress?.totalTaggedItems
               ? `Checklist ${proposalProgress.doneCount}/${proposalProgress.totalTaggedItems} item(s) are already in a done state.`
               : "The latest proposal snapshot still matches the current source state.",
@@ -293,6 +471,7 @@ export function getProposalReadiness({
   inspect,
   session,
   latestProposalExists,
+  latestProposalDecision,
   latestProposalIsStale,
   hasUnsavedSourceChanges,
   draftComparison,
@@ -303,6 +482,7 @@ export function getProposalReadiness({
   inspect: InspectSnapshot
   session: SessionDetail
   latestProposalExists: boolean
+  latestProposalDecision?: ProposalDecision
   latestProposalIsStale: boolean
   hasUnsavedSourceChanges: boolean
   draftComparison?: SourceComparisonSummary
@@ -340,6 +520,10 @@ export function getProposalReadiness({
 
   if (latestProposalIsStale) {
     warnings.push("The latest proposal predates the current session state.")
+  }
+
+  if (latestProposalDecision?.status === "needs-changes") {
+    warnings.push("The latest recorded decision still requests changes.")
   }
 
   if (proposalComparison?.changedLineCount) {

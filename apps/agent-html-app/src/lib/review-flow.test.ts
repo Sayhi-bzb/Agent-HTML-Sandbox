@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest"
 
 import type { AgentShellMessage, BuildRunSummary, InspectSnapshot, SessionDetail } from "./types"
 import {
+  getProposalDecisionTrend,
+  findRecentProposalDecisions,
+  findLatestProposalDecision,
+  getCurrentReviewStageGuidance,
   getCurrentReviewStage,
+  getSecondaryReadinessItems,
   getProposalChecklistContext,
   getProposalChecklistFocusOptions,
   getProposalChecklistProgress,
@@ -12,6 +17,7 @@ import {
   getReviewTimelineActionConfig,
   getReviewTimeline,
   parseProposalChecklist,
+  parseProposalDecision,
 } from "./review-flow"
 
 const baseSession: SessionDetail = {
@@ -117,6 +123,34 @@ describe("review flow helpers", () => {
     })
   })
 
+  it("surfaces a needs-changes decision in proposal guidance and timeline summary", () => {
+    const guidance = getCurrentReviewStageGuidance({
+      stage: "proposal",
+      latestProposalExists: true,
+      latestProposalDecision: { proposalTitle: "Session One", status: "needs-changes" },
+      latestProposalIsStale: false,
+    })
+    const timeline = getReviewTimeline({
+      build: succeededBuild,
+      hasUnsavedSourceChanges: false,
+      inspect: cleanInspect,
+      latestProposal: {
+        id: "proposal-1",
+        role: "placeholder",
+        createdAt: "2026-05-15T11:57:00.000Z",
+        text: "Proposal for Session One",
+        kind: "proposal-placeholder",
+      },
+      latestProposalDecision: { proposalTitle: "Session One", status: "needs-changes" },
+      latestProposalIsStale: false,
+      messages: [],
+      session: baseSession,
+    })
+
+    expect(guidance).toContain("requests changes")
+    expect(timeline.find((item) => item.id === "proposal")?.summary).toContain("requests changes")
+  })
+
   it("parses tagged proposal checklist items and marks save/build actions as done when state is current", () => {
     const proposal = parseProposalChecklist(
       ["Proposal for Session One", "- [save] Save the latest draft.", "- [build] Run Build."].join("\n"),
@@ -146,6 +180,92 @@ describe("review flow helpers", () => {
 
     expect(saveStatus).toEqual({ label: "Done", pillClassName: "status-ready" })
     expect(buildStatus).toEqual({ label: "Done", pillClassName: "status-ready" })
+  })
+
+  it("parses and finds the latest proposal decision from structured context cards", () => {
+    const decision = parseProposalDecision(
+      ["Proposal decision", "- Proposal: Session One", "- Status: approved"].join("\n"),
+    )
+    const latest = findLatestProposalDecision([
+      {
+        id: "msg-1",
+        role: "system",
+        createdAt: "2026-05-15T12:00:00.000Z",
+        text: ["Proposal decision", "- Proposal: Session One", "- Status: needs changes"].join("\n"),
+        kind: "context-card",
+      },
+      {
+        id: "msg-2",
+        role: "system",
+        createdAt: "2026-05-15T12:05:00.000Z",
+        text: ["Proposal decision", "- Proposal: Session One", "- Status: approved"].join("\n"),
+        kind: "context-card",
+      },
+    ])
+
+    expect(decision).toEqual({ proposalTitle: "Session One", status: "approved" })
+    expect(latest).toEqual({ proposalTitle: "Session One", status: "approved" })
+  })
+
+  it("returns the most recent proposal decisions with timestamps", () => {
+    const recent = findRecentProposalDecisions([
+      {
+        id: "msg-1",
+        role: "system",
+        createdAt: "2026-05-15T12:00:00.000Z",
+        text: ["Proposal decision", "- Proposal: Session One", "- Status: needs changes"].join("\n"),
+        kind: "context-card",
+      },
+      {
+        id: "msg-2",
+        role: "system",
+        createdAt: "2026-05-15T12:05:00.000Z",
+        text: "Other message",
+        kind: "message",
+      },
+      {
+        id: "msg-3",
+        role: "system",
+        createdAt: "2026-05-15T12:10:00.000Z",
+        text: ["Proposal decision", "- Proposal: Session One", "- Status: approved"].join("\n"),
+        kind: "context-card",
+      },
+    ])
+
+    expect(recent).toEqual([
+      {
+        proposalTitle: "Session One",
+        status: "approved",
+        createdAt: "2026-05-15T12:10:00.000Z",
+      },
+      {
+        proposalTitle: "Session One",
+        status: "needs-changes",
+        createdAt: "2026-05-15T12:00:00.000Z",
+      },
+    ])
+  })
+
+  it("summarizes proposal decision trend across recent decisions", () => {
+    const approvedTrend = getProposalDecisionTrend([
+      { proposalTitle: "Session One", status: "approved", createdAt: "2026-05-15T12:10:00.000Z" },
+      { proposalTitle: "Session One", status: "approved", createdAt: "2026-05-15T12:00:00.000Z" },
+    ])
+    const mixedTrend = getProposalDecisionTrend([
+      { proposalTitle: "Session One", status: "approved", createdAt: "2026-05-15T12:10:00.000Z" },
+      { proposalTitle: "Session One", status: "needs-changes", createdAt: "2026-05-15T12:00:00.000Z" },
+    ])
+
+    expect(approvedTrend).toEqual({
+      label: "Approved",
+      summary: "Recent decisions are consistently approving the proposal direction.",
+      pillClassName: "status-ready",
+    })
+    expect(mixedTrend).toEqual({
+      label: "Mixed",
+      summary: "Recent decisions changed direction, so review the latest drift and rationale before proceeding.",
+      pillClassName: "status-dirty",
+    })
   })
 
   it("suggests review-diff as the next action for review-tagged items when proposal and current draft diverge", () => {
@@ -448,5 +568,48 @@ describe("review flow helpers", () => {
         session: baseSession,
       }),
     ).toBe("proposal")
+  })
+
+  it("returns stage-specific guidance for source and proposal drift states", () => {
+    expect(
+      getCurrentReviewStageGuidance({
+        stage: "source",
+        latestProposalExists: true,
+        latestProposalIsStale: false,
+      }),
+    ).toContain("Save the current draft first")
+
+    expect(
+      getCurrentReviewStageGuidance({
+        stage: "proposal",
+        latestProposalExists: true,
+        latestProposalIsStale: false,
+        proposalComparison: {
+          savedLineCount: 3,
+          draftLineCount: 4,
+          changedLineCount: 1,
+          firstChangedLine: 2,
+          hasAdditionalChanges: false,
+          previewGroups: [],
+          previewItems: [],
+        },
+      }),
+    ).toContain("Review proposal drift")
+  })
+
+  it("filters duplicated readiness warnings that already match the current stage summary", () => {
+    expect(
+      getSecondaryReadinessItems("source", [
+        "Unsaved draft changes are still pending (2 changed lines).",
+        "2 checklist item(s) are still pending.",
+      ]),
+    ).toEqual(["2 checklist item(s) are still pending."])
+
+    expect(
+      getSecondaryReadinessItems("proposal", [
+        "The latest proposal predates the current session state.",
+        "1 checklist item(s) still require review.",
+      ]),
+    ).toEqual(["1 checklist item(s) still require review."])
   })
 })

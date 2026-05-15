@@ -18,6 +18,7 @@ export default (async () => {
         "react-dom": dependencies.reactDomRoot,
         "react-dom/client": dependencies.reactDomClient,
         "react-dom/server": dependencies.reactDomServer,
+        "@base-ui/react": dependencies.baseUiReactRoot,
         "class-variance-authority": dependencies.classVarianceAuthorityRoot,
         clsx: dependencies.clsxRoot,
         "lucide-react": dependencies.lucideReactRoot,

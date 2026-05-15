@@ -119,6 +119,11 @@ Status: First local proposal pass.
 - 右栏已新增 review timeline，把 source saved / build / inspect / proposal 四步压成高信号总览
 - review timeline 各阶段现在也可直接触发对应动作，例如 save / build / open inspect / draft proposal / review diff
 - review timeline 会高亮当前最该看的阶段，而不只是平铺状态卡
+- readiness / current stage 区现在承担主 CTA，timeline 更偏总览而不是重复按钮区
+- readiness 区的主文案现在更偏阶段摘要，而不只是重复 blocked / needs review 标签
+- proposal 区现在直接显示一条紧凑的 review path，而不只用单个 current stage 文案提示
+- 紧凑的 review path 现在也可直接点击跳到对应阶段动作
+- readiness 区会过滤掉与当前阶段完全重复的提示，只保留 secondary warnings
 - proposal bullet 项已开始带 workflow checklist 状态，例如 save / build / inspect / review
 - checklist 项现在也可直接触发对应动作，例如 save / build / inspect / review diff
 - checklist 项已能展示上下文摘要，并在可用时附上首条相关 diff 片段
@@ -128,6 +133,12 @@ Status: First local proposal pass.
 - focused compare 现在会明确显示当前聚焦的是哪条 checklist 项
 - compare 卡现在也支持在多个带 diff 的 checklist 项之间切换导航
 - proposal 卡头部已开始汇总 checklist progress，例如 done / pending / review 的完成度
+- proposal 入口区现在会直接露出 pending / review 数量，减少在 checklist 中来回数状态
+- proposal 卡现在也支持记录 `Approve` / `Needs changes` 结论，并回写到右栏消息流
+- latest proposal decision 也已接入 proposal 区摘要、timeline 和 stage guidance
+- proposal 区现在可直接回看最近几次 decision 结论，而不只显示 latest decision
+- recent proposal decisions 现在也会汇总成一个 compact trend，提示是在收敛还是反复
+- proposal 区已增加一行 one-glance review snapshot，汇总 stage / checklist / diagnostics / drift / preview
 
 当前缺口：
 

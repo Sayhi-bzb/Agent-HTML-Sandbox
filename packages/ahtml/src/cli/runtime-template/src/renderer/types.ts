@@ -58,7 +58,9 @@ export type RendererSpecComponent = {
   childMode?: "block" | "inline" | "none"
   component?: string
   control?: string
+  controlRoot?: string
   controlContent?: string
+  controlList?: string
   controlTrigger?: string
   controlValue?: string
   label?: string

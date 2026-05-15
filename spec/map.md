@@ -55,3 +55,15 @@ semantic component contract
 
 - The current artifact-focused pass is complete.
 - Reopen `spec/` only when product semantics expand beyond the current lane.
+
+## Open Debt
+
+- `combobox` is supported, but its current `Input + datalist` path is not the
+  official shadcn combobox implementation route.
+- Checked-in renderer/template snapshots can drift from the generated runtime
+  support surface.
+- Field/control rendering still relies on custom wrapper and fallback
+  composition that is not fully aligned with official shadcn composition
+  guidance.
+- Local shadcn fixture snapshots and test registry responses can drift from
+  upstream registry and docs behavior.
