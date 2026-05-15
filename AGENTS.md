@@ -22,9 +22,10 @@ For architecture principles, design rationale, and stage decisions, start at [`b
 
 ## Repository Map
 
-- `src/engine`: parsing, validation, sanitization, rendering core, and shared agent-html types.
-- `src/config`: default values and CLI config behavior.
-- `src/cli`: command orchestration and local runtime IO.
+- `packages/core/src`: parsing, validation, sanitization, render config, and shared agent-html types.
+- `packages/ahtml/src/config`: CLI defaults and runtime capability behavior.
+- `packages/ahtml/src/cli`: command orchestration and managed runtime IO.
+- `package.json`: private workspace root for package scripts, verification, and release orchestration.
 - `README.md`: visitor-facing product overview and basic usage entry.
 - `docs-web/content/`: project and maintenance docs. Start at [`docs/index.mdx`](docs-web/content/docs/index.mdx).
 - `.agents/skills/ahtml/`: `ahtml` skill guidance. Start at [`SKILL.md`](.agents/skills/ahtml/SKILL.md).
@@ -34,7 +35,7 @@ For architecture principles, design rationale, and stage decisions, start at [`b
 ## Agent Workflow
 
 - Read relevant repo context before editing; do not guess boundaries that are documented in `blueprint/`, `spec/`, or this file.
-- Confirm the target layer before changing code: engine, config, CLI, docs, skill, spec, or blueprint.
+- Confirm the target layer before changing code: core, ahtml config, ahtml CLI, docs, skill, spec, or blueprint.
 - For architecture or boundary decisions, start at [`blueprint/index.md`](blueprint/index.md).
 - For user-facing or maintenance docs work, start at [`docs-web/content/docs/index.mdx`](docs-web/content/docs/index.mdx).
 - For `ahtml` usage, debugging, build, preview, or artifact-delivery tasks, start at [`.agents/skills/ahtml/SKILL.md`](.agents/skills/ahtml/SKILL.md).
@@ -72,11 +73,14 @@ For architecture principles, design rationale, and stage decisions, start at [`b
 
 ## Package Boundary
 
-- Keep this repo as a single-package npm CLI package.
-- Keep package source focused on `src/cli`, `src/config`, and `src/engine`.
+- Keep this repo as a private npm workspace rooted at `package.json`.
+- Keep publishable package source focused on `packages/core` and `packages/ahtml`.
+- Keep parser, validation, sanitization, render config, and shared contract code in `packages/core/src`.
+- Keep CLI defaults, managed runtime orchestration, and local runtime IO in `packages/ahtml/src/config` and `packages/ahtml/src/cli`.
+- Keep any product app or frontend shell outside this repo unless a spec explicitly changes that boundary.
 - Keep managed runtime state under `~/.ahtml`, `%USERPROFILE%\.ahtml`, or `AHTML_HOME`; do not write frontend scaffold files into the current project.
 - Do not restore `agent-html.project.json`, `init --scaffold`, `init --apply`, a root Vite app, current-directory Vite builder, package-local Vite builder, package-local renderer, package-local shadcn UI kit, or root `src/components/ui/`.
-- Do not introduce a monorepo unless a spec explicitly changes that direction.
+- Do not add more workspace packages, or move the app into this repo, unless a spec explicitly changes that direction.
 
 ## Code Rules
 

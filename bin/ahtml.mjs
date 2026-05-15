@@ -1,2 +1,2 @@
 #!/usr/bin/env node
-import "../src/cli/index.mjs"
+import "../packages/ahtml/src/cli/index.mjs"

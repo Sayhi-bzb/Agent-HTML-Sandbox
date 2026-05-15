@@ -1,0 +1,31 @@
+{
+  "name": "@agent-html/core",
+  "version": "0.1.0",
+  "description": "Core contracts and sanitization for agent-html.",
+  "license": "MIT",
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": "./index.mjs"
+  },
+  "types": "./src/core.ts",
+  "files": [
+    "index.mjs",
+    "src/",
+    "!src/**/*.test.ts",
+    "!src/examples/",
+    "!src/component-schema-prompt.txt",
+    "!src/schema-overlays.ts"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "parse5": "^8.0.1",
+    "typescript": "latest",
+    "zod": "^4.4.3"
+  },
+  "keywords": ["agent-html", "core", "schema", "sanitize", "html"]
+}

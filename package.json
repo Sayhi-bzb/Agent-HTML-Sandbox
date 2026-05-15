@@ -1,40 +1,18 @@
 {
-  "name": "@agent-html/ahtml",
+  "name": "agent-html-workspace",
+  "private": true,
   "version": "0.1.0",
-  "description": "AI-native HTML artifacts for replacing long Markdown outputs.",
+  "description": "Workspace for agent-html packages, docs, and verification.",
   "license": "MIT",
   "type": "module",
-  "publishConfig": {
-    "access": "public"
-  },
-  "bin": {
-    "ahtml": "bin/ahtml.mjs"
-  },
-  "files": [
-    "bin/",
-    "assets/ghost.svg",
-    "src/config/",
-    "src/engine/component-schema.ts",
-    "src/engine/core.ts",
-    "src/engine/generated/",
-    "src/engine/render-config.ts",
-    "src/engine/types.ts",
-    "src/engine/parse/",
-    "src/cli/",
-    "!src/cli/shadcn-template/",
-    "!src/cli/cli-test-helpers.ts",
-    "!src/**/*.test.ts",
-    "tsconfig.json",
-    "tsconfig.node.json",
-    "README.md"
-  ],
+  "workspaces": ["packages/*"],
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b packages/core/tsconfig.json packages/ahtml/tsconfig.json",
     "lint": "eslint .",
     "lint:cache": "eslint . --cache --cache-location .cache/eslint",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "format:check:source": "prettier package.json tsconfig.json tsconfig.node.json eslint.config.js vitest.config.ts vitest.heavy.config.ts knip.json README.md \".github/workflows/*.yml\" \".github/actions/**/*.yml\" \"src/**/*.{ts,mjs}\" \"!src/engine/generated/**\" \"scripts/**/*.mjs\" \"docs-web/content/**/*.mdx\" --check",
+    "format:check:source": "prettier package.json tsconfig.json tsconfig.base.json tsconfig.node.json eslint.config.js vitest.config.ts vitest.heavy.config.ts knip.json README.md \".github/workflows/*.yml\" \".github/actions/**/*.yml\" \"packages/**/*.{ts,mjs,tsx}\" \"!packages/core/src/generated/**\" \"scripts/**/*.mjs\" \"docs-web/content/**/*.mdx\" --check",
     "knip": "knip",
     "test": "vitest",
     "test:run": "vitest run",
@@ -47,10 +25,10 @@
     "docs:web:lint": "npm --prefix docs-web run lint",
     "docs:web:preview": "npm --prefix docs-web run start",
     "docs:web:check": "npm run docs:web:typecheck && npm run docs:web:lint && npm run docs:web:build",
-    "agent": "node src/cli/index.mjs",
+    "agent": "node bin/ahtml.mjs",
     "verify:pack": "node scripts/verify-packed-ahtml.mjs",
     "dev:check": "npm run check:commit",
-    "release:check": "npm run check:package:release && npm publish --access public --tag latest --dry-run",
+    "release:check": "npm run check:package:release && npm publish --workspace @agent-html/core --access public --dry-run && npm publish --workspace @agent-html/ahtml --access public --tag latest --dry-run",
     "release:check:ci": "npm run check:package:release",
     "release:tag": "node scripts/release-tag.mjs",
     "schema:generate": "node scripts/generate-component-schema.mjs",
@@ -87,9 +65,9 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^5.0.4",
     "@eslint/js": "^9.39.4",
     "@types/node": "^25.6.2",
+    "@vitejs/plugin-react": "^5.0.4",
     "eslint": "^9.39.4",
     "globals": "^16.5.0",
     "knip": "^5.71.0",
@@ -102,18 +80,6 @@
     "type": "git",
     "url": "git+https://github.com/Sayhi-bzb/Agent-HTML.git"
   },
-  "keywords": [
-    "agent-html",
-    "ahtml",
-    "cli",
-    "artifact",
-    "html-artifact",
-    "agent-native",
-    "markdown-alternative",
-    "static-artifact",
-    "shadcn"
-  ],
-  "author": "",
   "bugs": {
     "url": "https://github.com/Sayhi-bzb/Agent-HTML/issues"
   },

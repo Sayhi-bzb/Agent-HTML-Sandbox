@@ -79,6 +79,26 @@ The schema is the public contract. Agents write content structure, not raw HTML,
 
 ## More
 
+```roadmap
+╭────── Roadmap
+│
+●       ·Architecture optimization
+├──╮
+●  │    ·Support more UI foundations
+│  │
+│  ●    ·app
+│  │
+●  │    ·Separation of static and interactive component data structures
+│  │
+│  ●    ·request-response -> interact-interact
+│  │
+│  ●    ·Custom component panel
+╭──╯
+●       ·Cloud service
+│
+╰──────────────
+```
+
 - [Quick Start](https://agent-html.pages.dev/docs)
 - [Best Practice](https://agent-html.pages.dev/docs/best-practice)
 - [Dev Docs](https://agent-html.pages.dev/docs/dev-docs)

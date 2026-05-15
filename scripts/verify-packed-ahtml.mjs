@@ -9,6 +9,8 @@ import { startShadcnTestServer } from "./shadcn-test-server.mjs"
 
 const execFileAsync = promisify(execFile)
 const root = process.cwd()
+const corePackageDir = path.join(root, "packages", "core")
+const ahtmlPackageDir = path.join(root, "packages", "ahtml")
 const npmCommand = "npm"
 const windowsShellOptions =
   process.platform === "win32" ? { shell: true } : undefined
@@ -24,18 +26,30 @@ try {
   await mkdir(packDir, { recursive: true })
   await mkdir(consumerDir, { recursive: true })
 
-  const dryRun = await runNpm(["pack", "--dry-run", "--json"], root)
-  const dryRunFiles = parsePackFiles(dryRun.stdout)
-  assertPackBoundary(dryRunFiles)
-
-  const packed = await runNpm(
-    ["pack", "--json", "--pack-destination", packDir],
-    root,
+  const coreDryRun = await runNpm(["pack", "--dry-run", "--json"], corePackageDir)
+  const ahtmlDryRun = await runNpm(
+    ["pack", "--dry-run", "--json"],
+    ahtmlPackageDir,
   )
-  const tarball = path.join(packDir, JSON.parse(packed.stdout)[0].filename)
+  assertPackBoundary("core", parsePackFiles(coreDryRun.stdout))
+  assertPackBoundary("ahtml", parsePackFiles(ahtmlDryRun.stdout))
+
+  const corePacked = await runNpm(
+    ["pack", "--json", "--pack-destination", packDir],
+    corePackageDir,
+  )
+  const ahtmlPacked = await runNpm(
+    ["pack", "--json", "--pack-destination", packDir],
+    ahtmlPackageDir,
+  )
+  const coreTarball = path.join(packDir, JSON.parse(corePacked.stdout)[0].filename)
+  const ahtmlTarball = path.join(
+    packDir,
+    JSON.parse(ahtmlPacked.stdout)[0].filename,
+  )
 
   await runNpm(["init", "-y"], consumerDir)
-  await runNpm(["install", tarball], consumerDir)
+  await runNpm(["install", coreTarball, ahtmlTarball], consumerDir)
 
   ahtmlCommand = path.join(
     consumerDir,
@@ -63,6 +77,21 @@ try {
   const { commandMetadata } = await import(
     pathToFileURL(commandMetadataPath).href
   )
+  const coreModulePath = path.join(
+    consumerDir,
+    "node_modules",
+    "@agent-html",
+    "core",
+    "index.mjs",
+  )
+  const coreModule = await import(pathToFileURL(coreModulePath).href)
+
+  if (
+    typeof coreModule.sanitizeAgentHtml !== "function" ||
+    !Array.isArray(coreModule.VALIDATED_STANDARD_COMPONENT_SCHEMAS)
+  ) {
+    throw new Error("Installed @agent-html/core package is missing public exports.")
+  }
 
   await expectStdout(["prompt", "--format", "prompt"], "Write agent-html only.")
   await expectStdout(["--help"], "Main workflow:")
@@ -88,9 +117,10 @@ try {
   )
   await expectStdout(
     ["doctor"],
-    "ok runtime:shadcn-provenance shadcn-official-template/shadcn-cli/",
+    "ok runtime:shadcn-provenance shadcn-template-override/shadcn-cli/",
   )
   await expectStdout(["doctor"], "ok runtime:prompt-ui-manifest")
+  await expectStdout(["doctor"], "ok runtime:shadcn-template-vite-config")
   await expectStdout(
     ["doctor"],
     "skip artifact:built-css",
@@ -105,7 +135,7 @@ try {
   )
   await expectFile(
     path.join(runtimeHome, "config", "runtime.json"),
-    "shadcn-official-template",
+    "shadcn-template-override",
   )
   const documentPath = path.join(consumerDir, "artifact.agent.html")
   const outputDir = path.join(consumerDir, "dist", "html")
@@ -135,6 +165,18 @@ try {
   await expectFile(
     path.join(runtimeHome, "runtime", "document.generated.json"),
     "Built from an installed package.",
+  )
+  await expectFile(
+    path.join(runtimeHome, "runtime", "vite.config.ts"),
+    "defineConfig",
+  )
+  await expectFile(
+    path.join(runtimeHome, "runtime", "vite.ahtml.config.mjs"),
+    "vite.config.ts",
+  )
+  await expectFile(
+    path.join(runtimeHome, "runtime", "vite.ahtml.config.mjs"),
+    "mergeConfig",
   )
   await assertNoProjectScaffold(consumerDir)
 
@@ -206,60 +248,88 @@ function runAhtml(args) {
   })
 }
 
-function assertPackBoundary(files) {
-  const forbiddenPrefixes = [
-    "blueprint/",
-    "spec/",
-    "tests/",
-    "src/components/ui/",
-    "src/agent-html/renderer/",
-    "src/engine/examples/",
-    "scripts/agent-html-cli",
-    ".gitnexus/",
-    "dist/",
-    "build/",
-    "coverage/",
-    "src/cli/shadcn-template/",
-  ]
-  const forbiddenFiles = [
-    "agent-html.config.json",
-    "agent-html.project.json",
-    "artifact.agent.html",
-    "src/config/project.mjs",
-    "src/cli/scaffold.mjs",
-  ]
+function assertPackBoundary(packageName, files) {
   const forbiddenSuffixes = [".test.ts", ".test.tsx"]
-  const requiredFiles = [
-    "bin/ahtml.mjs",
-    "src/config/defaults.mjs",
-    "src/cli/commands.mjs",
-    "src/cli/index.mjs",
-    "src/cli/module-loader.mjs",
-    "src/cli/runtime-paths.mjs",
-    "src/cli/runtime-setup.mjs",
-    "src/cli/runtime-status.mjs",
-    "src/cli/runtime-build.mjs",
-    "src/cli/runtime-template.mjs",
-    "src/cli/runtime-template/src/app.tsx",
-    "src/config/component-capabilities.mjs",
-    "src/cli/schema.mjs",
-    "src/cli/shadcn-api.mjs",
-    "src/cli/validate.mjs",
-    "src/engine/component-schema.ts",
-    "src/engine/core.ts",
-    "src/engine/generated/component-schema.generated.ts",
-    "src/engine/render-config.ts",
-    "src/engine/parse/parse-agent-html.ts",
-    "package.json",
-    "README.md",
-  ]
+  const packageChecks = {
+    core: {
+      forbiddenPrefixes: [
+        "blueprint/",
+        "spec/",
+        "tests/",
+        "dist/",
+        "build/",
+        "coverage/",
+      ],
+      forbiddenFiles: [
+        "artifact.agent.html",
+        "src/component-schema-prompt.txt",
+        "src/schema-overlays.ts",
+      ],
+      requiredFiles: [
+        "index.mjs",
+        "src/component-schema.ts",
+        "src/core.ts",
+        "src/generated/component-schema.generated.ts",
+        "src/parse/parse-agent-html.ts",
+        "src/render-config.ts",
+        "src/types.ts",
+        "package.json",
+      ],
+    },
+    ahtml: {
+      forbiddenPrefixes: [
+        "blueprint/",
+        "spec/",
+        "tests/",
+        "src/components/ui/",
+        "src/agent-html/renderer/",
+        "scripts/agent-html-cli",
+        ".gitnexus/",
+        "dist/",
+        "build/",
+        "coverage/",
+        "scripts/shadcn-test-fixtures/",
+      ],
+      forbiddenFiles: [
+        "agent-html.config.json",
+        "agent-html.project.json",
+        "artifact.agent.html",
+        "src/config/project.mjs",
+        "src/cli/scaffold.mjs",
+      ],
+      requiredFiles: [
+        "bin/ahtml.mjs",
+        "assets/ghost.svg",
+        "src/config/defaults.mjs",
+        "src/config/component-capabilities.mjs",
+        "src/cli/commands.mjs",
+        "src/cli/index.mjs",
+        "src/cli/runtime-paths.mjs",
+        "src/cli/runtime-setup.mjs",
+        "src/cli/runtime-status.mjs",
+        "src/cli/runtime-build.mjs",
+        "src/cli/runtime-template.mjs",
+        "src/cli/runtime-template/src/app.tsx",
+        "src/cli/schema.mjs",
+        "src/cli/shadcn-api.mjs",
+        "src/cli/validate.mjs",
+        "package.json",
+        "README.md",
+      ],
+    },
+  }
+  const check = packageChecks[packageName]
+
+  if (!check) {
+    throw new Error(`Unknown package boundary target: ${packageName}`)
+  }
 
   for (const file of files) {
-    if (forbiddenPrefixes.some((prefix) => file.startsWith(prefix))) {
+    if (check.forbiddenPrefixes.some((prefix) => file.startsWith(prefix))) {
       throw new Error(`Forbidden package file included: ${file}`)
     }
 
-    if (forbiddenFiles.includes(file)) {
+    if (check.forbiddenFiles.includes(file)) {
       throw new Error(`Forbidden package file included: ${file}`)
     }
 
@@ -268,7 +338,7 @@ function assertPackBoundary(files) {
     }
   }
 
-  for (const requiredFile of requiredFiles) {
+  for (const requiredFile of check.requiredFiles) {
     if (!files.includes(requiredFile)) {
       throw new Error(`Required package file missing: ${requiredFile}`)
     }
@@ -414,9 +484,16 @@ async function writeTempFile(directory, name, source) {
 function getAhtmlEnv() {
   return {
     ...process.env,
+    AHTML_ALLOW_SHADCN_TEMPLATE_OVERRIDE: "1",
     AHTML_HOME: runtimeHome,
     AHTML_NO_UPDATE_CHECK: "1",
-    AHTML_SHADCN_TEMPLATE_DIR: path.join(root, "src", "cli", "shadcn-template"),
+    AHTML_SHADCN_TEMPLATE_DIR: path.join(
+      root,
+      "scripts",
+      "shadcn-test-fixtures",
+      "template",
+      "shadcn-template",
+    ),
     REGISTRY_URL: shadcnTestServer.registryUrl,
   }
 }

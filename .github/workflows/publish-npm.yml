@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   publish:
-    name: Publish package
+    name: Publish packages
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -38,21 +38,29 @@ jobs:
       - name: Run package release checks
         run: npm run release:check:ci
 
-      - name: Verify tag matches package version
+      - name: Verify tag matches workspace package versions
         if: ${{ github.event_name == 'push' }}
         shell: bash
         run: |
-          package_version="$(node -p "JSON.parse(require('fs').readFileSync('package.json', 'utf8')).version")"
+          core_version="$(node -p "JSON.parse(require('fs').readFileSync('packages/core/package.json', 'utf8')).version")"
+          ahtml_version="$(node -p "JSON.parse(require('fs').readFileSync('packages/ahtml/package.json', 'utf8')).version")"
           tag_version="${GITHUB_REF_NAME#v}"
 
-          if [[ "$tag_version" != "$package_version" ]]; then
-            echo "Tag version '$tag_version' does not match package.json version '$package_version'." >&2
+          if [[ "$core_version" != "$ahtml_version" ]]; then
+            echo "Workspace package versions are out of sync: @agent-html/core=$core_version, @agent-html/ahtml=$ahtml_version." >&2
+            exit 1
+          fi
+
+          if [[ "$tag_version" != "$core_version" ]]; then
+            echo "Tag version '$tag_version' does not match workspace package version '$core_version'." >&2
             exit 1
           fi
 
       - name: Dry-run publish
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
-        run: npm publish --access public --tag latest --dry-run
+        run: |
+          npm publish --workspace @agent-html/core --access public --dry-run
+          npm publish --workspace @agent-html/ahtml --access public --tag latest --dry-run
 
       - name: Reject manual publish
         if: ${{ github.event_name == 'workflow_dispatch' && !inputs.dry_run }}
@@ -60,6 +68,8 @@ jobs:
           echo "Manual publishing is disabled. Push a matching v* tag to publish." >&2
           exit 1
 
-      - name: Publish package
+      - name: Publish packages
         if: ${{ github.event_name == 'push' }}
-        run: npm publish --access public --tag latest
+        run: |
+          npm publish --workspace @agent-html/core --access public
+          npm publish --workspace @agent-html/ahtml --access public --tag latest

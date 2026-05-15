@@ -1,0 +1,89 @@
+import { readFile } from "node:fs/promises"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
+import { mergeConfig } from "__AHTML_VITE_MODULE__"
+
+const runtimeRoot = path.dirname(fileURLToPath(import.meta.url))
+const dependencies = __AHTML_RUNTIME_DEPENDENCIES__
+
+export default (async () => {
+  const templateConfig = await loadShadcnTemplateConfig()
+
+  return mergeConfig(templateConfig, {
+    root: runtimeRoot,
+    resolve: {
+      alias: {
+        react: dependencies.reactRoot,
+        "react/jsx-runtime": dependencies.reactJsxRuntime,
+        "react-dom": dependencies.reactDomRoot,
+        "react-dom/client": dependencies.reactDomClient,
+        "react-dom/server": dependencies.reactDomServer,
+        "class-variance-authority": dependencies.classVarianceAuthorityRoot,
+        clsx: dependencies.clsxRoot,
+        "lucide-react": dependencies.lucideReactRoot,
+        "radix-ui": dependencies.radixUiRoot,
+        "shadcn/tailwind.css": dependencies.shadcnTailwindStylesheet,
+        "tailwind-merge": dependencies.tailwindMergeRoot,
+        tailwindcss: dependencies.tailwindcssStylesheet,
+        "tw-animate-css": dependencies.twAnimateCssStylesheet,
+      },
+    },
+    ssr: {
+      noExternal: true,
+    },
+    build: {
+      emptyOutDir: true,
+      rollupOptions: {
+        output: {
+          entryFileNames: "assets/ahtml.js",
+          chunkFileNames: "assets/ahtml-[hash].js",
+          assetFileNames: "assets/ahtml.[ext]",
+        },
+      },
+    },
+  })
+})()
+
+async function loadShadcnTemplateConfig() {
+  const templatePath = path.join(runtimeRoot, "vite.config.ts")
+  const source = await readFile(templatePath, "utf8")
+  const rewritten = rewriteTemplateRoot(
+    rewriteTemplateImport(
+      rewriteTemplateImport(
+        rewriteTemplateImport(
+          source,
+          "@vitejs/plugin-react",
+          dependencies.viteReactPlugin,
+        ),
+        "@tailwindcss/vite",
+        dependencies.tailwindcssVitePlugin,
+      ),
+      "vite",
+      dependencies.viteModule,
+    ),
+  )
+
+  return (
+    await import(
+      `data:text/javascript;base64,${Buffer.from(rewritten).toString("base64")}`
+    )
+  ).default
+}
+
+function rewriteTemplateImport(source, specifier, replacement) {
+  const escapedSpecifier = escapeRegExp(specifier)
+  const expression = new RegExp(`from\\s+["']${escapedSpecifier}["']`, "g")
+
+  return source.replace(expression, `from "${replacement}"`)
+}
+
+function rewriteTemplateRoot(source) {
+  return source.replace(
+    /const\s+rootDir\s*=\s*path\.dirname\(fileURLToPath\(import\.meta\.url\)\)/,
+    `const rootDir = ${JSON.stringify(runtimeRoot)}`,
+  )
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}

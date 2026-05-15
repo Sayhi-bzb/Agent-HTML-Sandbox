@@ -1,10 +1,10 @@
 {
   "$schema": "https://unpkg.com/knip@latest/schema.json",
   "entry": [
-    "src/engine/core.ts",
-    "src/engine/schema-overlays.ts",
-    "src/cli/runtime-template/src/app.tsx",
-    "src/cli/runtime-template/src/ssr.tsx"
+    "packages/core/index.mjs",
+    "packages/core/src/schema-overlays.ts",
+    "packages/ahtml/src/cli/runtime-template/src/app.tsx",
+    "packages/ahtml/src/cli/runtime-template/src/ssr.tsx"
   ],
   "ignoreBinaries": ["gitnexus"],
   "ignoreDependencies": [
@@ -18,12 +18,12 @@
     "tailwindcss",
     "tw-animate-css"
   ],
-  "ignoreFiles": ["src/cli/shadcn-template/vite-app/**/*"],
+  "ignoreFiles": ["scripts/shadcn-test-fixtures/**/*"],
   "ignoreUnresolved": ["^@/components/ui/"],
   "project": [
-    "src/**/*.mjs",
-    "src/**/*.ts",
-    "src/**/*.tsx",
+    "packages/**/*.mjs",
+    "packages/**/*.ts",
+    "packages/**/*.tsx",
     "*.{ts,js}",
     "scripts/**/*.mjs"
   ],

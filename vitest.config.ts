@@ -4,14 +4,14 @@ import { configDefaults, defineConfig } from "vitest/config"
 export default defineConfig({
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(__dirname, "./packages/ahtml/src"),
     },
   },
   test: {
     environment: "node",
     globals: true,
-    include: ["src/**/*.test.ts"],
-    exclude: [...configDefaults.exclude, "src/**/*.heavy.test.ts"],
+    include: ["packages/**/*.test.ts"],
+    exclude: [...configDefaults.exclude, "packages/**/*.heavy.test.ts"],
     testTimeout: 15000,
   },
 })

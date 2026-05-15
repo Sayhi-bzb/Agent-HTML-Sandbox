@@ -13,7 +13,6 @@ export default tseslint.config(
       ".claude",
       "docs-web",
       "scripts/shadcn-test-fixtures",
-      "src/cli/shadcn-template/vite-app/**/*",
     ],
   },
   js.configs.recommended,
@@ -49,8 +48,9 @@ export default tseslint.config(
       "*.config.{js,ts}",
       "eslint.config.js",
       "scripts/**/*.mjs",
-      "src/**/*.mjs",
+      "packages/**/*.mjs",
       "vitest.config.ts",
+      "vitest.heavy.config.ts",
     ],
     languageOptions: {
       globals: globals.node,

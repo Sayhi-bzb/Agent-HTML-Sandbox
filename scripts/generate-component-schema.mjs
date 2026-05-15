@@ -8,12 +8,19 @@ import ts from "typescript"
 const root = process.cwd()
 const generatedPath = path.join(
   root,
+  "packages",
+  "core",
   "src",
-  "engine",
   "generated",
   "component-schema.generated.ts",
 )
-const overlayPath = path.join(root, "src", "engine", "schema-overlays.ts")
+const overlayPath = path.join(
+  root,
+  "packages",
+  "core",
+  "src",
+  "schema-overlays.ts",
+)
 const registryNames = [
   "accordion",
   "alert",

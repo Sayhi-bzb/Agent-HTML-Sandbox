@@ -11,7 +11,7 @@ agent-html exists to replace long Markdown agent outputs with AI-native HTML art
 
 ```bash
 npm install
-npm link
+npm link --workspace @agent-html/ahtml
 ahtml doctor
 ahtml prompt
 ```
@@ -48,13 +48,36 @@ While editing, prefer the narrowest useful check:
 
 `dev:check`, `check:quick`, and `check:ready` remain broad compatibility aliases in `package.json`, but they are not the preferred day-to-day edit loop.
 
+## Integrate with an app [#integrate-with-an-app]
+
+If you build a product app around `ahtml`, keep the app in a separate repository unless a future spec explicitly changes the package boundary.
+
+Recommended integration order:
+
+1. Consume the published npm package `@agent-html/ahtml`.
+2. Import `@agent-html/core` only when you explicitly need the shared schema or sanitization library surface.
+3. For local development, use `npm pack` or `npm link --workspace @agent-html/ahtml`.
+4. Do not import `packages/ahtml/src/*` or `packages/core/src/*` across repositories.
+
+Prefer stable CLI boundaries over cross-repo source imports:
+
+```bash
+ahtml prompt --format json
+ahtml build artifact.agent.html --format json
+ahtml inspect --input artifact.agent.html --format json
+ahtml doctor --format json
+```
+
+Use the CLI exit code as the success signal. In JSON mode, `build`, `inspect`, `prompt`, and `doctor` print machine-readable output to stdout for app-side orchestration.
+
 ## Verify package boundary [#verify-package-boundary]
 
 ```bash
-npm pack --dry-run
+npm pack --dry-run --workspace @agent-html/core
+npm pack --dry-run --workspace @agent-html/ahtml
 ```
 
-The package should include only the config, engine, CLI, bin entry, managed runtime template logic, TypeScript configs, and README. It should not include a root Vite app, root shadcn UI files, docs web files, examples, specs, blueprints, or tests.
+The workspace publishes two packages: `@agent-html/core` and `@agent-html/ahtml`. `@agent-html/core` should include only shared contract and sanitization code. `@agent-html/ahtml` should include only the CLI, runtime config, bin entry, managed runtime template logic, and README. Neither package should include docs web files, examples, specs, blueprints, or tests.
 
 ## Verify installed CLI behavior [#verify-installed-cli-behavior]
 
@@ -67,17 +90,18 @@ This packs the project, installs it into a temporary consumer directory, sets `A
 ## Verify published package [#verify-published-package]
 
 ```bash
+npm view @agent-html/core dist-tags versions --json
 npm view @agent-html/ahtml dist-tags versions --json
 npm install -g @agent-html/ahtml
 ```
 
-The public package is published under `@agent-html/ahtml`; the CLI bin remains `ahtml`. Publish only to npmjs.com. pnpm, yarn, and bun consume the same npm registry package and do not need separate package releases.
+The published packages are `@agent-html/core` and `@agent-html/ahtml`; the CLI bin remains `ahtml` through `@agent-html/ahtml`. Publish only to npmjs.com. pnpm, yarn, and bun consume the same npm registry packages and do not need separate package releases.
 
 ## Publish npm package [#publish-npm-package]
 
 Publishing is tag-driven through GitHub Actions and npm Trusted Publishing. Do not use a long-lived `NPM_TOKEN` for releases.
 
-Configure the npm trusted publisher for `@agent-html/ahtml`:
+Configure the npm trusted publisher for both `@agent-html/core` and `@agent-html/ahtml`:
 
 ```txt
 Provider: GitHub Actions
@@ -89,9 +113,9 @@ Workflow filename: publish-npm.yml
 Release a package version:
 
 ```bash
-npm version patch --no-git-tag-version
-# or: npm version minor --no-git-tag-version
-# or: npm version major --no-git-tag-version
+npm version patch --workspace @agent-html/core --workspace @agent-html/ahtml --no-git-tag-version
+# or: npm version minor --workspace @agent-html/core --workspace @agent-html/ahtml --no-git-tag-version
+# or: npm version major --workspace @agent-html/core --workspace @agent-html/ahtml --no-git-tag-version
 ```
 
 Validate and publish the selected version:
@@ -104,9 +128,9 @@ npm run release:tag
 git push origin main --tags
 ```
 
-Stable releases publish only to npm `latest`. Prerelease channels are not maintained. The publish workflow fails if the Git tag does not match `package.json` version.
+Stable releases publish only to npm `latest`. Prerelease channels are not maintained. The publish workflow fails if the Git tag does not match both workspace package versions.
 
-`release:check` is the local package release gate. It runs the package CI checks, `knip`, `verify:pack`, and the npm dry-run publish. The GitHub Actions publish workflow runs the same package release gate again before tag-driven publish.
+`release:check` is the local package release gate. It runs the package CI checks, `knip`, `verify:pack`, and the npm dry-run publish for both workspace packages. The GitHub Actions publish workflow runs the same package release gate again before tag-driven publish.
 
 ## Distribute the ahtml skill [#distribute-the-ahtml-skill]
 
@@ -134,7 +158,8 @@ npx skills add . --skill ahtml -a codex --copy -y
 
 ```txt
 installed ahtml package
-  -> config + engine + CLI
+  -> depends on @agent-html/core
+  -> CLI + runtime config
   -> shadcn-backed managed runtime under ~/.ahtml or AHTML_HOME
   -> static artifact directory
 ```
@@ -152,8 +177,8 @@ Use direct references instead of maintaining parallel facts:
 - Verification gate names live in `package.json`; CI/release usage lives in `.github/workflows/`.
 - Verification timing and scope live in `AGENTS.md`.
 - Agent-facing component and prop choices live in `ahtml prompt`, generated through `scripts/generate-component-schema-prompt.mjs`.
-- Renderable component capability and runtime export requirements live in `src/config/component-capabilities.mjs` and `src/config/render-capabilities.mjs`.
-- Managed runtime completeness checks live in `src/cli/runtime-surface.mjs` and `ahtml doctor`.
+- Renderable component capability and runtime export requirements live in `packages/ahtml/src/config/component-capabilities.mjs` and `packages/ahtml/src/config/render-capabilities.mjs`.
+- Managed runtime completeness checks live in `packages/ahtml/src/cli/runtime-surface.mjs` and `ahtml doctor`.
 
 ## Build the docs web [#build-the-docs-web]
 

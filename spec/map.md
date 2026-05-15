@@ -68,9 +68,7 @@ Target example:
 ```html
 <meta-agent profile="ops-compact" />
 <page title="Weekly review">
-  <card title="Service status" status="healthy">
-    All core checks passed.
-  </card>
+  <card title="Service status" status="healthy"> All core checks passed. </card>
 </page>
 ```
 
@@ -115,6 +113,15 @@ theme tokens, Tailwind entry, dependencies, style, base, iconLibrary, component
 files, and registry items. ahtml injects the renderer app, sanitized document,
 verification data, diagnostics, and build wiring into that runtime; it does
 not own a parallel shadcn UI kit or pseudo template.
+
+### Repository packaging
+
+Repository packaging is a private npm workspace, not the product app itself.
+
+`@agent-html/core` owns parse / validate / sanitize and shared contract code.
+`@agent-html/ahtml` owns CLI, config, managed runtime orchestration, and the
+published `ahtml` bin. Product apps stay outside this repository unless a
+future spec explicitly changes that boundary.
 
 ### Internal capability verification
 
@@ -247,7 +254,12 @@ layer, theme tokens, Tailwind entry, dependencies, aliases, style, base,
 iconLibrary, docs, and registry metadata.
 
 Current code: `shadcn` catalog and preset APIs are used during setup; ahtml now
-generates its own minimal runtime shell, then calls `shadcn init/add`, and the
+generates its own minimal runtime shell, then calls `shadcn init/add`. The old
+checked-in template mirror no longer lives under product source paths, but
+offline verification still uses a template override fixture. The generated
+shadcn `vite.config.ts` is now retained in the managed runtime, while ahtml
+injects its build glue through a separate `vite.ahtml.config.mjs` that loads
+and merges the retained template config instead of fully re-declaring it. The
 artifact path still carries an ahtml-managed CSS surface.
 
 Primary gap: runtime bootstrap still treats ahtml-owned template files as part
@@ -262,7 +274,7 @@ Target: generate and validate runtime capability facts that prove contract,
 runtime surface, and renderer parity without becoming the public schema.
 
 Current code: generated introspection knows about components such as `tabs`,
-`accordion`, `table`, `alert`, and `badge`; `src/config/render-capabilities.mjs`
+`accordion`, `table`, `alert`, and `badge`; `packages/ahtml/src/config/render-capabilities.mjs`
 records first-pass runtime requirements; runtime bootstrap emits
 `render-capabilities.generated.json`; build and doctor compare runtime
 verification data and renderer mapping with schema expectations.
@@ -325,9 +337,10 @@ data are aligned.
 
 Current code: status now treats runtime completeness as part of `ready` and
 checks `components.json` semantics, CSS entry existence, required Tailwind /
-shadcn imports, CSS base surface, manifest surface consistency, and recorded
-runtime provenance metadata. doctor now checks those same surfaces, required
-shadcn component files, named exports, schema/runtime capability parity,
+shadcn imports, CSS base surface, retained template `vite.config.ts` shape,
+manifest surface consistency, and recorded runtime provenance metadata. doctor
+now checks those same surfaces, required shadcn component files, named exports,
+schema/runtime capability parity,
 schema/renderer mapping parity, renderer registry parity, recorded provenance
 metadata, and built artifact CSS when an artifact exists.
 
@@ -403,7 +416,8 @@ fields and generic ui/slot compatibility paths.
 - Runtime setup creates or repairs a shadcn-native managed runtime rather than
   relying on package-local shadcn component copies or hand-written CSS.
 - `doctor` fails when the shadcn runtime surface is incomplete, including
-  missing CSS entry, missing base layer, missing `components.json`, unsupported
-  base/style/iconLibrary, missing registry items, or missing required exports.
+  missing CSS entry, missing base layer, missing `components.json`, missing
+  template `vite.config.ts`, unsupported base/style/iconLibrary, missing
+  registry items, or missing required exports.
 - Tests enforce contract/runtime/renderer parity so future public contract
   changes cannot ship without renderer support.

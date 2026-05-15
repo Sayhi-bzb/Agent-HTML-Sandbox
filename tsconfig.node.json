@@ -1,22 +1,16 @@
 {
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
-    "target": "ES2023",
-    "lib": ["ES2023"],
-    "module": "ESNext",
-    "types": ["node"],
-    "skipLibCheck": true,
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "isolatedModules": true,
-    "moduleDetection": "force",
-    "noEmit": true,
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./packages/ahtml/src/*"]
+    }
   },
-  "include": ["vitest.config.ts", "vitest.heavy.config.ts", "src/**/*.ts"],
-  "exclude": ["src/cli/shadcn-template/vite-app/**/*"]
+  "include": [
+    "vitest.config.ts",
+    "vitest.heavy.config.ts",
+    "packages/**/*.ts"
+  ],
+  "exclude": ["scripts/shadcn-test-fixtures/template/**/*"]
 }

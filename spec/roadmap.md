@@ -3,6 +3,10 @@
 本轮目标：把新蓝图彻底下推到 spec，并让后续实现围绕“语义组件 + presentation
 profile”收敛，而不是继续扩张旧协议或旧配置口径。
 
+本轮仓库边界也已锁定：仓库本身是 private npm workspace，当前只维护
+`@agent-html/core` 和 `@agent-html/ahtml` 两个包；app 继续留在仓库外，除非后续
+spec 明确改边界。
+
 ```txt
 semantic component contract
   + presentation profile registry
@@ -59,9 +63,13 @@ Done when:
 Current state:
 
 - 已实现一部分。`status` / `doctor` 已经会检查 `components.json` 语义、CSS entry、
-  required imports、base surface、manifest surface 和 runtime provenance。
-- 已实现一部分。setup 现在会调用 `shadcn init/add`，但 runtime shell 仍通过本地
-  checked-in template mirror 引导。
+  required imports、base surface、保留的 template `vite.config.ts`、manifest
+  surface 和 runtime provenance。
+- 已实现一部分。setup 现在会调用 `shadcn init/add`；产品源码路径下的 checked-in
+  template mirror 已移出，离线测试仍通过 template override fixture 引导，并且
+  shadcn 生成的 `vite.config.ts` 会保留在 managed runtime 中，ahtml 自己的
+  build glue 则写入独立的 `vite.ahtml.config.mjs`，并在 build 时组合 retained
+  template config，而不是完全绕开它。
 - 仍未完成。runtime source ownership 还是 partial，不是完全 shadcn-native。
 
 Done when:
