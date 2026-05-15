@@ -413,6 +413,32 @@ describe("sanitizeAgentHtml", () => {
     })
   })
 
+  it("accepts progress inside supported content containers", () => {
+    const result = sanitizeAgentHtml(`
+      <page title="Delivery Readiness">
+        <card title="Rollout">
+          <progress value="0" />
+        </card>
+      </page>
+    `)
+
+    expect(result.diagnostics).toEqual([])
+    expect(result.document?.components[0]?.children[0]).toMatchObject({
+      type: "component",
+      name: "card",
+      children: [
+        {
+          type: "component",
+          name: "progress",
+          props: {
+            value: "0",
+          },
+          children: [],
+        },
+      ],
+    })
+  })
+
   it("rejects removed custom controls", () => {
     const result = sanitizeAgentHtml(`
       <page title="Removed Controls">
