@@ -77,6 +77,42 @@ export type ReviewTimelineActionConfig = {
     | "openPreview"
 }
 
+export function getCurrentReviewStage({
+  build,
+  hasUnsavedSourceChanges,
+  inspect,
+  latestProposalExists,
+  latestProposalIsStale,
+  proposalComparison,
+  session,
+}: {
+  build: BuildRunSummary
+  hasUnsavedSourceChanges: boolean
+  inspect: InspectSnapshot
+  latestProposalExists: boolean
+  latestProposalIsStale: boolean
+  proposalComparison?: SourceComparisonSummary
+  session: SessionDetail
+}): ReviewTimelineItem["id"] {
+  if (hasUnsavedSourceChanges) {
+    return "source"
+  }
+
+  if (inspect.diagnostics.length > 0) {
+    return "inspect"
+  }
+
+  if (build.status === "failed" || build.status === "running" || !session.summary.hasPreview || session.summary.status === "dirty") {
+    return "build"
+  }
+
+  if (!latestProposalExists || latestProposalIsStale || proposalComparison?.changedLineCount) {
+    return "proposal"
+  }
+
+  return "proposal"
+}
+
 export function parseStructuredMessageCard(text: string) {
   const lines = text
     .split(/\r?\n/)

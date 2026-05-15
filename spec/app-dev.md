@@ -118,6 +118,7 @@ Status: First local proposal pass.
 - compare 现已支持在 `Saved source` 与 `Proposal snapshot` 两个基线之间切换
 - 右栏已新增 review timeline，把 source saved / build / inspect / proposal 四步压成高信号总览
 - review timeline 各阶段现在也可直接触发对应动作，例如 save / build / open inspect / draft proposal / review diff
+- review timeline 会高亮当前最该看的阶段，而不只是平铺状态卡
 - proposal bullet 项已开始带 workflow checklist 状态，例如 save / build / inspect / review
 - checklist 项现在也可直接触发对应动作，例如 save / build / inspect / review diff
 - checklist 项已能展示上下文摘要，并在可用时附上首条相关 diff 片段

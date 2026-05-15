@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import type { AgentShellMessage, BuildRunSummary, InspectSnapshot, SessionDetail } from "./types"
 import {
+  getCurrentReviewStage,
   getProposalChecklistContext,
   getProposalChecklistFocusOptions,
   getProposalChecklistProgress,
@@ -414,5 +415,38 @@ describe("review flow helpers", () => {
       description: "Review diagnostics before trusting the proposal.",
       handler: "openInspect",
     })
+  })
+
+  it("detects the current review stage from the strongest blocking signal", () => {
+    expect(
+      getCurrentReviewStage({
+        build: succeededBuild,
+        hasUnsavedSourceChanges: true,
+        inspect: cleanInspect,
+        latestProposalExists: true,
+        latestProposalIsStale: false,
+        session: baseSession,
+      }),
+    ).toBe("source")
+
+    expect(
+      getCurrentReviewStage({
+        build: succeededBuild,
+        hasUnsavedSourceChanges: false,
+        inspect: cleanInspect,
+        latestProposalExists: true,
+        latestProposalIsStale: false,
+        proposalComparison: {
+          savedLineCount: 3,
+          draftLineCount: 4,
+          changedLineCount: 1,
+          firstChangedLine: 2,
+          hasAdditionalChanges: false,
+          previewGroups: [],
+          previewItems: [],
+        },
+        session: baseSession,
+      }),
+    ).toBe("proposal")
   })
 })

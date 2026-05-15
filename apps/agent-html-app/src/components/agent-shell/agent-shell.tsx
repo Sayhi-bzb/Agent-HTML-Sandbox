@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from "react"
 
 import {
+  getCurrentReviewStage,
   getProposalChecklistActionConfig,
   getProposalChecklistContext,
   getProposalChecklistFocusOptions,
@@ -98,6 +99,15 @@ export function AgentShell({
     messages,
     proposalComparison,
     proposalProgress,
+    session,
+  })
+  const currentReviewStage = getCurrentReviewStage({
+    build,
+    hasUnsavedSourceChanges,
+    inspect,
+    latestProposalExists: Boolean(latestProposal),
+    latestProposalIsStale,
+    proposalComparison,
     session,
   })
   const isProposalActionBusy =
@@ -292,7 +302,7 @@ export function AgentShell({
             })
 
             return (
-              <article className="timeline-item" key={item.id}>
+              <article className={item.id === currentReviewStage ? "timeline-item active" : "timeline-item"} key={item.id}>
                 <div className="message-topline">
                   <div className="timeline-label-group">
                     <h4>{item.label}</h4>

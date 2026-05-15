@@ -1,8 +1,8 @@
-# agent-html Rendering Chain Map
+# agent-html Current State
 
-Blueprint is the architecture authority. This file only tracks the live
-rendering chain, the remaining implementation gaps, and the fixed acceptance
-bar for the current pass.
+Blueprint is the architecture authority. This file is the compact snapshot of
+the current stable rendering chain and the acceptance bar for the completed
+pass.
 
 ```txt
 semantic component contract
@@ -15,68 +15,31 @@ semantic component contract
   -> portable HTML artifact
 ```
 
-Current execution posture: keep the public contract semantic and profile-first,
-keep shadcn inside the managed runtime, and expand breadth through shared
-renderer archetypes instead of one-off component additions. Component grouping
-and sequencing live in `spec/components-adoption.md`.
+## Stable Decisions
 
-## Locked Decisions
-
-### Public authoring
-
-- The public authoring surface is semantic agent-html with named presentation
-  profiles.
-- Legacy `<ui>` / `<slot>` input and old non-profile render-config input do
-  not return as normal public authoring paths.
-
-### Presentation profiles
-
-- Public visual choice is a profile id such as `ops-compact` or
-  `review-dense`.
-- Internal `theme` / `density` / `tone` / `width` remain runtime-resolved
-  profile tokens, not public config vocabulary.
-
-### Honest schema
-
+- Public authoring stays semantic and profile-first.
+- Legacy `<ui>` / `<slot>` input and old non-profile render-config input stay
+  out of the normal path.
 - Schema and prompt expose only renderable semantic components and approved
   profiles.
-- Unsupported or planned runtime data may exist internally, but not as normal
-  agent-facing choices.
+- Internal `theme` / `density` / `tone` / `width` remain runtime-resolved
+  profile tokens, not public config vocabulary.
+- ahtml uses its own managed runtime; shadcn template / init / registry remain
+  the source of truth for the runtime UI surface.
+- Runtime verification data, generated introspection, renderer mapping, and
+  slot metadata stay internal verification inputs, not the external product
+  protocol.
 
-### Runtime boundary
+## Acceptance Bar
 
-- ahtml uses its own managed runtime and does not own a parallel UI kit.
-- shadcn template / init / registry remain the source of truth for the runtime
-  UI surface.
-
-### Internal verification
-
-- `render-capabilities`, generated introspection, renderer mapping, and slot
-  metadata are internal verification inputs.
-- They exist for contract/runtime/renderer parity and drift checks, not as the
-  external product protocol.
-
-### Acceptance bar
-
-- Final HTML must contain real semantic or shadcn/native structure.
+- Final HTML contains real semantic or shadcn/native structure;
   `data-agent-html-component` markers alone are not enough.
-
-## Current Main Gaps
-
-- None for the current pass. Future work should reopen spec only when product
-  semantics expand beyond the current artifact-focused lane.
-
-## Fixed-State Criteria
-
-- `ahtml schema --format prompt` exposes only renderable semantic components and
-  approved presentation profiles.
-- Public authoring stays semantic and profile-first; `<ui>` / `<slot>` and old
-  flat render-config input stay out of the normal path.
-- `ahtml build` produces real semantics for representative artifacts, including
-  tabs, accordion, list, table, and current supported field or option-set
-  structures.
-- Tabs and accordion keep interaction when JS is available and remain readable
-  when JS is unavailable.
+- `ahtml schema --format prompt` exposes only renderable semantic components
+  and approved presentation profiles.
+- `ahtml build` produces representative artifact structure for the current
+  supported semantic surface, including tabs, accordion, list, table, field
+  controls, and option-set controls.
+- Tabs and accordion remain interactive with JS and readable without JS.
 - Runtime setup creates or repairs a shadcn-native managed runtime instead of
   relying on package-local UI copies or handwritten base CSS.
 - Runtime setup, doctor surface, and fixture expectations use shared fact
@@ -87,3 +50,8 @@ and sequencing live in `spec/components-adoption.md`.
   agent-html components.
 - Tests prevent public contract expansion from shipping without renderer or
   runtime support.
+
+## Current Pass
+
+- The current artifact-focused pass is complete.
+- Reopen `spec/` only when product semantics expand beyond the current lane.
