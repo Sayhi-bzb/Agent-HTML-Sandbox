@@ -103,6 +103,10 @@ export async function appendChatMessage(
   return invoke("append_chat_message", { sessionId, input })
 }
 
+export async function generateSessionProposal(sessionId: string): Promise<AgentShellMessage[]> {
+  return invoke("generate_session_proposal", { sessionId })
+}
+
 export function isTauriRuntime(): boolean {
   if (typeof window === "undefined") {
     return false

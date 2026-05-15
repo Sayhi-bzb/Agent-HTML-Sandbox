@@ -45,7 +45,7 @@ agent standard syntax
 
 `registry:block` 可作为复杂 RendererComponent 的实现材料来源。`components.json`、custom registry、CLI、MCP 和 migrations 都属于 managed runtime 采购面。
 
-`shadcn add` 只安装 registry item，不等于完整 initialization。`shadcn apply --only theme` 只更新有限 preset 部分，也不等于完整 CSS/base surface。managed runtime bootstrap 应使用 shadcn template / init / registry 建立完整 surface，再由 ahtml 注入 renderer app、capability data 和 artifact build wiring。
+`shadcn add` 只安装 registry item，不等于完整 initialization。`shadcn apply --only theme` 只更新有限 preset 部分，也不等于完整 CSS/base surface。managed runtime bootstrap 应使用 shadcn template / init / registry 建立完整 surface，再由 ahtml 注入 renderer app、verification data 和 artifact build wiring。
 
 registry metadata 和组件源码可辅助 contract 维护，但不能成为 ComponentSchema 的权威来源。
 

@@ -30,6 +30,7 @@ const rendererSpecScalarFields = [
   "headerCell",
   "bodyCell",
   "item",
+  "itemContainer",
   "labelClassName",
   "descriptionClassName",
   "itemSlot",
@@ -47,6 +48,8 @@ const rendererSpecScalarFields = [
   "kindProp",
   "itemValueProp",
   "itemHeadingProp",
+  "valueProp",
+  "controlListAttr",
   "childMode",
 ]
 const rendererSpecStructuredFields = [
@@ -56,10 +59,10 @@ const rendererSpecStructuredFields = [
   "staticProps",
 ]
 
-export async function readRuntimeCapabilities(paths) {
+export async function readRuntimeVerificationState(paths) {
   return parseJson(
-    await readFile(paths.runtimeCapabilitiesPath, "utf8"),
-    "render-capabilities.generated.json must be valid JSON.",
+    await readFile(paths.runtimeVerificationPath, "utf8"),
+    "render-verification.generated.json must be valid JSON.",
   )
 }
 
@@ -68,48 +71,49 @@ export async function getRuntimeRenderDiagnostics({
   runtimePaths,
   schema,
 }) {
-  const runtimeCapabilities = await readRuntimeCapabilities(runtimePaths)
+  const runtimeVerificationState =
+    await readRuntimeVerificationState(runtimePaths)
   return createRuntimeRenderDiagnostics({
     document,
-    runtimeCapabilities,
+    runtimeVerificationState,
     schema,
   })
 }
 
 export function createRuntimeRenderDiagnostics({
   document,
-  runtimeCapabilities,
+  runtimeVerificationState,
   schema,
 }) {
   const diagnostics = []
-  const runtimeVerificationData = runtimeCapabilities.verificationData
+  const runtimeVerificationData = runtimeVerificationState.verificationData
   const schemaVerificationData = schema.verificationData
-  const runtimeRendererMapping = runtimeCapabilities.rendererMapping
+  const runtimeRendererMapping = runtimeVerificationState.rendererMapping
   const schemaRendererMapping = schema.rendererMapping
 
   pushRuntimeCheckDiagnostic({
     actual: runtimeVerificationData,
-    actualName: "runtime verification data ui capabilities",
+    actualName: "runtime verification data",
     code: "runtime-verification-data-parity",
     diagnostics,
     expected: schemaVerificationData,
-    expectedName: "schema verificationData",
+    expectedName: "schema verification data",
     path: "/runtime",
-    validate: assertUiCapabilitiesParity,
+    validate: assertVerificationDataParity,
   })
   pushRuntimeCheckDiagnostic({
     actual: runtimeRendererMapping,
-    actualName: "runtime renderer mapping spec",
+    actualName: "runtime renderer verification mapping",
     code: "runtime-renderer-mapping-parity",
     diagnostics,
     expected: schemaRendererMapping,
-    expectedName: "schema rendererMapping",
+    expectedName: "schema renderer verification mapping",
     path: "/runtime",
     validate: assertRendererSpecParity,
   })
 
   try {
-    assertRuntimeRendererRegistryParity(runtimeCapabilities)
+    assertRuntimeRendererRegistryParity(runtimeVerificationState)
   } catch (error) {
     diagnostics.push(
       createRuntimeDiagnostic({
@@ -136,7 +140,7 @@ export function createRuntimeRenderDiagnostics({
   return diagnostics
 }
 
-export function assertUiCapabilitiesParity({
+export function assertVerificationDataParity({
   actual,
   actualName,
   expected,
@@ -259,9 +263,9 @@ export function assertRendererSpecParity({
   }
 }
 
-export function assertRuntimeRendererRegistryParity(runtimeCapabilities) {
-  const expected = runtimeCapabilities.verificationData?.components ?? []
-  const actual = runtimeCapabilities.rendererMapping?.components ?? []
+export function assertRuntimeRendererRegistryParity(runtimeVerificationState) {
+  const expected = runtimeVerificationState.verificationData?.components ?? []
+  const actual = runtimeVerificationState.rendererMapping?.components ?? []
   const expectedNames = expected.map((component) => component.name)
   const actualNames = actual.map((component) => component.name)
   const missing = expectedNames.filter((name) => !actualNames.includes(name))
@@ -449,13 +453,13 @@ function collectDocumentRenderDiagnostics({
             rendererSpecByName,
           }),
         )
-        continue
+          continue
       }
 
       diagnostics.push(
         createRuntimeDiagnostic({
           code: "runtime-renderer-component",
-          message: `Component "${node.name}" has no runtime renderer mapping spec.`,
+          message: `Component "${node.name}" has no runtime renderer verification mapping.`,
           path,
         }),
       )

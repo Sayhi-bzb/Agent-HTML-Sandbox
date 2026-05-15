@@ -9,7 +9,7 @@ import {
   RenderConfigSchema,
 } from "./render-config"
 
-describe("render config schema", () => {
+describe("profile-first render config", () => {
   it("accepts the public profile-first render config values", () => {
     expect(RenderConfigSchema.parse(DEFAULT_RENDER_CONFIG)).toEqual({
       profile: "report-default",
@@ -33,13 +33,13 @@ describe("render config schema", () => {
       parseRenderConfig({
         className: "text-red-500",
       }),
-    ).toThrow()
+    ).toThrow("Invalid profile-based render config.")
 
     expect(() =>
       parseRenderConfig({
         profile: "color:red",
       }),
-    ).toThrow()
+    ).toThrow("Invalid profile-based render config.")
 
     expect(() =>
       parseRenderConfig({
@@ -48,7 +48,7 @@ describe("render config schema", () => {
         tone: "dashboard",
         width: "dashboard",
       }),
-    ).toThrow()
+    ).toThrow("Invalid profile-based render config.")
   })
 
   it("exposes only the public render config keys", () => {

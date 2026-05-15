@@ -16,7 +16,7 @@ presentation profile declaration supplies the public visual choices.
 managed runtime components.json supplies shadcn config.
 shadcn registry supplies item metadata, dependencies, files, docs links.
 component AST supplies exports, data-slot, blocked/internal prop candidates.
-generated runtime capability facts supply verification and drift checks.
+generated runtime verification facts supply verification and drift checks.
 standardized component schema supplies fixed components, semantic props, and slots.
 presentation profile registry supplies approved profile options.
 TSDoc supplies optional annotation convention.
@@ -43,7 +43,7 @@ ComponentSchema + ComponentPropSchema + ComponentToken + PresentationProfileRegi
 ```txt
 shadcn registry / managed runtime components.json / component source
         ↓
-generated runtime capability facts
+generated runtime verification facts
         ↓
 contract verification + renderer registry inputs + drift check
 ```

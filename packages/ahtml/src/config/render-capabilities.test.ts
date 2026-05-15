@@ -31,6 +31,24 @@ describe("createRuntimeElementRegistrySpec", () => {
           content: "CardContent",
         },
         {
+          name: "switch",
+          kind: "field-control",
+          requiredRegistryItem: "switch",
+          requiredExports: ["Switch"],
+          root: "div",
+          label: "p",
+          control: "Switch",
+        },
+        {
+          name: "slider",
+          kind: "field-control",
+          requiredRegistryItem: "slider",
+          requiredExports: ["Slider"],
+          root: "div",
+          label: "p",
+          control: "Slider",
+        },
+        {
           name: "list",
           kind: "collection",
           rootByProp: {
@@ -70,16 +88,42 @@ describe("createRuntimeElementRegistrySpec", () => {
           controlContent: "SelectContent",
           item: "SelectItem",
         },
+        {
+          name: "combobox",
+          kind: "option-set",
+          requiredRegistryItem: "input",
+          requiredExports: ["Input"],
+          root: "div",
+          label: "p",
+          control: "Input",
+          itemContainer: "datalist",
+          item: "option",
+          controlListAttr: "list",
+        },
       ],
     })
 
     expect(registrySpec).toEqual({
       version: 1,
-      nativeElements: ["article", "div", "h1", "li", "ol", "p", "ul"],
+      nativeElements: [
+        "article",
+        "datalist",
+        "div",
+        "h1",
+        "li",
+        "ol",
+        "option",
+        "p",
+        "ul",
+      ],
       modules: [
         {
           registryItem: "card",
           exports: ["Card", "CardContent", "CardHeader", "CardTitle"],
+        },
+        {
+          registryItem: "input",
+          exports: ["Input"],
         },
         {
           registryItem: "select",
@@ -90,6 +134,14 @@ describe("createRuntimeElementRegistrySpec", () => {
             "SelectTrigger",
             "SelectValue",
           ],
+        },
+        {
+          registryItem: "slider",
+          exports: ["Slider"],
+        },
+        {
+          registryItem: "switch",
+          exports: ["Switch"],
         },
         {
           registryItem: "tabs",

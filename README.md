@@ -78,6 +78,7 @@ agent work
 ```
 
 The schema is the public contract. Agents write content structure, not raw HTML, CSS, JavaScript, Tailwind classes, or renderer props.
+Public visual choice is limited to named `profile` ids such as `report-default` or `ops-compact`, not free-form `theme`, `density`, `tone`, or `width` inputs.
 
 ## More
 

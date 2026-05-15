@@ -29,10 +29,10 @@ export function getRuntimePaths(env = process.env) {
       "prompt-ui.manifest.json",
     ),
     runtimePackageJsonPath: path.join(runtimeRoot, "runtime", "package.json"),
-    runtimeCapabilitiesPath: path.join(
+    runtimeVerificationPath: path.join(
       runtimeRoot,
       "runtime",
-      "render-capabilities.generated.json",
+      "render-verification.generated.json",
     ),
     runtimeViteConfigPath: path.join(
       runtimeRoot,

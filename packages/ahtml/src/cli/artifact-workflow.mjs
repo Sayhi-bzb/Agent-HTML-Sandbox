@@ -171,14 +171,14 @@ export function createInspection(document) {
     throw new Error("Cannot inspect an invalid agent-html document.")
   }
 
-  const { profile, ...resolvedConfig } = document.meta
+  const { profile, ...resolvedProfileTokens } = document.meta
 
   return {
     kind: "agent-html-inspection",
     config: {
       profile,
     },
-    resolvedConfig,
+    resolvedProfileTokens,
     components: countComponents(document.components),
   }
 }
@@ -220,10 +220,10 @@ export function formatInspectionSummary(inspection) {
     ...Object.entries(inspection.config).map(
       ([key, value]) => `${key}: ${value}`,
     ),
-    ...(inspection.resolvedConfig
+    ...(inspection.resolvedProfileTokens
       ? [
-          "resolved tokens:",
-          ...Object.entries(inspection.resolvedConfig).map(
+          "resolved profile tokens:",
+          ...Object.entries(inspection.resolvedProfileTokens).map(
             ([key, value]) => `- ${key}: ${value}`,
           ),
         ]

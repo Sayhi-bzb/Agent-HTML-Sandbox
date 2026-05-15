@@ -71,7 +71,7 @@ agent writes standard agent-html syntax
 ```txt
 managed runtime shadcn/ui implementation
         ↓
-runtime capability facts + drift checks
+runtime verification facts + drift checks
         ↓
 renderer registry inputs + contract verification
         ↓
@@ -154,7 +154,7 @@ shadcn/ui 提供组件实现、设计系统材料和可访问 primitive。项目
 
 shadcn template / init / registry 是 managed runtime UI surface 的 source of truth，包括 `components.json`、组件文件、global CSS、theme tokens、base layer、Tailwind 入口、依赖、icon library 和 registry item。ahtml 不维护一套平行的 shadcn UI kit、global CSS、base layer、component copy 或 pseudo template。
 
-artifact build 仍然是产品主路径，但 build project 必须是 shadcn-template-derived managed runtime。ahtml 可以向其中注入 renderer app、SSR/build glue、sanitized document、renderer capability data 和 diagnostics，不得替换 shadcn template surface。
+artifact build 仍然是产品主路径，但 build project 必须是 shadcn-template-derived managed runtime。ahtml 可以向其中注入 renderer app、SSR/build glue、sanitized document、renderer verification data 和 diagnostics，不得替换 shadcn template surface。
 
 shadcn/ui 的自由度必须被收束。agent-facing 层不暴露完整 shadcn props、Radix props、Tailwind class、`className` 或组件源码结构。
 
@@ -184,16 +184,16 @@ agent-facing 组件是标准化语义组件，不是自由拼装的 UI primitive
 
 用户或调用方负责选择 profile；agent 只在 schema 明确允许时写入 profile id。RenderConfig 的默认职责是选择 profile，而不是直接拼装视觉参数。
 
-## 5. runtime capability facts assist maintenance, not define the contract
+## 5. runtime verification facts assist maintenance, not define the contract
 
-shadcn registry、shadcn-native managed runtime、组件源码和 managed runtime `components.json` 可用于生成内部 capability facts、renderer registry 草稿和 drift check 输入。
+shadcn registry、shadcn-native managed runtime、组件源码和 managed runtime `components.json` 可用于生成内部 verification facts、renderer registry 草稿和 drift check 输入。
 
 自动化路径是：
 
 ```txt
 shadcn registry / shadcn-native managed runtime / components.json / component source
         ↓
-runtime capability facts
+runtime verification facts
         ↓
 contract verification + renderer registry inputs
 ```
@@ -221,7 +221,7 @@ style 参数必须锁在 renderer adapter / StandardComponent 内部。agent-fac
 ```txt
 semantic component contract
         +
-runtime capability facts
+runtime verification facts
         ↓
 UiComponentSchema + UiSlotSchema
         ↓

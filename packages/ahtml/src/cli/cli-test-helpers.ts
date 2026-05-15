@@ -30,6 +30,8 @@ export const validAgentHtmlFixtures = [
     '<page title="Review Form">',
     '  <card title="Decision">',
     '    <checkbox label="Ship now" checked="true" description="Boolean field." />',
+    '    <switch label="Live Sync" checked="true" description="Immediate preference toggle." />',
+    '    <slider label="Review strictness" value="70" description="Read-only numeric field." />',
     '    <radio-group label="Direction" value="ship" description="Single-select field.">',
     '      <option value="ship" label="Ship">Use the current direction.</option>',
     '      <option value="hold" label="Hold">Wait for the guard.</option>',
@@ -78,6 +80,7 @@ export type CliSchemaOutput = {
     readonly forbidden: string
   }
   readonly renderConfig: {
+    readonly defaults: Readonly<Record<string, string>>
     readonly keys: readonly string[]
     readonly values: Readonly<Record<string, readonly string[]>>
   }
@@ -115,6 +118,10 @@ type RuntimeSetupModule = {
     readonly preset: string
     readonly components: readonly string[]
   }>
+  readonly resolveManagedRuntimeComponentSet: (options?: {
+    readonly componentCatalog?: readonly string[]
+    readonly componentSet?: string
+  }) => readonly string[]
   readonly formatSetupControls: () => string
   readonly formatSetupHeader: () => string
 }

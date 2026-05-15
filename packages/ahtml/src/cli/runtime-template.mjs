@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url"
 import { promisify } from "node:util"
 
 import {
-  createUiCapabilities,
+  createRuntimeVerificationData,
   createRendererMapping,
   createRuntimeElementRegistrySpec,
   createRuntimeRendererKindSpec,
@@ -15,7 +15,7 @@ import {
 } from "../config/render-capabilities.mjs"
 import {
   createShadcnRuntimeSurface,
-  recordManagedRuntimeProof,
+  recordAhtmlGlueProof,
 } from "./runtime-surface.mjs"
 import { getDefaultShadcnPreset } from "./shadcn-api.mjs"
 
@@ -39,7 +39,7 @@ export async function writeRuntimeTemplate({
   const dependencies = resolveRuntimeDependencies(packageRoot)
   const components = Array.isArray(schema?.components) ? schema.components : []
   const verificationData =
-    schema?.verificationData ?? createUiCapabilities(components)
+    schema?.verificationData ?? createRuntimeVerificationData(components)
   const rendererMapping =
     schema?.rendererMapping ?? createRendererMapping(components)
 
@@ -70,11 +70,11 @@ export async function writeRuntimeTemplate({
     runtimeSurface,
   })
   await renderViteConfig({ dependencies, paths })
-  const provenRuntimeSurface = await recordManagedRuntimeProof({
+  const provenRuntimeSurface = await recordAhtmlGlueProof({
     paths,
     surface: runtimeSurface,
   })
-  await writeRuntimeCapabilities({
+  await writeRuntimeVerificationState({
     components,
     paths,
     rendererMapping,
@@ -283,7 +283,7 @@ function isLocalRegistryUrl(value) {
   }
 }
 
-async function writeRuntimeCapabilities({
+async function writeRuntimeVerificationState({
   components,
   paths,
   rendererMapping,
@@ -295,8 +295,8 @@ async function writeRuntimeCapabilities({
     components.length > 0
       ? components.map((component) => component.name)
       : (verificationData.components ?? []).map((component) => component.name)
-  const capabilities = {
-    kind: "ahtml-runtime-render-capabilities",
+  const runtimeVerificationState = {
+    kind: "ahtml-runtime-render-verification",
     version: 1,
     runtimeBase: supportedRuntimeBase,
     shadcnRuntimeSurface: runtimeSurface,
@@ -307,8 +307,8 @@ async function writeRuntimeCapabilities({
   }
 
   await writeFile(
-    paths.runtimeCapabilitiesPath,
-    `${JSON.stringify(capabilities, null, 2)}\n`,
+    paths.runtimeVerificationPath,
+    `${JSON.stringify(runtimeVerificationState, null, 2)}\n`,
   )
 }
 

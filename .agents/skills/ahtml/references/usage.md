@@ -62,6 +62,7 @@ ahtml inspect --dir dist/html
 ## Document shape
 
 Use a named presentation profile and standard agent-html components. The agent writes information structure, not page implementation.
+Public visual choice is only the profile id. Do not try to author free-form `theme`, `density`, `tone`, or `width` values.
 
 ```html
 <meta-agent profile="report-default" />

@@ -15,7 +15,7 @@ managed runtime 消费 CLI 生成或安装的配置、renderer adapter 和 shadc
 - 默认 runtime 位于用户级 `.ahtml` 目录，不位于当前工作目录。
 - `ahtml setup` 默认初始化或检查 managed runtime，并可记录 shadcn preset、template、style、base、iconLibrary 和 registry item 选择。
 - managed runtime UI surface 必须来自 shadcn template / init / registry。这里的 UI surface 包括 `components.json`、component files、CSS entry、theme tokens、base layer、Tailwind entry、dependencies、aliases、style、base 和 iconLibrary。
-- ahtml 可以向 shadcn-native managed runtime 注入 renderer app、SSR/build glue、sanitized document、rendererSpec、capability data、diagnostics 和 output wiring，但不得替换 shadcn template surface。
+- ahtml 可以向 shadcn-native managed runtime 注入 renderer app、SSR/build glue、sanitized document、rendererSpec、verification data、diagnostics 和 output wiring，但不得替换 shadcn template surface。
 - shadcn 组件 catalog、preset 名称和 preset code 校验应来自 shadcn 官方 package API，不由 ahtml 维护平行硬编码名单。
 - 首次 `status` / `doctor` / `build` / `preview` 可以触发默认 runtime bootstrap，或给出明确初始化命令。
 - CLI 生成 prompt-ui manifest，供 agent 读取可用 UI 底座、组件清单和安全边界。

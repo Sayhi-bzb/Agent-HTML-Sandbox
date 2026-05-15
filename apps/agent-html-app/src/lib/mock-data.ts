@@ -93,8 +93,17 @@ const chat: AgentShellMessage[] = [
     id: "msg-2",
     role: "placeholder",
     createdAt: now,
-    text: "Future proposal cards will anchor to diagnostics, source ranges, and build runs.",
+    text: [
+      "Proposal for Vendor Decision",
+      "- [build] Rebuild after updating the decision notes so Preview matches the latest source.",
+      "- [review] Compare the refreshed preview against the current recommendation card before sharing the artifact.",
+      "- [inspect] Clear the stale-preview warning in Inspect before treating this session as ready.",
+    ].join("\n"),
     kind: "proposal-placeholder",
+    proposalSnapshot: {
+      lineCount: currentSession.source.split(/\r?\n/).length,
+      source: currentSession.source,
+    },
   },
 ]
 

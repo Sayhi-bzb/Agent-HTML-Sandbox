@@ -2,13 +2,13 @@ import { z } from "zod"
 
 import type { RenderConfig } from "./types"
 
-const RENDER_PROFILE_VALUES = [
+const PUBLIC_PROFILE_VALUES = [
   "report-default",
   "ops-compact",
   "review-dense",
 ] as const
 
-const PROFILE_PRESETS = {
+const RESOLVED_PROFILE_TOKENS_BY_PROFILE = {
   "report-default": {
     theme: "neutral",
     density: "comfortable",
@@ -28,17 +28,17 @@ const PROFILE_PRESETS = {
     width: "wide",
   },
 } as const satisfies Readonly<
-  Record<(typeof RENDER_PROFILE_VALUES)[number], Omit<RenderConfig, "profile">>
+  Record<(typeof PUBLIC_PROFILE_VALUES)[number], Omit<RenderConfig, "profile">>
 >
 
 const ProfileRenderConfigInputSchema = z
   .object({
-    profile: z.enum(RENDER_PROFILE_VALUES),
+    profile: z.enum(PUBLIC_PROFILE_VALUES),
   })
   .strict()
 
 export const RENDER_CONFIG_VALUES = {
-  profile: RENDER_PROFILE_VALUES,
+  profile: PUBLIC_PROFILE_VALUES,
 } as const
 
 export const PUBLIC_RENDER_CONFIG_DEFAULTS = {
@@ -55,7 +55,7 @@ export const RenderConfigSchema = z
   })
   .strict()
 
-export const DEFAULT_RENDER_CONFIG = resolveProfile(
+export const DEFAULT_RENDER_CONFIG = resolveResolvedProfileTokens(
   PUBLIC_RENDER_CONFIG_DEFAULTS.profile,
 )
 
@@ -67,17 +67,17 @@ export function parseRenderConfig(input: unknown): RenderConfig {
   const profileInput = ProfileRenderConfigInputSchema.safeParse(input)
 
   if (profileInput.success) {
-    return resolveProfile(profileInput.data.profile)
+    return resolveResolvedProfileTokens(profileInput.data.profile)
   }
 
-  throw new Error("Invalid render config.")
+  throw new Error("Invalid profile-based render config.")
 }
 
-function resolveProfile(
-  profile: (typeof RENDER_PROFILE_VALUES)[number],
+function resolveResolvedProfileTokens(
+  profile: (typeof PUBLIC_PROFILE_VALUES)[number],
 ): RenderConfig {
   return {
     profile,
-    ...PROFILE_PRESETS[profile],
+    ...RESOLVED_PROFILE_TOKENS_BY_PROFILE[profile],
   }
 }

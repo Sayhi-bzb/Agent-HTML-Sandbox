@@ -56,7 +56,7 @@ artifact 应支持人的反馈、选择和修改重新进入 agent 工作流。
 
 managed runtime 的 UI surface 必须以 shadcn template / init / registry 为 source of truth。
 
-ahtml 不维护一套平行的 shadcn UI kit、global CSS、base layer、component copy 或 pseudo template。artifact build 仍然存在，但 build project 必须来自 shadcn-native managed runtime；ahtml 只注入 renderer app、sanitized document、capability data 和构建胶水。
+ahtml 不维护一套平行的 shadcn UI kit、global CSS、base layer、component copy 或 pseudo template。artifact build 仍然存在，但 build project 必须来自 shadcn-native managed runtime；ahtml 只注入 renderer app、sanitized document、verification data 和构建胶水。
 
 当 shadcn 官方 template / init / registry 能提供完整组件、CSS、theme、base layer、依赖和配置时，禁止用 ahtml 手搓 CSS、截断 CSS、复制组件文件或 `apply --only theme` + `add` 组合伪装成完整初始化。例外只能是显式、短期、可删除的兼容层，并必须在 spec 中记录风险和退出条件。
 

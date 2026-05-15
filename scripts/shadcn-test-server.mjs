@@ -3,26 +3,13 @@ import { readFile } from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
+import { requiredShadcnRuntimeComponents } from "../packages/ahtml/src/config/render-capabilities.mjs"
+
 const fixtureRoot = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "shadcn-test-fixtures",
 )
-const componentNames = [
-  "accordion",
-  "alert",
-  "badge",
-  "button",
-  "card",
-  "checkbox",
-  "input",
-  "progress",
-  "radio-group",
-  "select",
-  "separator",
-  "table",
-  "tabs",
-  "textarea",
-]
+const componentNames = ["button", ...requiredShadcnRuntimeComponents]
 const styleNames = ["nova", "vega", "maia", "lyra", "mira", "luma", "sera"]
 
 export async function startShadcnTestServer() {

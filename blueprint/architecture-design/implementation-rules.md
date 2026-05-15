@@ -24,7 +24,7 @@ shadcn/ui 可为标准组件提供实现材料，但 shadcn 源码、内部 prop
 
 RenderConfig 默认只选择 renderer adapter 已注册的 PresentationProfile，不直接暴露完整 shadcn props 或平铺的视觉参数包。
 
-新增 shadcn component requirement 时，必须同步 renderer adapter、ComponentSchema 说明、runtime capability data 和 runtime doctor 检查。
+新增 shadcn component requirement 时，必须同步 renderer adapter、ComponentSchema 说明、runtime verification data 和 runtime doctor 检查。
 
 shadcn component catalog、preset 名称、preset code 校验和 registry item 查询应优先调用 shadcn 官方 package API。ahtml 不应维护一套与 shadcn 平行的组件名单、preset 名单或 registry schema。
 
@@ -64,11 +64,11 @@ generated shadcn introspection 失败或 drift check 失败不能静默通过。
 
 presentation profile registry 生成或同步失败也不能静默通过。
 
-shadcn runtime surface drift 不能静默通过。doctor / tests 必须能发现缺失 `components.json`、缺失 CSS entry、缺失 base layer、required registry item 缺失、required export 缺失、runtime base 不支持、schema/runtime capability 不一致等问题。
+shadcn runtime surface drift 不能静默通过。doctor / tests 必须能发现缺失 `components.json`、缺失 CSS entry、缺失 base layer、required registry item 缺失、required export 缺失、runtime base 不支持、schema/runtime verification data 不一致等问题。
 
-## 8. runtime capability facts are not the public contract
+## 8. runtime verification facts are not the public contract
 
-generated shadcn introspection 只能作为 runtime capability facts、renderer registry 草稿和 drift check 输入。
+generated shadcn introspection 只能作为 runtime verification facts、renderer registry 草稿和 drift check 输入。
 
 不得直接把 generated introspection 发布给 agent。
 

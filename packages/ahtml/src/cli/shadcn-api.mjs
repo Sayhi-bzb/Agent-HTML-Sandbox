@@ -50,6 +50,8 @@ export async function getShadcnComponentCatalog({ allowFallback = true } = {}) {
       throw new Error("shadcn registry returned no UI components.")
     }
 
+    assertRequiredRuntimeComponentCoverage(components)
+
     return {
       components,
       source: "shadcn-api",
@@ -64,6 +66,19 @@ export async function getShadcnComponentCatalog({ allowFallback = true } = {}) {
       source: "fallback",
       error: error instanceof Error ? error.message : String(error),
     }
+  }
+}
+
+function assertRequiredRuntimeComponentCoverage(components) {
+  const availableComponents = new Set(components)
+  const missingRequiredComponents = requiredShadcnRuntimeComponents.filter(
+    (component) => !availableComponents.has(component),
+  )
+
+  if (missingRequiredComponents.length > 0) {
+    throw new Error(
+      `shadcn registry is missing required runtime components: ${missingRequiredComponents.join(", ")}.`,
+    )
   }
 }
 

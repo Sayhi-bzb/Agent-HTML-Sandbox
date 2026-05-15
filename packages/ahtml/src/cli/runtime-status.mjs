@@ -131,7 +131,7 @@ export async function getRuntimeStatus({
     shadcnCssBase: false,
     shadcnSurface: false,
     promptUiManifest: await pathExists(paths.promptUiManifestPath),
-    runtimeCapabilities: await pathExists(paths.runtimeCapabilitiesPath),
+    runtimeVerification: await pathExists(paths.runtimeVerificationPath),
     viteConfig: await pathExists(paths.runtimeViteConfigPath),
     outputWritable: false,
   }
@@ -209,7 +209,7 @@ export async function getRuntimeStatus({
     checks.shadcnCssBase &&
     checks.shadcnSurface &&
     checks.promptUiManifest &&
-    checks.runtimeCapabilities &&
+    checks.runtimeVerification &&
     checks.viteConfig
 
   return {

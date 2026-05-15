@@ -60,6 +60,11 @@ describe("agent-html CLI contracts", () => {
     )
 
     expect(normalizeNewlines(prompt)).toBe(`${formatPrompt(schema)}\n`)
+    expect(prompt).toContain('<meta-agent profile="')
+    expect(prompt).not.toContain('theme="')
+    expect(prompt).not.toContain('density="')
+    expect(prompt).not.toContain('tone="')
+    expect(prompt).not.toContain('width="')
   })
 
   it("prints global and command help for the managed runtime workflow", async () => {
@@ -126,6 +131,22 @@ describe("agent-html CLI contracts", () => {
     expect(tabRendererSlot?.children).toEqual(
       expect.arrayContaining(["card", "accordion"]),
     )
+    expect(schema.renderConfig.defaults).toEqual({
+      profile: "report-default",
+    })
+    expect(schema.renderConfig.keys).toEqual(["profile"])
+    expect(schema.renderConfig.keys).not.toContain("theme")
+    expect(schema.renderConfig.keys).not.toContain("density")
+    expect(schema.renderConfig.keys).not.toContain("tone")
+    expect(schema.renderConfig.keys).not.toContain("width")
+    expect(Object.keys(schema.renderConfig.values)).toEqual(["profile"])
+    expect(Object.keys(schema.renderConfig.values)).not.toContain("theme")
+    expect(Object.keys(schema.renderConfig.values)).not.toContain("density")
+    expect(Object.keys(schema.renderConfig.values)).not.toContain("tone")
+    expect(Object.keys(schema.renderConfig.values)).not.toContain("width")
+    expect(schema.renderConfig.values.profile).toEqual(
+      expect.arrayContaining(["report-default", "ops-compact"]),
+    )
     expect(serializedComponents).not.toContain('"className"')
     expect(serializedComponents).not.toContain('"style"')
     expect(schema.safetyPolicy.blockedNames).toContain("className")
@@ -171,7 +192,8 @@ describe("agent-html CLI contracts", () => {
   })
 
   it("uses shadcn API for runtime setup catalogs and keeps required runtime components renderable", async () => {
-    const { resolveRuntimeSetup } = await importRuntimeSetupModule()
+    const { resolveManagedRuntimeComponentSet, resolveRuntimeSetup } =
+      await importRuntimeSetupModule()
     const { requiredShadcnRuntimeComponents } =
       await importRenderCapabilitiesModule()
     const {
@@ -188,12 +210,28 @@ describe("agent-html CLI contracts", () => {
         components: "accordion",
       },
     })
-    expect(setup.components).toEqual(requiredShadcnRuntimeComponents)
+    expect([...setup.components].sort()).toEqual(
+      [...requiredShadcnRuntimeComponents].sort(),
+    )
 
     const catalog = await getShadcnComponentCatalog()
     expect(catalog.source).toBe("shadcn-api")
-    expect(catalog.components).toContain("card")
     expect(catalog.components).toContain("button")
+    expect(catalog.components).toEqual(
+      expect.arrayContaining([...requiredShadcnRuntimeComponents]),
+    )
+    expect(
+      resolveManagedRuntimeComponentSet({
+        componentCatalog: catalog.components,
+        componentSet: "recommended",
+      }),
+    ).toEqual(requiredShadcnRuntimeComponents)
+    expect(
+      resolveManagedRuntimeComponentSet({
+        componentCatalog: catalog.components,
+        componentSet: "all",
+      }),
+    ).toEqual(catalog.components)
 
     const presets = listShadcnPresets()
     expect(presets).toContain("nova")

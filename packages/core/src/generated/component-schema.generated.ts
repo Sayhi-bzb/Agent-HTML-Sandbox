@@ -282,6 +282,29 @@ export const GENERATED_SHADCN_INTROSPECTIONS = [
     ]
   },
   {
+    "registryName": "switch",
+    "componentName": "Switch",
+    "exports": [
+      "Switch"
+    ],
+    "slots": [
+      "switch",
+      "switch-thumb"
+    ],
+    "unionProps": {
+      "size": [
+        "sm",
+        "default"
+      ]
+    },
+    "blockedProps": [
+      "className"
+    ],
+    "dependencies": [
+      "radix-ui"
+    ]
+  },
+  {
     "registryName": "table",
     "componentName": "Table",
     "exports": [
@@ -484,11 +507,14 @@ export const GENERATED_STANDARD_COMPONENT_SCHEMAS = [
       "alert",
       "badge",
       "checkbox",
+      "combobox",
       "input",
       "progress",
       "radio-group",
       "separator",
       "select",
+      "slider",
+      "switch",
       "table",
       "textarea",
       "toggle-group",
@@ -585,7 +611,7 @@ export const GENERATED_STANDARD_COMPONENT_SCHEMAS = [
   },
   {
     "name": "checkbox",
-    "description": "Single boolean field.",
+    "description": "Single boolean confirmation field.",
     "props": [
       {
         "name": "label",
@@ -597,6 +623,53 @@ export const GENERATED_STANDARD_COMPONENT_SCHEMAS = [
         "name": "checked",
         "valueKind": "boolean",
         "description": "Whether the field starts checked."
+      },
+      {
+        "name": "description",
+        "valueKind": "string",
+        "description": "Helpful field note."
+      }
+    ],
+    "allowedChildren": []
+  },
+  {
+    "name": "switch",
+    "description": "Immediate on/off preference toggle.",
+    "props": [
+      {
+        "name": "label",
+        "valueKind": "string",
+        "required": true,
+        "description": "Visible field label."
+      },
+      {
+        "name": "checked",
+        "valueKind": "boolean",
+        "description": "Whether the toggle starts enabled."
+      },
+      {
+        "name": "description",
+        "valueKind": "string",
+        "description": "Helpful field note."
+      }
+    ],
+    "allowedChildren": []
+  },
+  {
+    "name": "slider",
+    "description": "Read-only numeric preference slider.",
+    "props": [
+      {
+        "name": "label",
+        "valueKind": "string",
+        "required": true,
+        "description": "Visible field label."
+      },
+      {
+        "name": "value",
+        "valueKind": "number",
+        "required": true,
+        "description": "Current numeric value from 0 to 100."
       },
       {
         "name": "description",
@@ -659,6 +732,31 @@ export const GENERATED_STANDARD_COMPONENT_SCHEMAS = [
   {
     "name": "select",
     "description": "Single-select option picker.",
+    "props": [
+      {
+        "name": "label",
+        "valueKind": "string",
+        "required": true,
+        "description": "Visible field label."
+      },
+      {
+        "name": "value",
+        "valueKind": "string",
+        "description": "Initially selected option value."
+      },
+      {
+        "name": "description",
+        "valueKind": "string",
+        "description": "Helpful field note."
+      }
+    ],
+    "allowedChildren": [
+      "option"
+    ]
+  },
+  {
+    "name": "combobox",
+    "description": "Searchable single-select option picker.",
     "props": [
       {
         "name": "label",
@@ -797,11 +895,14 @@ export const GENERATED_STANDARD_COMPONENT_SCHEMAS = [
       "alert",
       "card",
       "checkbox",
+      "combobox",
       "input",
       "progress",
       "radio-group",
       "separator",
       "select",
+      "slider",
+      "switch",
       "table",
       "textarea",
       "toggle-group",
@@ -838,10 +939,13 @@ export const GENERATED_STANDARD_COMPONENT_SCHEMAS = [
       "alert",
       "badge",
       "checkbox",
+      "combobox",
       "input",
       "progress",
       "radio-group",
       "select",
+      "slider",
+      "switch",
       "table",
       "textarea",
       "toggle-group",

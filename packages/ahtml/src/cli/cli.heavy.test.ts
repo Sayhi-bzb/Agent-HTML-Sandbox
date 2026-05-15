@@ -100,18 +100,18 @@ describe("agent-html CLI heavy runtime flows", () => {
       "ahtml-prompt-ui-manifest",
     )
     await expectFile(
-      path.join(runtimeHome, "runtime", "render-capabilities.generated.json"),
-      "ahtml-runtime-render-capabilities",
+      path.join(runtimeHome, "runtime", "render-verification.generated.json"),
+      "ahtml-runtime-render-verification",
     )
-    const runtimeCapabilities = parseJson<{
+    const runtimeVerificationState = parseJson<{
       renderableAgentComponents: string[]
     }>(
       await readFile(
-        path.join(runtimeHome, "runtime", "render-capabilities.generated.json"),
+        path.join(runtimeHome, "runtime", "render-verification.generated.json"),
         "utf8",
       ),
     )
-    expect(runtimeCapabilities.renderableAgentComponents).toContain("tab")
+    expect(runtimeVerificationState.renderableAgentComponents).toContain("tab")
     await expectFile(
       path.join(runtimeHome, "runtime", "src", "renderer", "elements.tsx"),
       'from "@/components/ui/tabs"',
@@ -236,6 +236,9 @@ describe("agent-html CLI heavy runtime flows", () => {
           '<alert title="State" tone="danger">Needs attention.</alert>',
           '<badge tone="success">Ready</badge>',
           "<separator />",
+          '<switch label="Live Sync" checked="true" description="Immediate preference toggle." />',
+          '<slider label="Review strictness" value="70" description="Read-only numeric field." />',
+          '<combobox label="Owner" value="Ops reviewer" description="Searchable single-select field."><option value="Ops reviewer" label="Ops reviewer">Current reviewer.</option><option value="Security reviewer" label="Security reviewer">Escalation reviewer.</option></combobox>',
           '<select label="Deployment Window" value="today" description="Choose a release window."><option value="today" label="Today">Ship in the current window.</option><option value="tomorrow" label="Tomorrow">Wait for the next window.</option></select>',
           '<table><row kind="header"><cell>Name</cell><cell>Status</cell></row><row><cell>Runtime</cell><cell>Ready</cell></row></table>',
           '<list variant="unordered"><item>Portable output</item><item>Readable content</item></list>',
@@ -274,6 +277,9 @@ describe("agent-html CLI heavy runtime flows", () => {
       'data-slot="accordion"',
     )
     await expectFile(path.join(outputDir, "index.html"), 'data-slot="select"')
+    await expectFile(path.join(outputDir, "index.html"), 'data-slot="input"')
+    await expectFile(path.join(outputDir, "index.html"), 'data-slot="slider"')
+    await expectFile(path.join(outputDir, "index.html"), 'data-slot="switch"')
     await expectFile(path.join(outputDir, "index.html"), 'data-slot="alert"')
     await expectFile(path.join(outputDir, "index.html"), 'data-slot="badge"')
     await expectFileMissingText(
@@ -292,6 +298,11 @@ describe("agent-html CLI heavy runtime flows", () => {
       path.join(outputDir, "index.html"),
       "Today (selected)",
     )
+    await expectFile(path.join(outputDir, "index.html"), "<datalist")
+    await expectFile(
+      path.join(outputDir, "index.html"),
+      "Ops reviewer (selected)",
+    )
     await expectFile(
       path.join(outputDir, "assets", "ahtml.css"),
       "background-color:var(--background)",
@@ -307,7 +318,7 @@ describe("agent-html CLI heavy runtime flows", () => {
       "Managed Runtime",
     )
     await expectFile(
-      path.join(runtimeHome, "runtime", "render-capabilities.generated.json"),
+      path.join(runtimeHome, "runtime", "render-verification.generated.json"),
       '"verificationData"',
     )
     await assertNoProjectScaffold(consumerDir)
@@ -403,10 +414,10 @@ describe("agent-html CLI heavy runtime flows", () => {
     const runtimeHome = path.join(tempDir, "runtime-home")
     const inputPath = path.join(tempDir, "artifact.agent.html")
     const outputDir = path.join(tempDir, "html")
-    const capabilitiesPath = path.join(
+    const verificationPath = path.join(
       runtimeHome,
       "runtime",
-      "render-capabilities.generated.json",
+      "render-verification.generated.json",
     )
 
     await runCliWithServer(["doctor"], { AHTML_HOME: runtimeHome }, tempDir)
@@ -415,7 +426,7 @@ describe("agent-html CLI heavy runtime flows", () => {
       '<page title="Drift"><card title="Summary">Slot drift.</card></page>',
     )
 
-    const capabilities = parseJson<{
+    const runtimeVerificationState = parseJson<{
       rendererMapping: {
         components: {
           name: string
@@ -428,19 +439,19 @@ describe("agent-html CLI heavy runtime flows", () => {
           kind: string
         }[]
       }
-    }>(await readFile(capabilitiesPath, "utf8"))
-    const card = capabilities.rendererMapping.components.find(
+    }>(await readFile(verificationPath, "utf8"))
+    const card = runtimeVerificationState.rendererMapping.components.find(
       (component) => component.name === "card",
     )
 
     if (!card) {
-      throw new Error("Expected card renderer spec in runtime capabilities.")
+      throw new Error("Expected card renderer verification mapping entry.")
     }
 
     card.kind = "primitive"
     await writeFile(
-      capabilitiesPath,
-      `${JSON.stringify(capabilities, null, 2)}\n`,
+      verificationPath,
+      `${JSON.stringify(runtimeVerificationState, null, 2)}\n`,
     )
 
     await expectCliFailure(
@@ -487,7 +498,9 @@ describe("agent-html CLI heavy runtime flows", () => {
       tempDir,
     )
     expect(documentInspection.stdout).toContain('"profile": "ops-compact"')
+    expect(documentInspection.stdout).toContain('"resolvedProfileTokens"')
     expect(documentInspection.stdout).toContain('"density": "compact"')
+    expect(documentInspection.stdout).not.toContain('"resolvedConfig"')
     expect(documentInspection.stdout).toContain('"name": "card"')
 
     const artifactInspection = await runCliWithServer(
@@ -496,6 +509,8 @@ describe("agent-html CLI heavy runtime flows", () => {
       tempDir,
     )
     expect(artifactInspection.stdout).toContain("profile: ops-compact")
+    expect(artifactInspection.stdout).toContain("resolved profile tokens:")
+    expect(artifactInspection.stdout).not.toContain("resolved config")
     expect(artifactInspection.stdout).toContain("- density: compact")
     expect(artifactInspection.stdout).toContain("- card: 1")
 
@@ -528,7 +543,7 @@ describe("agent-html CLI heavy runtime flows", () => {
       inspectionPath: string
       inspection: {
         config: { profile: string }
-        resolvedConfig: { density: string }
+        resolvedProfileTokens: { density: string }
         components: { name: string; count: number }[]
       }
     }>(stdout)
@@ -539,9 +554,13 @@ describe("agent-html CLI heavy runtime flows", () => {
     expect(result.inspectionPath).toBe(
       path.join(outputDir, "agent-html.inspect.json"),
     )
+    expect(stdout).not.toContain("resolvedConfig")
     expect(result.inspection.config.profile).toBe("ops-compact")
-    expect(result.inspection.resolvedConfig.density).toBe("compact")
-    expect(result.inspection.components).toEqual([{ name: "card", count: 1 }])
+    expect(result.inspection.resolvedProfileTokens.density).toBe("compact")
+    expect(result.inspection.components).toEqual([
+      { name: "card", count: 1 },
+      { name: "page", count: 1 },
+    ])
     await removeTempDir(tempDir)
   }, 120000)
 
@@ -619,7 +638,7 @@ describe("agent-html CLI heavy runtime flows", () => {
     await removeTempDir(tempDir)
   }, 120000)
 
-  it("repairs managed runtime when managed runtime proof drifts from runtime files", async () => {
+  it("repairs managed runtime when ahtml glue proof drifts from runtime files", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
     const runtimeHome = path.join(tempDir, ".ahtml")
     const appPath = path.join(runtimeHome, "runtime", "src", "app.tsx")
@@ -641,39 +660,39 @@ describe("agent-html CLI heavy runtime flows", () => {
   it("fails doctor when runtime capabilities drift from schema", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
     const runtimeHome = path.join(tempDir, ".ahtml")
-    const capabilitiesPath = path.join(
+    const verificationPath = path.join(
       runtimeHome,
       "runtime",
-      "render-capabilities.generated.json",
+      "render-verification.generated.json",
     )
 
     await runCliWithServer(["doctor"], { AHTML_HOME: runtimeHome }, tempDir)
 
-    const capabilities = parseJson<{
+    const runtimeVerificationState = parseJson<{
       verificationData: {
         components: {
           name: string
           slots: { name: string; children: string[] }[]
         }[]
       }
-    }>(await readFile(capabilitiesPath, "utf8"))
-    const card = capabilities.verificationData.components.find(
+    }>(await readFile(verificationPath, "utf8"))
+    const card = runtimeVerificationState.verificationData.components.find(
       (component) => component.name === "card",
     )
 
     if (!card) {
-      throw new Error("Expected card capability in runtime capabilities.")
+      throw new Error("Expected card verification entry in runtime verification data.")
     }
 
     card.slots.push({ name: "actions", children: [] })
     await writeFile(
-      capabilitiesPath,
-      `${JSON.stringify(capabilities, null, 2)}\n`,
+      verificationPath,
+      `${JSON.stringify(runtimeVerificationState, null, 2)}\n`,
     )
 
     await expectCliFailure(
       runCliWithServer(["doctor"], { AHTML_HOME: runtimeHome }, tempDir),
-      "fail runtime:verification-data-parity runtime verification data ui capabilities card slots does not match schema verificationData card slots.",
+      "fail runtime:verification-data-parity runtime verification data card slots does not match schema verification data card slots.",
     )
     await removeTempDir(tempDir)
   }, 120000)
@@ -681,39 +700,39 @@ describe("agent-html CLI heavy runtime flows", () => {
   it("fails doctor when runtime renderer mapping drifts from schema", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
     const runtimeHome = path.join(tempDir, ".ahtml")
-    const capabilitiesPath = path.join(
+    const verificationPath = path.join(
       runtimeHome,
       "runtime",
-      "render-capabilities.generated.json",
+      "render-verification.generated.json",
     )
 
     await runCliWithServer(["doctor"], { AHTML_HOME: runtimeHome }, tempDir)
 
-    const capabilities = parseJson<{
+    const runtimeVerificationState = parseJson<{
       rendererMapping: {
         components: {
           name: string
           slots: { name: string; children: string[] }[]
         }[]
       }
-    }>(await readFile(capabilitiesPath, "utf8"))
-    const card = capabilities.rendererMapping.components.find(
+    }>(await readFile(verificationPath, "utf8"))
+    const card = runtimeVerificationState.rendererMapping.components.find(
       (component) => component.name === "card",
     )
 
     if (!card) {
-      throw new Error("Expected card renderer spec in runtime capabilities.")
+      throw new Error("Expected card renderer verification mapping entry.")
     }
 
     card.slots.push({ name: "actions", children: [] })
     await writeFile(
-      capabilitiesPath,
-      `${JSON.stringify(capabilities, null, 2)}\n`,
+      verificationPath,
+      `${JSON.stringify(runtimeVerificationState, null, 2)}\n`,
     )
 
     await expectCliFailure(
       runCliWithServer(["doctor"], { AHTML_HOME: runtimeHome }, tempDir),
-      "fail runtime:renderer-mapping-parity runtime renderer mapping spec card slots does not match schema rendererMapping card slots.",
+      "fail runtime:renderer-mapping-parity runtime renderer verification mapping card slots does not match schema renderer verification mapping card slots.",
     )
     await removeTempDir(tempDir)
   }, 60000)

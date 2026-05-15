@@ -26,6 +26,7 @@ export const rendererKindDefinitions = {
     requiredFields: ["root", "label", "control", "labelProp"],
     requiredWhenPresent: {
       description: ["descriptionProp"],
+      fallback: ["valueProp"],
       item: ["itemSlot", "itemValueProp", "itemHeadingProp"],
     },
   },
@@ -44,6 +45,8 @@ export const rendererKindDefinitions = {
       description: ["descriptionProp"],
       controlTrigger: ["controlContent"],
       controlValue: ["controlTrigger"],
+      itemContainer: ["controlListAttr"],
+      controlListAttr: ["itemContainer"],
     },
   },
   compound: {
@@ -99,7 +102,7 @@ export const supportedRendererKinds = new Set(
   Object.keys(rendererKindDefinitions),
 )
 
-export function createUiCapabilities(components) {
+export function createRuntimeVerificationData(components) {
   const componentMap = new Map(
     components.map((component) => [component.name, component]),
   )
@@ -210,6 +213,7 @@ const rendererElementKeys = [
   "headerCell",
   "bodyCell",
   "item",
+  "itemContainer",
 ]
 
 export function createRuntimeElementRegistrySpec(rendererMapping) {

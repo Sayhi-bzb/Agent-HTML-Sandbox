@@ -93,12 +93,18 @@ export type RuntimeReport = {
   checks: RuntimeCheckItem[]
 }
 
+export type ProposalSnapshot = {
+  source: string
+  lineCount: number
+}
+
 export type AgentShellMessage = {
   id: string
   role: "system" | "user" | "placeholder"
   createdAt: string
   text: string
   kind: "message" | "context-card" | "proposal-placeholder"
+  proposalSnapshot?: ProposalSnapshot
 }
 
 export type AppErrorCode =

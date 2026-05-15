@@ -10,7 +10,7 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
-    include: ["packages/**/*.test.ts"],
+    include: ["packages/**/*.test.ts", "apps/**/*.test.ts"],
     exclude: [...configDefaults.exclude, "packages/**/*.heavy.test.ts"],
     testTimeout: 15000,
   },

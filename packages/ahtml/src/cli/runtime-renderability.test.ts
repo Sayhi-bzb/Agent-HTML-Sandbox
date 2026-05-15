@@ -23,7 +23,7 @@ describe("createRuntimeRenderDiagnostics", () => {
           },
         ],
       },
-      runtimeCapabilities: {
+      runtimeVerificationState: {
         verificationData: {
           components: [
             {
@@ -102,7 +102,7 @@ describe("createRuntimeRenderDiagnostics", () => {
         },
         components: [],
       },
-      runtimeCapabilities: {
+      runtimeVerificationState: {
         verificationData: {
           components: [
             {
@@ -186,7 +186,7 @@ describe("createRuntimeRenderDiagnostics", () => {
         },
         components: [],
       },
-      runtimeCapabilities: {
+      runtimeVerificationState: {
         verificationData: {
           components: [
             {
@@ -305,7 +305,7 @@ describe("createRuntimeRenderDiagnostics", () => {
           },
         ],
       },
-      runtimeCapabilities: {
+      runtimeVerificationState: {
         verificationData: {
           components: [
             {

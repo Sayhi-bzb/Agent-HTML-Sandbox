@@ -24,13 +24,21 @@ type RuntimePaths = {
   readonly configDir: string
   readonly manifestPath: string
   readonly promptUiManifestPath: string
-  readonly runtimeCapabilitiesPath: string
+  readonly runtimeVerificationPath: string
   readonly runtimeViteConfigPath: string
   readonly runtimeSrcDir: string
   readonly runtimeComponentsDir: string
 }
 
 type LoadedModules = {
+  readonly createShadcnBaseLayerExpectation: (
+    cssVariables: boolean,
+  ) => {
+    readonly cssVariables: boolean
+    readonly imports: readonly string[]
+    readonly tokens: readonly string[]
+  }
+  readonly requiredShadcnRuntimeExports: Record<string, readonly string[]>
   readonly supportedRuntimeBase: string
   readonly runDoctorCommand: (input: {
     readonly commandArgs: readonly string[]
@@ -48,7 +56,7 @@ type LoadedModules = {
     readonly setup: NativeRuntimeSetup
     readonly schema: CliSchemaOutput
   }) => unknown
-  readonly createManagedRuntimeProof: (paths: RuntimePaths) => Promise<{
+  readonly createAhtmlGlueProof: (paths: RuntimePaths) => Promise<{
     readonly algorithm: string
     readonly files: Record<string, string>
   }>
@@ -207,17 +215,17 @@ describe("runtime surface completeness", () => {
     )
   })
 
-  it("rejects managed runtime proof drift between manifest and runtime files", async () => {
+  it("rejects ahtml glue proof drift between manifest and runtime files", async () => {
     const { assertRuntimeSurface } = await loadModules()
     const fixture = await createRuntimeFixture()
     const manifest = {
       ...fixture.manifest,
       shadcnRuntimeSurface: {
         ...fixture.manifest.shadcnRuntimeSurface,
-        managedRuntimeProof: {
-          ...fixture.manifest.shadcnRuntimeSurface.managedRuntimeProof,
+        ahtmlGlueProof: {
+          ...fixture.manifest.shadcnRuntimeSurface.ahtmlGlueProof,
           files: {
-            ...fixture.manifest.shadcnRuntimeSurface.managedRuntimeProof.files,
+            ...fixture.manifest.shadcnRuntimeSurface.ahtmlGlueProof.files,
             "src/app.tsx": "drifted-proof",
           },
         },
@@ -230,7 +238,7 @@ describe("runtime surface completeness", () => {
         paths: fixture.runtimePaths,
       }),
     ).rejects.toThrow(
-      "surface managedRuntimeProof src/app.tsx does not match runtime file hash",
+      "surface ahtmlGlueProof src/app.tsx does not match runtime file hash",
     )
   })
 
@@ -297,8 +305,10 @@ async function createRuntimeFixture({
   builtCssSource?: string
 } = {}) {
   const {
+    createShadcnBaseLayerExpectation,
+    requiredShadcnRuntimeExports,
     supportedRuntimeBase,
-    createManagedRuntimeProof,
+    createAhtmlGlueProof,
     createPromptUiManifest,
     getCliSchemaOutput,
     getRuntimePaths,
@@ -353,11 +363,9 @@ async function createRuntimeFixture({
     cssPath: "src/styles.css",
     componentsJson: "components.json",
     aliases: componentsJson.aliases,
-    baseLayerExpectation: {
-      cssVariables: true,
-      imports: ["tailwindcss", "tw-animate-css", "shadcn/tailwind.css"],
-      tokens: ["--background", "--foreground", "--border"],
-    },
+    baseLayerExpectation: createShadcnBaseLayerExpectation(
+      componentsJson.tailwind.cssVariables,
+    ),
     registryItems: [...nativeRuntimeSetup.components],
     requiredRegistryItems: [...nativeRuntimeSetup.components],
     requiredFiles: [
@@ -371,7 +379,7 @@ async function createRuntimeFixture({
     requiredExports: Object.fromEntries(
       nativeRuntimeSetup.components.map((component) => [
         component,
-        getRequiredComponentExports(component),
+        getRequiredComponentExports(requiredShadcnRuntimeExports, component),
       ]),
     ),
     ...surfaceOverrides,
@@ -382,7 +390,7 @@ async function createRuntimeFixture({
   await mkdir(runtimePaths.cacheDir, { recursive: true })
   await mkdir(runtimePaths.logsDir, { recursive: true })
   await mkdir(runtimePaths.runtimeSrcDir, { recursive: true })
-  await mkdir(path.dirname(runtimePaths.runtimeCapabilitiesPath), {
+  await mkdir(path.dirname(runtimePaths.runtimeVerificationPath), {
     recursive: true,
   })
   await writeFile(
@@ -461,7 +469,10 @@ async function createRuntimeFixture({
   )
 
   for (const component of nativeRuntimeSetup.components) {
-    const exports = getRequiredComponentExports(component)
+    const exports = getRequiredComponentExports(
+      requiredShadcnRuntimeExports,
+      component,
+    )
     await writeFile(
       path.join(runtimePaths.runtimeComponentsDir, `${component}.tsx`),
       createComponentModule(exports),
@@ -470,7 +481,7 @@ async function createRuntimeFixture({
 
   const shadcnRuntimeSurface = {
     ...baseRuntimeSurface,
-    managedRuntimeProof: await createManagedRuntimeProof(runtimePaths),
+    ahtmlGlueProof: await createAhtmlGlueProof(runtimePaths),
   }
   const manifest = {
     kind: "ahtml-managed-runtime",
@@ -495,8 +506,8 @@ async function createRuntimeFixture({
       config: runtimePaths.configDir,
     },
   }
-  const runtimeCapabilities = {
-    kind: "ahtml-runtime-render-capabilities",
+  const runtimeVerificationState = {
+    kind: "ahtml-runtime-render-verification",
     version: 1,
     runtimeBase: supportedRuntimeBase,
     shadcnRuntimeSurface,
@@ -514,8 +525,8 @@ async function createRuntimeFixture({
     `${JSON.stringify(promptUiManifest, null, 2)}\n`,
   )
   await writeFile(
-    runtimePaths.runtimeCapabilitiesPath,
-    `${JSON.stringify(runtimeCapabilities, null, 2)}\n`,
+    runtimePaths.runtimeVerificationPath,
+    `${JSON.stringify(runtimeVerificationState, null, 2)}\n`,
   )
 
   const outputDir = path.join(runtimeRoot, "dist", "html")
@@ -597,48 +608,17 @@ function createComponentModule(exports: string[]) {
     .join("\n")
 }
 
-function getRequiredComponentExports(component: string) {
-  const exportMap: Record<string, string[]> = {
-    accordion: [
-      "Accordion",
-      "AccordionContent",
-      "AccordionItem",
-      "AccordionTrigger",
-    ],
-    alert: ["Alert", "AlertDescription", "AlertTitle"],
-    badge: ["Badge"],
-    card: ["Card", "CardContent", "CardHeader", "CardTitle"],
-    checkbox: ["Checkbox"],
-    input: ["Input"],
-    progress: ["Progress"],
-    "radio-group": ["RadioGroup", "RadioGroupItem"],
-    select: [
-      "Select",
-      "SelectContent",
-      "SelectItem",
-      "SelectTrigger",
-      "SelectValue",
-    ],
-    separator: ["Separator"],
-    table: [
-      "Table",
-      "TableBody",
-      "TableCell",
-      "TableHead",
-      "TableHeader",
-      "TableRow",
-    ],
-    textarea: ["Textarea"],
-    "toggle-group": ["ToggleGroup", "ToggleGroupItem"],
-    tabs: ["Tabs", "TabsContent", "TabsList", "TabsTrigger"],
-  }
-  const exports = exportMap[component]
+function getRequiredComponentExports(
+  requiredShadcnRuntimeExports: Record<string, readonly string[]>,
+  component: string,
+) {
+  const exports = requiredShadcnRuntimeExports[component]
 
   if (!exports) {
     throw new Error(`No test export map defined for ${component}.`)
   }
 
-  return exports
+  return [...exports]
 }
 
 async function captureStdout(callback: () => Promise<void>) {
@@ -723,13 +703,17 @@ async function loadModules(): Promise<LoadedModules> {
   ])
 
   return {
+    requiredShadcnRuntimeExports:
+      renderCapabilitiesModule.requiredShadcnRuntimeExports,
+    createShadcnBaseLayerExpectation:
+      runtimeSurfaceModule.createShadcnBaseLayerExpectation,
     supportedRuntimeBase: renderCapabilitiesModule.supportedRuntimeBase,
     runDoctorCommand: doctorChecksModule.runDoctorCommand,
     getRuntimePaths: runtimePathsModule.getRuntimePaths,
     runtimeRenderer: runtimePathsModule.runtimeRenderer,
     runtimeVersion: runtimePathsModule.runtimeVersion,
     createPromptUiManifest: runtimeSetupModule.createPromptUiManifest,
-    createManagedRuntimeProof: runtimeSurfaceModule.createManagedRuntimeProof,
+    createAhtmlGlueProof: runtimeSurfaceModule.createAhtmlGlueProof,
     nativeRuntimeSetup: runtimeSetupModule.nativeRuntimeSetup,
     assertBuiltArtifactCss: runtimeSurfaceModule.assertBuiltArtifactCss,
     assertRuntimeSurface: runtimeSurfaceModule.assertRuntimeSurface,

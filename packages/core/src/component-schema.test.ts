@@ -27,9 +27,12 @@ describe("standard component schema", () => {
       "input",
       "textarea",
       "checkbox",
+      "switch",
+      "slider",
       "radio-group",
       "toggle-group",
       "select",
+      "combobox",
       "option",
       "table",
       "row",
@@ -41,11 +44,11 @@ describe("standard component schema", () => {
       "accordion",
       "accordion-item",
     ])
-    expect(VALIDATED_STANDARD_COMPONENT_SCHEMAS).toHaveLength(22)
+    expect(VALIDATED_STANDARD_COMPONENT_SCHEMAS).toHaveLength(25)
   })
 
-  it("keeps schema components aligned with render capability state", async () => {
-    const capabilities = (await import(
+  it("keeps schema components aligned with runtime verification data", async () => {
+    const verification = (await import(
       pathToFileURL(
         path.join(
           process.cwd(),
@@ -57,7 +60,7 @@ describe("standard component schema", () => {
         ),
       ).href
     )) as {
-      readonly createUiCapabilities: (
+      readonly createRuntimeVerificationData: (
         components: typeof STANDARD_COMPONENT_SCHEMAS,
       ) => {
         readonly components: readonly {
@@ -70,12 +73,12 @@ describe("standard component schema", () => {
     }
 
     expect([...STANDARD_COMPONENT_NAMES].sort()).toEqual(
-      [...capabilities.schemaRenderableComponents].sort(),
+      [...verification.schemaRenderableComponents].sort(),
     )
     expect(
       Object.fromEntries(
-        capabilities
-          .createUiCapabilities(STANDARD_COMPONENT_SCHEMAS)
+        verification
+          .createRuntimeVerificationData(STANDARD_COMPONENT_SCHEMAS)
           .components.map((component) => [
             component.name,
             component.slots.map((slot) => slot.name),
@@ -87,6 +90,8 @@ describe("standard component schema", () => {
       badge: ["children"],
       card: ["children"],
       checkbox: ["children"],
+      slider: ["children"],
+      combobox: ["option"],
       input: ["children"],
       list: ["item"],
       page: ["children"],
@@ -94,6 +99,7 @@ describe("standard component schema", () => {
       "radio-group": ["option"],
       separator: ["children"],
       select: ["option"],
+      switch: ["children"],
       table: ["row", "cell"],
       textarea: ["children"],
       "toggle-group": ["option"],
@@ -101,8 +107,8 @@ describe("standard component schema", () => {
     })
     expect(
       Object.fromEntries(
-        capabilities
-          .createUiCapabilities(STANDARD_COMPONENT_SCHEMAS)
+        verification
+          .createRuntimeVerificationData(STANDARD_COMPONENT_SCHEMAS)
           .components.map((component) => [
             component.name,
             component.renderKind,
@@ -114,6 +120,8 @@ describe("standard component schema", () => {
       badge: "primitive",
       card: "compound",
       checkbox: "field-control",
+      slider: "field-control",
+      combobox: "option-set",
       input: "field-control",
       list: "collection",
       page: "compound",
@@ -121,6 +129,7 @@ describe("standard component schema", () => {
       "radio-group": "field-control",
       separator: "primitive",
       select: "option-set",
+      switch: "field-control",
       table: "table",
       textarea: "field-control",
       "toggle-group": "option-set",
@@ -165,6 +174,15 @@ describe("standard component schema", () => {
       "checked",
       "description",
       "label",
+      "checked",
+      "description",
+      "label",
+      "value",
+      "description",
+      "label",
+      "value",
+      "description",
+      "label",
       "value",
       "description",
       "label",
@@ -204,11 +222,14 @@ describe("standard component schema", () => {
       "alert",
       "badge",
       "checkbox",
+      "combobox",
       "input",
       "progress",
       "radio-group",
       "separator",
       "select",
+      "slider",
+      "switch",
       "table",
       "textarea",
       "toggle-group",
@@ -223,6 +244,9 @@ describe("standard component schema", () => {
     expect(getComponentSchema("input")?.allowedChildren).toEqual([])
     expect(getComponentSchema("textarea")?.allowedChildren).toEqual([])
     expect(getComponentSchema("checkbox")?.allowedChildren).toEqual([])
+    expect(getComponentSchema("switch")?.allowedChildren).toEqual([])
+    expect(getComponentSchema("slider")?.allowedChildren).toEqual([])
+    expect(getComponentSchema("combobox")?.allowedChildren).toEqual(["option"])
     expect(getComponentSchema("radio-group")?.allowedChildren).toEqual([
       "option",
     ])
@@ -240,11 +264,14 @@ describe("standard component schema", () => {
       "alert",
       "card",
       "checkbox",
+      "combobox",
       "input",
       "progress",
       "radio-group",
       "separator",
       "select",
+      "slider",
+      "switch",
       "table",
       "textarea",
       "toggle-group",
@@ -258,10 +285,13 @@ describe("standard component schema", () => {
       "alert",
       "badge",
       "checkbox",
+      "combobox",
       "input",
       "progress",
       "radio-group",
       "select",
+      "slider",
+      "switch",
       "table",
       "textarea",
       "toggle-group",

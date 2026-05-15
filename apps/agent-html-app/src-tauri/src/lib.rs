@@ -40,12 +40,20 @@ struct SessionDetail {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+struct ProposalSnapshot {
+    source: String,
+    line_count: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct AgentShellMessage {
     id: String,
     role: String,
     created_at: String,
     text: String,
     kind: String,
+    proposal_snapshot: Option<ProposalSnapshot>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -556,6 +564,45 @@ fn append_chat_message(
         created_at: now_iso_stub(),
         text: text.to_string(),
         kind: input.kind,
+        proposal_snapshot: None,
+    };
+
+    append_chat_message_to_file(&session_dir, &message)?;
+    record.updated_at = now_iso_stub();
+    write_session_record(&session_dir, &record)?;
+    read_chat_messages(&session_dir)
+}
+
+#[tauri::command]
+fn generate_session_proposal(
+    app: AppHandle,
+    session_id: String,
+) -> Result<Vec<AgentShellMessage>, AppError> {
+    let session_dir = session_dir(&app, &session_id)?;
+    let mut record = read_session_record(&session_dir)?;
+    let source = fs::read_to_string(session_dir.join(SOURCE_FILE_NAME)).map_err(|error| {
+        AppError::new("session-io", "Unable to read source file for proposal generation.")
+            .with_details(error.to_string())
+            .with_session(session_id.clone())
+    })?;
+    let logs_dir = session_dir.join(LOGS_DIR_NAME);
+    let logs = LogSnapshot {
+        stdout: read_latest_log(&logs_dir, ".stdout.log"),
+        stderr: read_latest_log(&logs_dir, ".stderr.log"),
+    };
+    let build = build_run_summary_from_record(&record, &session_dir);
+    let text = build_session_proposal_text(&record, &source, build.as_ref(), &logs);
+
+    let message = AgentShellMessage {
+        id: format!("chat-{}", now_epoch_millis()),
+        role: "placeholder".into(),
+        created_at: now_iso_stub(),
+        text,
+        kind: "proposal-placeholder".into(),
+        proposal_snapshot: Some(ProposalSnapshot {
+            line_count: source.lines().count(),
+            source,
+        }),
     };
 
     append_chat_message_to_file(&session_dir, &message)?;
@@ -871,6 +918,84 @@ fn write_session_record(session_dir: &Path, record: &SessionRecord) -> Result<()
     })
 }
 
+fn build_session_proposal_text(
+    record: &SessionRecord,
+    source: &str,
+    build: Option<&BuildRunSummary>,
+    logs: &LogSnapshot,
+) -> String {
+    let mut items: Vec<String> = Vec::new();
+
+    if !source.contains("<page") {
+        items.push(
+            "[build] Add a <page> root before the next build so the session has a valid top-level artifact."
+                .into(),
+        );
+    }
+
+    if source.contains("className=") {
+        items.push(
+            "[inspect] Remove raw UI props such as className and keep the document at the semantic agent-html layer."
+                .into(),
+        );
+    }
+
+    match record.status.as_str() {
+        "dirty" => items.push(
+            "[build] Rebuild this session so Preview and Inspect catch up with the latest saved source."
+                .into(),
+        ),
+        "error" => items.push(
+            "[inspect] Inspect the latest stderr log before editing again so the next build targets the actual failure."
+                .into(),
+        ),
+        _ => {}
+    }
+
+    match build {
+        Some(summary) if summary.status == "failed" => items.push(
+            "[build] The latest build failed, so review the logs first and only rebuild after the failure path is understood."
+                .into(),
+        ),
+        Some(summary) if summary.preview_path.is_some() => items.push(
+            "[review] Compare the current preview artifact with the source intent and confirm the main recommendation still matches the rendered output."
+                .into(),
+        ),
+        _ => items.push(
+            "[build] Run Build to generate a fresh preview artifact before sharing or reviewing this session."
+                .into(),
+        ),
+    }
+
+    if logs.stderr.as_ref().map(|value| !value.trim().is_empty()).unwrap_or(false) {
+        items.push(
+            "[inspect] Keep the latest stderr log open while you edit because it is the fastest way to explain runtime and build failures."
+                .into(),
+        );
+    } else if logs
+        .stdout
+        .as_ref()
+        .map(|value| !value.trim().is_empty())
+        .unwrap_or(false)
+    {
+        items.push(
+            "[review] Use the captured stdout summary as the baseline and return to Source only if Preview diverges from that output."
+                .into(),
+        );
+    }
+
+    if items.is_empty() {
+        items.push(
+            "[review] Keep the source, preview, and inspect summary aligned before making the next artifact decision."
+                .into(),
+        );
+    }
+
+    let mut lines = vec![format!("Proposal for {}", record.name)];
+    lines.extend(items.into_iter().map(|item| format!("- {item}")));
+    lines.join("\n")
+}
+
 fn build_run_summary_from_record(
     record: &SessionRecord,
     session_dir: &Path,
@@ -1113,6 +1238,7 @@ fn default_chat_messages() -> Vec<AgentShellMessage> {
             created_at: created_at.clone(),
             text: "Agent shell is session-backed. Live provider integration is intentionally disabled in v1.".into(),
             kind: "message".into(),
+            proposal_snapshot: None,
         },
         AgentShellMessage {
             id: format!("chat-{}", now_epoch_millis() + 1),
@@ -1120,6 +1246,7 @@ fn default_chat_messages() -> Vec<AgentShellMessage> {
             created_at,
             text: "Prompt drafts, placeholder replies, and future proposals are persisted in chat.jsonl.".into(),
             kind: "proposal-placeholder".into(),
+            proposal_snapshot: None,
         },
     ]
 }
@@ -1189,6 +1316,7 @@ pub fn run() {
             read_logs,
             read_chat,
             append_chat_message,
+            generate_session_proposal,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -1196,7 +1324,10 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::{read_session_record, update_session_view_record, write_session_record, SessionRecord};
+    use super::{
+        build_session_proposal_text, read_session_record, update_session_view_record,
+        write_session_record, BuildRunSummary, LogSnapshot, SessionRecord,
+    };
     use std::fs;
     use std::path::PathBuf;
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -1255,6 +1386,44 @@ mod tests {
         let record = read_session_record(&session_dir).expect("read record");
         assert_eq!(record.current_view, "source");
         let _ = fs::remove_dir_all(&session_dir);
+    }
+
+    #[test]
+    fn build_session_proposal_text_highlights_error_and_missing_page() {
+        let record = SessionRecord {
+            id: "session-test".into(),
+            name: "Session Test".into(),
+            status: "error".into(),
+            pinned: false,
+            updated_at: "epoch-1".into(),
+            last_build_at: Some("epoch-2".into()),
+            has_preview: false,
+            current_view: "inspect".into(),
+        };
+        let build = BuildRunSummary {
+            run_id: "build-1".into(),
+            session_id: "session-test".into(),
+            started_at: "epoch-2".into(),
+            finished_at: Some("epoch-3".into()),
+            status: "failed".into(),
+            exit_code: Some(1),
+            stdout_path: None,
+            stderr_path: None,
+            preview_path: None,
+        };
+        let logs = LogSnapshot {
+            stdout: None,
+            stderr: Some("Validation failed".into()),
+        };
+
+        let text = build_session_proposal_text(&record, "<card />", Some(&build), &logs);
+
+        assert!(text.contains("Proposal for Session Test"));
+        assert!(text.contains("\n- [build] Add a <page> root"));
+        assert!(text.contains("[build] Add a <page> root"));
+        assert!(text.contains("[inspect]"));
+        assert!(text.contains("stderr log"));
+        assert!(text.contains("[build] The latest build failed"));
     }
 
     fn test_session_dir(suffix: &str) -> PathBuf {

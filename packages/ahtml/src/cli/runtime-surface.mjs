@@ -12,14 +12,14 @@ const requiredCssImports = [
 ]
 const requiredCssTokens = ["--background", "--foreground", "--border"]
 const requiredAliasKeys = ["components", "ui", "lib", "utils"]
-const managedRuntimeProofAlgorithm = "sha256"
+const ahtmlGlueProofAlgorithm = "sha256"
 const managedRuntimeShellSource = "shadcn-official-template"
 const managedRuntimeTemplateOverrideSource = "shadcn-template-override"
 const supportedManagedRuntimeShellSources = new Set([
   managedRuntimeShellSource,
   managedRuntimeTemplateOverrideSource,
 ])
-const managedRuntimeOwnedFiles = [
+const ahtmlGlueFiles = [
   "vite.ahtml.config.mjs",
   "src/app.tsx",
   "src/main.tsx",
@@ -30,6 +30,14 @@ const managedRuntimeOwnedFiles = [
   "src/renderer/render-node.tsx",
   "src/renderer/types.ts",
 ]
+
+export function createShadcnBaseLayerExpectation(cssVariables) {
+  return {
+    cssVariables,
+    imports: [...requiredCssImports],
+    tokens: [...requiredCssTokens],
+  }
+}
 
 export async function createShadcnRuntimeSurface({
   paths,
@@ -56,11 +64,9 @@ export async function createShadcnRuntimeSurface({
     cssPath,
     componentsJson: "components.json",
     aliases: componentsJson.aliases,
-    baseLayerExpectation: {
-      cssVariables: componentsJson.tailwind.cssVariables,
-      imports: requiredCssImports,
-      tokens: requiredCssTokens,
-    },
+    baseLayerExpectation: createShadcnBaseLayerExpectation(
+      componentsJson.tailwind.cssVariables,
+    ),
     registryItems: setup.components,
     requiredRegistryItems: setup.components,
     requiredFiles: createRequiredRuntimeFiles({
@@ -71,17 +77,17 @@ export async function createShadcnRuntimeSurface({
   }
 }
 
-export async function recordManagedRuntimeProof({ paths, surface }) {
+export async function recordAhtmlGlueProof({ paths, surface }) {
   return {
     ...surface,
-    managedRuntimeProof: await createManagedRuntimeProof(paths),
+    ahtmlGlueProof: await createAhtmlGlueProof(paths),
   }
 }
 
-export async function createManagedRuntimeProof(paths) {
+export async function createAhtmlGlueProof(paths) {
   const files = {}
 
-  for (const relativePath of managedRuntimeOwnedFiles) {
+  for (const relativePath of ahtmlGlueFiles) {
     const absolutePath = path.join(
       paths.runtimeDir,
       relativePath.replaceAll("/", path.sep),
@@ -92,7 +98,7 @@ export async function createManagedRuntimeProof(paths) {
   }
 
   return {
-    algorithm: managedRuntimeProofAlgorithm,
+    algorithm: ahtmlGlueProofAlgorithm,
     files,
   }
 }
@@ -460,10 +466,10 @@ export function formatShadcnRuntimeProvenance(surface) {
   }
 
   const proofCount = Object.keys(
-    surface.managedRuntimeProof?.files ?? {},
+    surface.ahtmlGlueProof?.files ?? {},
   ).length
 
-  return `${String(surface.shellSource ?? "missing")}/${String(surface.initSource ?? "missing")}/${String(surface.tailwindVersion ?? "missing")} files:${proofCount}`
+  return `${String(surface.shellSource ?? "missing")}/${String(surface.initSource ?? "missing")}/${String(surface.tailwindVersion ?? "missing")} glue-files:${proofCount}`
 }
 
 export function getShadcnRuntimeProvenanceState(surface) {
@@ -625,29 +631,29 @@ function assertBaseLayerExpectation({ surface, componentsJson }) {
 
 async function assertManagedRuntimeProof({ paths, surface }) {
   const proof = requireObject(
-    surface.managedRuntimeProof,
-    "surface managedRuntimeProof must be an object.",
+    surface.ahtmlGlueProof,
+    "surface ahtmlGlueProof must be an object.",
   )
 
-  if (proof.algorithm !== managedRuntimeProofAlgorithm) {
+  if (proof.algorithm !== ahtmlGlueProofAlgorithm) {
     throw new Error(
-      `surface managedRuntimeProof algorithm must be ${managedRuntimeProofAlgorithm}, got ${String(proof.algorithm)}.`,
+      `surface ahtmlGlueProof algorithm must be ${ahtmlGlueProofAlgorithm}, got ${String(proof.algorithm)}.`,
     )
   }
 
-  const expectedProof = await createManagedRuntimeProof(paths)
+  const expectedProof = await createAhtmlGlueProof(paths)
 
   assertSameStringSet({
     actual: Object.keys(proof.files ?? {}),
-    actualName: "surface managedRuntimeProof files",
+    actualName: "surface ahtmlGlueProof files",
     expected: Object.keys(expectedProof.files),
-    expectedName: "expected managedRuntimeProof files",
+    expectedName: "expected ahtmlGlueProof files",
   })
 
   for (const relativePath of Object.keys(expectedProof.files)) {
     if (proof.files[relativePath] !== expectedProof.files[relativePath]) {
       throw new Error(
-        `surface managedRuntimeProof ${relativePath} does not match runtime file hash. Actual: ${String(proof.files[relativePath])} Expected: ${String(expectedProof.files[relativePath])}.`,
+        `surface ahtmlGlueProof ${relativePath} does not match runtime file hash. Actual: ${String(proof.files[relativePath])} Expected: ${String(expectedProof.files[relativePath])}.`,
       )
     }
   }
@@ -778,5 +784,5 @@ function normalizeCssForComparison(css) {
 }
 
 function createContentHash(source) {
-  return createHash(managedRuntimeProofAlgorithm).update(source).digest("hex")
+  return createHash(ahtmlGlueProofAlgorithm).update(source).digest("hex")
 }

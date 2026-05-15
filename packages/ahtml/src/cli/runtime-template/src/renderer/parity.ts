@@ -1,10 +1,13 @@
-import type { RendererSpecComponent, RuntimeCapabilities } from "./types"
+import type {
+  RendererSpecComponent,
+  RuntimeVerificationState,
+} from "./types"
 
 export function createRendererSpecMap(
-  runtimeCapabilities: RuntimeCapabilities,
+  runtimeVerificationState: RuntimeVerificationState,
 ) {
   return new Map(
-    runtimeCapabilities.rendererMapping.components.map((component) => [
+    runtimeVerificationState.rendererMapping.components.map((component) => [
       component.name,
       component,
     ]),
@@ -12,11 +15,11 @@ export function createRendererSpecMap(
 }
 
 export function assertRendererRegistryParity(
-  runtimeCapabilities: RuntimeCapabilities,
+  runtimeVerificationState: RuntimeVerificationState,
   rendererSpecByName: Map<string, RendererSpecComponent>,
 ) {
-  const expected = runtimeCapabilities.verificationData.components
-  const actual = runtimeCapabilities.rendererMapping.components
+  const expected = runtimeVerificationState.verificationData.components
+  const actual = runtimeVerificationState.rendererMapping.components
   const expectedNames = expected.map((component) => component.name)
   const actualNames = actual.map((component) => component.name)
   const missing = expectedNames.filter((name) => !actualNames.includes(name))

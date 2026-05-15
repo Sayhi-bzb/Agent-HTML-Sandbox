@@ -24,37 +24,13 @@ const uiProtocolDefinitions = {
   checkbox: {
     promptOrder: 7,
   },
-  "radio-group": {
+  switch: {
     promptOrder: 8,
-    normalization: {
-      kind: "slotted",
-      slotName: "option",
-      childComponentName: "option",
-    },
-    slots: [
-      {
-        name: "option",
-        props: ["value", "label"],
-        children: ["text"],
-      },
-    ],
   },
-  "toggle-group": {
+  slider: {
     promptOrder: 9,
-    normalization: {
-      kind: "slotted",
-      slotName: "option",
-      childComponentName: "option",
-    },
-    slots: [
-      {
-        name: "option",
-        props: ["value", "label"],
-        children: ["text"],
-      },
-    ],
   },
-  select: {
+  "radio-group": {
     promptOrder: 10,
     normalization: {
       kind: "slotted",
@@ -69,11 +45,56 @@ const uiProtocolDefinitions = {
       },
     ],
   },
-  separator: {
+  "toggle-group": {
     promptOrder: 11,
+    normalization: {
+      kind: "slotted",
+      slotName: "option",
+      childComponentName: "option",
+    },
+    slots: [
+      {
+        name: "option",
+        props: ["value", "label"],
+        children: ["text"],
+      },
+    ],
+  },
+  select: {
+    promptOrder: 12,
+    normalization: {
+      kind: "slotted",
+      slotName: "option",
+      childComponentName: "option",
+    },
+    slots: [
+      {
+        name: "option",
+        props: ["value", "label"],
+        children: ["text"],
+      },
+    ],
+  },
+  combobox: {
+    promptOrder: 13,
+    normalization: {
+      kind: "slotted",
+      slotName: "option",
+      childComponentName: "option",
+    },
+    slots: [
+      {
+        name: "option",
+        props: ["value", "label"],
+        children: ["text"],
+      },
+    ],
+  },
+  separator: {
+    promptOrder: 14,
   },
   list: {
-    promptOrder: 12,
+    promptOrder: 15,
     normalization: {
       kind: "slotted",
       slotName: "item",
@@ -87,7 +108,7 @@ const uiProtocolDefinitions = {
     ],
   },
   table: {
-    promptOrder: 13,
+    promptOrder: 16,
     normalization: {
       kind: "table",
       rowSlotName: "row",
@@ -108,7 +129,7 @@ const uiProtocolDefinitions = {
     ],
   },
   tabs: {
-    promptOrder: 14,
+    promptOrder: 17,
     attrAliases: {
       default: "default-value",
     },
@@ -136,7 +157,7 @@ const uiProtocolDefinitions = {
     ],
   },
   accordion: {
-    promptOrder: 15,
+    promptOrder: 18,
     normalization: {
       kind: "slotted",
       slotName: "accordion-item",
@@ -327,6 +348,54 @@ export const componentCapabilityDefinitions = {
       ],
     },
   },
+  switch: {
+    source: "shadcn",
+    renderKind: "field-control",
+    uiProtocol: uiProtocolDefinitions.switch,
+    requiredRegistryItem: "switch",
+    requiredExports: ["Switch"],
+    renderer: {
+      kind: "field-control",
+      root: "div",
+      label: "p",
+      control: "Switch",
+      description: "p",
+      rootClassName: "grid gap-2",
+      labelClassName: "m-0 text-sm font-medium leading-6 text-foreground",
+      descriptionClassName: "m-0 text-sm text-muted-foreground",
+      labelProp: "label",
+      descriptionProp: "description",
+      propMappings: [
+        { prop: "checked", target: "defaultChecked", coerce: "boolean" },
+        { prop: "label", target: "aria-label" },
+      ],
+    },
+  },
+  slider: {
+    source: "shadcn",
+    renderKind: "field-control",
+    uiProtocol: uiProtocolDefinitions.slider,
+    requiredRegistryItem: "slider",
+    requiredExports: ["Slider"],
+    renderer: {
+      kind: "field-control",
+      root: "div",
+      label: "p",
+      control: "Slider",
+      description: "p",
+      rootClassName: "grid gap-2",
+      labelClassName: "m-0 text-sm font-medium leading-6 text-foreground",
+      descriptionClassName: "m-0 text-sm text-muted-foreground",
+      labelProp: "label",
+      descriptionProp: "description",
+      valueProp: "value",
+      fallback: true,
+      propMappings: [
+        { prop: "value", target: "defaultValue", coerce: "number-array" },
+        { prop: "label", target: "aria-label" },
+      ],
+    },
+  },
   "radio-group": {
     source: "shadcn",
     renderKind: "field-control",
@@ -414,6 +483,36 @@ export const componentCapabilityDefinitions = {
       descriptionClassName: "m-0 text-sm text-muted-foreground",
       labelProp: "label",
       descriptionProp: "description",
+      fallback: true,
+      propMappings: [
+        { prop: "value", target: "defaultValue" },
+        { prop: "label", target: "aria-label" },
+      ],
+    },
+  },
+  combobox: {
+    source: "composite",
+    renderKind: "option-set",
+    uiProtocol: uiProtocolDefinitions.combobox,
+    requiredRegistryItem: "input",
+    requiredExports: ["Input"],
+    renderer: {
+      kind: "option-set",
+      root: "div",
+      label: "p",
+      control: "Input",
+      itemContainer: "datalist",
+      item: "option",
+      itemSlot: "option",
+      itemValueProp: "value",
+      itemHeadingProp: "label",
+      description: "p",
+      rootClassName: "grid gap-3",
+      labelClassName: "m-0 text-sm font-medium leading-6 text-foreground",
+      descriptionClassName: "m-0 text-sm text-muted-foreground",
+      labelProp: "label",
+      descriptionProp: "description",
+      controlListAttr: "list",
       fallback: true,
       propMappings: [
         { prop: "value", target: "defaultValue" },
@@ -525,20 +624,11 @@ export const structuralAgentComponents = [
 ]
 
 export const requiredShadcnRuntimeComponents = [
-  "accordion",
-  "alert",
-  "badge",
-  "card",
-  "checkbox",
-  "input",
-  "progress",
-  "radio-group",
-  "select",
-  "separator",
-  "table",
-  "textarea",
-  "toggle-group",
-  "tabs",
+  ...new Set(
+    Object.values(componentCapabilityDefinitions)
+      .map((definition) => definition.requiredRegistryItem)
+      .filter(Boolean),
+  ),
 ]
 
 export const nativeRenderableAgentComponents = Object.entries(
@@ -547,10 +637,9 @@ export const nativeRenderableAgentComponents = Object.entries(
   .filter(([, definition]) => definition.source !== "shadcn")
   .map(([name]) => name)
 
-export const renderableAgentComponents = [
-  ...nativeRenderableAgentComponents,
-  ...requiredShadcnRuntimeComponents,
-]
+export const renderableAgentComponents = Object.keys(
+  componentCapabilityDefinitions,
+)
 
 export const schemaRenderableComponents = [
   ...renderableAgentComponents,
@@ -559,7 +648,7 @@ export const schemaRenderableComponents = [
 
 export const requiredShadcnRuntimeExports = Object.fromEntries(
   Object.values(componentCapabilityDefinitions)
-    .filter((definition) => definition.source === "shadcn")
+    .filter((definition) => definition.requiredRegistryItem)
     .map((definition) => [
       definition.requiredRegistryItem,
       definition.requiredExports,

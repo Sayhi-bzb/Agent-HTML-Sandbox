@@ -39,23 +39,6 @@ export const nativeRuntimeSetup = defaultRuntimeSetup
 
 const supportedUiLibraries = ["shadcn"]
 const supportedComponentSources = ["shadcn-cli"]
-const recommendedRuntimeComponents = [
-  "accordion",
-  "alert",
-  "badge",
-  "card",
-  "button",
-  "checkbox",
-  "dialog",
-  "dropdown-menu",
-  "input",
-  "select",
-  "separator",
-  "table",
-  "tabs",
-  "textarea",
-  "tooltip",
-]
 
 export async function resolveRuntimeSetup({
   options = {},
@@ -276,17 +259,10 @@ async function chooseComponentSet(componentCatalog) {
     defaultValue: "recommended",
   })
 
-  if (componentSet === "all") {
-    return componentCatalog
-  }
-
-  if (componentSet === "recommended") {
-    return recommendedRuntimeComponents.filter((component) =>
-      componentCatalog.includes(component),
-    )
-  }
-
-  return requiredShadcnRuntimeComponents
+  return resolveManagedRuntimeComponentSet({
+    componentCatalog,
+    componentSet,
+  })
 }
 
 function unwrapPromptValue(value) {
@@ -336,6 +312,25 @@ function normalizeComponents(
 
 function withRequiredRuntimeComponents(components) {
   return [...new Set([...components, ...requiredShadcnRuntimeComponents])]
+}
+
+export function resolveManagedRuntimeComponentSet({
+  componentCatalog = fallbackShadcnComponents,
+  componentSet = "recommended",
+} = {}) {
+  if (componentSet === "all") {
+    return [...componentCatalog]
+  }
+
+  if (componentSet === "minimal" || componentSet === "recommended") {
+    return requiredShadcnRuntimeComponents.filter((component) =>
+      componentCatalog.includes(component),
+    )
+  }
+
+  throw new Error(
+    `Unsupported runtime component set "${componentSet}". Supported: minimal, recommended, all.`,
+  )
 }
 
 async function getComponentCatalog() {

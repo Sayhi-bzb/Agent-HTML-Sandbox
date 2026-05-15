@@ -6,6 +6,18 @@ import { describe, expect, it, vi } from "vitest"
 
 vi.mock("./elements", () => ({
   resolveElement(name) {
+    if (name === "Input") {
+      return "input"
+    }
+
+    if (name === "Switch") {
+      return "input"
+    }
+
+    if (name === "Slider") {
+      return "input"
+    }
+
     return name ?? React.Fragment
   },
 }))
@@ -252,6 +264,109 @@ describe("createRendererNode", () => {
     expect(markup).toContain("<p class=\"description\">Boolean field.</p>")
   })
 
+  it("renders switch field-control components with boolean prop coercion", () => {
+    const rendererSpecByName = new Map([
+      [
+        "switch",
+        {
+          name: "switch",
+          kind: "field-control",
+          renderKind: "field-control",
+          slots: [{ name: "children", children: [] }],
+          root: "div",
+          label: "p",
+          control: "Switch",
+          description: "p",
+          rootClassName: "grid gap-2",
+          labelClassName: "label",
+          descriptionClassName: "description",
+          labelProp: "label",
+          descriptionProp: "description",
+          propMappings: [
+            { prop: "checked", target: "defaultChecked", coerce: "boolean" },
+            { prop: "label", target: "aria-label" },
+          ],
+        },
+      ],
+    ])
+
+    const RendererNode = createRendererNode(rendererSpecByName)
+    const markup = renderToStaticMarkup(
+      React.createElement(RendererNode, {
+        node: {
+          type: "component",
+          name: "switch",
+          props: {
+            label: "Live Sync",
+            checked: "true",
+            description: "Immediate preference toggle.",
+          },
+          children: [],
+        },
+      }),
+    )
+
+    expect(markup).toContain("<p class=\"label\">Live Sync</p>")
+    expect(markup).toContain("<input")
+    expect(markup).toContain('aria-label="Live Sync"')
+    expect(markup).toContain("checked")
+    expect(markup).toContain(
+      "<p class=\"description\">Immediate preference toggle.</p>",
+    )
+  })
+
+  it("renders slider field-control components with numeric coercion and fallback", () => {
+    const rendererSpecByName = new Map([
+      [
+        "slider",
+        {
+          name: "slider",
+          kind: "field-control",
+          renderKind: "field-control",
+          slots: [{ name: "children", children: [] }],
+          root: "div",
+          label: "p",
+          control: "Slider",
+          description: "p",
+          rootClassName: "grid gap-2",
+          labelClassName: "label",
+          descriptionClassName: "description",
+          labelProp: "label",
+          descriptionProp: "description",
+          valueProp: "value",
+          fallback: true,
+          propMappings: [
+            { prop: "value", target: "defaultValue", coerce: "number-array" },
+            { prop: "label", target: "aria-label" },
+          ],
+        },
+      ],
+    ])
+
+    const RendererNode = createRendererNode(rendererSpecByName)
+    const markup = renderToStaticMarkup(
+      React.createElement(RendererNode, {
+        node: {
+          type: "component",
+          name: "slider",
+          props: {
+            label: "Review strictness",
+            value: "70",
+            description: "Read-only numeric field.",
+          },
+          children: [],
+        },
+      }),
+    )
+
+    expect(markup).toContain("<p class=\"label\">Review strictness</p>")
+    expect(markup).toContain("<input")
+    expect(markup).toContain('aria-label="Review strictness"')
+    expect(markup).toContain('value="70"')
+    expect(markup).toContain("<noscript>")
+    expect(markup).toContain(">70</p>")
+  })
+
   it("renders radio-group field-control components with option children", () => {
     const rendererSpecByName = new Map([
       [
@@ -484,6 +599,88 @@ describe("createRendererNode", () => {
     expect(markup).toContain("<p class=\"description\">Choose a release window.</p>")
     expect(markup).toContain("<noscript>")
     expect(markup).toContain("Today (selected)")
+  })
+
+  it("renders combobox option-set components with input and datalist fallback", () => {
+    const rendererSpecByName = new Map([
+      [
+        "combobox",
+        {
+          name: "combobox",
+          kind: "option-set",
+          renderKind: "option-set",
+          slots: [
+            {
+              name: "option",
+              childNames: ["option"],
+              children: ["text"],
+            },
+          ],
+          root: "div",
+          label: "p",
+          control: "Input",
+          itemContainer: "datalist",
+          item: "option",
+          itemSlot: "option",
+          itemValueProp: "value",
+          itemHeadingProp: "label",
+          description: "p",
+          rootClassName: "grid gap-3",
+          labelClassName: "label",
+          descriptionClassName: "description",
+          labelProp: "label",
+          descriptionProp: "description",
+          controlListAttr: "list",
+          fallback: true,
+          propMappings: [
+            { prop: "value", target: "defaultValue" },
+            { prop: "label", target: "aria-label" },
+          ],
+        },
+      ],
+    ])
+
+    const RendererNode = createRendererNode(rendererSpecByName)
+    const markup = renderToStaticMarkup(
+      React.createElement(RendererNode, {
+        node: {
+          type: "component",
+          name: "combobox",
+          props: {
+            label: "Owner",
+            value: "Ops reviewer",
+            description: "Searchable single-select field.",
+          },
+          children: [
+            {
+              type: "component",
+              name: "option",
+              props: { value: "Ops reviewer", label: "Ops reviewer" },
+              children: [{ type: "text", value: "Current reviewer." }],
+            },
+            {
+              type: "component",
+              name: "option",
+              props: {
+                value: "Security reviewer",
+                label: "Security reviewer",
+              },
+              children: [{ type: "text", value: "Escalation reviewer." }],
+            },
+          ],
+        },
+      }),
+    )
+
+    expect(markup).toContain("<p class=\"label\">Owner</p>")
+    expect(markup).toContain("<input")
+    expect(markup).toContain('aria-label="Owner"')
+    expect(markup).toContain('value="Ops reviewer"')
+    expect(markup).toContain("<datalist")
+    expect(markup).toContain("<option")
+    expect(markup).toContain('value="Ops reviewer"')
+    expect(markup).toContain("<noscript>")
+    expect(markup).toContain("Ops reviewer (selected)")
   })
 
   it("renders a no-script fallback for accordion items when configured", () => {

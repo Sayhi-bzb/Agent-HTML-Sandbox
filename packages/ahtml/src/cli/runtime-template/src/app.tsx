@@ -1,21 +1,22 @@
 import React from "react"
 
 import generatedDocument from "../document.generated.json"
-import runtimeCapabilities from "../render-capabilities.generated.json"
+import runtimeVerificationState from "../render-verification.generated.json"
 import {
   assertRendererRegistryParity,
   createRendererSpecMap,
 } from "./renderer/parity"
 import { createRendererNode } from "./renderer/render-node"
 import type { AgentComponentNode, AgentDocument } from "./renderer/types"
-import type { RuntimeCapabilities } from "./renderer/types"
+import type { RuntimeVerificationState } from "./renderer/types"
 
 const agentDocument = generatedDocument as AgentDocument
-const runtimeRenderCapabilities = runtimeCapabilities as RuntimeCapabilities
-const rendererSpecByName = createRendererSpecMap(runtimeRenderCapabilities)
+const runtimeRendererVerification =
+  runtimeVerificationState as RuntimeVerificationState
+const rendererSpecByName = createRendererSpecMap(runtimeRendererVerification)
 const RendererNode = createRendererNode(rendererSpecByName)
 
-assertRendererRegistryParity(runtimeRenderCapabilities, rendererSpecByName)
+assertRendererRegistryParity(runtimeRendererVerification, rendererSpecByName)
 
 export function App() {
   const title = getDocumentTitle(agentDocument)

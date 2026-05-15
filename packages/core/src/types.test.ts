@@ -9,7 +9,7 @@ import type {
 } from "./types"
 
 describe("agent-html public types", () => {
-  it("models a finite render config and sanitized components", () => {
+  it("models a profile-first render config and sanitized components", () => {
     const meta = {
       profile: "ops-compact",
       theme: "neutral",

@@ -123,53 +123,65 @@ export function createRendererNode(
     const itemHeadingProp = rendererSpec.item
       ? requireRendererSpecField(rendererSpec, "itemHeadingProp")
       : undefined
+    const valueProp = rendererSpec.fallback
+      ? requireRendererSpecField(rendererSpec, "valueProp")
+      : undefined
     const items =
-      itemSlot && Item ? getSlotChildren(node, itemSlot) : undefined
+      itemSlot && Item ? getStructuredItemsForNode(node, itemSlot) : undefined
     const controlProps = applyPropMappings(node.props, rendererSpec.propMappings)
 
     return (
-      <Root
-        data-agent-html-component={node.name}
-        className={rendererSpec.rootClassName}
-      >
-        {label ? (
-          <Label className={rendererSpec.labelClassName}>{label}</Label>
-        ) : null}
-        {Item && items && itemValueProp && itemHeadingProp ? (
-          <Control {...controlProps}>
-            {items.map((item) => {
-              const itemValue = getConfiguredPropValue(item, itemValueProp)
-              const itemHeading = getConfiguredPropValue(item, itemHeadingProp)
+      <>
+        <Root
+          data-agent-html-component={node.name}
+          className={rendererSpec.rootClassName}
+        >
+          {label ? (
+            <Label className={rendererSpec.labelClassName}>{label}</Label>
+          ) : null}
+          {Item && items && itemValueProp && itemHeadingProp ? (
+            <Control {...controlProps}>
+              {items.map((item) => {
+                const itemValue = getStructuredItemValue(item, itemValueProp)
+                const itemHeading = getStructuredItemHeading(item, itemHeadingProp)
 
-              return (
-                <label
-                  className="flex items-start gap-3"
-                  key={itemValue || itemHeading}
-                >
-                  <Item aria-label={itemHeading} value={itemValue} />
-                  <span className="grid gap-1">
-                    <span className={rendererSpec.labelClassName}>
-                      {itemHeading}
-                    </span>
-                    {item.children.length > 0 ? (
-                      <span className={rendererSpec.descriptionClassName}>
-                        {renderInlineChildren(item)}
+                return (
+                  <label
+                    className="flex items-start gap-3"
+                    key={itemValue || itemHeading}
+                  >
+                    <Item aria-label={itemHeading} value={itemValue} />
+                    <span className="grid gap-1">
+                      <span className={rendererSpec.labelClassName}>
+                        {itemHeading}
                       </span>
-                    ) : null}
-                  </span>
-                </label>
-              )
-            })}
-          </Control>
-        ) : (
-          <Control {...controlProps} />
-        )}
-        {description && Description ? (
-          <Description className={rendererSpec.descriptionClassName}>
-            {description}
-          </Description>
-        ) : null}
-      </Root>
+                      {item.children.length > 0 ? (
+                        <span className={rendererSpec.descriptionClassName}>
+                          {renderInlineChildren(item)}
+                        </span>
+                      ) : null}
+                    </span>
+                  </label>
+                )
+              })}
+            </Control>
+          ) : (
+            <Control {...controlProps} />
+          )}
+          {description && Description ? (
+            <Description className={rendererSpec.descriptionClassName}>
+              {description}
+            </Description>
+          ) : null}
+        </Root>
+        {rendererSpec.fallback && !Item && valueProp
+          ? renderNoScriptFieldControlFallback({
+              description,
+              label,
+              value: node.props[valueProp],
+            })
+          : null}
+      </>
     )
   }
 
@@ -183,6 +195,9 @@ export function createRendererNode(
     const ControlTrigger = resolveElement(rendererSpec.controlTrigger)
     const ControlValue = resolveElement(rendererSpec.controlValue)
     const ControlContent = resolveElement(rendererSpec.controlContent)
+    const ItemContainer = rendererSpec.itemContainer
+      ? resolveElement(rendererSpec.itemContainer)
+      : undefined
     const Item = resolveElement(rendererSpec.item)
     const Description = resolveElement(rendererSpec.description)
     const labelProp = requireRendererSpecField(rendererSpec, "labelProp")
@@ -199,8 +214,16 @@ export function createRendererNode(
     const description = descriptionProp
       ? node.props[descriptionProp]
       : undefined
-    const items = getSlotChildren(node, itemSlot)
-    const controlProps = getRendererProps(node.props, rendererSpec)
+    const items = getStructuredItemsForNode(node, itemSlot)
+    const optionSetContainerId =
+      rendererSpec.itemContainer && rendererSpec.controlListAttr
+        ? createOptionSetContainerId(node, itemValueProp, items)
+        : undefined
+    const controlProps = getOptionSetControlProps({
+      itemContainerId: optionSetContainerId,
+      rendererSpec,
+      props: node.props,
+    })
     const selectedValue = controlProps.defaultValue
 
     return (
@@ -212,8 +235,8 @@ export function createRendererNode(
           {label ? (
             <Label className={rendererSpec.labelClassName}>{label}</Label>
           ) : null}
-          <Control {...controlProps}>
-            {rendererSpec.controlTrigger && rendererSpec.controlContent ? (
+          {rendererSpec.controlTrigger && rendererSpec.controlContent ? (
+            <Control {...controlProps}>
               <>
                 <ControlTrigger>
                   {rendererSpec.controlValue ? <ControlValue /> : null}
@@ -229,17 +252,31 @@ export function createRendererNode(
                   )}
                 </ControlContent>
               </>
-            ) : (
-              items.map((item) =>
-                renderOptionSetItem({
-                  Item,
-                  item,
-                  itemHeadingProp,
-                  itemValueProp,
-                }),
-              )
-            )}
-          </Control>
+            </Control>
+          ) : rendererSpec.itemContainer ? (
+            <>
+              <Control {...controlProps} />
+              {renderOptionSetItems({
+                Item,
+                ItemContainer,
+                itemContainerId: optionSetContainerId,
+                itemHeadingProp,
+                items,
+                itemValueProp,
+              })}
+            </>
+          ) : (
+            <Control {...controlProps}>
+              {renderOptionSetItems({
+                Item,
+                ItemContainer,
+                itemContainerId: optionSetContainerId,
+                itemHeadingProp,
+                items,
+                itemValueProp,
+              })}
+            </Control>
+          )}
           {description && Description ? (
             <Description className={rendererSpec.descriptionClassName}>
               {description}
@@ -386,8 +423,10 @@ export function createRendererNode(
       "itemHeadingProp",
     )
     const mode = requireRendererSpecField(rendererSpec, "mode")
-    const items = getSlotChildren(node, itemSlot)
-    const values = items.map((item) => getConfiguredPropValue(item, itemValueProp))
+    const items = getStructuredItemsForNode(node, itemSlot)
+    const values = items.map((item) =>
+      getStructuredItemValue(item, itemValueProp),
+    )
 
     return (
       <>
@@ -398,10 +437,10 @@ export function createRendererNode(
         >
           {items.map((item) => (
             <Item
-              key={getConfiguredPropValue(item, itemValueProp)}
-              value={getConfiguredPropValue(item, itemValueProp)}
+              key={getStructuredItemValue(item, itemValueProp)}
+              value={getStructuredItemValue(item, itemValueProp)}
             >
-              <Trigger>{getConfiguredPropValue(item, itemHeadingProp)}</Trigger>
+              <Trigger>{getStructuredItemHeading(item, itemHeadingProp)}</Trigger>
               <Content>{renderChildren(item)}</Content>
             </Item>
           ))}
@@ -431,14 +470,17 @@ export function createRendererNode(
       "itemHeadingProp",
     )
     const defaultProp = requireRendererSpecField(rendererSpec, "defaultProp")
-    const tabs = getSlotChildren(node, itemSlot)
+    const tabs = getStructuredItemsForNode(node, itemSlot)
 
     if (tabs.length === 0) {
       return null
     }
 
-    const defaultValue =
-      node.props[defaultProp] || getConfiguredPropValue(tabs[0], itemValueProp)
+    const defaultValue = getStructuredDefaultValue({
+      explicitValue: node.props[defaultProp],
+      items: tabs,
+      itemValueProp,
+    })
 
     return (
       <>
@@ -446,17 +488,17 @@ export function createRendererNode(
           <List>
             {tabs.map((tab) => (
               <Trigger
-                key={getConfiguredPropValue(tab, itemValueProp)}
-                value={getConfiguredPropValue(tab, itemValueProp)}
+                key={getStructuredItemValue(tab, itemValueProp)}
+                value={getStructuredItemValue(tab, itemValueProp)}
               >
-                {getConfiguredPropValue(tab, itemHeadingProp)}
+                {getStructuredItemHeading(tab, itemHeadingProp)}
               </Trigger>
             ))}
           </List>
           {tabs.map((tab) => (
             <Content
-              key={getConfiguredPropValue(tab, itemValueProp)}
-              value={getConfiguredPropValue(tab, itemValueProp)}
+              key={getStructuredItemValue(tab, itemValueProp)}
+              value={getStructuredItemValue(tab, itemValueProp)}
             >
               {renderChildren(tab)}
             </Content>
@@ -536,14 +578,22 @@ export function createRendererNode(
     item,
     itemHeadingProp,
     itemValueProp,
+    itemInDatalist = false,
   }: {
     Item: React.ElementType
     item: AgentComponentNode
     itemHeadingProp: string
     itemValueProp: string
+    itemInDatalist?: boolean
   }) {
-    const itemValue = getConfiguredPropValue(item, itemValueProp)
-    const itemHeading = getConfiguredPropValue(item, itemHeadingProp)
+    const itemValue = getStructuredItemValue(item, itemValueProp)
+    const itemHeading = getStructuredItemHeading(item, itemHeadingProp)
+
+    if (itemInDatalist) {
+      return (
+        <Item key={itemValue || itemHeading} label={itemHeading} value={itemValue} />
+      )
+    }
 
     return (
       <Item key={itemValue || itemHeading} value={itemValue}>
@@ -556,6 +606,64 @@ export function createRendererNode(
         ) : null}
       </Item>
     )
+  }
+
+  function renderNoScriptFieldControlFallback({
+    description,
+    label,
+    value,
+  }: {
+    description?: string
+    label?: string
+    value?: string
+  }) {
+    return (
+      <noscript>
+        <section className="grid gap-1">
+          {label ? (
+            <h2 className="m-0 text-lg font-medium leading-7">{label}</h2>
+          ) : null}
+          {typeof value === "string" && value.length > 0 ? (
+            <p className="m-0 text-sm text-muted-foreground">{value}</p>
+          ) : null}
+          {description ? (
+            <p className="m-0 text-sm text-muted-foreground">{description}</p>
+          ) : null}
+        </section>
+      </noscript>
+    )
+  }
+
+  function renderOptionSetItems({
+    Item,
+    ItemContainer,
+    itemContainerId,
+    itemHeadingProp,
+    items,
+    itemValueProp,
+  }: {
+    Item: React.ElementType
+    ItemContainer?: React.ElementType
+    itemContainerId?: string
+    itemHeadingProp: string
+    items: AgentComponentNode[]
+    itemValueProp: string
+  }) {
+    const renderedItems = items.map((item) =>
+      renderOptionSetItem({
+        Item,
+        item,
+        itemHeadingProp,
+        itemInDatalist: Boolean(itemContainerId),
+        itemValueProp,
+      }),
+    )
+
+    if (itemContainerId && ItemContainer) {
+      return <ItemContainer id={itemContainerId}>{renderedItems}</ItemContainer>
+    }
+
+    return renderedItems
   }
 
   function renderChildren(node: AgentComponentNode) {
@@ -589,6 +697,13 @@ export function createRendererNode(
     )
   }
 
+  function getStructuredItemsForNode(
+    node: AgentComponentNode,
+    itemSlot: string,
+  ) {
+    return getSlotChildren(node, itemSlot)
+  }
+
   function isRuntimeRenderableComponent(name: string) {
     return rendererSpecByName.has(name)
   }
@@ -611,6 +726,75 @@ export function createRendererNode(
   }
 
   return RendererNode
+}
+
+function getStructuredItemValue(
+  node: AgentComponentNode,
+  itemValueProp: string,
+) {
+  return getConfiguredPropValue(node, itemValueProp)
+}
+
+function getStructuredItemHeading(
+  node: AgentComponentNode,
+  itemHeadingProp: string,
+) {
+  return getConfiguredPropValue(node, itemHeadingProp)
+}
+
+function getStructuredDefaultValue({
+  explicitValue,
+  items,
+  itemValueProp,
+}: {
+  explicitValue?: string
+  items: AgentComponentNode[]
+  itemValueProp: string
+}) {
+  return explicitValue || getStructuredItemValue(items[0], itemValueProp)
+}
+
+function getOptionSetControlProps({
+  itemContainerId,
+  props,
+  rendererSpec,
+}: {
+  itemContainerId?: string
+  props: Record<string, string>
+  rendererSpec: RendererSpecComponent
+}) {
+  const controlProps = getRendererProps(props, rendererSpec)
+
+  if (!itemContainerId || !rendererSpec.controlListAttr) {
+    return controlProps
+  }
+
+  return {
+    ...controlProps,
+    [rendererSpec.controlListAttr]: itemContainerId,
+  }
+}
+
+function createOptionSetContainerId(
+  node: AgentComponentNode,
+  itemValueProp: string,
+  items: AgentComponentNode[],
+) {
+  if (items.length === 0) {
+    return undefined
+  }
+
+  const seed = [
+    node.name,
+    node.props.label ?? "",
+    ...items.map((item) => getStructuredItemValue(item, itemValueProp) ?? ""),
+  ]
+    .join("-")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+
+  return seed.length > 0 ? `${seed}-options` : `${node.name}-options`
 }
 
 function applyPropMappings(
@@ -662,6 +846,10 @@ function coercePropValue(
 ) {
   if (kind === "boolean") {
     return value === "true"
+  }
+
+  if (kind === "number-array") {
+    return [Number(value)]
   }
 
   return Number(value)

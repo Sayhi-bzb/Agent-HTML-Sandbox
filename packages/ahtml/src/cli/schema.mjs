@@ -9,8 +9,8 @@ import {
 
 import { formatForbiddenPolicy } from "../config/defaults.mjs"
 import {
+  createRuntimeVerificationData,
   createRendererMapping,
-  createUiCapabilities,
 } from "../config/render-capabilities.mjs"
 
 const textChild = "#text"
@@ -38,7 +38,7 @@ export async function getCliSchemaOutput() {
     blockedNames: BLOCKED_AGENT_FACING_PROP_NAMES,
     forbidden: formatForbiddenPolicy(BLOCKED_AGENT_FACING_PROP_NAMES),
   }
-  const verificationData = createUiCapabilities(components)
+  const verificationData = createRuntimeVerificationData(components)
   const rendererMapping = createRendererMapping(components)
 
   return {

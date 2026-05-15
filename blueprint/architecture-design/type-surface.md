@@ -11,9 +11,9 @@
 
 ## 1. GeneratedShadcnIntrospection
 
-Ownership: runtime capability verification
+Ownership: runtime verification
 
-Purpose: 表示从 shadcn registry、组件源码和 `components.json` 自动抽取的内部 runtime capability facts。
+Purpose: 表示从 shadcn registry、组件源码和 `components.json` 自动抽取的内部 runtime verification facts。
 
 Consumers: contract verification, renderer capability checks, drift check
 

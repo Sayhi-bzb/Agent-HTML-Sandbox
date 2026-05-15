@@ -339,7 +339,7 @@ describe("sanitizeAgentHtml", () => {
     )
   })
 
-  it("rejects legacy finite render config header values", () => {
+  it("rejects legacy non-profile render config header values", () => {
     const result = sanitizeAgentHtml(`
       <meta-agent theme="neutral" density="compact" tone="color:red" width="article" />
       <page title="Payment Review" />
@@ -483,6 +483,8 @@ describe("sanitizeAgentHtml", () => {
       <page title="Reviewer Form">
         <card title="Decision">
           <checkbox label="Ship now" checked="true" description="Boolean field." />
+          <switch label="Live Sync" checked="true" description="Immediate preference toggle." />
+          <slider label="Review strictness" value="70" description="Read-only numeric field." />
           <radio-group label="Direction" value="ship" description="Single-select field.">
             <option value="ship" label="Ship">Use the current direction.</option>
             <option value="hold" label="Hold">Wait for the guard.</option>
@@ -495,6 +497,10 @@ describe("sanitizeAgentHtml", () => {
             <option value="today" label="Today">Ship in the current window.</option>
             <option value="tomorrow" label="Tomorrow">Wait for the next window.</option>
           </select>
+          <combobox label="Owner" value="Ops reviewer" description="Searchable single-select field.">
+            <option value="Ops reviewer" label="Ops reviewer">Current reviewer.</option>
+            <option value="Security reviewer" label="Security reviewer">Escalation reviewer.</option>
+          </combobox>
         </card>
       </page>
     `)
@@ -511,6 +517,26 @@ describe("sanitizeAgentHtml", () => {
             label: "Ship now",
             checked: "true",
             description: "Boolean field.",
+          },
+          children: [],
+        },
+        {
+          type: "component",
+          name: "switch",
+          props: {
+            label: "Live Sync",
+            checked: "true",
+            description: "Immediate preference toggle.",
+          },
+          children: [],
+        },
+        {
+          type: "component",
+          name: "slider",
+          props: {
+            label: "Review strictness",
+            value: "70",
+            description: "Read-only numeric field.",
           },
           children: [],
         },
@@ -591,6 +617,33 @@ describe("sanitizeAgentHtml", () => {
               props: {
                 value: "tomorrow",
                 label: "Tomorrow",
+              },
+            },
+          ],
+        },
+        {
+          type: "component",
+          name: "combobox",
+          props: {
+            label: "Owner",
+            value: "Ops reviewer",
+            description: "Searchable single-select field.",
+          },
+          children: [
+            {
+              type: "component",
+              name: "option",
+              props: {
+                value: "Ops reviewer",
+                label: "Ops reviewer",
+              },
+            },
+            {
+              type: "component",
+              name: "option",
+              props: {
+                value: "Security reviewer",
+                label: "Security reviewer",
               },
             },
           ],

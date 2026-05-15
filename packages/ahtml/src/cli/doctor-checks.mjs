@@ -23,8 +23,8 @@ import {
   assertRendererSpecParity,
   assertRuntimeRendererRegistryParity,
   assertSameStringSet,
-  assertUiCapabilitiesParity,
-  readRuntimeCapabilities,
+  assertVerificationDataParity,
+  readRuntimeVerificationState,
 } from "./runtime-renderability.mjs"
 import { checkForPackageUpdate } from "./update-check.mjs"
 import { readRuntimeManifest } from "./runtime-status.mjs"
@@ -174,45 +174,48 @@ export async function runDoctorCommand({
   )
   checks.push(
     await runDoctorCheck("runtime", "verification-data", async () => {
-      await stat(runtimePaths.runtimeCapabilitiesPath)
-      return runtimePaths.runtimeCapabilitiesPath
+      await stat(runtimePaths.runtimeVerificationPath)
+      return runtimePaths.runtimeVerificationPath
     }),
   )
   checks.push(
     await runDoctorCheck("runtime", "verification-data-parity", async () => {
       const schema = await getCliSchemaOutput()
-      const runtimeCapabilities = await readRuntimeCapabilities(runtimePaths)
+      const runtimeVerificationState =
+        await readRuntimeVerificationState(runtimePaths)
 
-      assertUiCapabilitiesParity({
-        actual: runtimeCapabilities.verificationData,
-        actualName: "runtime verification data ui capabilities",
+      assertVerificationDataParity({
+        actual: runtimeVerificationState.verificationData,
+        actualName: "runtime verification data",
         expected: schema.verificationData,
-        expectedName: "schema verificationData",
+        expectedName: "schema verification data",
       })
 
-      return `${runtimeCapabilities.verificationData.components.length} ui capabilities`
+      return `${runtimeVerificationState.verificationData.components.length} verification entries`
     }),
   )
   checks.push(
     await runDoctorCheck("runtime", "renderer-mapping-parity", async () => {
       const schema = await getCliSchemaOutput()
-      const runtimeCapabilities = await readRuntimeCapabilities(runtimePaths)
+      const runtimeVerificationState =
+        await readRuntimeVerificationState(runtimePaths)
 
       assertRendererSpecParity({
-        actual: runtimeCapabilities.rendererMapping,
-        actualName: "runtime renderer mapping spec",
+        actual: runtimeVerificationState.rendererMapping,
+        actualName: "runtime renderer verification mapping",
         expected: schema.rendererMapping,
-        expectedName: "schema rendererMapping",
+        expectedName: "schema renderer verification mapping",
       })
 
-      return `${runtimeCapabilities.rendererMapping.components.length} renderer specs`
+      return `${runtimeVerificationState.rendererMapping.components.length} renderer mapping entries`
     }),
   )
   checks.push(
     await runDoctorCheck("runtime", "renderer-registry-parity", async () => {
-      const runtimeCapabilities = await readRuntimeCapabilities(runtimePaths)
-      assertRuntimeRendererRegistryParity(runtimeCapabilities)
-      return `${runtimeCapabilities.rendererMapping.components.length} renderer entries`
+      const runtimeVerificationState =
+        await readRuntimeVerificationState(runtimePaths)
+      assertRuntimeRendererRegistryParity(runtimeVerificationState)
+      return `${runtimeVerificationState.rendererMapping.components.length} renderer registry entries`
     }),
   )
   checks.push(

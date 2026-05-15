@@ -90,11 +90,16 @@ role
 createdAt
 text
 kind
+proposalSnapshot?
 ```
 
 v1 允许的 `role` 仅需支持：`system`、`user`、`placeholder`。
 
 v1 允许的 `kind` 仅需支持：`message`、`context-card`、`proposal-placeholder`。
+
+当 `kind = proposal-placeholder` 时，消息可选地携带 `proposalSnapshot`，用于把当前
+source/draft 与 proposal 生成时的 source 快照做比较。该快照只服务于本地 review
+和 compare，不成为新的真相源。
 
 ## Error Types
 

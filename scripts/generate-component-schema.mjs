@@ -33,6 +33,7 @@ const registryNames = [
   "radio-group",
   "select",
   "separator",
+  "switch",
   "slider",
   "table",
   "tabs",

@@ -43,7 +43,7 @@ agent-facing authoring contract
 ```txt
 managed runtime shadcn/ui implementation
         ↓
-runtime capability facts
+runtime verification facts
         ↓
 drift checks + renderer registry inputs
         ↓
@@ -53,7 +53,7 @@ contract verification
 ## Contracts
 
 - `cli-to-managed-runtime.md`: CLI 到 managed runtime、template 和 renderer adapter。
-- `shadcn-to-component-schema.md`: shadcn/ui 实现到标准组件 contract 和 runtime capability checks。
+- `shadcn-to-component-schema.md`: shadcn/ui 实现到标准组件 contract 和 runtime verification checks。
 - `component-schema-to-agent-html.md`: 标准组件 schema 到 agent-html 和 render config header。
 - `cli-to-artifact.md`: CLI 到 agent-html、renderer adapter 和 artifact。
 - `agent-html-to-renderer.md`: agent-html 经 core parse / sanitize 后到 renderer adapter。

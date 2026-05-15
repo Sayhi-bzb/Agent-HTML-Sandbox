@@ -30,14 +30,14 @@ export type RendererSlot = {
   childNames?: string[]
 }
 
-export type RendererPropValue = string | number | boolean
+export type RendererPropValue = string | number | boolean | number[]
 
 export type RendererPropMapping = {
   prop: string
   target: string
   map?: Record<string, RendererPropValue>
   default?: RendererPropValue
-  coerce?: "boolean" | "number"
+  coerce?: "boolean" | "number" | "number-array"
 }
 
 export type RendererRootByProp = {
@@ -75,6 +75,7 @@ export type RendererSpecComponent = {
   headerCell?: string
   bodyCell?: string
   item?: string
+  itemContainer?: string
   itemSlot?: string
   rowSlot?: string
   cellSlot?: string
@@ -92,12 +93,14 @@ export type RendererSpecComponent = {
   kindProp?: string
   itemValueProp?: string
   itemHeadingProp?: string
+  valueProp?: string
+  controlListAttr?: string
   rootByProp?: RendererRootByProp
   propMappings?: RendererPropMapping[]
   staticProps?: Record<string, RendererPropValue>
 }
 
-export type RuntimeCapabilities = {
+export type RuntimeVerificationState = {
   verificationData: {
     components: {
       name: string
