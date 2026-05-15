@@ -20,8 +20,14 @@ export function ComparisonCarousel({
   const htmlEntry = entries.find((entry) => entry.id === "html")
   const agentHtmlEntry = entries.find((entry) => entry.id === "agent-html")
   const [comparisonMode, setComparisonMode] =
-    useState<ComparisonMode>("markdown")
+    useState<ComparisonMode>("source-compare")
   const [viewMode, setViewMode] = useState<"raw" | "rendered">("raw")
+  const toggleGroupClass =
+    "inline-flex w-fit flex-wrap items-center gap-1 rounded-full border border-border/70 bg-muted/45 p-1 shadow-sm"
+  const activeToggleClass =
+    "rounded-full bg-foreground px-3.5 py-1.5 text-sm font-semibold text-background shadow-sm shadow-black/10 ring-1 ring-black/5 underline-offset-4 transition duration-150 hover:underline"
+  const inactiveToggleClass =
+    "rounded-full px-3.5 py-1.5 text-sm font-semibold text-muted-foreground underline-offset-4 transition duration-150 hover:bg-background/80 hover:text-foreground hover:underline"
 
   if (!markdownEntry || !htmlEntry || !agentHtmlEntry) {
     return null
@@ -30,50 +36,52 @@ export function ComparisonCarousel({
   return (
     <section className="w-full">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className={toggleGroupClass}>
           <button
             type="button"
+            aria-pressed={comparisonMode === "markdown"}
             onClick={() => setComparisonMode("markdown")}
             className={
               comparisonMode === "markdown"
-                ? "rounded-full bg-foreground px-3 py-1.5 text-sm font-medium text-background"
-                : "rounded-full border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+                ? activeToggleClass
+                : inactiveToggleClass
             }
           >
             Markdown
           </button>
           <button
             type="button"
+            aria-pressed={comparisonMode === "source-compare"}
             onClick={() => setComparisonMode("source-compare")}
             className={
               comparisonMode === "source-compare"
-                ? "rounded-full bg-foreground px-3 py-1.5 text-sm font-medium text-background"
-                : "rounded-full border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+                ? activeToggleClass
+                : inactiveToggleClass
             }
           >
             HTML vs agent-html
           </button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className={toggleGroupClass}>
           <button
             type="button"
+            aria-pressed={viewMode === "raw"}
             onClick={() => setViewMode("raw")}
             className={
-              viewMode === "raw"
-                ? "rounded-full bg-foreground px-3 py-1.5 text-sm font-medium text-background"
-                : "rounded-full border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+              viewMode === "raw" ? activeToggleClass : inactiveToggleClass
             }
           >
             Raw
           </button>
           <button
             type="button"
+            aria-pressed={viewMode === "rendered"}
             onClick={() => setViewMode("rendered")}
             className={
               viewMode === "rendered"
-                ? "rounded-full bg-foreground px-3 py-1.5 text-sm font-medium text-background"
-                : "rounded-full border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+                ? activeToggleClass
+                : inactiveToggleClass
             }
           >
             Rendered

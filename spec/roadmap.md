@@ -38,11 +38,11 @@ semantic component contract
 
 ### Component Expansion Order
 
-- 第一步先接 `progress`，验证新增只读显示型组件能否低成本进入 schema、
-  renderer、runtime verification 和 artifact tests。
-- 第二步补 `field/control` archetype，再按该 contract 成批接入 `textarea`、
+- `progress` 已通过真实语义/runtime path 回归，证明新增只读显示型组件可以低成本
+  进入 schema、renderer、runtime verification 和 artifact tests。
+- 当前下一步是补 `field/control` archetype，再按该 contract 成批接入 `textarea`、
   `input`、`checkbox`、`radio-group`。
-- 第三步补 `option-set` archetype，再按该 contract 成批接入 `toggle-group`、
+- 再下一步补 `option-set` archetype，再按该 contract 成批接入 `toggle-group`、
   `select`、`combobox`。
 - `dialog`、`sheet`、`drawer`、`popover`、`tooltip`、menu、navigation 和
   app-shell 语义不属于当前近期开发表。
@@ -183,8 +183,8 @@ Done when:
 
 Current state:
 
-- 已明确当前组件接入节奏：先 `progress`，再 `field/control`，再 `option-set`，
-  不直接扩到 overlay、menu 或 navigation。
+- 已完成 `progress` 的真实语义/runtime 回归；当前组件接入节奏已前移到
+  `field/control`，然后是 `option-set`，不直接扩到 overlay、menu 或 navigation。
 - 已明确当前参数策略：继续收紧到语义字段，不继续扩张视觉实现字段或 raw shadcn
   props。
 - 已新增 `spec/components-adoption.md` 作为组件接入分组和优先级清单。

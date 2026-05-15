@@ -393,9 +393,10 @@ fields and generic ui/slot compatibility paths.
   runtime side. It must map semantic agent-html into legal shadcn/native React
   composition without one-off adapters for each component.
 - Broader component coverage should follow grouped semantic adoption, not
-  opportunistic shadcn install order. The next expansion path is `progress`,
-  then `field/control`, then `option-set`; overlay, menu, navigation, and
-  app-shell semantics remain out of the near-term lane.
+  opportunistic shadcn install order. `progress` has now returned through the
+  real semantic/runtime path; the current next expansion path is
+  `field/control`, then `option-set`. Overlay, menu, navigation, and app-shell
+  semantics remain out of the near-term lane.
 - Generic fallback is no longer the renderer path for unsupported component
   names; build now emits structured runtime-render diagnostics before
   SSR/runtime failure.

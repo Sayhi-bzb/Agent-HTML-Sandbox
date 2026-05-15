@@ -409,6 +409,7 @@ export const GENERATED_STANDARD_COMPONENT_SCHEMAS = [
     "allowedChildren": [
       "alert",
       "badge",
+      "progress",
       "separator",
       "table",
       "list",
@@ -442,6 +443,19 @@ export const GENERATED_STANDARD_COMPONENT_SCHEMAS = [
     "allowedChildren": [
       "#text"
     ]
+  },
+  {
+    "name": "progress",
+    "description": "Read-only completion indicator.",
+    "props": [
+      {
+        "name": "value",
+        "valueKind": "number",
+        "required": true,
+        "description": "Completion percentage from 0 to 100."
+      }
+    ],
+    "allowedChildren": []
   },
   {
     "name": "table",
@@ -537,6 +551,7 @@ export const GENERATED_STANDARD_COMPONENT_SCHEMAS = [
     "allowedChildren": [
       "alert",
       "card",
+      "progress",
       "separator",
       "table",
       "list",
@@ -571,6 +586,7 @@ export const GENERATED_STANDARD_COMPONENT_SCHEMAS = [
     "allowedChildren": [
       "alert",
       "badge",
+      "progress",
       "table",
       "list",
       "#text"

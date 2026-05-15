@@ -25,7 +25,8 @@ export default function HomePage() {
         <div className="mt-8">
           <Link
             href="/docs"
-            className="inline-flex rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition hover:opacity-90"
+            prefetch={true}
+            className="inline-flex rounded-md bg-foreground px-4 py-2 text-sm font-semibold text-background underline-offset-4 transition hover:underline hover:opacity-90"
           >
             Read the docs
           </Link>

@@ -6,18 +6,19 @@ Header:
 Semantic compatibility tags:
 page(title*) -> alert/card/separator/table/list/tabs/accordion
 alert(title? tone?=neutral|danger) -> text
-card(title?) -> alert/badge/separator/table/list/tabs/accordion/text
+card(title?) -> alert/badge/progress/separator/table/list/tabs/accordion/text
 separator -> none
 badge(tone?=neutral|success|warning|danger) -> text
+progress(value*) -> none
 table -> row
 row(kind?=header|body) -> cell
 cell -> text
 list(variant?=ordered|unordered) -> item
 item -> text
 tabs(default?) -> tab
-tab(value* label*) -> alert/card/separator/table/list/accordion
+tab(value* label*) -> alert/card/progress/separator/table/list/accordion
 accordion -> accordion-item
-accordion-item(value* title*) -> alert/badge/table/list/text
+accordion-item(value* title*) -> alert/badge/progress/table/list/text
 
 Forbidden:
 asChild/class/className/css/dangerouslySetInnerHTML/onClick/onclick/script/style/Tailwind/shadcn props/Radix props/React props/events/external URLs/unknown tags/unknown attrs
