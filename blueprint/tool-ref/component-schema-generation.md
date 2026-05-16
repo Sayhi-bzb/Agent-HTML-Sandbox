@@ -4,7 +4,7 @@
 
 ## Decision
 
-采购显式语义 contract + presentation profile 声明作为 ComponentSchema 主路径。
+采购显式语义 contract + document style config 声明作为 ComponentSchema 主路径。兼容期可保留 presentation profile 声明作为 alias 层。
 
 采购 shadcn runtime facts 作为内部校验、renderer registry 输入和 drift check 支撑，而不是作为 agent-facing schema 主来源。
 
@@ -12,13 +12,13 @@
 
 ```txt
 semantic component declaration supplies the public contract.
-presentation profile declaration supplies the public visual choices.
+document style config declaration supplies the public visual choices.
 managed runtime components.json supplies shadcn config.
 shadcn registry supplies item metadata, dependencies, files, docs links.
 component AST supplies exports, data-slot, blocked/internal prop candidates.
 generated runtime verification facts supply verification and drift checks.
 standardized component schema supplies fixed components, semantic props, and slots.
-presentation profile registry supplies approved profile options.
+document style config catalog supplies approved visual config options.
 TSDoc supplies optional annotation convention.
 TypeDoc and ts-morph stay extraction helpers, not contract authority.
 React docgen and Storybook stay auxiliary.
@@ -31,11 +31,11 @@ React docgen and Storybook stay auxiliary.
 ```txt
 semantic component declaration
         +
-presentation profile declaration
+document style config declaration
         ↓
 contract mapper
         ↓
-ComponentSchema + ComponentPropSchema + ComponentToken + PresentationProfileRegistry
+ComponentSchema + ComponentPropSchema + ComponentToken + DocumentStyleConfigReference
 ```
 
 推荐内部校验路径：
@@ -62,8 +62,8 @@ overlay / docs enrichment
 
 采购分工：
 
-- semantic declaration / overlay: 暴露哪些组件、语义 prop 如何命名、slot 结构、children 边界、profile 兼容性和示例。
-- presentation profile declaration: 暴露哪些命名 profile，内部可绑定哪些受控视觉 token。
+- semantic declaration / overlay: 暴露哪些组件、语义 prop 如何命名、slot 结构、children 边界、profile / style config 兼容性和示例。
+- document style config declaration: 暴露哪些文档级视觉配置入口可用，以及它们可解析到哪些受控视觉 token。兼容期命名 profile 只是 alias 层。
 - managed runtime `components.json`: style、base、aliases、iconLibrary、preset 和 registry 配置。
 - `shadcn registry`: registry item metadata、dependencies、registryDependencies、files 和 docs links。
 - `ts-morph`: TypeScript AST / type checker precision extraction。
@@ -106,7 +106,7 @@ overlay / docs enrichment
 
 不以组件源码作为 agent 学习常规用法的主路径。
 
-不把 renderer theme object、Tailwind config 或 shadcn props 自动外泄为 presentation profile registry 或 RenderConfig。
+不把 renderer theme object、Tailwind config 或 shadcn props 自动外泄为 document style config catalog、compatibility profile registry 或 RenderConfig。
 
 不把 GeneratedShadcnIntrospection 直接发布为 agent-facing schema。
 
@@ -116,7 +116,7 @@ overlay / docs enrichment
 
 - TypeDoc JSON 偏 API docs，必须经过 contract mapper 才能成为 agent-facing schema。
 - 标准组件若照搬 shadcn props，会泄漏实现接口。
-- presentation profile 若照搬 renderer theme / Tailwind config，会泄漏实现接口。
+- document style config 或 compatibility profile alias 若照搬 renderer theme / Tailwind config，会泄漏实现接口。
 - `cva` variants 若全部开放，会把样式自由度重新泄漏给 agent。
 - `data-slot` 只能证明源码 slot 存在，不能单独证明合法嵌套结构。
 - TSDoc custom tags 容易膨胀，应保持最小充分。
@@ -131,10 +131,10 @@ overlay / docs enrichment
 
 - GeneratedShadcnIntrospection 的最小 JSON 形态。
 - ComponentSchemaOverlay 的最小声明形态。
-- PresentationProfile / PresentationProfileRegistry 的最小字段集合。
+- DocumentStyleConfigReference、DocumentStyleConfig 与 compatibility profile alias 的最小字段集合。
 - standard component declaration 的最小声明形态。
 - ComponentSchema / ComponentPropSchema 的最小字段集合。
-- 哪些视觉 token 可以留在 profile 内部，哪些必须完全隐藏。
+- 哪些视觉 token 可以留在独立配置层内部，哪些必须完全隐藏。
 - TSDoc custom tags 的最小集合。
 - TypeDoc JSON 到 ComponentSchema / ComponentPropSchema 的映射边界。
 - renderer adapter requirement 到 managed runtime shadcn install check 的映射边界。

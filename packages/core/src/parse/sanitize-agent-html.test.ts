@@ -85,6 +85,7 @@ describe("sanitizeAgentHtml", () => {
     expect(result.diagnostics).toEqual([])
     expect(result.document).toEqual({
       meta: {
+        documentStyleConfigReference: "report-default",
         profile: "report-default",
         theme: "neutral",
         density: "comfortable",
@@ -223,6 +224,7 @@ describe("sanitizeAgentHtml", () => {
 
     expect(result.diagnostics).toEqual([])
     expect(result.document?.meta).toEqual({
+      documentStyleConfigReference: "report-default",
       profile: "report-default",
       theme: "neutral",
       density: "comfortable",

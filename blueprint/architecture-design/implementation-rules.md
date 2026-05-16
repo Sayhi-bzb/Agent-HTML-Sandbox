@@ -62,7 +62,7 @@ schema 生成或同步失败不能静默通过。
 
 generated shadcn introspection 失败或 drift check 失败不能静默通过。
 
-presentation profile registry 生成或同步失败也不能静默通过。
+document style config catalog 或 compatibility profile registry 生成或同步失败也不能静默通过。
 
 shadcn runtime surface drift 不能静默通过。doctor / tests 必须能发现缺失 `components.json`、缺失 CSS entry、缺失 base layer、required registry item 缺失、required export 缺失、runtime base 不支持、schema/runtime verification data 不一致等问题。
 
@@ -72,7 +72,7 @@ generated shadcn introspection 只能作为 runtime verification facts、rendere
 
 不得直接把 generated introspection 发布给 agent。
 
-最终 agent-facing ComponentSchema 和 PresentationProfileRegistry 必须由显式声明收束，并经过 introspection 校验。
+最终 agent-facing ComponentSchema、DocumentStyleConfigReference 和 compatibility profile registry 必须由显式声明收束，并经过 introspection 校验。
 
 新增或更新 shadcn 组件后，必须重新生成 introspection，并检查声明是否仍有效。
 

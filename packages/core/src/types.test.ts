@@ -3,15 +3,20 @@ import { describe, expect, it } from "vitest"
 import type {
   ComponentSchema,
   ComponentSchemaOverlay,
+  DocumentStyleConfigReference,
   GeneratedShadcnIntrospection,
+  PresentationProfile,
   RenderConfig,
   SanitizedAgentHtml,
 } from "./types"
 
 describe("agent-html public types", () => {
-  it("models a profile-first render config and sanitized components", () => {
+  it("models a checked render config with compatibility profile alias values", () => {
+    const styleReference = "ops-compact" satisfies DocumentStyleConfigReference
+    const presentationProfile = "ops-compact" satisfies PresentationProfile
     const meta = {
-      profile: "ops-compact",
+      documentStyleConfigReference: styleReference,
+      profile: styleReference,
       theme: "neutral",
       density: "compact",
       tone: "report",
@@ -51,7 +56,9 @@ describe("agent-html public types", () => {
     } satisfies SanitizedAgentHtml
 
     expect(pageComponentSchema.name).toBe("page")
+    expect(document.meta.documentStyleConfigReference).toBe("ops-compact")
     expect(document.meta.profile).toBe("ops-compact")
+    expect(presentationProfile).toBe("ops-compact")
     expect(document.meta.density).toBe("compact")
     expect(document.components[0]?.name).toBe("page")
   })

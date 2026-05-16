@@ -41,7 +41,10 @@ export const DEFAULT_RENDER_CONFIG = core.DEFAULT_RENDER_CONFIG
 export const formatForbiddenPolicy = core.formatForbiddenPolicy
 export const parseRenderConfig = core.parseRenderConfig
 export const PUBLIC_PROFILE_VALUES = core.PUBLIC_PROFILE_VALUES
+export const PUBLIC_RENDER_CONFIG_COMPATIBILITY_SYNTAX =
+  core.PUBLIC_RENDER_CONFIG_COMPATIBILITY_SYNTAX
 export const PUBLIC_RENDER_CONFIG_DEFAULTS = core.PUBLIC_RENDER_CONFIG_DEFAULTS
+export const PUBLIC_RENDER_CONFIG_MODEL = core.PUBLIC_RENDER_CONFIG_MODEL
 export const RENDER_CONFIG_KEYS = core.RENDER_CONFIG_KEYS
 export const RENDER_CONFIG_VALUES = core.RENDER_CONFIG_VALUES
 export const RenderConfigSchema = core.RenderConfigSchema

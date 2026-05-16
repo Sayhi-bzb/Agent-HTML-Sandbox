@@ -9,9 +9,10 @@ import {
   RenderConfigSchema,
 } from "./render-config"
 
-describe("profile-first render config", () => {
-  it("accepts the public profile-first render config values", () => {
+describe("document-style-config render config", () => {
+  it("accepts the current compatibility profile alias values", () => {
     expect(RenderConfigSchema.parse(DEFAULT_RENDER_CONFIG)).toEqual({
+      documentStyleConfigReference: "report-default",
       profile: "report-default",
       theme: "neutral",
       density: "comfortable",
@@ -20,6 +21,7 @@ describe("profile-first render config", () => {
     })
 
     expect(parseRenderConfig({ profile: "ops-compact" })).toEqual({
+      documentStyleConfigReference: "ops-compact",
       profile: "ops-compact",
       theme: "neutral",
       density: "compact",
@@ -31,6 +33,7 @@ describe("profile-first render config", () => {
   it("rejects resolved token combinations that do not match the selected profile", () => {
     expect(() =>
       RenderConfigSchema.parse({
+        documentStyleConfigReference: "ops-compact",
         profile: "ops-compact",
         theme: "neutral",
         density: "comfortable",
@@ -45,13 +48,13 @@ describe("profile-first render config", () => {
       parseRenderConfig({
         className: "text-red-500",
       }),
-    ).toThrow("Invalid profile-based render config.")
+    ).toThrow("Invalid document-style-config render config.")
 
     expect(() =>
       parseRenderConfig({
         profile: "color:red",
       }),
-    ).toThrow("Invalid profile-based render config.")
+    ).toThrow("Invalid document-style-config render config.")
 
     expect(() =>
       parseRenderConfig({
@@ -60,7 +63,7 @@ describe("profile-first render config", () => {
         tone: "dashboard",
         width: "dashboard",
       }),
-    ).toThrow("Invalid profile-based render config.")
+    ).toThrow("Invalid document-style-config render config.")
   })
 
   it("exposes only the public render config keys", () => {

@@ -44,11 +44,12 @@ function runCliWithServer(
 }
 
 describe("agent-html CLI contracts", () => {
-  it("formats a profile-first prompt without implementation tokens", async () => {
+  it("formats a document-style-config prompt without implementation tokens", async () => {
     const { formatPrompt, getCliSchemaOutput } = await importSchemaModule()
     const schema = await getCliSchemaOutput(root)
     const prompt = `${formatPrompt(schema)}\n`
 
+    expect(prompt).toContain("document style config reference")
     expect(prompt).toContain('<meta-agent profile="')
     expect(prompt).not.toContain('theme="')
     expect(prompt).not.toContain('density="')
@@ -122,6 +123,11 @@ describe("agent-html CLI contracts", () => {
     )
     expect(schema.renderConfig.defaults).toEqual({
       profile: "report-default",
+    })
+    expect(schema.renderConfig.model).toBe("document-style-config-reference")
+    expect(schema.renderConfig.compatibilitySyntax).toEqual({
+      key: "profile",
+      kind: "presentation-profile-alias",
     })
     expect(schema.renderConfig.keys).toEqual(["profile"])
     expect(schema.renderConfig.keys).not.toContain("theme")

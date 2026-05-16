@@ -2,6 +2,13 @@ import { z } from "zod"
 
 import type { RenderConfig } from "./types"
 
+export const PUBLIC_RENDER_CONFIG_MODEL = "document-style-config-reference"
+
+export const PUBLIC_RENDER_CONFIG_COMPATIBILITY_SYNTAX = {
+  key: "profile",
+  kind: "presentation-profile-alias",
+} as const
+
 export const PUBLIC_PROFILE_VALUES = [
   "report-default",
   "ops-compact",
@@ -10,25 +17,31 @@ export const PUBLIC_PROFILE_VALUES = [
 
 const RESOLVED_PROFILE_TOKENS_BY_PROFILE = {
   "report-default": {
+    documentStyleConfigReference: "report-default",
     theme: "neutral",
     density: "comfortable",
     tone: "report",
     width: "article",
   },
   "ops-compact": {
+    documentStyleConfigReference: "ops-compact",
     theme: "neutral",
     density: "compact",
     tone: "dashboard",
     width: "dashboard",
   },
   "review-dense": {
+    documentStyleConfigReference: "review-dense",
     theme: "neutral",
     density: "compact",
     tone: "decision",
     width: "wide",
   },
 } as const satisfies Readonly<
-  Record<(typeof PUBLIC_PROFILE_VALUES)[number], Omit<RenderConfig, "profile">>
+  Record<
+    (typeof PUBLIC_PROFILE_VALUES)[number],
+    Omit<RenderConfig, "profile">
+  >
 >
 
 const ProfileRenderConfigInputSchema = z
@@ -71,7 +84,7 @@ export function parseRenderConfig(input: unknown): RenderConfig {
     return resolveResolvedProfileTokens(profileInput.data.profile)
   }
 
-  throw new Error("Invalid profile-based render config.")
+  throw new Error("Invalid document-style-config render config.")
 }
 
 function resolveResolvedProfileTokens(
@@ -90,6 +103,7 @@ function createResolvedRenderConfigSchema(
 
   return z
     .object({
+      documentStyleConfigReference: z.literal(tokens.documentStyleConfigReference),
       profile: z.literal(profile),
       theme: z.literal(tokens.theme),
       density: z.literal(tokens.density),

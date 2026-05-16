@@ -21,6 +21,11 @@ describe("public agent contract", () => {
     expect(contract.renderConfig.defaults).toEqual({
       profile: "report-default",
     })
+    expect(contract.renderConfig.model).toBe("document-style-config-reference")
+    expect(contract.renderConfig.compatibilitySyntax).toEqual({
+      key: "profile",
+      kind: "presentation-profile-alias",
+    })
   })
 
   it("builds safety policy from blocked names and shared categories", () => {
@@ -42,6 +47,11 @@ describe("public agent contract", () => {
       keys: ["profile"],
       values: {
         profile: ["report-default", "ops-compact", "review-dense"],
+      },
+      model: "document-style-config-reference",
+      compatibilitySyntax: {
+        key: "profile",
+        kind: "presentation-profile-alias",
       },
     })
   })

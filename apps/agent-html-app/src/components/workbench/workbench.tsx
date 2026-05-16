@@ -191,11 +191,8 @@ export function Workbench({
         <TabsContent value="inspect">
           <InspectPanel
             activeReviewFocus={activeReviewFocus}
-            activeSourceFocus={activeSourceFocus}
-            activeSourceFocusReviewStatus={activeSourceFocusReviewStatus}
             availableReviewFocusTargets={availableReviewFocusTargets}
             build={build}
-            canRevealSourceOrigin={canRevealSourceOrigin}
             draftComparison={draftComparison}
             hasUnsavedSourceChanges={hasUnsavedSourceChanges}
             inspect={inspect}
@@ -205,8 +202,6 @@ export function Workbench({
             sourceValidation={sourceValidation}
             onClearReviewFocus={onClearReviewFocus}
             onOpenSourceFocus={onOpenSourceFocus}
-            onRefreshSourceFocus={onRefreshSourceFocus}
-            onRevealSourceReviewTarget={onRevealSourceReviewTarget}
             onRevisitReviewFocus={onRevisitReviewFocus}
             onRunReviewAction={onRunReviewAction}
             onSelectReviewFocus={onSelectReviewFocus}

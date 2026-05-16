@@ -7,23 +7,14 @@ import {
 } from "../ui/surface-card"
 import { StatusBadge } from "../ui/status-badge"
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group"
-import {
-  formatInspectDiagnosticMeta,
-  getInspectDiagnosticsViewModel,
-} from "../../lib/inspect-diagnostics-view"
-import {
-  getReviewFocusPreview,
-  type ReviewFocusTarget,
-} from "../../lib/review-focus"
+import { getInspectDiagnosticsViewModel } from "../../lib/inspect-diagnostics-view"
+import { type ReviewFocusTarget } from "../../lib/review-focus"
 import type { ReviewTimelineActionConfig } from "../../lib/review-flow"
 import type { SourceComparisonSummary } from "../../lib/source-comparison"
 import {
   createSourceFocusTargetFromDiagnostic,
-  createSourceFocusTargetFromGroup,
-  type SourceFocusReviewStatus,
   type SourceFocusTarget,
 } from "../../lib/source-focus"
-import { getSourceFocusViewModel } from "../../lib/source-focus-view"
 import { getLogInsightViewModel } from "../../lib/log-insight"
 import { formatTimestampLabel } from "../../lib/time"
 import type {
@@ -34,18 +25,12 @@ import type {
   SessionDetail,
   SourceValidationState,
 } from "../../lib/types"
-import {
-  formatSourceValidationDiagnosticMeta,
-  getSourceValidationViewModel,
-} from "../../lib/source-validation-view"
+import { getSourceValidationViewModel } from "../../lib/source-validation-view"
 
 type InspectPanelProps = {
   activeReviewFocus?: ReviewFocusTarget
-  activeSourceFocus?: SourceFocusTarget
-  activeSourceFocusReviewStatus?: SourceFocusReviewStatus
   availableReviewFocusTargets: ReviewFocusTarget[]
   build: BuildRunSummary
-  canRevealSourceOrigin: boolean
   session: SessionDetail
   inspect: InspectSnapshot
   sourceValidation: SourceValidationState
@@ -57,8 +42,6 @@ type InspectPanelProps = {
   proposalComparison?: SourceComparisonSummary
   onClearReviewFocus: () => void
   onOpenSourceFocus: (target: SourceFocusTarget) => void
-  onRefreshSourceFocus: () => void
-  onRevealSourceReviewTarget: () => void
   onSelectReviewFocus: (target: ReviewFocusTarget) => void
   onRevisitReviewFocus: () => void
   onRunReviewAction: (
@@ -68,11 +51,8 @@ type InspectPanelProps = {
 
 export function InspectPanel({
   activeReviewFocus,
-  activeSourceFocus,
-  activeSourceFocusReviewStatus,
   availableReviewFocusTargets,
   build,
-  canRevealSourceOrigin,
   session,
   inspect,
   sourceValidation,
@@ -84,8 +64,6 @@ export function InspectPanel({
   proposalComparison,
   onClearReviewFocus,
   onOpenSourceFocus,
-  onRefreshSourceFocus,
-  onRevealSourceReviewTarget,
   onSelectReviewFocus,
   onRevisitReviewFocus,
   onRunReviewAction,
@@ -93,9 +71,6 @@ export function InspectPanel({
   const diagnosticCounts = countDiagnosticsBySeverity(inspect)
   const inspectBuildStatus = inspect.lastBuild?.status ?? "idle"
   const buildStatusClassName = statusClassNameForBuild(inspectBuildStatus)
-  const stdoutAvailable = Boolean(logs.stdout?.trim())
-  const stderrAvailable = Boolean(logs.stderr?.trim())
-  const reviewFocus = deriveReviewFocus(inspect, logs)
   const inspectDiagnosticsView = getInspectDiagnosticsViewModel(inspect)
   const sourceValidationView = getSourceValidationViewModel(sourceValidation)
   const logInsight = getLogInsightViewModel({
@@ -112,16 +87,6 @@ export function InspectPanel({
     proposalComparison,
     session,
     sourceValidation,
-  })
-  const activeReviewFocusPreview = getReviewFocusPreview({
-    target: activeReviewFocus,
-    draftComparison,
-    proposalComparison,
-  })
-  const sourceFocusView = getSourceFocusViewModel({
-    sourceFocus: activeSourceFocus,
-    reviewStatus: activeSourceFocusReviewStatus,
-    canRevealSourceOrigin,
   })
 
   return (
@@ -236,133 +201,6 @@ export function InspectPanel({
                 </span>
               </div>
             ) : null}
-            {activeReviewFocusPreview?.groups.length ? (
-              <div className="inspect-focus-preview-list">
-                {activeReviewFocusPreview.groups.slice(0, 2).map((group) => (
-                  <article
-                    className="inspect-focus-preview-item"
-                    key={`${group.startLine}-${group.endLine}-${group.savedText}-${group.draftText}`}
-                  >
-                    <div className="message-topline">
-                      <StatusBadge>
-                        {group.startLine === group.endLine
-                          ? `Line ${group.startLine}`
-                          : `Lines ${group.startLine}-${group.endLine}`}
-                      </StatusBadge>
-                      <Button
-                        disabled={isActionBusy}
-                        onClick={() =>
-                          onOpenSourceFocus(
-                            createSourceFocusTargetFromGroup({
-                              label: activeReviewFocus?.label ?? "Review focus",
-                              group,
-                              reviewTarget: activeReviewFocus,
-                            }),
-                          )
-                        }
-                        size="sm"
-                        type="button"
-                        variant="outline"
-                      >
-                        Open in Source
-                      </Button>
-                    </div>
-                    <div className="inspect-focus-preview-code">
-                      <p className="draft-preview-label">Before</p>
-                      <pre>{group.savedText || "(empty)"}</pre>
-                    </div>
-                    <div className="inspect-focus-preview-code inspect-focus-preview-code-next">
-                      <p className="draft-preview-label">After</p>
-                      <pre>{group.draftText || "(empty)"}</pre>
-                    </div>
-                  </article>
-                ))}
-                {activeReviewFocusPreview.groups.length > 2 ? (
-                  <span className="inline-meta">
-                    Showing 2 of {activeReviewFocusPreview.groups.length}{" "}
-                    focused group(s) for this review target.
-                  </span>
-                ) : null}
-              </div>
-            ) : null}
-            {activeSourceFocus && activeSourceFocusReviewStatus ? (
-              <SurfaceCard
-                className="inspect-source-focus-status"
-                variant="summary"
-              >
-                <SurfaceCardHeader
-                  eyebrow="Source focus"
-                  title={sourceFocusView?.label ?? activeSourceFocus.label}
-                >
-                  {sourceFocusView?.statusPill ? (
-                    <StatusBadge
-                      tone={statusToneForClassName(
-                        sourceFocusView.statusPill.className,
-                      )}
-                    >
-                      {sourceFocusView.statusPill.label}
-                    </StatusBadge>
-                  ) : null}
-                </SurfaceCardHeader>
-                <SurfaceCardBody className="grid gap-3 px-[14px] pb-[14px]">
-                  <p className="inspect-linked-review-summary">
-                    {sourceFocusView?.summary}
-                  </p>
-                  <div className="proposal-meta-row">
-                    {sourceFocusView?.originLabel ? (
-                      <StatusBadge tone="accent">
-                        {sourceFocusView.originLabel}
-                      </StatusBadge>
-                    ) : null}
-                    <StatusBadge>{sourceFocusView?.selectionLabel}</StatusBadge>
-                    {sourceFocusView?.reviewOriginLabel ? (
-                      <span className="inline-meta">
-                        From {sourceFocusView.reviewOriginLabel}
-                      </span>
-                    ) : null}
-                    {sourceFocusView?.originReference ? (
-                      <span className="inline-meta">
-                        {sourceFocusView.originReference}
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="inspect-linked-review-actions">
-                    <Button
-                      disabled={isActionBusy}
-                      onClick={() => onOpenSourceFocus(activeSourceFocus)}
-                      size="sm"
-                      type="button"
-                      variant="outline"
-                    >
-                      {sourceFocusView?.actions.primaryLabel ??
-                        "Open Source focus"}
-                    </Button>
-                    {sourceFocusView?.actions.canRevealSourceOrigin ? (
-                      <Button
-                        disabled={isActionBusy}
-                        onClick={onRevealSourceReviewTarget}
-                        size="sm"
-                        type="button"
-                        variant="outline"
-                      >
-                        Reveal source origin
-                      </Button>
-                    ) : null}
-                    {sourceFocusView?.actions.canRefreshFocus ? (
-                      <Button
-                        disabled={isActionBusy}
-                        onClick={onRefreshSourceFocus}
-                        size="sm"
-                        type="button"
-                        variant="outline"
-                      >
-                        Refresh focus
-                      </Button>
-                    ) : null}
-                  </div>
-                </SurfaceCardBody>
-              </SurfaceCard>
-            ) : null}
             {availableReviewFocusTargets.length > 0 ? (
               <ToggleGroup
                 className="inspect-review-targets"
@@ -399,32 +237,6 @@ export function InspectPanel({
             ) : null}
           </div>
         ) : null}
-        <div className="inspect-audit-chip-grid">
-          <SurfaceCard className="inspect-audit-chip" variant="summary">
-            <SurfaceCardHeader eyebrow="Proposal state" />
-            <SurfaceCardBody className="grid gap-2 px-[14px] pb-[14px]">
-              <h5>{reviewAudit.proposalState.statusLabel}</h5>
-              <p>{reviewAudit.proposalState.summary}</p>
-            </SurfaceCardBody>
-          </SurfaceCard>
-          <SurfaceCard className="inspect-audit-chip" variant="summary">
-            <SurfaceCardHeader eyebrow="Readiness" />
-            <SurfaceCardBody className="grid gap-2 px-[14px] pb-[14px]">
-              <h5>{reviewAudit.readiness.label}</h5>
-              <p>{reviewAudit.readiness.summary}</p>
-            </SurfaceCardBody>
-          </SurfaceCard>
-          <SurfaceCard className="inspect-audit-chip" variant="summary">
-            <SurfaceCardHeader eyebrow="Signals" />
-            <SurfaceCardBody className="grid gap-2 px-[14px] pb-[14px]">
-              <h5>{reviewAudit.evidence.length} captured</h5>
-              <p>
-                Diagnostics, drift, and logs are condensed here so the next
-                review move is obvious.
-              </p>
-            </SurfaceCardBody>
-          </SurfaceCard>
-        </div>
         <div className="inspect-audit-grid">
           <SurfaceCard className="inspect-audit-block" variant="summary">
             <SurfaceCardHeader title="Recovery path" />
@@ -509,44 +321,6 @@ export function InspectPanel({
                   : "No validation run yet"}
               </span>
             </div>
-            {sourceValidationView.issues.length > 0 ? (
-              <div className="inspect-summary-issue-list">
-                {sourceValidationView.issues.map((issue) => (
-                  <div
-                    className="proposal-meta-row"
-                    key={`${issue.diagnostic.id}-${issue.diagnostic.message}`}
-                  >
-                    <span className="inline-meta">
-                      {issue.diagnostic.message}
-                    </span>
-                    <span className="inline-meta">{issue.meta}</span>
-                    {issue.canOpenInSource ? (
-                      <Button
-                        disabled={isActionBusy}
-                        onClick={() => {
-                          const target = createSourceFocusTargetFromDiagnostic({
-                            diagnostic: issue.diagnostic,
-                          })
-                          if (target) {
-                            onOpenSourceFocus(target)
-                          }
-                        }}
-                        size="sm"
-                        type="button"
-                        variant="outline"
-                      >
-                        Open in Source
-                      </Button>
-                    ) : null}
-                  </div>
-                ))}
-                {sourceValidationView.hasAdditionalIssues ? (
-                  <span className="inline-meta inspect-summary-detail">
-                    More validation issues are available in the Source panel.
-                  </span>
-                ) : null}
-              </div>
-            ) : null}
             <div className="inspect-summary-actions">
               <Button
                 disabled={isActionBusy}
@@ -600,44 +374,6 @@ export function InspectPanel({
               {diagnosticCounts.error} error, {diagnosticCounts.warning}{" "}
               warning, {diagnosticCounts.info} info.
             </p>
-            {inspectDiagnosticsView.issues.length > 0 ? (
-              <div className="inspect-summary-issue-list">
-                {inspectDiagnosticsView.issues.map((issue) => (
-                  <div
-                    className="proposal-meta-row"
-                    key={`${issue.diagnostic.id}-${issue.diagnostic.message}`}
-                  >
-                    <span className="inline-meta">
-                      {issue.diagnostic.message}
-                    </span>
-                    <span className="inline-meta">{issue.meta}</span>
-                    {issue.canOpenInSource ? (
-                      <Button
-                        disabled={isActionBusy}
-                        onClick={() => {
-                          const target = createSourceFocusTargetFromDiagnostic({
-                            diagnostic: issue.diagnostic,
-                          })
-                          if (target) {
-                            onOpenSourceFocus(target)
-                          }
-                        }}
-                        size="sm"
-                        type="button"
-                        variant="outline"
-                      >
-                        Open in Source
-                      </Button>
-                    ) : null}
-                  </div>
-                ))}
-                {inspectDiagnosticsView.hasAdditionalIssues ? (
-                  <span className="inline-meta inspect-summary-detail">
-                    More inspect diagnostics are available below.
-                  </span>
-                ) : null}
-              </div>
-            ) : null}
             <div className="inspect-summary-actions">
               <Button
                 disabled={isActionBusy}
@@ -667,36 +403,9 @@ export function InspectPanel({
             </div>
           </SurfaceCardBody>
         </SurfaceCard>
-
-        <SurfaceCard variant="summary">
-          <SurfaceCardHeader eyebrow="Captured outputs" />
-          <SurfaceCardBody className="grid gap-3 px-[16px] pb-[16px]">
-            <h4>{logInsight.headline}</h4>
-            <p>{logInsight.summary}</p>
-            <div className="inspect-summary-issue-list">
-              {logInsight.items.map((item) => (
-                <div className="proposal-meta-row" key={item.id}>
-                  <StatusBadge tone={item.tone}>{item.label}</StatusBadge>
-                  <span className="inline-meta">{item.detail}</span>
-                </div>
-              ))}
-            </div>
-          </SurfaceCardBody>
-        </SurfaceCard>
       </div>
 
       <div className="inspect-grid">
-        <SurfaceCard variant="summary">
-          <SurfaceCardHeader eyebrow="Review focus" />
-          <SurfaceCardBody className="px-[16px] pb-[16px]">
-            <ul className="inspect-focus-list">
-              {reviewFocus.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </SurfaceCardBody>
-        </SurfaceCard>
-
         <SurfaceCard variant="summary">
           <SurfaceCardHeader eyebrow="Structure" />
           <SurfaceCardBody className="px-[16px] pb-[16px]">
@@ -768,38 +477,12 @@ export function InspectPanel({
         </SurfaceCard>
 
         <SurfaceCard variant="summary">
-          <SurfaceCardHeader eyebrow="Last build" />
-          <SurfaceCardBody className="px-[16px] pb-[16px]">
-            <dl className="key-value-grid">
-              <dt>Run ID</dt>
-              <dd>{inspect.lastBuild?.runId ?? "n/a"}</dd>
-              <dt>Status</dt>
-              <dd>{inspect.lastBuild?.status ?? "n/a"}</dd>
-              <dt>Started</dt>
-              <dd>{formatTimestampLabel(inspect.lastBuild?.startedAt)}</dd>
-              <dt>Finished</dt>
-              <dd>{formatTimestampLabel(inspect.lastBuild?.finishedAt)}</dd>
-              <dt>Exit code</dt>
-              <dd>{inspect.lastBuild?.exitCode ?? "n/a"}</dd>
-              <dt>Preview</dt>
-              <dd>{inspect.lastBuild?.previewPath ?? "No preview artifact"}</dd>
-              <dt>stdout log</dt>
-              <dd>
-                {inspect.lastBuild?.stdoutPath ??
-                  (stdoutAvailable ? "Captured for this session" : "n/a")}
-              </dd>
-              <dt>stderr log</dt>
-              <dd>
-                {inspect.lastBuild?.stderrPath ??
-                  (stderrAvailable ? "Captured for this session" : "n/a")}
-              </dd>
-            </dl>
-          </SurfaceCardBody>
-        </SurfaceCard>
-
-        <SurfaceCard variant="summary">
           <SurfaceCardHeader eyebrow="Logs" />
           <SurfaceCardBody className="px-[16px] pb-[16px]">
+            <div className="inspect-summary-issue-list">
+              <h4>{logInsight.headline}</h4>
+              <p className="inspect-summary-detail">{logInsight.summary}</p>
+            </div>
             <div className="inspect-summary-issue-list">
               {logInsight.streams.map((stream) => (
                 <div className="inspect-step-item" key={stream.id}>
@@ -921,46 +604,4 @@ function artifactSummary(inspect: InspectSnapshot) {
   }
 
   return "Run Build once the draft is ready to generate a shareable artifact."
-}
-
-function deriveReviewFocus(inspect: InspectSnapshot, logs: LogSnapshot) {
-  const items: string[] = []
-
-  if (inspect.diagnostics.length > 0) {
-    items.push(
-      "Resolve the listed diagnostics before trusting the next artifact build.",
-    )
-  } else {
-    items.push("The latest inspect run did not report structured diagnostics.")
-  }
-
-  if (inspect.lastBuild?.status === "failed") {
-    items.push(
-      "Check stderr first. A failed build usually explains preview gaps more directly than the source summary.",
-    )
-  } else if (inspect.lastBuild?.status === "succeeded") {
-    items.push(
-      "Compare the structure summary with the preview artifact to confirm the rendered output matches the source intent.",
-    )
-  } else {
-    items.push(
-      "Run Build to create the first artifact, then return here for artifact and log review.",
-    )
-  }
-
-  if (!logs.stdout?.trim() && !logs.stderr?.trim()) {
-    items.push(
-      "No session logs are available yet, so this review is currently limited to source-derived summaries.",
-    )
-  } else if (!logs.stderr?.trim()) {
-    items.push(
-      "stderr is empty, which usually means failures are more likely to be source-validation or preview-state issues than runtime crashes.",
-    )
-  } else {
-    items.push(
-      "Use the captured logs to separate validation, runtime, and preview-loading failures before editing the source.",
-    )
-  }
-
-  return items
 }

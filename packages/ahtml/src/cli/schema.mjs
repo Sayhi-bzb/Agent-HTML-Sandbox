@@ -22,6 +22,7 @@ export function formatPrompt(schema) {
     "Write agent-html only.",
     "",
     "Header:",
+    formatRenderConfigGuidance(schema.renderConfig),
     formatMetaAgentTemplate(schema.renderConfig.values),
     "",
     "Semantic compatibility tags:",
@@ -32,6 +33,19 @@ export function formatPrompt(schema) {
   ]
 
   return lines.join("\n")
+}
+
+function formatRenderConfigGuidance(renderConfig) {
+  const compatibilitySyntax = renderConfig.compatibilitySyntax
+
+  if (
+    renderConfig.model === "document-style-config-reference" &&
+    compatibilitySyntax?.key === "profile"
+  ) {
+    return 'Use an approved document style config reference. Current compatibility syntax serializes that choice with profile="...".'
+  }
+
+  return "Use an approved render config choice."
 }
 
 function formatMetaAgentTemplate(values) {

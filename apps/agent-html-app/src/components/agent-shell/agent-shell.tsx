@@ -23,21 +23,9 @@ import {
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { cn } from "@/lib/utils"
 import { PanelShell, PanelShellHeader } from "../ui/panel-shell"
 import {
-  type AgentShellEntryView,
-  getCurrentStageEntryView,
-  getInspectDiagnosticsEntryView,
-  getPreviewEntryView,
-  getProposalChecklistEntryView,
-  getProposalDecisionEntryView,
-  getProposalDecisionTrendEntryView,
-  getProposalDriftEntryView,
   getProposalReadinessView,
-  getSourceFocusEntryView,
-  getSourceValidationEntryView,
-  type AgentShellDetailAction,
 } from "../../lib/agent-shell-review-entry-view"
 import { ScrollArea } from "../ui/scroll-area"
 import {
@@ -52,21 +40,11 @@ import {
   type ReviewFocusTarget,
 } from "../../lib/review-focus"
 import {
-  createSourceFocusTargetFromDiagnostic,
   createSourceFocusTargetFromGroup,
   getSourceFocusReadinessWarning,
   type SourceFocusReviewStatus,
   type SourceFocusTarget,
 } from "../../lib/source-focus"
-import {
-  formatInspectDiagnosticMeta,
-  getInspectDiagnosticsViewModel,
-} from "../../lib/inspect-diagnostics-view"
-import { getSourceFocusViewModel } from "../../lib/source-focus-view"
-import {
-  formatSourceValidationDiagnosticMeta,
-  getSourceValidationViewModel,
-} from "../../lib/source-validation-view"
 import { formatTimestampLabel } from "../../lib/time"
 import {
   getPreviewGroupKey,
@@ -92,14 +70,12 @@ type AgentShellProps = {
   draftComparison?: SourceComparisonSummary
   proposalComparison?: SourceComparisonSummary
   sourceValidation: SourceValidationState
-  activeSourceFocus?: SourceFocusTarget
   activeSourceFocusReviewStatus?: SourceFocusReviewStatus
   isSavingSource: boolean
   isRunningBuild: boolean
   isRunningInspect: boolean
   isSending: boolean
   isDraftingProposal: boolean
-  canRevealSourceOrigin: boolean
   clearReviewFocusKey?: string
   reviewIntent?: ReviewFocusIntent
   onReviewFocusChange?: (focus?: ReviewFocusTarget) => void
@@ -110,9 +86,6 @@ type AgentShellProps = {
   ) => Promise<void> | void
   onDraftProposal: () => Promise<void> | void
   onOpenView: (view: WorkbenchView) => Promise<void> | void
-  onOpenSourceFocus: (target: SourceFocusTarget) => Promise<void> | void
-  onRefreshSourceFocus: () => Promise<void> | void
-  onRevealSourceReviewTarget: () => Promise<void> | void
   onBuild: () => Promise<void> | void
   onInspect: () => Promise<void> | void
   onSaveDraft: () => Promise<void> | void
@@ -145,21 +118,6 @@ function statusToneForClassName(
   }
 }
 
-function getStatusButtonClassName(className?: string) {
-  switch (className) {
-    case "status-ready":
-      return "border-[#ddf8e8] bg-[#ddf8e8] text-[#116436] hover:bg-[#ddf8e8]/90 hover:text-[#116436]"
-    case "status-dirty":
-      return "border-[#fff4d8] bg-[#fff4d8] text-[#8a5a00] hover:bg-[#fff4d8]/90 hover:text-[#8a5a00]"
-    case "status-error":
-      return "border-[#ffe2e2] bg-[#ffe2e2] text-[#a42323] hover:bg-[#ffe2e2]/90 hover:text-[#a42323]"
-    case "status-building":
-      return "border-[#e4ebff] bg-[#e4ebff] text-[#2649a7] hover:bg-[#e4ebff]/90 hover:text-[#2649a7]"
-    default:
-      return "border-[#edf2fb] bg-[#edf2fb] text-[#30415f] hover:bg-[#edf2fb]/90 hover:text-[#30415f]"
-  }
-}
-
 export function AgentShell({
   session,
   messages,
@@ -170,14 +128,12 @@ export function AgentShell({
   draftComparison,
   proposalComparison,
   sourceValidation,
-  activeSourceFocus,
   activeSourceFocusReviewStatus,
   isSavingSource,
   isRunningBuild,
   isRunningInspect,
   isSending,
   isDraftingProposal,
-  canRevealSourceOrigin,
   clearReviewFocusKey,
   reviewIntent,
   onReviewFocusChange,
@@ -185,15 +141,11 @@ export function AgentShell({
   onDecision,
   onDraftProposal,
   onOpenView,
-  onOpenSourceFocus,
-  onRefreshSourceFocus,
-  onRevealSourceReviewTarget,
   onBuild,
   onInspect,
   onSaveDraft,
 }: AgentShellProps) {
   const [draft, setDraft] = useState("")
-  const [isDraftPreviewExpanded, setIsDraftPreviewExpanded] = useState(false)
   const [comparisonMode, setComparisonMode] = useState<ComparisonMode>("saved")
   const [focusedComparison, setFocusedComparison] = useState<
     FocusedComparison | undefined
@@ -285,26 +237,6 @@ export function AgentShell({
     draftComparison,
     proposalComparison,
   })
-  const sourceFocusView = getSourceFocusViewModel({
-    sourceFocus: activeSourceFocus,
-    reviewStatus: activeSourceFocusReviewStatus,
-    canRevealSourceOrigin,
-  })
-  const sourceValidationView = getSourceValidationViewModel(sourceValidation)
-  const inspectDiagnosticsView = getInspectDiagnosticsViewModel(inspect)
-  const sourceValidationEntry = getSourceValidationEntryView({
-    sourceValidation,
-    sourceValidationView,
-  })
-  const sourceFocusEntry = getSourceFocusEntryView(sourceFocusView)
-  const inspectDiagnosticsEntry = getInspectDiagnosticsEntryView(
-    inspectDiagnosticsView,
-  )
-  const proposalDriftEntry = getProposalDriftEntryView(proposalComparison)
-  const previewEntry = getPreviewEntryView({
-    buildStatus: build.status,
-    hasPreview: session.summary.hasPreview,
-  })
   const currentStageGuidance = getCurrentReviewStageGuidance({
     stage: currentReviewStage,
     latestProposalExists: Boolean(latestProposal),
@@ -341,27 +273,6 @@ export function AgentShell({
   const currentStageItem =
     reviewTimeline.find((item) => item.id === currentReviewStage) ??
     reviewTimeline[0]
-  const currentStageEntry = currentStageItem
-    ? getCurrentStageEntryView({
-        stage: currentStageItem,
-        guidance: currentStageGuidance,
-        actionConfig: currentStageAction,
-      })
-    : undefined
-  const proposalDecisionTrendEntry = getProposalDecisionTrendEntryView(
-    proposalDecisionTrend,
-  )
-  const proposalChecklistEntry = getProposalChecklistEntryView({
-    proposalProgress,
-    currentStageAction,
-  })
-  const proposalDecisionEntry = getProposalDecisionEntryView({
-    latestProposalExists: Boolean(latestProposal),
-    latestProposalDecision,
-    latestProposalIsStale,
-    recentProposalDecisions,
-    proposalDecisionTrend,
-  })
   const proposalReadinessView = getProposalReadinessView({
     proposalReadiness,
     currentStage: currentReviewStage,
@@ -371,24 +282,6 @@ export function AgentShell({
     stageActions,
     currentStageAction,
   })
-  const snapshotEntries: AgentShellEntryView[] = [
-    currentStageEntry,
-    proposalDecisionEntry,
-    proposalDecisionTrendEntry,
-    proposalChecklistEntry,
-    sourceValidationEntry,
-    sourceFocusEntry,
-    inspectDiagnosticsEntry,
-    proposalDriftEntry,
-    previewEntry,
-  ].flatMap((entry) => (entry ? [entry] : []))
-  const detailEntries: Array<
-    AgentShellEntryView & {
-      panel: NonNullable<AgentShellEntryView["panel"]>
-    }
-  > = snapshotEntries.flatMap((entry) =>
-    entry.panel ? [{ ...entry, panel: entry.panel }] : [],
-  )
   const showComparisonModeSwitch = Boolean(
     draftComparison && proposalComparison,
   )
@@ -415,20 +308,12 @@ export function AgentShell({
     activeComparison && focusedComparison?.mode === comparisonMode
       ? getPreviewGroupsByKeys(activeComparison, focusedComparison.keys)
       : undefined
-  const visibleDraftPreviewGroups = activeComparison
-    ? focusedPreviewGroups && focusedPreviewGroups.length > 0
-      ? focusedPreviewGroups
-      : isDraftPreviewExpanded
-        ? activeComparison.previewGroups
-        : activeComparison.previewGroups.slice(0, 3)
-    : []
 
   useEffect(() => {
     setDraft("")
   }, [session.summary.id])
 
   useEffect(() => {
-    setIsDraftPreviewExpanded(false)
     setFocusedComparison(undefined)
   }, [
     session.summary.id,
@@ -448,7 +333,6 @@ export function AgentShell({
     }
 
     setFocusedComparison(undefined)
-    setIsDraftPreviewExpanded(false)
   }, [clearReviewFocusKey])
 
   useEffect(() => {
@@ -567,7 +451,6 @@ export function AgentShell({
           }
         : undefined,
     )
-    setIsDraftPreviewExpanded(true)
   }
 
   function runWorkflowAction(
@@ -609,226 +492,133 @@ export function AgentShell({
     }
   }
 
-  function runDetailAction(action: AgentShellDetailAction) {
-    switch (action.kind) {
-      case "open-source":
-        runWorkflowAction("openSource")
-        break
-      case "open-inspect":
-        runWorkflowAction(activeView === "inspect" ? "inspect" : "openInspect")
-        break
-      case "focus-diagnostic": {
-        const target = createSourceFocusTargetFromDiagnostic({
-          diagnostic: action.diagnostic,
-        })
-        if (target) {
-          void onOpenSourceFocus(target)
-        }
-        break
-      }
-      case "open-source-focus":
-        if (activeSourceFocus) {
-          void onOpenSourceFocus(activeSourceFocus)
-        }
-        break
-      case "refresh-source-focus":
-        void onRefreshSourceFocus()
-        break
-      case "reveal-source-origin":
-        void onRevealSourceReviewTarget()
-        break
-      case "review-diff":
-        runWorkflowAction("reviewDiff")
-        break
-      case "open-preview":
-        runWorkflowAction("openPreview")
-        break
-      case "save":
-        runWorkflowAction("save")
-        break
-      case "inspect":
-        runWorkflowAction("inspect")
-        break
-      case "draft-proposal":
-        runWorkflowAction("draftProposal")
-        break
-      case "approve-proposal":
-        if (latestProposal) {
-          void onDecision(latestProposal.text, "approved")
-        }
-        break
-      case "needs-changes-proposal":
-        if (latestProposal) {
-          void onDecision(latestProposal.text, "needs changes")
-        }
-        break
-      case "build":
-        runWorkflowAction("build")
-        break
-    }
-  }
+  return (
+    <PanelShell as="aside" variant="agent-shell">
+      <PanelShellHeader eyebrow="Agent" title="Proposal desk">
+        <StatusBadge tone="accent">Secondary lane</StatusBadge>
+      </PanelShellHeader>
 
-  function isDetailActionDisabled(action: AgentShellDetailAction) {
-    if (isProposalActionBusy) {
-      return true
-    }
-
-    switch (action.kind) {
-      case "approve-proposal":
-        return !latestProposal || latestProposalDecision?.status === "approved"
-      case "needs-changes-proposal":
-        return (
-          !latestProposal || latestProposalDecision?.status === "needs-changes"
-        )
-      case "open-source":
-        return activeView === "source"
-      case "open-preview":
-        return activeView === "preview"
-      default:
-        return false
-    }
-  }
-
-  function renderEntryPanel(
-    entry: AgentShellEntryView & {
-      panel: NonNullable<AgentShellEntryView["panel"]>
-    },
-  ) {
-    const { panel } = entry
-
-    return (
-      <div className="proposal-entry-panel" key={entry.id}>
-        <div className="message-topline">
-          <div>
-            <p className="eyebrow">{panel.eyebrow}</p>
-            <h4>{panel.title}</h4>
-          </div>
-          <StatusBadge tone={statusToneForClassName(panel.pillClassName)}>
-            {panel.pillLabel}
-          </StatusBadge>
-        </div>
-        <p className="proposal-starter-copy">{panel.summary}</p>
-        {panel.meta.length > 0 ? (
+      <SurfaceCard className="proposal-starter-card" variant="context">
+        <SurfaceCardHeader eyebrow="Proposal" title="Next review step">
+          <Button
+            disabled={isProposalActionBusy}
+            onClick={() => void onDraftProposal()}
+            type="button"
+          >
+            {isDraftingProposal
+              ? "Drafting..."
+              : hasUnsavedSourceChanges
+                ? "Save + draft proposal"
+                : "Draft proposal"}
+          </Button>
+        </SurfaceCardHeader>
+        <SurfaceCardBody className="grid gap-4 px-[18px] pb-[18px]">
+          <p className="proposal-starter-copy">
+            {hasUnsavedSourceChanges
+              ? "The current source draft will be saved first so the proposal reflects the latest session truth."
+              : "Generate a proposal from the current source, latest build state, preview availability, and captured logs."}
+          </p>
           <div className="proposal-meta-row">
-            {panel.meta.map((item, index) =>
-              panel.metaDisplay === "first-pill" ? (
-                index === 0 ? (
-                  <StatusBadge key={item} tone="accent">
-                    {item}
-                  </StatusBadge>
-                ) : (
-                  <span className="inline-meta" key={item}>
-                    {item}
-                  </span>
-                )
-              ) : (
-                <StatusBadge key={item}>{item}</StatusBadge>
-              ),
+            {latestProposal ? (
+              <p className="inline-meta">
+                Latest proposal {formatTimestampLabel(latestProposal.createdAt)}
+              </p>
+            ) : (
+              <p className="inline-meta">
+                No proposal drafted for this session yet.
+              </p>
             )}
+            {latestProposalIsStale ? (
+              <StatusBadge tone="dirty">Stale context</StatusBadge>
+            ) : null}
+            {currentStageItem ? (
+              <StatusBadge
+                tone={statusToneForClassName(currentStageItem.pillClassName)}
+              >
+                {currentStageItem.statusLabel}
+              </StatusBadge>
+            ) : null}
+            <StatusBadge
+              tone={statusToneForClassName(proposalReadinessView.pillClassName)}
+            >
+              {proposalReadinessView.label}
+            </StatusBadge>
           </div>
-        ) : null}
-        {panel.issues?.length ? (
-          <div className="proposal-list">
-            {panel.issues.map((issue) => (
-              <div className="proposal-meta-row" key={issue.id}>
-                <span className="inline-meta">{issue.message}</span>
-                <span className="inline-meta">{issue.meta}</span>
-                {issue.action ? (
-                  <Button
-                    disabled={isDetailActionDisabled(issue.action)}
-                    onClick={() => runDetailAction(issue.action!)}
-                    size="sm"
-                    type="button"
-                    variant="outline"
-                  >
-                    {issue.action.label}
-                  </Button>
-                ) : null}
+
+          <div className="proposal-entry-panel">
+            <div className="message-topline">
+              <div>
+                <p className="eyebrow">Current gate</p>
+                <h4>{currentStageItem?.label ?? "Proposal readiness"}</h4>
               </div>
-            ))}
-            {panel.hasAdditionalIssues && panel.additionalIssuesLabel ? (
-              <span className="inline-meta">{panel.additionalIssuesLabel}</span>
+              {currentStageAction ? (
+                <Button
+                  disabled={isProposalActionBusy}
+                  onClick={() => runWorkflowAction(currentStageAction.handler)}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  {currentStageAction.label}
+                </Button>
+              ) : null}
+            </div>
+            <p className="proposal-starter-copy">{currentStageGuidance}</p>
+            {currentStageAction ? (
+              <span className="inline-meta">
+                {currentStageAction.description}
+              </span>
             ) : null}
           </div>
-        ) : null}
-        {panel.actions.length > 0 ? (
-          <div className="proposal-actions">
-            {panel.actions.map((action) => (
+
+          {proposalReadinessView.items.length > 0 ? (
+            <div className="proposal-readiness">
+              <div className="message-topline">
+                <p className="eyebrow">Open checks</p>
+                <span className="inline-meta">
+                  {proposalReadinessView.items.length} item(s)
+                </span>
+              </div>
+              <ul className="proposal-list proposal-readiness-list">
+                {proposalReadinessView.items.slice(0, 3).map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+              {proposalReadinessView.items.length > 3 ? (
+                <p className="inline-meta">
+                  More checks remain in the session history below.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {latestProposalHasDraftDelta && proposalComparison ? (
+            <div className="proposal-compare-panel">
+              <div className="message-topline">
+                <p className="eyebrow">Proposal drift</p>
+                <StatusBadge
+                  tone={proposalComparison.changedLineCount ? "dirty" : "ready"}
+                >
+                  {proposalComparison.changedLineCount} changed line(s)
+                </StatusBadge>
+              </div>
+              <p className="proposal-compare-summary">
+                The current source differs from the latest proposal snapshot by{" "}
+                {proposalComparison.changedLineCount} line(s).
+              </p>
               <Button
-                disabled={isDetailActionDisabled(action)}
-                key={action.id}
-                onClick={() => runDetailAction(action)}
+                disabled={isProposalActionBusy}
+                onClick={() =>
+                  focusChecklistOption(getDefaultProposalFocusOption())
+                }
                 size="sm"
                 type="button"
                 variant="outline"
               >
-                {action.label}
+                Review diff
               </Button>
-            ))}
-          </div>
-        ) : null}
-      </div>
-    )
-  }
-
-  return (
-    <PanelShell as="aside" variant="agent-shell">
-      <PanelShellHeader eyebrow="Agent" title="Shell">
-        <StatusBadge tone="accent">Session-backed</StatusBadge>
-      </PanelShellHeader>
-
-      <SurfaceCard variant="context">
-        <SurfaceCardHeader
-          eyebrow="Session context"
-          title={session.summary.name}
-        />
-        <SurfaceCardBody className="px-[18px] pb-[18px]">
-          <dl className="key-value-grid compact">
-            <dt>Status</dt>
-            <dd>{session.summary.status}</dd>
-            <dt>Source</dt>
-            <dd>{session.sourcePath}</dd>
-            <dt>Preview</dt>
-            <dd>{session.previewPath ?? "none"}</dd>
-          </dl>
-        </SurfaceCardBody>
-      </SurfaceCard>
-
-      <SurfaceCard className="review-timeline-card" variant="context">
-        <SurfaceCardHeader
-          eyebrow="Review timeline"
-          title="Source to proposal checkpoints"
-        />
-        <SurfaceCardBody className="px-[18px] pb-[18px]">
-          <div className="timeline-list">
-            {reviewTimeline.map((item) => (
-              <article
-                className={
-                  item.id === currentReviewStage
-                    ? "timeline-item active"
-                    : "timeline-item"
-                }
-                key={item.id}
-              >
-                <div className="message-topline">
-                  <div className="timeline-label-group">
-                    <h4>{item.label}</h4>
-                    <span className="inline-meta">
-                      {item.timestamp
-                        ? formatTimestampLabel(item.timestamp)
-                        : "No event yet"}
-                    </span>
-                  </div>
-                  <StatusBadge
-                    tone={statusToneForClassName(item.pillClassName)}
-                  >
-                    {item.statusLabel}
-                  </StatusBadge>
-                </div>
-                <p className="timeline-summary">{item.summary}</p>
-              </article>
-            ))}
-          </div>
+            </div>
+          ) : null}
         </SurfaceCardBody>
       </SurfaceCard>
 
@@ -902,47 +692,6 @@ export function AgentShell({
                 </ToggleGroupItem>
               </ToggleGroup>
             ) : null}
-            {proposalFocusOptions.length > 0 ? (
-              <ToggleGroup
-                className="compare-focus-strip"
-                onValueChange={(value) => {
-                  if (!value) {
-                    setFocusedComparison(undefined)
-                    return
-                  }
-
-                  const option = proposalFocusOptions.find(
-                    (candidate) => candidate.id === value,
-                  )
-                  if (!option) {
-                    return
-                  }
-
-                  setFocusedComparison({
-                    mode: comparisonMode,
-                    targetId: option.id,
-                    keys: option.groups.map((group) =>
-                      getPreviewGroupKey(group),
-                    ),
-                    label: option.label,
-                  })
-                }}
-                type="single"
-                value={focusedComparison?.targetId}
-                variant="outline"
-              >
-                {proposalFocusOptions.map((option) => (
-                  <ToggleGroupItem
-                    className="compare-focus-button"
-                    key={option.id}
-                    size="sm"
-                    value={option.id}
-                  >
-                    {option.label}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-            ) : null}
             <dl className="key-value-grid compact">
               <dt>Changed lines</dt>
               <dd>{activeComparison.changedLineCount}</dd>
@@ -958,235 +707,47 @@ export function AgentShell({
               </dd>
             </dl>
             {activeComparison.previewGroups.length > 0 ? (
-              <div className="draft-preview-list">
-                {visibleDraftPreviewGroups.map((group) => (
-                  <article
-                    className="draft-preview-item"
-                    key={getPreviewGroupKey(group)}
-                  >
-                    <div className="message-topline">
-                      <StatusBadge>
-                        {group.startLine === group.endLine
-                          ? `Line ${group.startLine}`
-                          : `Lines ${group.startLine}-${group.endLine}`}
-                      </StatusBadge>
-                      <Button
-                        disabled={isProposalActionBusy}
-                        onClick={() =>
-                          void onOpenSourceFocus(
-                            createSourceFocusTargetFromGroup({
-                              label:
-                                focusedComparison?.label ??
-                                comparisonLabels.cardTitle,
-                              group,
-                              compareMode: comparisonMode,
-                              reviewTarget:
-                                getFocusedReviewTarget(focusedPreviewGroups),
-                            }),
-                          )
-                        }
-                        size="sm"
-                        type="button"
-                        variant="outline"
-                      >
-                        Open in Source
-                      </Button>
-                    </div>
-                    <div className="draft-preview-code">
-                      <p className="draft-preview-label">Saved</p>
-                      <pre>{group.savedText || "(empty)"}</pre>
-                    </div>
-                    <div className="draft-preview-code draft-preview-code-next">
-                      <p className="draft-preview-label">Draft</p>
-                      <pre>{group.draftText || "(empty)"}</pre>
-                    </div>
-                  </article>
-                ))}
-                <div className="draft-preview-footer">
-                  {focusedPreviewGroups && focusedPreviewGroups.length > 0 ? (
-                    <>
-                      <Button
-                        onClick={() => setFocusedComparison(undefined)}
-                        size="sm"
-                        type="button"
-                        variant="outline"
-                      >
-                        Show all compare groups
-                      </Button>
-                      <span className="inline-meta">
-                        Focused on{" "}
-                        {focusedComparison?.label ?? "selected checklist item"}{" "}
-                        with {focusedPreviewGroups.length} group(s).
-                      </span>
-                    </>
-                  ) : null}
-                  {activeComparison.previewGroups.length > 3 ||
-                  activeComparison.hasAdditionalChanges ? (
-                    <>
-                      <Button
-                        onClick={() =>
-                          setIsDraftPreviewExpanded((current) => !current)
-                        }
-                        size="sm"
-                        type="button"
-                        variant="outline"
-                      >
-                        {isDraftPreviewExpanded
-                          ? "Show fewer changes"
-                          : "Show more changes"}
-                      </Button>
-                      <span className="inline-meta">
-                        {isDraftPreviewExpanded
-                          ? activeComparison.hasAdditionalChanges
-                            ? `Showing the first ${activeComparison.previewGroups.length} changed groups.`
-                            : `Showing all ${activeComparison.previewGroups.length} changed groups.`
-                          : `Showing ${visibleDraftPreviewGroups.length} of ${activeComparison.previewGroups.length} changed groups.`}
-                      </span>
-                    </>
-                  ) : null}
-                </div>
+              <div className="draft-preview-footer">
+                <Button
+                  disabled={isProposalActionBusy}
+                  onClick={() => {
+                    focusChecklistOption(getDefaultProposalFocusOption())
+                    void onOpenView("source")
+                  }}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  Review in Source
+                </Button>
+                {focusedPreviewGroups && focusedPreviewGroups.length > 0 ? (
+                  <>
+                    <Button
+                      onClick={() => setFocusedComparison(undefined)}
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                    >
+                      Clear diff focus
+                    </Button>
+                    <span className="inline-meta">
+                      Focused on{" "}
+                      {focusedComparison?.label ?? "selected compare target"}{" "}
+                      with {focusedPreviewGroups.length} group(s).
+                    </span>
+                  </>
+                ) : (
+                  <span className="inline-meta">
+                    Review the diff in Source instead of reading inline snippets
+                    here.
+                  </span>
+                )}
               </div>
             ) : null}
             <p className="proposal-starter-copy">{comparisonLabels.helper}</p>
           </SurfaceCardBody>
         </SurfaceCard>
       ) : null}
-
-      <SurfaceCard className="proposal-starter-card" variant="context">
-        <SurfaceCardHeader eyebrow="Proposal" title="Session-backed next step">
-          <Button
-            disabled={isProposalActionBusy}
-            onClick={() => void onDraftProposal()}
-            type="button"
-          >
-            {isDraftingProposal
-              ? "Drafting..."
-              : hasUnsavedSourceChanges
-                ? "Save + draft proposal"
-                : "Draft proposal"}
-          </Button>
-        </SurfaceCardHeader>
-        <SurfaceCardBody className="grid gap-4 px-[18px] pb-[18px]">
-          <p className="proposal-starter-copy">
-            {hasUnsavedSourceChanges
-              ? "The current source draft will be saved first so the proposal reflects the latest session truth."
-              : "Generate a proposal from the current source, latest build state, preview availability, and captured logs."}
-          </p>
-          {latestProposal ? (
-            <div className="proposal-meta-row">
-              <p className="inline-meta">
-                Latest proposal {formatTimestampLabel(latestProposal.createdAt)}
-              </p>
-              {latestProposalIsStale ? (
-                <StatusBadge tone="dirty">Stale context</StatusBadge>
-              ) : null}
-            </div>
-          ) : (
-            <p className="inline-meta">
-              No proposal drafted for this session yet.
-            </p>
-          )}
-          <div className="proposal-snapshot-row">
-            {snapshotEntries.map((entry) =>
-              entry.chip.action ? (
-                <Button
-                  className={cn(
-                    "proposal-snapshot-chip rounded-full",
-                    getStatusButtonClassName(entry.chip.pillClassName),
-                  )}
-                  disabled={isDetailActionDisabled(entry.chip.action)}
-                  key={entry.id}
-                  onClick={() => runDetailAction(entry.chip.action!)}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  {entry.chip.label}
-                </Button>
-              ) : (
-                <StatusBadge
-                  key={entry.id}
-                  tone={statusToneForClassName(entry.chip.pillClassName)}
-                >
-                  {entry.chip.label}
-                </StatusBadge>
-              ),
-            )}
-          </div>
-          {detailEntries.map((entry) => renderEntryPanel(entry))}
-          <div className="proposal-readiness">
-            <div className="message-topline">
-              <p className="eyebrow">Proposal readiness</p>
-              <StatusBadge
-                tone={statusToneForClassName(
-                  proposalReadinessView.pillClassName,
-                )}
-              >
-                {proposalReadinessView.label}
-              </StatusBadge>
-            </div>
-            <div
-              className="proposal-stage-strip"
-              role="list"
-              aria-label="Review path"
-            >
-              {proposalReadinessView.stages.map((item) => (
-                <Button
-                  className="proposal-stage-chip"
-                  disabled={!item.action || isDetailActionDisabled(item.action)}
-                  key={item.id}
-                  onClick={() => {
-                    if (item.action) {
-                      runDetailAction(item.action)
-                    }
-                  }}
-                  role="listitem"
-                  size="sm"
-                  type="button"
-                  variant={item.isActive ? "default" : "outline"}
-                >
-                  <span className="proposal-stage-name">{item.label}</span>
-                  <StatusBadge
-                    tone={statusToneForClassName(item.pillClassName)}
-                  >
-                    {item.statusLabel}
-                  </StatusBadge>
-                </Button>
-              ))}
-            </div>
-            <p className="proposal-readiness-summary">
-              {proposalReadinessView.summary}
-            </p>
-            {proposalReadinessView.items.length > 0 ? (
-              <ul className="proposal-list proposal-readiness-list">
-                {proposalReadinessView.items.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            ) : null}
-            {proposalReadinessView.currentAction ? (
-              <div className="proposal-readiness-action">
-                <Button
-                  disabled={isDetailActionDisabled(
-                    proposalReadinessView.currentAction.action,
-                  )}
-                  onClick={() =>
-                    runDetailAction(proposalReadinessView.currentAction!.action)
-                  }
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  {proposalReadinessView.currentAction.action.label}
-                </Button>
-                <span className="inline-meta">
-                  {proposalReadinessView.currentAction.description}
-                </span>
-              </div>
-            ) : null}
-          </div>
-        </SurfaceCardBody>
-      </SurfaceCard>
 
       <ScrollArea className="message-list-scroll">
         <div className="message-list">

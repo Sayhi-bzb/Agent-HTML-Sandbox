@@ -13,7 +13,9 @@ rehype supplies the inspectable AST pipeline.
 rehype-sanitize supplies the primary schema gate.
 parse5 supplies parser-level HTML correctness.
 DOMPurify supplies optional runtime defense.
-RenderConfig header is validated as finite profile selection.
+RenderConfig header is validated as finite document style config selection;
+compatibility `profile` entries are treated as aliases to that approved
+configuration layer.
 SanitizedAgentHtml remains the renderer input authority.
 ```
 
@@ -54,7 +56,7 @@ HAST to SanitizedAgentHtml
 ## Specific Risks
 
 - `rehype-sanitize` schema 配错会直接影响安全边界和合法积木能力。
-- render config schema 配错会把 presentation profile 选择变成样式逃逸口。
+- render config schema 配错会把 document style config 选择或 compatibility `profile` alias 选择变成样式逃逸口。
 - DOMPurify server-side 依赖 DOM 实现；jsdom 版本和配置也进入信任边界。
 - SVG、MathML、style、data URL 和外部资源必须单独声明策略。
 - diagnostics 必须足够清楚，帮助 agent 修正被拒绝的标签、属性和结构。

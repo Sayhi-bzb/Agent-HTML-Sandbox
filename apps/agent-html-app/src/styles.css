@@ -8,18 +8,7 @@
 :root {
   color-scheme: light;
   font-family: "Segoe UI", "SF Pro Display", sans-serif;
-  background:
-    radial-gradient(
-      circle at top left,
-      rgba(187, 214, 255, 0.9),
-      transparent 24%
-    ),
-    radial-gradient(
-      circle at top right,
-      rgba(255, 231, 214, 0.9),
-      transparent 28%
-    ),
-    #edf2f7;
+  background: #f3f5f7;
   color: #172033;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -84,15 +73,15 @@ button:disabled {
 }
 
 .app-root {
-  padding: 18px;
+  padding: 16px;
 }
 
 .topbar {
   align-items: center;
   display: flex;
   justify-content: space-between;
-  gap: 16px;
-  padding: 0 0 18px;
+  gap: 12px;
+  padding: 0 0 14px;
 }
 
 .topbar h1 {
@@ -105,10 +94,10 @@ button:disabled {
 }
 
 .error-banner {
-  margin-bottom: 18px;
-  border: 1px solid rgba(164, 35, 35, 0.16);
-  border-radius: 16px;
-  background: rgba(255, 226, 226, 0.8);
+  margin-bottom: 14px;
+  border: 1px solid rgba(164, 35, 35, 0.14);
+  border-radius: 14px;
+  background: #fff7f7;
   color: #7f1d1d;
   padding: 14px 16px;
 }
@@ -117,12 +106,12 @@ button:disabled {
   align-items: center;
   display: flex;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 18px;
+  gap: 12px;
+  margin-bottom: 14px;
   border: 1px solid rgba(31, 41, 55, 0.08);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.78);
-  padding: 16px 18px;
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 14px 16px;
 }
 
 .runtime-banner h2 {
@@ -137,17 +126,16 @@ button:disabled {
 
 .app-shell {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr) 360px;
-  gap: 18px;
+  grid-template-columns: 264px minmax(0, 1fr);
+  gap: 16px;
   min-height: calc(100vh - 112px);
 }
 
 .panel {
   border: 1px solid rgba(31, 41, 55, 0.08);
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(18px);
-  border-radius: 24px;
-  box-shadow: 0 18px 40px rgba(27, 39, 61, 0.08);
+  background: #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(27, 39, 61, 0.05);
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -158,7 +146,7 @@ button:disabled {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  padding: 20px 20px 0;
+  padding: 18px 18px 0;
 }
 
 .panel-header h1,
@@ -181,6 +169,10 @@ button:disabled {
 .sidebar,
 .agent-shell {
   padding-bottom: 20px;
+}
+
+.agent-shell {
+  grid-column: 1 / -1;
 }
 
 .search-shell {
@@ -207,7 +199,11 @@ button:disabled {
 .message-list-scroll {
   flex: 1;
   min-height: 0;
-  padding: 16px 20px 0;
+  padding: 12px 20px 0;
+}
+
+.agent-shell .message-list-scroll {
+  max-height: 480px;
 }
 
 .session-card,
@@ -219,8 +215,8 @@ button:disabled {
 .artifact-card,
 .artifact-alert {
   border: 1px solid rgba(31, 41, 55, 0.08);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.88);
+  border-radius: 16px;
+  background: #ffffff;
 }
 
 .session-card {
@@ -272,7 +268,7 @@ button:disabled {
 }
 
 .tab-strip {
-  padding: 14px 20px 0;
+  padding: 12px 18px 0;
 }
 
 .workbench-shell {
@@ -282,8 +278,8 @@ button:disabled {
 .workbench-card {
   display: grid;
   gap: 18px;
-  margin: 14px 20px 0;
-  padding: 18px;
+  margin: 12px 18px 0;
+  padding: 16px;
 }
 
 .validation-card {
@@ -337,12 +333,8 @@ button:disabled {
   display: grid;
   gap: 14px;
   border: 1px solid rgba(20, 33, 61, 0.08);
-  border-radius: 20px;
-  background: linear-gradient(
-    180deg,
-    rgba(240, 246, 255, 0.94) 0%,
-    rgba(255, 255, 255, 0.94) 100%
-  );
+  border-radius: 16px;
+  background: #ffffff;
   padding: 16px;
 }
 
@@ -461,6 +453,10 @@ button:disabled {
   gap: 12px;
 }
 
+.inspect-audit-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .inspect-audit-chip-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -530,8 +526,8 @@ button:disabled {
 
 .inspect-summary-card {
   border: 1px solid rgba(31, 41, 55, 0.08);
-  border-radius: 18px;
-  background: rgba(247, 249, 252, 0.92);
+  border-radius: 16px;
+  background: #f8fafc;
   padding: 16px;
 }
 
@@ -589,8 +585,8 @@ button:disabled {
 }
 
 .preview-surface {
-  border-radius: 20px;
-  background: linear-gradient(180deg, #fff7ec 0%, #f7f5f1 100%);
+  border-radius: 16px;
+  background: #f5f5f2;
   min-height: 440px;
   overflow: hidden;
   padding: 28px;
@@ -676,6 +672,7 @@ button:disabled {
 .inspect-grid {
   display: grid;
   gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .inspect-block {
@@ -748,7 +745,7 @@ button:disabled {
 
 .context-card,
 .composer-shell {
-  margin: 16px 20px 0;
+  margin: 12px 20px 0;
   padding: 16px;
 }
 
@@ -798,11 +795,7 @@ button:disabled {
   display: grid;
   gap: 10px;
   border-color: rgba(138, 90, 0, 0.14);
-  background: linear-gradient(
-    180deg,
-    rgba(255, 250, 235, 0.94) 0%,
-    rgba(255, 255, 255, 0.92) 100%
-  );
+  background: #fffaf0;
 }
 
 .draft-preview-list {
@@ -832,7 +825,7 @@ button:disabled {
 .draft-preview-item {
   border: 1px solid rgba(138, 90, 0, 0.12);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.84);
+  background: #ffffff;
   padding: 12px;
 }
 
@@ -873,20 +866,12 @@ button:disabled {
 
 .proposal-card {
   border-color: rgba(29, 78, 216, 0.16);
-  background: linear-gradient(
-    180deg,
-    rgba(239, 246, 255, 0.92) 0%,
-    rgba(255, 255, 255, 0.92) 100%
-  );
+  background: #f7fbff;
 }
 
 .context-message-card {
   border-color: rgba(49, 130, 206, 0.14);
-  background: linear-gradient(
-    180deg,
-    rgba(247, 250, 252, 0.94) 0%,
-    rgba(255, 255, 255, 0.92) 100%
-  );
+  background: #f8fafc;
 }
 
 .proposal-body {
@@ -923,7 +908,7 @@ button:disabled {
   gap: 8px;
   border: 1px solid rgba(31, 41, 55, 0.08);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.78);
+  background: #ffffff;
   padding: 12px;
 }
 
@@ -932,7 +917,7 @@ button:disabled {
   gap: 8px;
   border: 1px solid rgba(31, 41, 55, 0.08);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.78);
+  background: #ffffff;
   padding: 12px;
 }
 
@@ -973,7 +958,7 @@ button:disabled {
   gap: 8px;
   border: 1px solid rgba(138, 90, 0, 0.12);
   border-radius: 14px;
-  background: rgba(255, 250, 235, 0.78);
+  background: #fffaf0;
   padding: 12px;
 }
 
@@ -1080,11 +1065,6 @@ button:disabled {
   .app-shell {
     grid-template-columns: 240px minmax(0, 1fr);
   }
-
-  .agent-shell {
-    grid-column: 1 / -1;
-    min-height: 320px;
-  }
 }
 
 @media (max-width: 900px) {
@@ -1092,7 +1072,9 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 
+  .inspect-audit-grid,
   .inspect-audit-chip-grid,
+  .inspect-grid,
   .inspect-summary-grid {
     grid-template-columns: 1fr;
   }

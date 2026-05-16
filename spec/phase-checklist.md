@@ -9,6 +9,8 @@ and reopen guide instead of a phase-by-phase execution log.
 - `spec/roadmap.md` is future-facing only.
 - `spec/components-adoption.md` is the stable support matrix for the completed
   grouped-adoption lane.
+- If the document-level config lane reopens, use
+  `spec/document-style-config-migration.md` as the execution spec.
 - If product semantics reopen, start a new checklist rather than restoring the
   closed phase logs here.
 

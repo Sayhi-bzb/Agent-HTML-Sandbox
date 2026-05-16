@@ -156,18 +156,6 @@ export function SessionsSidebar({
                   disabled={isBusy}
                   onClick={(event) => {
                     event.stopPropagation()
-                    onOpenSession(session.id)
-                  }}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  Open
-                </Button>
-                <Button
-                  disabled={isBusy}
-                  onClick={(event) => {
-                    event.stopPropagation()
                     onTogglePinSession(session.id, !session.pinned)
                   }}
                   size="sm"

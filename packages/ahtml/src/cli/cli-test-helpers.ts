@@ -83,6 +83,11 @@ export type CliSchemaOutput = {
     readonly defaults: Readonly<Record<string, string>>
     readonly keys: readonly string[]
     readonly values: Readonly<Record<string, readonly string[]>>
+    readonly model: string
+    readonly compatibilitySyntax: {
+      readonly key: string
+      readonly kind: string
+    }
   }
 }
 

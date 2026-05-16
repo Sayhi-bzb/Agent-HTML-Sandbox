@@ -48,6 +48,8 @@ Reopen roadmap work only if one of these changes:
 
 - If local fixture or registry snapshots become costly to maintain across
   shadcn upgrades, reopen fixture and registry maintenance work.
+- For the document-level config cleanup itself, use
+  `spec/document-style-config-migration.md` as the execution spec.
 - Establish the migration path from compatibility `profile` entries to
   document-level style config references when the configuration lane reopens,
   without adding component-level public styling knobs.

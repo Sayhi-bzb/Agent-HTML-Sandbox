@@ -178,14 +178,24 @@ export function createInspection(document) {
     throw new Error("Cannot inspect an invalid agent-html document.")
   }
 
-  const { profile, ...resolvedProfileTokens } = document.meta
+  const {
+    documentStyleConfigReference: rawDocumentStyleConfigReference,
+    profile,
+    ...resolvedDocumentStyleTokens
+  } = document.meta
+  const documentStyleConfigReference =
+    rawDocumentStyleConfigReference ?? profile
 
   return {
     kind: "agent-html-inspection",
+    configModel: "document-style-config-reference",
+    configSource: "profile-alias",
     config: {
+      documentStyleConfigReference,
       profile,
     },
-    resolvedProfileTokens,
+    resolvedDocumentStyleTokens,
+    resolvedProfileTokens: resolvedDocumentStyleTokens,
     components: countComponents(document.components),
   }
 }
@@ -227,15 +237,21 @@ function createValidationResult({
 }
 
 export function formatInspectionSummary(inspection) {
+  const resolvedTokens =
+    inspection.resolvedDocumentStyleTokens ?? inspection.resolvedProfileTokens
   const lines = [
     "agent-html inspection",
-    ...Object.entries(inspection.config).map(
-      ([key, value]) => `${key}: ${value}`,
+    ...(inspection.configModel ? [`config model: ${inspection.configModel}`] : []),
+    ...(inspection.configSource ? [`config source: ${inspection.configSource}`] : []),
+    ...Object.entries(inspection.config).map(([key, value]) =>
+      key === "profile" && inspection.configSource === "profile-alias"
+        ? `profile alias: ${value}`
+        : `${key}: ${value}`,
     ),
-    ...(inspection.resolvedProfileTokens
+    ...(resolvedTokens
       ? [
-          "resolved profile tokens:",
-          ...Object.entries(inspection.resolvedProfileTokens).map(
+          "resolved document style tokens:",
+          ...Object.entries(resolvedTokens).map(
             ([key, value]) => `- ${key}: ${value}`,
           ),
         ]

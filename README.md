@@ -79,7 +79,7 @@ agent work
 ```
 
 The schema is the public contract. Agents write content structure, not raw HTML, CSS, JavaScript, Tailwind classes, or renderer props.
-Public visual choice is limited to named `profile` ids such as `report-default` or `ops-compact`, not free-form `theme`, `density`, `tone`, or `width` inputs.
+Public visual choice is limited to approved document style config choices. Current compatibility syntax serializes those choices as named `profile` ids such as `report-default` or `ops-compact`, not free-form `theme`, `density`, `tone`, or `width` inputs.
 
 The workspace publishes two package roles:
 

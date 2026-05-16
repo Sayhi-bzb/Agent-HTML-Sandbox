@@ -1483,11 +1483,9 @@ export function App() {
         />
         <AgentShell
           activeView={activeView}
-          activeSourceFocus={activeSourceFocus}
           activeSourceFocusReviewStatus={sourceFocusReviewStatus}
           build={appState.currentBuild}
           sourceValidation={currentSourceValidation}
-          canRevealSourceOrigin={canRevealSourceOrigin}
           draftComparison={draftComparison}
           hasUnsavedSourceChanges={hasUnsavedSourceChanges}
           inspect={appState.currentInspect}
@@ -1499,8 +1497,6 @@ export function App() {
           onInspect={handleInspect}
           onOpenView={handleViewChange}
           onOpenSourceFocus={handleOpenSourceFocus}
-          onRefreshSourceFocus={handleRefreshSourceFocus}
-          onRevealSourceReviewTarget={handleRevealSourceReviewTarget}
           onSaveDraft={handleSaveDraftForWorkflow}
           isDraftingProposal={commandState.draftingProposal}
           isSending={commandState.sendingMessage}

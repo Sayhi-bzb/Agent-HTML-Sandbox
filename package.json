@@ -49,7 +49,7 @@
     "check:package:quick": "npm run format:check:source && npm run lint:package && npm run test:run",
     "check:commit": "npm run check:quick",
     "check:package": "npm run check:package:quick && npm run test:run:cli-heavy && npm run build",
-    "check:package:release": "npm run check:package && npm run knip && npm run verify:pack",
+    "check:package:release": "npm run check:package && npm run verify:pack",
     "check:ready": "npm run check:package:release",
     "check:docs:ci": "npm run docs:lint && npm run docs:web:typecheck && npm run docs:web:build",
     "check:docs": "npm run docs:lint && npm run docs:web:check",

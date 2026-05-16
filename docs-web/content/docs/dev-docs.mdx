@@ -44,7 +44,7 @@ While editing, prefer the narrowest useful check:
 - For ordinary CLI/runtime code changes, run `npm run build` once, then `npm run test:run -- <affected test file or -t pattern>`.
 - Run `npm run test:run:cli-heavy` only when changes touch setup, doctor, prompt output, build, preview, or runtime rendering.
 - Use `npm run check:package` as the package CI gate, not as the default edit loop.
-- Use `npm run check:package:release` only for release-boundary validation. It adds `knip` and `verify:pack`.
+- Use `npm run check:package:release` only for release-boundary validation. It adds `verify:pack` on top of the package CI checks.
 
 `dev:check`, `check:quick`, and `check:ready` remain broad compatibility aliases in `package.json`, but they are not the preferred day-to-day edit loop.
 
@@ -167,7 +167,7 @@ Install the current alpha release:
 npm install -g @agent-html/ahtml@alpha
 ```
 
-`release:check` is the generic local package release gate. It runs the package CI checks, `knip`, `verify:pack`, and the npm dry-run publish for both workspace packages using the dist-tag derived from the current workspace version. The GitHub Actions publish workflow uses the same version-derived dist-tag before tag-driven publish.
+`release:check` is the generic local package release gate. It runs the package CI checks, `verify:pack`, and the npm dry-run publish for both workspace packages using the dist-tag derived from the current workspace version. The GitHub Actions publish workflow uses the same version-derived dist-tag before tag-driven publish.
 
 ## Distribute the ahtml skill [#distribute-the-ahtml-skill]
 

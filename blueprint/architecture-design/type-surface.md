@@ -79,7 +79,7 @@ Consumers: agent, parse / sanitize
 
 Change rule: ComponentPropSchema 不得暴露内部 props、Tailwind class、`className`、Radix props 或完整 shadcn/ui props。
 
-Note: 常见公开字段应是 `title`、`description`、`value`、`status`、`intent`、`priority`、`href`、`label`、`columns`、`rows`、`items`、`disabled` 这类语义字段，而不是 `variant`、`size`、`tone`、`surface`、`radius`、`spacing` 这类视觉实现字段。
+Note: 常见公开字段应是 `title`、`description`、`value`、`status`、`intent`、`priority`、`href`、`label`、`columns`、`rows`、`items`、`disabled` 这类语义字段，而不是默认暴露 `variant`、`size`、`surface`、`radius`、`spacing` 这类视觉实现字段。若少量组件保留 `tone` 之类受控语义强调词，也必须由显式声明收束，而不是回退成通用视觉参数包。
 
 ## 5. ComponentToken
 
@@ -101,7 +101,7 @@ Consumers: agent, parse / sanitize, renderer adapter, CLI
 
 Change rule: 新增、删除或重命名 PresentationProfile 必须同步 schema、sanitize schema、renderer adapter profile 注册和 tests。
 
-Note: 在目标架构里，PresentationProfile 可以保留为兼容 alias 或简化 preset，但不再是长期唯一文档级视觉入口。它可以在内部绑定 theme、density、card treatment、table treatment、badge treatment、emphasis 和 width 等受控 token，但这些 token 默认不直接暴露为 agent-facing 自由 props。
+Note: 在目标架构里，PresentationProfile 可以保留为兼容 alias 或简化 preset，但不再是长期唯一文档级视觉入口。当前兼容期仍可继续用 `<meta-agent profile="...">` 序列化这一 alias，但这种 serialized spelling 不改变它的兼容层角色。它可以在内部绑定 theme、density、card treatment、table treatment、badge treatment、emphasis 和 width 等受控 token，但这些 token 默认不直接暴露为 agent-facing 自由 props。
 
 ## 7. PresentationProfileRegistry
 
@@ -125,7 +125,7 @@ Consumers: agent, parse / sanitize, CLI schema output
 
 Change rule: 引用 identity、允许值或解析规则变化必须同步 schema、sanitize schema、配置解析和 tests。
 
-Note: 在目标架构里，DocumentStyleConfigReference 是长期首选的文档级视觉配置入口。它只选择已批准配置，不内联具体组件样式规则，不等于 CSS、Tailwind class 或 shadcn props。
+Note: 在目标架构里，DocumentStyleConfigReference 是长期首选的文档级视觉配置入口。当前重构期可以先在 contract/type 层把它作为主语，而继续保留 `profile` 作为 serialized compatibility alias。它只选择已批准配置，不内联具体组件样式规则，不等于 CSS、Tailwind class 或 shadcn props。
 
 ## 7.2. DocumentStyleConfig
 
@@ -173,7 +173,7 @@ Consumers: agent, parse / sanitize, renderer adapter
 
 Change rule: RenderConfig key / value 变化必须同步 schema、sanitize schema、renderer adapter 配置解析和 tests。
 
-Note: 在目标架构里，RenderConfig 默认应优先从 DocumentStyleConfigReference 解析得到；兼容期可以接受 `profile` alias 或极少量与 alias 绑定的受控 token。它不是 CSS、style、className、Tailwind class、shadcn props、script 或外部资源入口。
+Note: 在目标架构里，RenderConfig 默认应优先从 DocumentStyleConfigReference 解析得到；兼容期可以接受 `profile` alias 或极少量与 alias 绑定的受控 token。core 应负责把当前 serialized `profile` input 归一到同一 checked RenderConfig，再交给 renderer。它不是 CSS、style、className、Tailwind class、shadcn props、script 或外部资源入口。
 
 ## 11. AhtmlRuntimeConfig
 
@@ -281,6 +281,8 @@ Consumers: agent
 
 Change rule: CliSchemaOutput 必须来自 ComponentSchema 和 DocumentStyleConfigReference / PresentationProfileRegistry / RenderConfig，不得暴露 renderer props、Tailwind class、shadcn props 或源码结构。
 
+Note: 在兼容期，如果具体示例语法仍使用 `<meta-agent profile="...">`，CliSchemaOutput 必须把它解释为 approved visual config alias，而不是独立长期 profile 系统。
+
 ## 19. CliConfigView
 
 Ownership: CLI / presentation contract
@@ -290,3 +292,5 @@ Purpose: 表示 CLI 从 DocumentStyleConfigReference、兼容 PresentationProfil
 Consumers: agent, developer
 
 Change rule: CliConfigView 不得成为独立配置状态源，不得映射为任意 CSS、Tailwind class、inline style、script、HTML attribute passthrough 或外部资源。
+
+Note: CliConfigView 应优先表达 document-level style config model；若展示 compatibility `profile`，应把它标记为 alias 或 compatibility wording，而不是主配置对象。

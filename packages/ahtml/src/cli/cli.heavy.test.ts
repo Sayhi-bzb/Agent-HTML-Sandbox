@@ -501,6 +501,16 @@ describe("agent-html CLI heavy runtime flows", () => {
       tempDir,
     )
     expect(documentInspection.stdout).toContain('"profile": "ops-compact"')
+    expect(documentInspection.stdout).toContain(
+      '"documentStyleConfigReference": "ops-compact"',
+    )
+    expect(documentInspection.stdout).toContain(
+      '"configModel": "document-style-config-reference"',
+    )
+    expect(documentInspection.stdout).toContain(
+      '"configSource": "profile-alias"',
+    )
+    expect(documentInspection.stdout).toContain('"resolvedDocumentStyleTokens"')
     expect(documentInspection.stdout).toContain('"resolvedProfileTokens"')
     expect(documentInspection.stdout).toContain('"density": "compact"')
     expect(documentInspection.stdout).not.toContain('"resolvedConfig"')
@@ -511,8 +521,17 @@ describe("agent-html CLI heavy runtime flows", () => {
       { AHTML_HOME: runtimeHome },
       tempDir,
     )
-    expect(artifactInspection.stdout).toContain("profile: ops-compact")
-    expect(artifactInspection.stdout).toContain("resolved profile tokens:")
+    expect(artifactInspection.stdout).toContain(
+      "config model: document-style-config-reference",
+    )
+    expect(artifactInspection.stdout).toContain("config source: profile-alias")
+    expect(artifactInspection.stdout).toContain(
+      "documentStyleConfigReference: ops-compact",
+    )
+    expect(artifactInspection.stdout).toContain("profile alias: ops-compact")
+    expect(artifactInspection.stdout).toContain(
+      "resolved document style tokens:",
+    )
     expect(artifactInspection.stdout).not.toContain("resolved config")
     expect(artifactInspection.stdout).toContain("- density: compact")
     expect(artifactInspection.stdout).toContain("- card: 1")
@@ -545,7 +564,10 @@ describe("agent-html CLI heavy runtime flows", () => {
       outputDir: string
       inspectionPath: string
       inspection: {
-        config: { profile: string }
+        configModel: string
+        configSource: string
+        config: { documentStyleConfigReference: string; profile: string }
+        resolvedDocumentStyleTokens: { density: string }
         resolvedProfileTokens: { density: string }
         components: { name: string; count: number }[]
       }
@@ -558,7 +580,17 @@ describe("agent-html CLI heavy runtime flows", () => {
       path.join(outputDir, "agent-html.inspect.json"),
     )
     expect(stdout).not.toContain("resolvedConfig")
+    expect(result.inspection.configModel).toBe(
+      "document-style-config-reference",
+    )
+    expect(result.inspection.configSource).toBe("profile-alias")
+    expect(result.inspection.config.documentStyleConfigReference).toBe(
+      "ops-compact",
+    )
     expect(result.inspection.config.profile).toBe("ops-compact")
+    expect(result.inspection.resolvedDocumentStyleTokens.density).toBe(
+      "compact",
+    )
     expect(result.inspection.resolvedProfileTokens.density).toBe("compact")
     expect(result.inspection.components).toEqual([
       { name: "card", count: 1 },
@@ -697,7 +729,7 @@ describe("agent-html CLI heavy runtime flows", () => {
 
     await expectCliFailure(
       runCliWithServer(["doctor"], { AHTML_HOME: runtimeHome }, tempDir),
-      "fail runtime:verification-data-parity runtime verification data card slots does not match schema verification data card slots.",
+      "fail runtime:verification-data-parity runtime verification data card slots does not match schema runtime contract verification data card slots.",
     )
     await removeTempDir(tempDir)
   }, 120000)
@@ -737,7 +769,7 @@ describe("agent-html CLI heavy runtime flows", () => {
 
     await expectCliFailure(
       runCliWithServer(["doctor"], { AHTML_HOME: runtimeHome }, tempDir),
-      "fail runtime:renderer-mapping-parity runtime renderer verification mapping card slots does not match schema renderer verification mapping card slots.",
+      "fail runtime:renderer-mapping-parity runtime renderer verification mapping card slots does not match schema runtime contract renderer mapping card slots.",
     )
     await removeTempDir(tempDir)
   }, 60000)

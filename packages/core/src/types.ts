@@ -52,7 +52,12 @@ export type RenderWidth = "article" | "dashboard" | "wide"
 
 export type RenderProfile = "report-default" | "ops-compact" | "review-dense"
 
+export type PresentationProfile = RenderProfile
+
+export type DocumentStyleConfigReference = RenderProfile
+
 export type RenderConfig = {
+  readonly documentStyleConfigReference: DocumentStyleConfigReference
   readonly profile: RenderProfile
   readonly theme: RenderTheme
   readonly density: RenderDensity
@@ -60,10 +65,19 @@ export type RenderConfig = {
   readonly width: RenderWidth
 }
 
+export type PublicRenderConfigModel = "document-style-config-reference"
+
+export type PublicRenderConfigCompatibilitySyntax = {
+  readonly key: "profile"
+  readonly kind: "presentation-profile-alias"
+}
+
 export type PublicRenderConfigContract = {
   readonly defaults: Readonly<Record<string, string>>
   readonly keys: readonly string[]
   readonly values: Readonly<Record<string, readonly string[]>>
+  readonly model: PublicRenderConfigModel
+  readonly compatibilitySyntax: PublicRenderConfigCompatibilitySyntax
 }
 
 export type PublicSafetyPolicy = {
