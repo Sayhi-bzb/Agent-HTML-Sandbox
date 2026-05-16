@@ -19,13 +19,10 @@ describe("public agent contract", () => {
     expect(contract.forbidden).toBe(contract.safetyPolicy.forbidden)
     expect(contract.renderConfig.keys).toEqual(["profile"])
     expect(contract.renderConfig.defaults).toEqual({
-      profile: "report-default",
+      "style-ref": "report-default",
     })
     expect(contract.renderConfig.model).toBe("document-style-config-reference")
-    expect(contract.renderConfig.compatibilitySyntax).toEqual({
-      key: "profile",
-      kind: "presentation-profile-alias",
-    })
+    expect(contract.renderConfig.keys).toEqual(["style-ref"])
   })
 
   it("builds safety policy from blocked names and shared categories", () => {
@@ -42,17 +39,13 @@ describe("public agent contract", () => {
   it("creates a render config contract from the published config values", () => {
     expect(createPublicRenderConfigContract()).toEqual({
       defaults: {
-        profile: "report-default",
+        "style-ref": "report-default",
       },
-      keys: ["profile"],
+      keys: ["style-ref"],
       values: {
-        profile: ["report-default", "ops-compact", "review-dense"],
+        "style-ref": ["report-default", "ops-compact", "review-dense"],
       },
       model: "document-style-config-reference",
-      compatibilitySyntax: {
-        key: "profile",
-        kind: "presentation-profile-alias",
-      },
     })
   })
 })

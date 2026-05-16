@@ -36,11 +36,13 @@ import {
   createMockInspectArtifacts,
   createMockValidationSnapshot,
 } from "./lib/mock-runtime"
-import { sortSessionSummaries, upsertSessionSummary } from "./lib/session-summary"
+import {
+  sortSessionSummaries,
+  upsertSessionSummary,
+} from "./lib/session-summary"
 import {
   buildEventMessage,
   buildLocalProposalText,
-  buildProposalDecisionMessage,
   buildSourceSavedEventMessage,
   inspectEventMessage,
 } from "./lib/session-messages"
@@ -78,14 +80,12 @@ import {
 } from "./lib/tauri"
 import type {
   AgentShellMessage,
-  AppError,
   AppState,
   BuildRunSummary,
   InspectSnapshot,
   SourceValidationSnapshot,
   SourceValidationState,
   SessionDetail,
-  SessionSummary,
   RuntimeReport,
   WorkbenchView,
 } from "./lib/types"
@@ -94,7 +94,6 @@ type CommandState = {
   loading: boolean
   savingSource: boolean
   sendingMessage: boolean
-  recordingDecision: boolean
   draftingProposal: boolean
   runningBuild: boolean
   runningInspect: boolean
@@ -106,7 +105,6 @@ const initialCommandState: CommandState = {
   loading: true,
   savingSource: false,
   sendingMessage: false,
-  recordingDecision: false,
   draftingProposal: false,
   runningBuild: false,
   runningInspect: false,
@@ -193,7 +191,6 @@ export function App() {
     commandState.loading ||
     commandState.savingSource ||
     commandState.sendingMessage ||
-    commandState.recordingDecision ||
     commandState.draftingProposal ||
     commandState.runningBuild ||
     commandState.runningInspect ||
@@ -296,7 +293,7 @@ export function App() {
             currentLogs: nextState.logs,
           }))
           setPreviewHtml(nextState.previewHtml)
-          setActiveView(nextState.session.currentView as WorkbenchView)
+          setActiveView(nextState.session.currentView)
           setCommandState({ ...initialCommandState, loading: false })
         })
         return
@@ -314,7 +311,7 @@ export function App() {
           currentLogs: nextState.logs,
         }))
         setPreviewHtml(nextState.previewHtml)
-        setActiveView(nextState.session.currentView as WorkbenchView)
+        setActiveView(nextState.session.currentView)
         setCommandState({ ...initialCommandState, loading: false })
       })
     } catch (error) {
@@ -356,7 +353,7 @@ export function App() {
           currentLogs: nextState.logs,
         }))
         setPreviewHtml(nextState.previewHtml)
-        setActiveView(nextState.session.currentView as WorkbenchView)
+        setActiveView(nextState.session.currentView)
         setCommandState((current) => ({ ...current, loading: false }))
       })
     } catch (error) {
@@ -390,7 +387,7 @@ export function App() {
           currentLogs: nextState.logs,
         }))
         setPreviewHtml(nextState.previewHtml)
-        setActiveView(nextState.session.currentView as WorkbenchView)
+        setActiveView(nextState.session.currentView)
         setCommandState((current) => ({ ...current, loading: false }))
       })
     } catch (error) {
@@ -503,7 +500,7 @@ export function App() {
             currentLogs: nextState.logs,
           }))
           setPreviewHtml(nextState.previewHtml)
-          setActiveView(nextState.session.currentView as WorkbenchView)
+          setActiveView(nextState.session.currentView)
         })
         setSessionDrafts((current) => removeSessionDraft(current, sessionId))
       } else if (sessionId === appState.currentSession.summary.id) {
@@ -519,7 +516,7 @@ export function App() {
             currentLogs: nextState.logs,
           }))
           setPreviewHtml(nextState.previewHtml)
-          setActiveView(nextState.session.currentView as WorkbenchView)
+          setActiveView(nextState.session.currentView)
         })
         setSessionDrafts((current) => removeSessionDraft(current, sessionId))
       } else {
@@ -571,7 +568,10 @@ export function App() {
               ),
             ],
             currentSession: nextSession,
-            sessions: upsertSessionSummary(current.sessions, nextSession.summary),
+            sessions: upsertSessionSummary(
+              current.sessions,
+              nextSession.summary,
+            ),
           }
         })
       })
@@ -633,7 +633,10 @@ export function App() {
     nextSource: string,
   ): Promise<SourceValidationSnapshot> {
     if (!isTauriRuntime()) {
-      return createMockValidationSnapshot(appState.currentSession.summary.id, nextSource)
+      return createMockValidationSnapshot(
+        appState.currentSession.summary.id,
+        nextSource,
+      )
     }
 
     return validateSource(appState.currentSession.summary.id, nextSource)
@@ -672,7 +675,10 @@ export function App() {
               ),
             ],
             currentSession: nextSession,
-            sessions: upsertSessionSummary(current.sessions, nextSession.summary),
+            sessions: upsertSessionSummary(
+              current.sessions,
+              nextSession.summary,
+            ),
           }
         })
       })
@@ -753,14 +759,17 @@ export function App() {
     if (!isTauriRuntime()) {
       const sourceForRun = currentDraftSource
       await persistCurrentDraftIfNeeded()
-      const { build, logs, previewHtml: nextPreviewHtml } =
-        createMockBuildArtifacts({
-          session: {
-            ...appState.currentSession,
-            source: sourceForRun,
-          },
+      const {
+        build,
+        logs,
+        previewHtml: nextPreviewHtml,
+      } = createMockBuildArtifacts({
+        session: {
+          ...appState.currentSession,
           source: sourceForRun,
-        })
+        },
+        source: sourceForRun,
+      })
 
       startTransition(() => {
         setAppState((current) => {
@@ -785,10 +794,15 @@ export function App() {
             currentBuild: build,
             currentLogs: logs,
             currentSession: nextSession,
-            sessions: upsertSessionSummary(current.sessions, nextSession.summary),
+            sessions: upsertSessionSummary(
+              current.sessions,
+              nextSession.summary,
+            ),
           }
         })
-        setPreviewHtml(build.status === "succeeded" ? nextPreviewHtml : previewHtml)
+        setPreviewHtml(
+          build.status === "succeeded" ? nextPreviewHtml : previewHtml,
+        )
       })
       setActiveView(build.status === "succeeded" ? "preview" : "inspect")
       return
@@ -869,7 +883,10 @@ export function App() {
             ),
             currentLogs: nextLogs,
             currentSession: nextSession,
-            sessions: upsertSessionSummary(current.sessions, nextSession.summary),
+            sessions: upsertSessionSummary(
+              current.sessions,
+              nextSession.summary,
+            ),
           }
         })
         setPreviewHtml(nextPreviewHtml)
@@ -899,7 +916,10 @@ export function App() {
               nextBuild,
             ),
             currentSession: nextSession,
-            sessions: upsertSessionSummary(current.sessions, nextSession.summary),
+            sessions: upsertSessionSummary(
+              current.sessions,
+              nextSession.summary,
+            ),
           }
         })
         setActiveView("inspect")
@@ -952,7 +972,10 @@ export function App() {
             currentInspect: inspect,
             currentLogs: logs,
             currentSession: nextSession,
-            sessions: upsertSessionSummary(current.sessions, nextSession.summary),
+            sessions: upsertSessionSummary(
+              current.sessions,
+              nextSession.summary,
+            ),
           }
         })
       })
@@ -1017,7 +1040,10 @@ export function App() {
             currentInspect: hydratedInspect,
             currentLogs: nextLogs,
             currentSession: nextSession,
-            sessions: upsertSessionSummary(current.sessions, nextSession.summary),
+            sessions: upsertSessionSummary(
+              current.sessions,
+              nextSession.summary,
+            ),
           }
         })
         setPreviewHtml(nextPreviewHtml)
@@ -1035,7 +1061,10 @@ export function App() {
           return {
             ...current,
             currentSession: nextSession,
-            sessions: upsertSessionSummary(current.sessions, nextSession.summary),
+            sessions: upsertSessionSummary(
+              current.sessions,
+              nextSession.summary,
+            ),
           }
         })
         setActiveView("inspect")
@@ -1200,57 +1229,6 @@ export function App() {
     setCommandState((current) => ({ ...current, draftingProposal: false }))
   }
 
-  async function handleRecordProposalDecision(
-    proposalText: string,
-    status: "approved" | "needs changes",
-  ) {
-    const decisionMessage = buildProposalDecisionMessage(proposalText, status)
-
-    if (!isTauriRuntime()) {
-      startTransition(() => {
-        setAppState((current) => ({
-          ...current,
-          chat: [
-            ...current.chat,
-            createLocalChatMessage("system", decisionMessage, "context-card"),
-          ],
-        }))
-      })
-      return
-    }
-
-    setCommandState((current) => ({
-      ...current,
-      error: undefined,
-      recordingDecision: true,
-    }))
-    try {
-      const updated = await appendChatMessage(
-        appState.currentSession.summary.id,
-        {
-          role: "system",
-          text: decisionMessage,
-          kind: "context-card",
-        },
-      )
-      startTransition(() => {
-        setAppState((current) => ({
-          ...current,
-          chat: updated,
-        }))
-      })
-    } catch (error) {
-      setCommandState((current) => ({
-        ...current,
-        recordingDecision: false,
-        error: formatError(error),
-      }))
-      return
-    }
-
-    setCommandState((current) => ({ ...current, recordingDecision: false }))
-  }
-
   async function handleSaveDraftForWorkflow() {
     try {
       await persistCurrentDraftIfNeeded()
@@ -1400,7 +1378,9 @@ export function App() {
           <div className="topbar-meta">
             <Button
               disabled={commandState.runningDoctor}
-              onClick={handleDoctor}
+              onClick={() => {
+                void handleDoctor()
+              }}
               size="sm"
               type="button"
               variant="outline"
@@ -1438,11 +1418,21 @@ export function App() {
         <SessionsSidebar
           activeSessionId={appState.currentSession.summary.id}
           isBusy={isSidebarBusy}
-          onCreateSession={handleCreateSession}
-          onDeleteSession={handleDeleteSession}
-          onOpenSession={handleOpenSession}
-          onRenameSession={handleRenameSession}
-          onTogglePinSession={handleToggleSessionPin}
+          onCreateSession={() => {
+            void handleCreateSession()
+          }}
+          onDeleteSession={(sessionId) => {
+            void handleDeleteSession(sessionId)
+          }}
+          onOpenSession={(sessionId) => {
+            void handleOpenSession(sessionId)
+          }}
+          onRenameSession={(sessionId, name) => {
+            void handleRenameSession(sessionId, name)
+          }}
+          onTogglePinSession={(sessionId, pinned) => {
+            void handleToggleSessionPin(sessionId, pinned)
+          }}
           sessions={appState.sessions}
         />
         <Workbench
@@ -1476,7 +1466,9 @@ export function App() {
           onRunReviewAction={handleRunReviewAction}
           onSelectReviewFocus={handleSelectReviewFocus}
           onSaveSource={handleSaveSource}
-          onViewChange={handleViewChange}
+          onViewChange={(view) => {
+            void handleViewChange(view)
+          }}
           previewHtml={previewHtml}
           proposalComparison={proposalComparison}
           session={appState.currentSession}
@@ -1493,7 +1485,6 @@ export function App() {
           isRunningInspect={commandState.runningInspect}
           isSavingSource={commandState.savingSource}
           onBuild={handleBuild}
-          onDecision={handleRecordProposalDecision}
           onInspect={handleInspect}
           onOpenView={handleViewChange}
           onOpenSourceFocus={handleOpenSourceFocus}

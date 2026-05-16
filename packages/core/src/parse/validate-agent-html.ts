@@ -52,7 +52,7 @@ function validateRenderConfig(
   diagnostics.push({
     code: "invalid-render-config",
     message:
-      'The <meta-agent /> header must use an approved document style config choice. Current compatibility syntax uses profile="...".',
+      'The <meta-agent /> header must use an approved document style config choice via style-ref="...".',
     path: "/meta-agent",
     severity: "error",
   })

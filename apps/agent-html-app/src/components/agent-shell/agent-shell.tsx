@@ -24,9 +24,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { PanelShell, PanelShellHeader } from "../ui/panel-shell"
-import {
-  getProposalReadinessView,
-} from "../../lib/agent-shell-review-entry-view"
+import { getProposalReadinessView } from "../../lib/agent-shell-review-entry-view"
 import { ScrollArea } from "../ui/scroll-area"
 import {
   SurfaceCard,
@@ -80,12 +78,9 @@ type AgentShellProps = {
   reviewIntent?: ReviewFocusIntent
   onReviewFocusChange?: (focus?: ReviewFocusTarget) => void
   onSend: (text: string) => Promise<void> | void
-  onDecision: (
-    proposalText: string,
-    status: "approved" | "needs changes",
-  ) => Promise<void> | void
   onDraftProposal: () => Promise<void> | void
   onOpenView: (view: WorkbenchView) => Promise<void> | void
+  onOpenSourceFocus: (target: SourceFocusTarget) => Promise<void> | void
   onBuild: () => Promise<void> | void
   onInspect: () => Promise<void> | void
   onSaveDraft: () => Promise<void> | void
@@ -138,9 +133,9 @@ export function AgentShell({
   reviewIntent,
   onReviewFocusChange,
   onSend,
-  onDecision,
   onDraftProposal,
   onOpenView,
+  onOpenSourceFocus,
   onBuild,
   onInspect,
   onSaveDraft,
@@ -390,21 +385,6 @@ export function AgentShell({
 
     await onSend(draft)
     setDraft("")
-  }
-
-  function getFocusedReviewTarget(
-    groups?: SourceComparisonSummary["previewGroups"],
-  ) {
-    if (!focusedComparison || focusedComparison.mode !== comparisonMode) {
-      return undefined
-    }
-
-    return createReviewFocusTargetFromGroups({
-      targetId: focusedComparison.targetId,
-      mode: focusedComparison.mode,
-      label: focusedComparison.label,
-      groups,
-    })
   }
 
   function getDefaultProposalFocusOption() {
@@ -770,7 +750,6 @@ export function AgentShell({
                   : undefined
               }
               message={message}
-              onDecision={onDecision}
               onReviewDraftDiff={() => {
                 focusChecklistOption(proposalFocusOptions[0])
               }}
@@ -795,7 +774,12 @@ export function AgentShell({
         </div>
       </ScrollArea>
 
-      <form className="composer-shell" onSubmit={handleSubmit}>
+      <form
+        className="composer-shell"
+        onSubmit={(event) => {
+          void handleSubmit(event)
+        }}
+      >
         <label htmlFor="agent-input">Future prompt</label>
         <Textarea
           id="agent-input"
@@ -828,10 +812,6 @@ type AgentShellMessageCardProps = {
   proposalComparison?: SourceComparisonSummary
   onOpenView: (view: WorkbenchView) => Promise<void> | void
   onBuild: () => Promise<void> | void
-  onDecision: (
-    proposalText: string,
-    status: "approved" | "needs changes",
-  ) => Promise<void> | void
   onFocusCompare: (
     mode: ComparisonMode,
     targetId: string,
@@ -862,7 +842,6 @@ function AgentShellMessageCard({
   proposalComparison,
   onOpenView,
   onBuild,
-  onDecision,
   onFocusCompare,
   onInspect,
   onOpenSourceFocus,

@@ -4,7 +4,6 @@ import {
 } from "./component-schema"
 import {
   DEFAULT_RENDER_CONFIG,
-  PUBLIC_RENDER_CONFIG_COMPATIBILITY_SYNTAX,
   PUBLIC_RENDER_CONFIG_DEFAULTS,
   PUBLIC_RENDER_CONFIG_MODEL,
   RENDER_CONFIG_KEYS,
@@ -43,7 +42,6 @@ export function createPublicRenderConfigContract(): PublicRenderConfigContract {
       }),
     ),
     model: PUBLIC_RENDER_CONFIG_MODEL,
-    compatibilitySyntax: PUBLIC_RENDER_CONFIG_COMPATIBILITY_SYNTAX,
   }
 }
 

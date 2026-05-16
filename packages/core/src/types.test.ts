@@ -5,18 +5,15 @@ import type {
   ComponentSchemaOverlay,
   DocumentStyleConfigReference,
   GeneratedShadcnIntrospection,
-  PresentationProfile,
   RenderConfig,
   SanitizedAgentHtml,
 } from "./types"
 
 describe("agent-html public types", () => {
-  it("models a checked render config with compatibility profile alias values", () => {
+  it("models a checked render config with a document style config reference", () => {
     const styleReference = "ops-compact" satisfies DocumentStyleConfigReference
-    const presentationProfile = "ops-compact" satisfies PresentationProfile
     const meta = {
       documentStyleConfigReference: styleReference,
-      profile: styleReference,
       theme: "neutral",
       density: "compact",
       tone: "report",
@@ -57,8 +54,6 @@ describe("agent-html public types", () => {
 
     expect(pageComponentSchema.name).toBe("page")
     expect(document.meta.documentStyleConfigReference).toBe("ops-compact")
-    expect(document.meta.profile).toBe("ops-compact")
-    expect(presentationProfile).toBe("ops-compact")
     expect(document.meta.density).toBe("compact")
     expect(document.components[0]?.name).toBe("page")
   })

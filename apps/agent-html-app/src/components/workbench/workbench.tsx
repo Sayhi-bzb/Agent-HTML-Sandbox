@@ -115,7 +115,9 @@ export function Workbench({
         <div className="header-actions">
           <Button
             disabled={isRunningBuild}
-            onClick={onBuild}
+            onClick={() => {
+              void onBuild()
+            }}
             size="sm"
             type="button"
             variant="outline"
@@ -124,7 +126,9 @@ export function Workbench({
           </Button>
           <Button
             disabled={isRunningInspect}
-            onClick={onInspect}
+            onClick={() => {
+              void onInspect()
+            }}
             size="sm"
             type="button"
           >

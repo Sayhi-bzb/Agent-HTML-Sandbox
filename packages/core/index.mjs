@@ -40,9 +40,9 @@ export const createPublicSafetyPolicy = core.createPublicSafetyPolicy
 export const DEFAULT_RENDER_CONFIG = core.DEFAULT_RENDER_CONFIG
 export const formatForbiddenPolicy = core.formatForbiddenPolicy
 export const parseRenderConfig = core.parseRenderConfig
-export const PUBLIC_PROFILE_VALUES = core.PUBLIC_PROFILE_VALUES
-export const PUBLIC_RENDER_CONFIG_COMPATIBILITY_SYNTAX =
-  core.PUBLIC_RENDER_CONFIG_COMPATIBILITY_SYNTAX
+export const PUBLIC_DOCUMENT_STYLE_CONFIG_REFERENCE_VALUES =
+  core.PUBLIC_DOCUMENT_STYLE_CONFIG_REFERENCE_VALUES
+export const PUBLIC_RENDER_CONFIG_KEY = core.PUBLIC_RENDER_CONFIG_KEY
 export const PUBLIC_RENDER_CONFIG_DEFAULTS = core.PUBLIC_RENDER_CONFIG_DEFAULTS
 export const PUBLIC_RENDER_CONFIG_MODEL = core.PUBLIC_RENDER_CONFIG_MODEL
 export const RENDER_CONFIG_KEYS = core.RENDER_CONFIG_KEYS
