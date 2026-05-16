@@ -31,6 +31,22 @@ vi.mock("./elements", () => ({
       return "input"
     }
 
+    if (name === "Field") {
+      return "div"
+    }
+
+    if (name === "FieldContent") {
+      return "div"
+    }
+
+    if (name === "FieldLabel") {
+      return "label"
+    }
+
+    if (name === "FieldDescription") {
+      return "p"
+    }
+
     if (name === "Combobox") {
       return "div"
     }
@@ -39,11 +55,23 @@ vi.mock("./elements", () => ({
       return "section"
     }
 
+    if (name === "ComboboxEmpty") {
+      return "div"
+    }
+
     if (name === "ComboboxList") {
       return "div"
     }
 
+    if (name === "ComboboxCollection") {
+      return "div"
+    }
+
     if (name === "ComboboxItem") {
+      return "div"
+    }
+
+    if (name === "SelectGroup") {
       return "div"
     }
 
@@ -202,13 +230,10 @@ describe("createRendererNode", () => {
           kind: "field-control",
           renderKind: "field-control",
           slots: [{ name: "children", children: [] }],
-          root: "div",
-          label: "p",
+          root: "Field",
+          label: "FieldLabel",
           control: "textarea",
-          description: "p",
-          rootClassName: "grid gap-2",
-          labelClassName: "label",
-          descriptionClassName: "description",
+          description: "FieldDescription",
           labelProp: "label",
           descriptionProp: "description",
           propMappings: [
@@ -236,12 +261,12 @@ describe("createRendererNode", () => {
     )
 
     expect(markup).toContain('data-agent-html-component="textarea"')
-    expect(markup).toContain("<p class=\"label\">Notes</p>")
+    expect(markup).toContain("<label>Notes</label>")
     expect(markup).toContain(
       "<textarea aria-label=\"Notes\">Ship after the guard lands.</textarea>",
     )
     expect(markup).toContain('aria-label="Notes"')
-    expect(markup).toContain("<p class=\"description\">Long-form field.</p>")
+    expect(markup).toContain("<p>Long-form field.</p>")
   })
 
   it("renders checkbox field-control components with boolean prop coercion", () => {
@@ -253,13 +278,10 @@ describe("createRendererNode", () => {
           kind: "field-control",
           renderKind: "field-control",
           slots: [{ name: "children", children: [] }],
-          root: "div",
-          label: "p",
+          root: "Field",
+          label: "FieldLabel",
           control: "input",
-          description: "p",
-          rootClassName: "grid gap-2",
-          labelClassName: "label",
-          descriptionClassName: "description",
+          description: "FieldDescription",
           labelProp: "label",
           descriptionProp: "description",
           propMappings: [
@@ -286,11 +308,11 @@ describe("createRendererNode", () => {
       }),
     )
 
-    expect(markup).toContain("<p class=\"label\">Ship now</p>")
+    expect(markup).toContain("<label>Ship now</label>")
     expect(markup).toContain("<input")
     expect(markup).toContain('aria-label="Ship now"')
     expect(markup).toContain("checked")
-    expect(markup).toContain("<p class=\"description\">Boolean field.</p>")
+    expect(markup).toContain("<p>Boolean field.</p>")
   })
 
   it("renders switch field-control components with boolean prop coercion", () => {
@@ -302,13 +324,10 @@ describe("createRendererNode", () => {
           kind: "field-control",
           renderKind: "field-control",
           slots: [{ name: "children", children: [] }],
-          root: "div",
-          label: "p",
+          root: "Field",
+          label: "FieldLabel",
           control: "Switch",
-          description: "p",
-          rootClassName: "grid gap-2",
-          labelClassName: "label",
-          descriptionClassName: "description",
+          description: "FieldDescription",
           labelProp: "label",
           descriptionProp: "description",
           propMappings: [
@@ -335,13 +354,11 @@ describe("createRendererNode", () => {
       }),
     )
 
-    expect(markup).toContain("<p class=\"label\">Live Sync</p>")
+    expect(markup).toContain("<label>Live Sync</label>")
     expect(markup).toContain("<input")
     expect(markup).toContain('aria-label="Live Sync"')
     expect(markup).toContain("checked")
-    expect(markup).toContain(
-      "<p class=\"description\">Immediate preference toggle.</p>",
-    )
+    expect(markup).toContain("<p>Immediate preference toggle.</p>")
   })
 
   it("renders slider field-control components with numeric coercion and fallback", () => {
@@ -353,13 +370,10 @@ describe("createRendererNode", () => {
           kind: "field-control",
           renderKind: "field-control",
           slots: [{ name: "children", children: [] }],
-          root: "div",
-          label: "p",
+          root: "Field",
+          label: "FieldLabel",
           control: "Slider",
-          description: "p",
-          rootClassName: "grid gap-2",
-          labelClassName: "label",
-          descriptionClassName: "description",
+          description: "FieldDescription",
           labelProp: "label",
           descriptionProp: "description",
           valueProp: "value",
@@ -388,7 +402,7 @@ describe("createRendererNode", () => {
       }),
     )
 
-    expect(markup).toContain("<p class=\"label\">Review strictness</p>")
+    expect(markup).toContain("<label>Review strictness</label>")
     expect(markup).toContain("<input")
     expect(markup).toContain('aria-label="Review strictness"')
     expect(markup).toContain('value="70"')
@@ -411,17 +425,14 @@ describe("createRendererNode", () => {
               children: ["text"],
             },
           ],
-          root: "div",
-          label: "p",
+          root: "Field",
+          label: "FieldLabel",
           control: "RadioGroup",
           item: "RadioGroupItem",
           itemSlot: "option",
           itemValueProp: "value",
           itemHeadingProp: "label",
-          description: "p",
-          rootClassName: "grid gap-3",
-          labelClassName: "label",
-          descriptionClassName: "description",
+          description: "FieldDescription",
           labelProp: "label",
           descriptionProp: "description",
           propMappings: [
@@ -461,13 +472,13 @@ describe("createRendererNode", () => {
       }),
     )
 
-    expect(markup).toContain("<p class=\"label\">Direction</p>")
+    expect(markup).toContain("<label>Direction</label>")
     expect(markup).toContain("<RadioGroup")
     expect(markup).toContain('aria-label="Direction"')
     expect(markup).toContain("<RadioGroupItem")
-    expect(markup).toContain(">Ship</span>")
+    expect(markup).toContain("<label>Ship</label>")
     expect(markup).toContain("Use the current direction.")
-    expect(markup).toContain("<p class=\"description\">Single-select field.</p>")
+    expect(markup).toContain("<p>Single-select field.</p>")
   })
 
   it("renders toggle-group option-set components with static props and option children", () => {
@@ -485,17 +496,14 @@ describe("createRendererNode", () => {
               children: ["text"],
             },
           ],
-          root: "div",
-          label: "p",
+          root: "Field",
+          label: "FieldLabel",
           control: "ToggleGroup",
           item: "ToggleGroupItem",
           itemSlot: "option",
           itemValueProp: "value",
           itemHeadingProp: "label",
-          description: "p",
-          rootClassName: "grid gap-3",
-          labelClassName: "label",
-          descriptionClassName: "description",
+          description: "FieldDescription",
           labelProp: "label",
           descriptionProp: "description",
           staticProps: {
@@ -538,14 +546,14 @@ describe("createRendererNode", () => {
       }),
     )
 
-    expect(markup).toContain("<p class=\"label\">Rollout Mode</p>")
+    expect(markup).toContain("<label>Rollout Mode</label>")
     expect(markup).toContain("<ToggleGroup")
     expect(markup).toContain('type="single"')
     expect(markup).toContain('aria-label="Rollout Mode"')
     expect(markup).toContain("<ToggleGroupItem")
     expect(markup).toContain('value="fast"')
     expect(markup).toContain("Prefer speed.")
-    expect(markup).toContain("<p class=\"description\">Inline option set.</p>")
+    expect(markup).toContain("<p>Inline option set.</p>")
   })
 
   it("renders select option-set components with trigger/content structure and fallback", () => {
@@ -563,20 +571,18 @@ describe("createRendererNode", () => {
               children: ["text"],
             },
           ],
-          root: "div",
-          label: "p",
+          root: "Field",
+          label: "FieldLabel",
           control: "Select",
           controlTrigger: "SelectTrigger",
           controlValue: "SelectValue",
           controlContent: "SelectContent",
+          itemContainer: "SelectGroup",
           item: "SelectItem",
           itemSlot: "option",
           itemValueProp: "value",
           itemHeadingProp: "label",
-          description: "p",
-          rootClassName: "grid gap-3",
-          labelClassName: "label",
-          descriptionClassName: "description",
+          description: "FieldDescription",
           labelProp: "label",
           descriptionProp: "description",
           fallback: true,
@@ -617,20 +623,21 @@ describe("createRendererNode", () => {
       }),
     )
 
-    expect(markup).toContain("<p class=\"label\">Deployment Window</p>")
+    expect(markup).toContain("<label>Deployment Window</label>")
     expect(markup).toContain("<Select")
     expect(markup).toContain("<SelectTrigger>")
     expect(markup).toContain("<SelectValue")
     expect(markup).toContain("<SelectContent>")
+    expect(markup).toContain("<div><SelectItem")
     expect(markup).toContain("<SelectItem")
     expect(markup).toContain('aria-label="Deployment Window"')
     expect(markup).toContain("Ship in the current window.")
-    expect(markup).toContain("<p class=\"description\">Choose a release window.</p>")
+    expect(markup).toContain("<p>Choose a release window.</p>")
     expect(markup).toContain("<noscript>")
     expect(markup).toContain("Today (selected)")
   })
 
-  it("renders combobox option-set components with input and datalist fallback", () => {
+  it("renders combobox option-set components with collection and empty-state composition", () => {
     const rendererSpecByName = new Map([
       [
         "combobox",
@@ -645,22 +652,22 @@ describe("createRendererNode", () => {
               children: ["text"],
             },
           ],
-          root: "div",
-          label: "p",
+          root: "Field",
+          label: "FieldLabel",
           controlRoot: "Combobox",
           control: "ComboboxInput",
           controlContent: "ComboboxContent",
+          controlEmpty: "ComboboxEmpty",
           controlList: "ComboboxList",
+          itemContainer: "ComboboxCollection",
           item: "ComboboxItem",
           itemSlot: "option",
           itemValueProp: "value",
           itemHeadingProp: "label",
-          description: "p",
-          rootClassName: "grid gap-3",
-          labelClassName: "label",
-          descriptionClassName: "description",
+          description: "FieldDescription",
           labelProp: "label",
           descriptionProp: "description",
+          emptyText: "No results found.",
           fallback: true,
           propMappings: [
             { prop: "value", target: "defaultValue" },
@@ -702,12 +709,13 @@ describe("createRendererNode", () => {
       }),
     )
 
-    expect(markup).toContain("<p class=\"label\">Owner</p>")
+    expect(markup).toContain("<label>Owner</label>")
     expect(markup).toContain("<input")
     expect(markup).toContain('aria-label="Owner"')
     expect(markup).toContain('value="Ops reviewer"')
     expect(markup).toContain("<section")
     expect(markup).toContain("<div")
+    expect(markup).toContain("No results found.")
     expect(markup).toContain("Ops reviewer")
     expect(markup).toContain("<noscript>")
     expect(markup).toContain("Ops reviewer (selected)")

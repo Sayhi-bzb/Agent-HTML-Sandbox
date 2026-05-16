@@ -2,8 +2,16 @@
   color-scheme: light;
   font-family: "Segoe UI", "SF Pro Display", sans-serif;
   background:
-    radial-gradient(circle at top left, rgba(187, 214, 255, 0.9), transparent 24%),
-    radial-gradient(circle at top right, rgba(255, 231, 214, 0.9), transparent 28%),
+    radial-gradient(
+      circle at top left,
+      rgba(187, 214, 255, 0.9),
+      transparent 24%
+    ),
+    radial-gradient(
+      circle at top right,
+      rgba(255, 231, 214, 0.9),
+      transparent 28%
+    ),
     #edf2f7;
   color: #172033;
 }
@@ -328,6 +336,130 @@ button:disabled {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.inspect-audit-card {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(20, 33, 61, 0.08);
+  border-radius: 20px;
+  background: linear-gradient(
+    180deg,
+    rgba(240, 246, 255, 0.94) 0%,
+    rgba(255, 255, 255, 0.94) 100%
+  );
+  padding: 16px;
+}
+
+.inspect-audit-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.inspect-audit-summary {
+  margin: 0;
+  color: #30415f;
+}
+
+.inspect-audit-actions,
+.inspect-step-topline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.inspect-linked-review {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(20, 33, 61, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.86);
+  padding: 14px;
+}
+
+.inspect-linked-review h5,
+.inspect-linked-review-summary {
+  margin: 0;
+}
+
+.inspect-linked-review-summary {
+  color: #5d6b84;
+}
+
+.inspect-audit-chip-grid,
+.inspect-audit-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.inspect-audit-chip-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.inspect-audit-chip,
+.inspect-audit-block {
+  border: 1px solid rgba(31, 41, 55, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 14px;
+}
+
+.inspect-audit-chip h5,
+.inspect-audit-chip p,
+.inspect-step-item p,
+.inspect-evidence-item p,
+.inspect-block p {
+  margin: 0;
+}
+
+.inspect-audit-chip h5 {
+  margin-bottom: 8px;
+  font-size: 1rem;
+}
+
+.inspect-audit-chip p:last-child,
+.inspect-step-item p,
+.inspect-evidence-item p {
+  color: #5d6b84;
+}
+
+.inspect-step-list,
+.inspect-evidence-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.inspect-step-item,
+.inspect-evidence-item {
+  display: grid;
+  gap: 6px;
+}
+
+.inspect-step-topline {
+  justify-content: space-between;
+}
+
+.inspect-evidence-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.inspect-evidence-item {
+  border: 1px solid rgba(31, 41, 55, 0.08);
+  border-radius: 14px;
+  background: rgba(247, 249, 252, 0.88);
+  padding: 12px;
+}
+
+.inspect-open-checks {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
 .inspect-summary-card {
   border: 1px solid rgba(31, 41, 55, 0.08);
   border-radius: 18px;
@@ -531,8 +663,11 @@ button:disabled {
   display: grid;
   gap: 10px;
   border-color: rgba(138, 90, 0, 0.14);
-  background:
-    linear-gradient(180deg, rgba(255, 250, 235, 0.94) 0%, rgba(255, 255, 255, 0.92) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 250, 235, 0.94) 0%,
+    rgba(255, 255, 255, 0.92) 100%
+  );
 }
 
 .draft-preview-list {
@@ -613,14 +748,20 @@ button:disabled {
 
 .proposal-card {
   border-color: rgba(29, 78, 216, 0.16);
-  background:
-    linear-gradient(180deg, rgba(239, 246, 255, 0.92) 0%, rgba(255, 255, 255, 0.92) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(239, 246, 255, 0.92) 0%,
+    rgba(255, 255, 255, 0.92) 100%
+  );
 }
 
 .context-message-card {
   border-color: rgba(49, 130, 206, 0.14);
-  background:
-    linear-gradient(180deg, rgba(247, 250, 252, 0.94) 0%, rgba(255, 255, 255, 0.92) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(247, 250, 252, 0.94) 0%,
+    rgba(255, 255, 255, 0.92) 100%
+  );
 }
 
 .proposal-body {
@@ -658,6 +799,10 @@ button:disabled {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.proposal-snapshot-chip {
+  border: 0;
 }
 
 .proposal-readiness {
@@ -825,6 +970,7 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 
+  .inspect-audit-chip-grid,
   .inspect-summary-grid {
     grid-template-columns: 1fr;
   }

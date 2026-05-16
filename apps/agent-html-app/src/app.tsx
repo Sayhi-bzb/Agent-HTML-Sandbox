@@ -1,10 +1,16 @@
 import { startTransition, useEffect, useState } from "react"
 
-import { AgentShell } from "./components/agent-shell/agent-shell"
+import {
+  AgentShell,
+  type AgentShellReviewFocusState,
+  type AgentShellReviewIntent,
+} from "./components/agent-shell/agent-shell"
 import { SessionsSidebar } from "./components/layout/sessions-sidebar"
 import { Workbench } from "./components/workbench/workbench"
+import type { ReviewTimelineActionConfig } from "./lib/review-flow"
 import {
   getLatestProposalComparisonSummary,
+  getPreviewGroupKey,
   getSourceComparisonSummary,
 } from "./lib/source-comparison"
 import { mockAppState } from "./lib/mock-data"
@@ -75,11 +81,34 @@ type HydratedSessionState = {
 export function App() {
   const [appState, setAppState] = useState<AppState>(mockAppState)
   const [sessionDrafts, setSessionDrafts] = useState<Record<string, string>>({})
-  const [activeView, setActiveView] = useState<WorkbenchView>(mockAppState.currentSession.currentView)
+  const [agentShellReviewIntent, setAgentShellReviewIntent] =
+    useState<AgentShellReviewIntent>()
+  const [agentShellReviewFocus, setAgentShellReviewFocus] =
+    useState<AgentShellReviewFocusState>()
+  const [activeView, setActiveView] = useState<WorkbenchView>(
+    mockAppState.currentSession.currentView,
+  )
   const [previewHtml, setPreviewHtml] = useState<string | undefined>(undefined)
-  const [commandState, setCommandState] = useState<CommandState>(initialCommandState)
+  const [commandState, setCommandState] =
+    useState<CommandState>(initialCommandState)
   const currentDraftSource =
-    sessionDrafts[appState.currentSession.summary.id] ?? appState.currentSession.source
+    sessionDrafts[appState.currentSession.summary.id] ??
+    appState.currentSession.source
+  const hasUnsavedSourceChanges =
+    currentDraftSource !== appState.currentSession.source
+  const draftComparison = getSourceComparisonSummary(
+    appState.currentSession.source,
+    currentDraftSource,
+  )
+  const proposalComparison = getLatestProposalComparisonSummary(
+    appState.chat,
+    currentDraftSource,
+  )
+  const isWorkbenchActionBusy =
+    commandState.savingSource ||
+    commandState.runningBuild ||
+    commandState.runningInspect ||
+    commandState.draftingProposal
   const isSidebarBusy =
     commandState.loading ||
     commandState.savingSource ||
@@ -94,6 +123,11 @@ export function App() {
     void bootstrap()
   }, [])
 
+  useEffect(() => {
+    setAgentShellReviewIntent(undefined)
+    setAgentShellReviewFocus(undefined)
+  }, [appState.currentSession.summary.id])
+
   async function bootstrap() {
     if (!isTauriRuntime()) {
       setCommandState({ ...initialCommandState, loading: false })
@@ -103,7 +137,9 @@ export function App() {
     try {
       const sessions = await listSessions()
       if (sessions.length === 0) {
-        const nextState = await hydrateSessionState(await createSession({ name: "First Session" }))
+        const nextState = await hydrateSessionState(
+          await createSession({ name: "First Session" }),
+        )
         startTransition(() => {
           setAppState((current) => ({
             ...current,
@@ -150,10 +186,16 @@ export function App() {
       return
     }
 
-    setCommandState((current) => ({ ...current, error: undefined, loading: true }))
+    setCommandState((current) => ({
+      ...current,
+      error: undefined,
+      loading: true,
+    }))
     try {
       const nextState = await hydrateSessionState(
-        await createSession({ name: `Session ${appState.sessions.length + 1}` }),
+        await createSession({
+          name: `Session ${appState.sessions.length + 1}`,
+        }),
       )
       startTransition(() => {
         setAppState((current) => ({
@@ -183,7 +225,11 @@ export function App() {
       return
     }
 
-    setCommandState((current) => ({ ...current, error: undefined, loading: true }))
+    setCommandState((current) => ({
+      ...current,
+      error: undefined,
+      loading: true,
+    }))
     try {
       const nextState = await loadSessionState(sessionId)
       startTransition(() => {
@@ -213,7 +259,11 @@ export function App() {
       return
     }
 
-    setCommandState((current) => ({ ...current, error: undefined, loading: true }))
+    setCommandState((current) => ({
+      ...current,
+      error: undefined,
+      loading: true,
+    }))
     try {
       const updatedSession = await renameSession(sessionId, { name })
       const sessions = await listSessions()
@@ -223,7 +273,9 @@ export function App() {
           ...current,
           sessions,
           currentSession:
-            current.currentSession.summary.id === sessionId ? updatedSession : current.currentSession,
+            current.currentSession.summary.id === sessionId
+              ? updatedSession
+              : current.currentSession,
         }))
       })
     } catch (error) {
@@ -243,7 +295,11 @@ export function App() {
       return
     }
 
-    setCommandState((current) => ({ ...current, error: undefined, loading: true }))
+    setCommandState((current) => ({
+      ...current,
+      error: undefined,
+      loading: true,
+    }))
     try {
       const updatedSession = await setSessionPinned(sessionId, { pinned })
       const sessions = await listSessions()
@@ -253,7 +309,9 @@ export function App() {
           ...current,
           sessions,
           currentSession:
-            current.currentSession.summary.id === sessionId ? updatedSession : current.currentSession,
+            current.currentSession.summary.id === sessionId
+              ? updatedSession
+              : current.currentSession,
         }))
       })
     } catch (error) {
@@ -273,13 +331,19 @@ export function App() {
       return
     }
 
-    setCommandState((current) => ({ ...current, error: undefined, loading: true }))
+    setCommandState((current) => ({
+      ...current,
+      error: undefined,
+      loading: true,
+    }))
     try {
       await deleteSession(sessionId)
       const sessions = await listSessions()
 
       if (sessions.length === 0) {
-        const nextState = await hydrateSessionState(await createSession({ name: "First Session" }))
+        const nextState = await hydrateSessionState(
+          await createSession({ name: "First Session" }),
+        )
         startTransition(() => {
           setAppState((current) => ({
             ...current,
@@ -333,7 +397,10 @@ export function App() {
 
   async function handleSaveSource(nextSource: string) {
     const sessionId = appState.currentSession.summary.id
-    const comparison = getSourceComparisonSummary(appState.currentSession.source, nextSource)
+    const comparison = getSourceComparisonSummary(
+      appState.currentSession.source,
+      nextSource,
+    )
 
     if (!isTauriRuntime()) {
       setAppState((current) => ({
@@ -359,7 +426,11 @@ export function App() {
       return
     }
 
-    setCommandState((current) => ({ ...current, error: undefined, savingSource: true }))
+    setCommandState((current) => ({
+      ...current,
+      error: undefined,
+      savingSource: true,
+    }))
     try {
       const session = await saveSource(sessionId, nextSource)
       let nextChat = appState.chat
@@ -405,9 +476,14 @@ export function App() {
     })
   }
 
-  async function handleValidateSource(nextSource: string): Promise<SourceValidationSnapshot> {
+  async function handleValidateSource(
+    nextSource: string,
+  ): Promise<SourceValidationSnapshot> {
     if (!isTauriRuntime()) {
-      return createMockValidationSnapshot(appState.currentSession.summary.id, nextSource)
+      return createMockValidationSnapshot(
+        appState.currentSession.summary.id,
+        nextSource,
+      )
     }
 
     return validateSource(appState.currentSession.summary.id, nextSource)
@@ -420,7 +496,10 @@ export function App() {
       return
     }
 
-    const comparison = getSourceComparisonSummary(appState.currentSession.source, currentDraftSource)
+    const comparison = getSourceComparisonSummary(
+      appState.currentSession.source,
+      currentDraftSource,
+    )
 
     if (!isTauriRuntime()) {
       setAppState((current) => ({
@@ -525,7 +604,10 @@ export function App() {
             ...current.chat,
             createLocalChatMessage(
               "system",
-              ["Build update", "- Mock runtime switched Preview without a real artifact rebuild."].join("\n"),
+              [
+                "Build update",
+                "- Mock runtime switched Preview without a real artifact rebuild.",
+              ].join("\n"),
               "context-card",
             ),
           ],
@@ -535,7 +617,11 @@ export function App() {
       return
     }
 
-    setCommandState((current) => ({ ...current, error: undefined, runningBuild: true }))
+    setCommandState((current) => ({
+      ...current,
+      error: undefined,
+      runningBuild: true,
+    }))
     try {
       await persistCurrentDraftIfNeeded()
     } catch (error) {
@@ -566,13 +652,18 @@ export function App() {
             exitCode: undefined,
           },
           currentSession: nextSession,
-          sessions: replaceSessionSummary(current.sessions, nextSession.summary),
+          sessions: replaceSessionSummary(
+            current.sessions,
+            nextSession.summary,
+          ),
         }
       })
     })
     try {
       const build = await runBuild(appState.currentSession.summary.id)
-      const nextPreviewHtml = await safeReadPreviewHtml(appState.currentSession.summary.id)
+      const nextPreviewHtml = await safeReadPreviewHtml(
+        appState.currentSession.summary.id,
+      )
       const nextLogs = await safeReadLogs(appState.currentSession.summary.id)
       let nextChat = appState.chat
       try {
@@ -589,12 +680,15 @@ export function App() {
       }
       startTransition(() => {
         setAppState((current) => {
-          const status: SessionStatus = build.status === "succeeded" ? "ready" : "error"
-          const nextView: WorkbenchView = build.status === "succeeded" ? "preview" : "inspect"
+          const status: SessionStatus =
+            build.status === "succeeded" ? "ready" : "error"
+          const nextView: WorkbenchView =
+            build.status === "succeeded" ? "preview" : "inspect"
           const nextSession = {
             ...current.currentSession,
             currentView: nextView,
-            previewPath: build.previewPath ?? current.currentSession.previewPath,
+            previewPath:
+              build.previewPath ?? current.currentSession.previewPath,
             summary: {
               ...current.currentSession.summary,
               status,
@@ -609,7 +703,10 @@ export function App() {
             currentBuild: build,
             currentLogs: nextLogs,
             currentSession: nextSession,
-            sessions: replaceSessionSummary(current.sessions, nextSession.summary),
+            sessions: replaceSessionSummary(
+              current.sessions,
+              nextSession.summary,
+            ),
           }
         })
         setPreviewHtml(nextPreviewHtml)
@@ -634,7 +731,10 @@ export function App() {
               finishedAt: new Date().toISOString(),
             },
             currentSession: nextSession,
-            sessions: replaceSessionSummary(current.sessions, nextSession.summary),
+            sessions: replaceSessionSummary(
+              current.sessions,
+              nextSession.summary,
+            ),
           }
         })
       })
@@ -659,7 +759,10 @@ export function App() {
             ...current.chat,
             createLocalChatMessage(
               "system",
-              ["Inspect update", "- Mock runtime switched Inspect without a real CLI inspect run."].join("\n"),
+              [
+                "Inspect update",
+                "- Mock runtime switched Inspect without a real CLI inspect run.",
+              ].join("\n"),
               "context-card",
             ),
           ],
@@ -669,7 +772,11 @@ export function App() {
       return
     }
 
-    setCommandState((current) => ({ ...current, error: undefined, runningInspect: true }))
+    setCommandState((current) => ({
+      ...current,
+      error: undefined,
+      runningInspect: true,
+    }))
     try {
       await persistCurrentDraftIfNeeded()
     } catch (error) {
@@ -682,7 +789,9 @@ export function App() {
     }
     try {
       const inspect = await runInspect(appState.currentSession.summary.id)
-      const nextPreviewHtml = await safeReadPreviewHtml(appState.currentSession.summary.id)
+      const nextPreviewHtml = await safeReadPreviewHtml(
+        appState.currentSession.summary.id,
+      )
       const nextLogs = await safeReadLogs(appState.currentSession.summary.id)
       let nextChat = appState.chat
       try {
@@ -700,11 +809,13 @@ export function App() {
       startTransition(() => {
         setAppState((current) => {
           const build = inspect.lastBuild ?? current.currentBuild
-          const status: SessionStatus = build.status === "succeeded" ? "ready" : "error"
+          const status: SessionStatus =
+            build.status === "succeeded" ? "ready" : "error"
           const nextSession = {
             ...current.currentSession,
             currentView: "inspect" as const,
-            previewPath: build.previewPath ?? current.currentSession.previewPath,
+            previewPath:
+              build.previewPath ?? current.currentSession.previewPath,
             summary: {
               ...current.currentSession.summary,
               status,
@@ -720,7 +831,10 @@ export function App() {
             currentInspect: inspect,
             currentLogs: nextLogs,
             currentSession: nextSession,
-            sessions: replaceSessionSummary(current.sessions, nextSession.summary),
+            sessions: replaceSessionSummary(
+              current.sessions,
+              nextSession.summary,
+            ),
           }
         })
         setPreviewHtml(nextPreviewHtml)
@@ -743,7 +857,11 @@ export function App() {
       return
     }
 
-    setCommandState((current) => ({ ...current, error: undefined, runningDoctor: true }))
+    setCommandState((current) => ({
+      ...current,
+      error: undefined,
+      runningDoctor: true,
+    }))
     try {
       const report = await checkRuntime()
       startTransition(() => {
@@ -774,19 +892,29 @@ export function App() {
       startTransition(() => {
         setAppState((current) => ({
           ...current,
-          chat: [...current.chat, createLocalChatMessage("user", trimmed, "message")],
+          chat: [
+            ...current.chat,
+            createLocalChatMessage("user", trimmed, "message"),
+          ],
         }))
       })
       return
     }
 
-    setCommandState((current) => ({ ...current, error: undefined, sendingMessage: true }))
+    setCommandState((current) => ({
+      ...current,
+      error: undefined,
+      sendingMessage: true,
+    }))
     try {
-      const updated = await appendChatMessage(appState.currentSession.summary.id, {
-        role: "user",
-        text: trimmed,
-        kind: "message",
-      })
+      const updated = await appendChatMessage(
+        appState.currentSession.summary.id,
+        {
+          role: "user",
+          text: trimmed,
+          kind: "message",
+        },
+      )
       startTransition(() => {
         setAppState((current) => ({
           ...current,
@@ -846,9 +974,15 @@ export function App() {
       return
     }
 
-    setCommandState((current) => ({ ...current, error: undefined, draftingProposal: true }))
+    setCommandState((current) => ({
+      ...current,
+      error: undefined,
+      draftingProposal: true,
+    }))
     try {
-      const updated = await generateSessionProposal(appState.currentSession.summary.id)
+      const updated = await generateSessionProposal(
+        appState.currentSession.summary.id,
+      )
       startTransition(() => {
         setAppState((current) => ({
           ...current,
@@ -877,19 +1011,29 @@ export function App() {
       startTransition(() => {
         setAppState((current) => ({
           ...current,
-          chat: [...current.chat, createLocalChatMessage("system", decisionMessage, "context-card")],
+          chat: [
+            ...current.chat,
+            createLocalChatMessage("system", decisionMessage, "context-card"),
+          ],
         }))
       })
       return
     }
 
-    setCommandState((current) => ({ ...current, error: undefined, recordingDecision: true }))
+    setCommandState((current) => ({
+      ...current,
+      error: undefined,
+      recordingDecision: true,
+    }))
     try {
-      const updated = await appendChatMessage(appState.currentSession.summary.id, {
-        role: "system",
-        text: decisionMessage,
-        kind: "context-card",
-      })
+      const updated = await appendChatMessage(
+        appState.currentSession.summary.id,
+        {
+          role: "system",
+          text: decisionMessage,
+          kind: "context-card",
+        },
+      )
       startTransition(() => {
         setAppState((current) => ({
           ...current,
@@ -908,7 +1052,90 @@ export function App() {
     setCommandState((current) => ({ ...current, recordingDecision: false }))
   }
 
-  function replaceCurrentSession(session: SessionDetail, nextChat?: AppState["chat"]) {
+  async function handleSaveDraftForWorkflow() {
+    try {
+      await persistCurrentDraftIfNeeded()
+    } catch (error) {
+      setCommandState((current) => ({
+        ...current,
+        error: formatError(error),
+      }))
+    }
+  }
+
+  function queueAgentShellReviewIntent(
+    mode: "saved" | "proposal",
+    label: string,
+    groupKeys?: string[],
+  ) {
+    setAgentShellReviewIntent({
+      mode,
+      label,
+      groupKeys,
+      requestKey: `${mode}-${Date.now()}`,
+    })
+  }
+
+  async function handleRunReviewAction(
+    handler: ReviewTimelineActionConfig["handler"],
+  ) {
+    switch (handler) {
+      case "save":
+        await handleSaveDraftForWorkflow()
+        break
+      case "build":
+        await handleBuild()
+        break
+      case "inspect":
+        await handleInspect()
+        break
+      case "openInspect":
+        await handleViewChange("inspect")
+        break
+      case "openPreview":
+        await handleViewChange("preview")
+        break
+      case "draftProposal":
+        await handleDraftProposal()
+        break
+      case "reviewDiff": {
+        if (proposalComparison) {
+          queueAgentShellReviewIntent(
+            "proposal",
+            "Inspect review drift",
+            proposalComparison.previewGroups.map(getPreviewGroupKey),
+          )
+          break
+        }
+
+        if (draftComparison) {
+          queueAgentShellReviewIntent(
+            "saved",
+            "Unsaved source drift",
+            draftComparison.previewGroups.map(getPreviewGroupKey),
+          )
+        }
+        break
+      }
+    }
+  }
+
+  function handleRevisitReviewFocus() {
+    if (!agentShellReviewFocus) {
+      return
+    }
+
+    queueAgentShellReviewIntent(
+      agentShellReviewFocus.mode,
+      agentShellReviewFocus.label,
+      agentShellReviewFocus.groupKeys,
+    )
+  }
+
+  function replaceCurrentSession(
+    session: SessionDetail,
+    nextChat?: AppState["chat"],
+  ) {
     startTransition(() => {
       setAppState((current) => ({
         ...current,
@@ -927,16 +1154,29 @@ export function App() {
           <h1>Local-first workbench</h1>
         </div>
         <div className="topbar-meta">
-          <button className="ghost-button" disabled={commandState.runningDoctor} onClick={handleDoctor} type="button">
+          <button
+            className="ghost-button"
+            disabled={commandState.runningDoctor}
+            onClick={handleDoctor}
+            type="button"
+          >
             {commandState.runningDoctor ? "Checking runtime..." : "Doctor"}
           </button>
-          <span className="pill">{isTauriRuntime() ? "Tauri runtime" : "Mock runtime"}</span>
-          {commandState.error ? <span className="pill status-error">Needs attention</span> : null}
+          <span className="pill">
+            {isTauriRuntime() ? "Tauri runtime" : "Mock runtime"}
+          </span>
+          {commandState.error ? (
+            <span className="pill status-error">Needs attention</span>
+          ) : null}
         </div>
       </header>
 
-      {commandState.error ? <div className="error-banner">{commandState.error}</div> : null}
-      {appState.runtimeReport ? <RuntimeBanner report={appState.runtimeReport} /> : null}
+      {commandState.error ? (
+        <div className="error-banner">{commandState.error}</div>
+      ) : null}
+      {appState.runtimeReport ? (
+        <RuntimeBanner report={appState.runtimeReport} />
+      ) : null}
 
       <div className="app-shell">
         <SessionsSidebar
@@ -951,27 +1191,35 @@ export function App() {
         />
         <Workbench
           activeView={activeView}
+          activeReviewFocus={agentShellReviewFocus}
           build={appState.currentBuild}
+          draftComparison={draftComparison}
           draftSource={currentDraftSource}
+          hasUnsavedSourceChanges={hasUnsavedSourceChanges}
           inspect={appState.currentInspect}
+          isActionBusy={isWorkbenchActionBusy}
           isRunningBuild={commandState.runningBuild}
           isRunningInspect={commandState.runningInspect}
           isSavingSource={commandState.savingSource}
           logs={appState.currentLogs}
+          messages={appState.chat}
           onBuild={handleBuild}
           onDraftSourceChange={handleDraftSourceChange}
           onInspect={handleInspect}
+          onRevisitReviewFocus={handleRevisitReviewFocus}
+          onRunReviewAction={handleRunReviewAction}
           onSaveSource={handleSaveSource}
           onValidateSource={handleValidateSource}
           onViewChange={handleViewChange}
           previewHtml={previewHtml}
+          proposalComparison={proposalComparison}
           session={appState.currentSession}
         />
         <AgentShell
           activeView={activeView}
           build={appState.currentBuild}
-          draftComparison={getSourceComparisonSummary(appState.currentSession.source, currentDraftSource)}
-          hasUnsavedSourceChanges={currentDraftSource !== appState.currentSession.source}
+          draftComparison={draftComparison}
+          hasUnsavedSourceChanges={hasUnsavedSourceChanges}
           inspect={appState.currentInspect}
           isRunningBuild={commandState.runningBuild}
           isRunningInspect={commandState.runningInspect}
@@ -980,12 +1228,14 @@ export function App() {
           onDecision={handleRecordProposalDecision}
           onInspect={handleInspect}
           onOpenView={handleViewChange}
-          onSaveDraft={persistCurrentDraftIfNeeded}
+          onSaveDraft={handleSaveDraftForWorkflow}
           isDraftingProposal={commandState.draftingProposal}
           isSending={commandState.sendingMessage}
           messages={appState.chat}
           onDraftProposal={handleDraftProposal}
-          proposalComparison={getLatestProposalComparisonSummary(appState.chat, currentDraftSource)}
+          proposalComparison={proposalComparison}
+          onReviewFocusChange={setAgentShellReviewFocus}
+          reviewIntent={agentShellReviewIntent}
           onSend={handleSendMessage}
           session={appState.currentSession}
         />
@@ -994,11 +1244,15 @@ export function App() {
   )
 }
 
-async function loadSessionState(sessionId: string): Promise<HydratedSessionState> {
+async function loadSessionState(
+  sessionId: string,
+): Promise<HydratedSessionState> {
   return hydrateSessionState(await openSession(sessionId))
 }
 
-async function hydrateSessionState(session: SessionDetail): Promise<HydratedSessionState> {
+async function hydrateSessionState(
+  session: SessionDetail,
+): Promise<HydratedSessionState> {
   const [chat, previewHtml, logs] = await Promise.all([
     safeReadChat(session.summary.id),
     safeReadPreviewHtml(session.summary.id),
@@ -1049,8 +1303,13 @@ async function safeReadChat(sessionId: string) {
   }
 }
 
-function replaceSessionSummary(summaries: SessionSummary[], nextSummary: SessionSummary) {
-  const withoutCurrent = summaries.filter((summary) => summary.id !== nextSummary.id)
+function replaceSessionSummary(
+  summaries: SessionSummary[],
+  nextSummary: SessionSummary,
+) {
+  const withoutCurrent = summaries.filter(
+    (summary) => summary.id !== nextSummary.id,
+  )
   return [nextSummary, ...withoutCurrent]
 }
 
@@ -1069,7 +1328,9 @@ function formatError(error: unknown) {
 
 function deriveBuildSummary(session: SessionDetail): BuildRunSummary {
   return {
-    runId: session.summary.lastBuildAt ? `${session.summary.id}-last-build` : `${session.summary.id}-idle`,
+    runId: session.summary.lastBuildAt
+      ? `${session.summary.id}-last-build`
+      : `${session.summary.id}-idle`,
     sessionId: session.summary.id,
     startedAt: session.summary.lastBuildAt ?? session.summary.updatedAt,
     finishedAt: session.summary.lastBuildAt,
@@ -1084,8 +1345,11 @@ function deriveInspectSnapshot(session: SessionDetail): InspectSnapshot {
     sessionId: session.summary.id,
     generatedAt: session.summary.updatedAt,
     diagnostics: [],
-    structureSummary: "Run Inspect to refresh the session analysis for this document.",
-    lastBuild: session.summary.hasPreview ? deriveBuildSummary(session) : undefined,
+    structureSummary:
+      "Run Inspect to refresh the session analysis for this document.",
+    lastBuild: session.summary.hasPreview
+      ? deriveBuildSummary(session)
+      : undefined,
   }
 }
 
@@ -1165,42 +1429,67 @@ function buildLocalProposalText(
   const items: string[] = []
 
   if (draftSource !== session.source) {
-    items.push("[save] Save the current source changes before trusting the next build or proposal review.")
+    items.push(
+      "[save] Save the current source changes before trusting the next build or proposal review.",
+    )
   }
 
   if (!draftSource.includes("<page")) {
-    items.push("[build] Add a <page> root before the next build. The current draft is missing the required top-level structure.")
+    items.push(
+      "[build] Add a <page> root before the next build. The current draft is missing the required top-level structure.",
+    )
   }
 
   if (draftSource.includes("className=")) {
-    items.push('[inspect] Remove "className" from the draft. agent-html documents should stay schema-level and not carry raw UI props.')
+    items.push(
+      '[inspect] Remove "className" from the draft. agent-html documents should stay schema-level and not carry raw UI props.',
+    )
   }
 
   if (inspect.diagnostics.length > 0) {
-    items.push(`[inspect] Resolve ${inspect.diagnostics.length} inspect diagnostic(s) before sharing the next artifact.`)
+    items.push(
+      `[inspect] Resolve ${inspect.diagnostics.length} inspect diagnostic(s) before sharing the next artifact.`,
+    )
   }
 
   if (build.status === "failed") {
-    items.push("[build] Read stderr first, then rebuild once the source issues or runtime failure are understood.")
+    items.push(
+      "[build] Read stderr first, then rebuild once the source issues or runtime failure are understood.",
+    )
   } else if (!session.summary.hasPreview) {
-    items.push("[build] Run Build to generate the first preview artifact for this session.")
+    items.push(
+      "[build] Run Build to generate the first preview artifact for this session.",
+    )
   } else if (session.summary.status === "dirty") {
-    items.push("[build] Rebuild the session so Preview and Inspect reflect the latest saved source.")
+    items.push(
+      "[build] Rebuild the session so Preview and Inspect reflect the latest saved source.",
+    )
   } else {
-    items.push("[review] Compare the current preview artifact against the source intent and confirm the recommendation still holds.")
+    items.push(
+      "[review] Compare the current preview artifact against the source intent and confirm the recommendation still holds.",
+    )
   }
 
   if (logs.stderr?.trim()) {
-    items.push("[inspect] Keep the latest stderr log open while editing. It contains the fastest explanation path for build or inspect failures.")
+    items.push(
+      "[inspect] Keep the latest stderr log open while editing. It contains the fastest explanation path for build or inspect failures.",
+    )
   } else if (logs.stdout?.trim()) {
-    items.push("[review] Use the captured stdout summary as the artifact baseline, then return to Source only if the preview diverges from the expected structure.")
+    items.push(
+      "[review] Use the captured stdout summary as the artifact baseline, then return to Source only if the preview diverges from the expected structure.",
+    )
   }
 
   if (items.length === 0) {
-    items.push("[review] Keep the source, preview, and inspect summary aligned before making the next artifact decision.")
+    items.push(
+      "[review] Keep the source, preview, and inspect summary aligned before making the next artifact decision.",
+    )
   }
 
-  return [`Proposal for ${session.summary.name}`, ...items.map((item) => `- ${item}`)].join("\n")
+  return [
+    `Proposal for ${session.summary.name}`,
+    ...items.map((item) => `- ${item}`),
+  ].join("\n")
 }
 
 function buildProposalDecisionMessage(
@@ -1208,7 +1497,8 @@ function buildProposalDecisionMessage(
   status: "approved" | "needs changes",
 ) {
   const [titleLine] = proposalText.split(/\r?\n/).filter(Boolean)
-  const proposalTitle = titleLine?.replace(/^Proposal for\s+/, "").trim() || "Unknown proposal"
+  const proposalTitle =
+    titleLine?.replace(/^Proposal for\s+/, "").trim() || "Unknown proposal"
 
   return [
     "Proposal decision",
@@ -1249,8 +1539,15 @@ function buildSourceSavedEventMessage(
 
 function inspectEventMessage(inspect: InspectSnapshot) {
   const diagnosticsCount = inspect.diagnostics.length
-  const summary = diagnosticsCount > 0 ? `${diagnosticsCount} diagnostic(s)` : "no structured diagnostics"
-  return ["Inspect update", `- Diagnostics: ${summary}`, `- Structure: ${inspect.structureSummary}`].join("\n")
+  const summary =
+    diagnosticsCount > 0
+      ? `${diagnosticsCount} diagnostic(s)`
+      : "no structured diagnostics"
+  return [
+    "Inspect update",
+    `- Diagnostics: ${summary}`,
+    `- Structure: ${inspect.structureSummary}`,
+  ].join("\n")
 }
 
 function RuntimeBanner({ report }: { report: RuntimeReport }) {
@@ -1258,7 +1555,11 @@ function RuntimeBanner({ report }: { report: RuntimeReport }) {
     <div className="runtime-banner">
       <div>
         <p className="eyebrow">Runtime health</p>
-        <h2>{report.status === "ok" ? "Managed runtime ready" : "Managed runtime has failures"}</h2>
+        <h2>
+          {report.status === "ok"
+            ? "Managed runtime ready"
+            : "Managed runtime has failures"}
+        </h2>
       </div>
       <div className="runtime-banner-meta">
         <span className="pill">ok {report.counts.ok}</span>

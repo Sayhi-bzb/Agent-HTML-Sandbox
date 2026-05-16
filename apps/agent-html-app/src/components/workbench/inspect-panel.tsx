@@ -1,18 +1,63 @@
-import type { BuildRunSummary, InspectSnapshot, LogSnapshot } from "../../lib/types"
+import { getInspectReviewSummary } from "../../lib/inspect-review"
+import type { ReviewTimelineActionConfig } from "../../lib/review-flow"
+import type { SourceComparisonSummary } from "../../lib/source-comparison"
 import { formatTimestampLabel } from "../../lib/time"
+import type { AgentShellReviewFocusState } from "../agent-shell/agent-shell"
+import type {
+  AgentShellMessage,
+  BuildRunSummary,
+  InspectSnapshot,
+  LogSnapshot,
+  SessionDetail,
+} from "../../lib/types"
 
 type InspectPanelProps = {
+  activeReviewFocus?: AgentShellReviewFocusState
+  build: BuildRunSummary
+  session: SessionDetail
   inspect: InspectSnapshot
   logs: LogSnapshot
+  messages: AgentShellMessage[]
+  hasUnsavedSourceChanges: boolean
+  isActionBusy: boolean
+  draftComparison?: SourceComparisonSummary
+  proposalComparison?: SourceComparisonSummary
+  onRevisitReviewFocus: () => void
+  onRunReviewAction: (
+    handler: ReviewTimelineActionConfig["handler"],
+  ) => Promise<void> | void
 }
 
-export function InspectPanel({ inspect, logs }: InspectPanelProps) {
+export function InspectPanel({
+  activeReviewFocus,
+  build,
+  session,
+  inspect,
+  logs,
+  messages,
+  hasUnsavedSourceChanges,
+  isActionBusy,
+  draftComparison,
+  proposalComparison,
+  onRevisitReviewFocus,
+  onRunReviewAction,
+}: InspectPanelProps) {
   const diagnosticCounts = countDiagnosticsBySeverity(inspect)
-  const buildStatus = inspect.lastBuild?.status ?? "idle"
-  const buildStatusClassName = statusClassNameForBuild(buildStatus)
+  const inspectBuildStatus = inspect.lastBuild?.status ?? "idle"
+  const buildStatusClassName = statusClassNameForBuild(inspectBuildStatus)
   const stdoutAvailable = Boolean(logs.stdout?.trim())
   const stderrAvailable = Boolean(logs.stderr?.trim())
   const reviewFocus = deriveReviewFocus(inspect, logs)
+  const reviewAudit = getInspectReviewSummary({
+    build,
+    draftComparison,
+    hasUnsavedSourceChanges,
+    inspect,
+    logs,
+    messages,
+    proposalComparison,
+    session,
+  })
 
   return (
     <section className="workbench-card">
@@ -22,10 +67,157 @@ export function InspectPanel({ inspect, logs }: InspectPanelProps) {
           <h3>Diagnostics and structure</h3>
         </div>
         <div className="inspect-header-meta">
-          <span className={`pill ${buildStatusClassName}`}>{buildStatusLabel(buildStatus)}</span>
-          <span className="inline-meta">Generated {formatTimestampLabel(inspect.generatedAt)}</span>
+          <span className={`pill ${buildStatusClassName}`}>
+            {buildStatusLabel(inspectBuildStatus)}
+          </span>
+          <span className="inline-meta">
+            Generated {formatTimestampLabel(inspect.generatedAt)}
+          </span>
         </div>
       </div>
+
+      <section className="inspect-audit-card">
+        <div className="message-topline">
+          <div>
+            <p className="eyebrow">Review audit</p>
+            <h4>{reviewAudit.stageLabel} is the current gate</h4>
+          </div>
+          <div className="inspect-audit-meta">
+            <span className={`pill ${reviewAudit.stagePillClassName}`}>
+              {reviewAudit.stageStatusLabel}
+            </span>
+            <span className={`pill ${reviewAudit.readiness.pillClassName}`}>
+              {reviewAudit.readiness.label}
+            </span>
+          </div>
+        </div>
+        <p className="inspect-audit-summary">{reviewAudit.stageSummary}</p>
+        {reviewAudit.currentAction ? (
+          <div className="inspect-audit-actions">
+            <button
+              className="primary-button"
+              disabled={isActionBusy}
+              onClick={() =>
+                void onRunReviewAction(reviewAudit.currentAction!.handler)
+              }
+              type="button"
+            >
+              {reviewAudit.currentAction.label}
+            </button>
+            <span className="inline-meta">
+              {reviewAudit.currentAction.description}
+            </span>
+          </div>
+        ) : null}
+        {activeReviewFocus ? (
+          <div className="inspect-linked-review">
+            <div className="message-topline">
+              <div>
+                <p className="eyebrow">Linked compare</p>
+                <h5>{activeReviewFocus.label}</h5>
+              </div>
+              <button
+                className="mini-button"
+                disabled={isActionBusy}
+                onClick={onRevisitReviewFocus}
+                type="button"
+              >
+                Revisit compare
+              </button>
+            </div>
+            <p className="inspect-linked-review-summary">
+              Agent Shell is already focused on the{" "}
+              {activeReviewFocus.mode === "proposal"
+                ? "proposal snapshot"
+                : "saved source"}{" "}
+              compare for this review target.
+            </p>
+            <div className="proposal-meta-row">
+              <span className="pill accent">
+                {activeReviewFocus.mode === "proposal"
+                  ? "Proposal compare"
+                  : "Saved compare"}
+              </span>
+              <span className="inline-meta">
+                {activeReviewFocus.groupCount} focused group(s)
+              </span>
+            </div>
+          </div>
+        ) : null}
+        <div className="inspect-audit-chip-grid">
+          <article className="inspect-audit-chip">
+            <p className="eyebrow">Proposal state</p>
+            <h5>{reviewAudit.proposalState.statusLabel}</h5>
+            <p>{reviewAudit.proposalState.summary}</p>
+          </article>
+          <article className="inspect-audit-chip">
+            <p className="eyebrow">Readiness</p>
+            <h5>{reviewAudit.readiness.label}</h5>
+            <p>{reviewAudit.readiness.summary}</p>
+          </article>
+          <article className="inspect-audit-chip">
+            <p className="eyebrow">Signals</p>
+            <h5>{reviewAudit.evidence.length} captured</h5>
+            <p>
+              Diagnostics, drift, and logs are condensed here so the next review
+              move is obvious.
+            </p>
+          </article>
+        </div>
+        <div className="inspect-audit-grid">
+          <section className="inspect-audit-block">
+            <h4>Recovery path</h4>
+            <ol className="inspect-step-list">
+              {reviewAudit.nextSteps.map((step) => (
+                <li className="inspect-step-item" key={step.id}>
+                  <div className="inspect-step-topline">
+                    <strong>{step.title}</strong>
+                    {step.action ? (
+                      <button
+                        className="mini-button"
+                        disabled={isActionBusy}
+                        onClick={() =>
+                          void onRunReviewAction(step.action!.handler)
+                        }
+                        type="button"
+                      >
+                        {step.action.label}
+                      </button>
+                    ) : null}
+                  </div>
+                  <p>{step.detail}</p>
+                </li>
+              ))}
+            </ol>
+            {reviewAudit.readiness.items.length > 0 ? (
+              <div className="inspect-open-checks">
+                <p className="eyebrow">Open checks</p>
+                <ul className="inspect-focus-list">
+                  {reviewAudit.readiness.items.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </section>
+
+          <section className="inspect-audit-block">
+            <h4>Key evidence</h4>
+            <ul className="inspect-evidence-list">
+              {reviewAudit.evidence.map((item) => (
+                <li className="inspect-evidence-item" key={item.id}>
+                  <div className="message-topline">
+                    <span className={`pill ${item.pillClassName}`}>
+                      {item.label}
+                    </span>
+                  </div>
+                  <p>{item.detail}</p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
+      </section>
 
       <div className="inspect-summary-grid">
         <section className="inspect-summary-card">
@@ -38,15 +230,21 @@ export function InspectPanel({ inspect, logs }: InspectPanelProps) {
           <p className="eyebrow">Diagnostics</p>
           <h4>{diagnosticHeadline(inspect)}</h4>
           <p>
-            {diagnosticCounts.error} error, {diagnosticCounts.warning} warning, {diagnosticCounts.info} info.
+            {diagnosticCounts.error} error, {diagnosticCounts.warning} warning,{" "}
+            {diagnosticCounts.info} info.
           </p>
         </section>
 
         <section className="inspect-summary-card">
           <p className="eyebrow">Captured outputs</p>
-          <h4>{stdoutAvailable || stderrAvailable ? "Logs ready for review" : "No logs captured yet"}</h4>
+          <h4>
+            {stdoutAvailable || stderrAvailable
+              ? "Logs ready for review"
+              : "No logs captured yet"}
+          </h4>
           <p>
-            stdout {stdoutAvailable ? "available" : "missing"} · stderr {stderrAvailable ? "available" : "missing"}
+            stdout {stdoutAvailable ? "available" : "missing"} · stderr{" "}
+            {stderrAvailable ? "available" : "missing"}
           </p>
         </section>
       </div>
@@ -71,19 +269,26 @@ export function InspectPanel({ inspect, logs }: InspectPanelProps) {
           {inspect.diagnostics.length > 0 ? (
             <ul className="diagnostic-list">
               {inspect.diagnostics.map((diagnostic) => (
-                <li className={`diagnostic-item severity-${diagnostic.severity}`} key={diagnostic.id}>
+                <li
+                  className={`diagnostic-item severity-${diagnostic.severity}`}
+                  key={diagnostic.id}
+                >
                   <strong>{diagnostic.severity.toUpperCase()}</strong>
                   <span>{diagnostic.message}</span>
                   {diagnostic.code || diagnostic.source ? (
                     <span className="inline-meta">
-                      {[diagnostic.code, diagnostic.source].filter(Boolean).join(" · ")}
+                      {[diagnostic.code, diagnostic.source]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </span>
                   ) : null}
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="validation-empty">No structured diagnostics from the latest inspect run.</p>
+            <p className="validation-empty">
+              No structured diagnostics from the latest inspect run.
+            </p>
           )}
         </div>
 
@@ -103,9 +308,15 @@ export function InspectPanel({ inspect, logs }: InspectPanelProps) {
             <dt>Preview</dt>
             <dd>{inspect.lastBuild?.previewPath ?? "No preview artifact"}</dd>
             <dt>stdout log</dt>
-            <dd>{inspect.lastBuild?.stdoutPath ?? (stdoutAvailable ? "Captured for this session" : "n/a")}</dd>
+            <dd>
+              {inspect.lastBuild?.stdoutPath ??
+                (stdoutAvailable ? "Captured for this session" : "n/a")}
+            </dd>
             <dt>stderr log</dt>
-            <dd>{inspect.lastBuild?.stderrPath ?? (stderrAvailable ? "Captured for this session" : "n/a")}</dd>
+            <dd>
+              {inspect.lastBuild?.stderrPath ??
+                (stderrAvailable ? "Captured for this session" : "n/a")}
+            </dd>
           </dl>
         </div>
 
@@ -114,11 +325,15 @@ export function InspectPanel({ inspect, logs }: InspectPanelProps) {
           <div className="log-grid">
             <div>
               <p className="eyebrow">stdout</p>
-              <pre className="log-surface">{logs.stdout ?? "No stdout log yet."}</pre>
+              <pre className="log-surface">
+                {logs.stdout ?? "No stdout log yet."}
+              </pre>
             </div>
             <div>
               <p className="eyebrow">stderr</p>
-              <pre className="log-surface">{logs.stderr?.length ? logs.stderr : "No stderr log yet."}</pre>
+              <pre className="log-surface">
+                {logs.stderr?.length ? logs.stderr : "No stderr log yet."}
+              </pre>
             </div>
           </div>
         </div>
@@ -164,7 +379,10 @@ function statusClassNameForBuild(status: BuildRunSummary["status"]) {
 }
 
 function artifactHeadline(inspect: InspectSnapshot) {
-  if (inspect.lastBuild?.status === "succeeded" && inspect.lastBuild.previewPath) {
+  if (
+    inspect.lastBuild?.status === "succeeded" &&
+    inspect.lastBuild.previewPath
+  ) {
     return "Preview artifact available"
   }
 
@@ -176,7 +394,10 @@ function artifactHeadline(inspect: InspectSnapshot) {
 }
 
 function artifactSummary(inspect: InspectSnapshot) {
-  if (inspect.lastBuild?.status === "succeeded" && inspect.lastBuild.previewPath) {
+  if (
+    inspect.lastBuild?.status === "succeeded" &&
+    inspect.lastBuild.previewPath
+  ) {
     return "The latest build produced a preview artifact that the workbench can review."
   }
 
@@ -196,7 +417,9 @@ function diagnosticHeadline(inspect: InspectSnapshot) {
     return "No structured diagnostics"
   }
 
-  const errorCount = inspect.diagnostics.filter((diagnostic) => diagnostic.severity === "error").length
+  const errorCount = inspect.diagnostics.filter(
+    (diagnostic) => diagnostic.severity === "error",
+  ).length
   return errorCount > 0 ? "Errors need attention" : "Review warnings and notes"
 }
 
@@ -204,25 +427,39 @@ function deriveReviewFocus(inspect: InspectSnapshot, logs: LogSnapshot) {
   const items: string[] = []
 
   if (inspect.diagnostics.length > 0) {
-    items.push("Resolve the listed diagnostics before trusting the next artifact build.")
+    items.push(
+      "Resolve the listed diagnostics before trusting the next artifact build.",
+    )
   } else {
     items.push("The latest inspect run did not report structured diagnostics.")
   }
 
   if (inspect.lastBuild?.status === "failed") {
-    items.push("Check stderr first. A failed build usually explains preview gaps more directly than the source summary.")
+    items.push(
+      "Check stderr first. A failed build usually explains preview gaps more directly than the source summary.",
+    )
   } else if (inspect.lastBuild?.status === "succeeded") {
-    items.push("Compare the structure summary with the preview artifact to confirm the rendered output matches the source intent.")
+    items.push(
+      "Compare the structure summary with the preview artifact to confirm the rendered output matches the source intent.",
+    )
   } else {
-    items.push("Run Build to create the first artifact, then return here for artifact and log review.")
+    items.push(
+      "Run Build to create the first artifact, then return here for artifact and log review.",
+    )
   }
 
   if (!logs.stdout?.trim() && !logs.stderr?.trim()) {
-    items.push("No session logs are available yet, so this review is currently limited to source-derived summaries.")
+    items.push(
+      "No session logs are available yet, so this review is currently limited to source-derived summaries.",
+    )
   } else if (!logs.stderr?.trim()) {
-    items.push("stderr is empty, which usually means failures are more likely to be source-validation or preview-state issues than runtime crashes.")
+    items.push(
+      "stderr is empty, which usually means failures are more likely to be source-validation or preview-state issues than runtime crashes.",
+    )
   } else {
-    items.push("Use the captured logs to separate validation, runtime, and preview-loading failures before editing the source.")
+    items.push(
+      "Use the captured logs to separate validation, runtime, and preview-loading failures before editing the source.",
+    )
   }
 
   return items

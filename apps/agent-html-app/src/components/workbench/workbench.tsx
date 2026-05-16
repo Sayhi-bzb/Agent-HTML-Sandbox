@@ -1,4 +1,6 @@
+import type { AgentShellReviewFocusState } from "../agent-shell/agent-shell"
 import type {
+  AgentShellMessage,
   BuildRunSummary,
   InspectSnapshot,
   LogSnapshot,
@@ -6,6 +8,8 @@ import type {
   SourceValidationSnapshot,
   WorkbenchView,
 } from "../../lib/types"
+import type { ReviewTimelineActionConfig } from "../../lib/review-flow"
+import type { SourceComparisonSummary } from "../../lib/source-comparison"
 import { InspectPanel } from "./inspect-panel"
 import { PreviewPanel } from "./preview-panel"
 import { SourcePanel } from "./source-panel"
@@ -15,12 +19,22 @@ type WorkbenchProps = {
   build: BuildRunSummary
   inspect: InspectSnapshot
   logs: LogSnapshot
+  messages: AgentShellMessage[]
+  activeReviewFocus?: AgentShellReviewFocusState
   draftSource: string
+  draftComparison?: SourceComparisonSummary
+  proposalComparison?: SourceComparisonSummary
+  hasUnsavedSourceChanges: boolean
+  isActionBusy: boolean
   previewHtml?: string
   activeView: WorkbenchView
   onViewChange: (view: WorkbenchView) => void
   onBuild: () => Promise<void> | void
   onInspect: () => Promise<void> | void
+  onRevisitReviewFocus: () => void
+  onRunReviewAction: (
+    handler: ReviewTimelineActionConfig["handler"],
+  ) => Promise<void> | void
   onDraftSourceChange: (source: string) => void
   onSaveSource: (source: string) => Promise<void> | void
   onValidateSource: (source: string) => Promise<SourceValidationSnapshot>
@@ -36,12 +50,20 @@ export function Workbench({
   build,
   inspect,
   logs,
+  messages,
+  activeReviewFocus,
   draftSource,
+  draftComparison,
+  proposalComparison,
+  hasUnsavedSourceChanges,
+  isActionBusy,
   previewHtml,
   activeView,
   onViewChange,
   onBuild,
   onInspect,
+  onRevisitReviewFocus,
+  onRunReviewAction,
   onDraftSourceChange,
   onSaveSource,
   onValidateSource,
@@ -57,10 +79,20 @@ export function Workbench({
           <h1>{session.summary.name}</h1>
         </div>
         <div className="header-actions">
-          <button className="ghost-button" disabled={isRunningBuild} onClick={onBuild} type="button">
+          <button
+            className="ghost-button"
+            disabled={isRunningBuild}
+            onClick={onBuild}
+            type="button"
+          >
             {isRunningBuild ? "Building..." : "Build"}
           </button>
-          <button className="primary-button" disabled={isRunningInspect} onClick={onInspect} type="button">
+          <button
+            className="primary-button"
+            disabled={isRunningInspect}
+            onClick={onInspect}
+            type="button"
+          >
             {isRunningInspect ? "Inspecting..." : "Inspect"}
           </button>
         </div>
@@ -101,7 +133,22 @@ export function Workbench({
           sourcePath={session.sourcePath}
         />
       ) : null}
-      {activeView === "inspect" ? <InspectPanel inspect={inspect} logs={logs} /> : null}
+      {activeView === "inspect" ? (
+        <InspectPanel
+          activeReviewFocus={activeReviewFocus}
+          build={build}
+          draftComparison={draftComparison}
+          hasUnsavedSourceChanges={hasUnsavedSourceChanges}
+          inspect={inspect}
+          isActionBusy={isActionBusy}
+          logs={logs}
+          messages={messages}
+          onRevisitReviewFocus={onRevisitReviewFocus}
+          onRunReviewAction={onRunReviewAction}
+          proposalComparison={proposalComparison}
+          session={session}
+        />
+      ) : null}
     </main>
   )
 }

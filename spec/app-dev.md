@@ -89,11 +89,16 @@ Status: Partial.
 - `Source` 侧轻量即时校验
 - 显式 `Build` 后刷新正式 preview
 - `Inspect` 展示诊断摘要、artifact/build 状态、review focus 和最近运行结果
+- `Inspect` 现在也会把 source/build/proposal/log 信号压成一张 review audit，直接给出 current gate、proposal state、recovery path 和 key evidence
+- `Inspect` review audit 现在也可直接触发 save / build / inspect / preview / proposal / diff review 等 workflow 动作，而不只是停在解释层
+- `Inspect` 与右栏 compare 现在有共享的 review focus 状态，当前已聚焦的 compare 目标会回流到 `Inspect`，并支持一键 revisit 同一 review target
+- shared review focus 现在也会保留精确的 diff group target，而不只是 compare 模式和标签
 - build 失败时可转向 inspect，而不是只停留在抽象错误提示
 
 当前缺口：
 
-- `Inspect` 还不是完整分析工作台，但已经不再只是原始日志堆叠
+- `Inspect` 还不是完整分析工作台，但已经不再只是原始日志堆叠或纯 diagnostics 面
+- review audit 与右栏 compare 已有共享 focus / revisit 能力，但整体仍不是完整统一的 review control surface
 - source diagnostics、build diagnostics、structure summary 仍有继续做深的空间
 
 ### Agent Shell
@@ -138,7 +143,12 @@ Status: First local proposal pass.
 - latest proposal decision 也已接入 proposal 区摘要、timeline 和 stage guidance
 - proposal 区现在可直接回看最近几次 decision 结论，而不只显示 latest decision
 - recent proposal decisions 现在也会汇总成一个 compact trend，提示是在收敛还是反复
+- proposal readiness 现在在满足条件时会直接进入 `Approved` 状态，而不只是 `Ready`
+- decision history 现在默认保持紧凑，需要时再展开完整记录
 - proposal 区已增加一行 one-glance review snapshot，汇总 stage / checklist / diagnostics / drift / preview
+- one-glance proposal snapshot 现在也直接露出 recent decision trend
+- one-glance proposal snapshot 中的 diagnostics / drift / preview 已可直接跳到对应动作
+- `Approve` / `Needs changes` 已上移到 snapshot 行，减少 proposal 卡内重复入口
 
 当前缺口：
 
@@ -158,6 +168,7 @@ Status: First local proposal pass.
 - `npm run app:check` 可通过，覆盖 app 前端 build 与 Tauri/Rust check
 - `npm run test:run -- apps/agent-html-app/src/lib/source-comparison.test.ts` 可通过，覆盖 proposal snapshot compare 的核心纯逻辑
 - `npm run test:run -- apps/agent-html-app/src/lib/review-flow.test.ts` 可通过，覆盖 review timeline / readiness 的核心纯逻辑
+- `npm run test:run -- apps/agent-html-app/src/lib/inspect-review.test.ts` 可通过，覆盖 inspect audit / recovery path / evidence 提炼逻辑
 
 这说明 app 当前至少具备：
 
@@ -179,7 +190,7 @@ Status: First local proposal pass.
 当前建议继续按以下顺序推进：
 
 1. 先继续收紧 `Source -> Build -> Preview -> Inspect` 主闭环的稳定性。
-2. 把 `Inspect` 从基础诊断面扩到更有用的 artifact / schema / proposal review 面。
+2. 把 `Inspect` 从基础诊断面继续扩到更有用的 artifact / schema / proposal review 面，并补更直接的操作联动。
 3. 在不破坏 source-of-truth discipline 的前提下，把当前本地 proposal 流扩到 proposal compare / patch review。
 4. 继续增强 CLI failure、preview 缺失、runtime mismatch 这类失败场景的可解释性。
 5. 最后再考虑更高耦合能力，例如 provider 集成、补丁应用流或更复杂的同步模型。

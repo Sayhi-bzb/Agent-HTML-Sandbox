@@ -15,6 +15,7 @@ const rendererSpecScalarFields = [
   "control",
   "controlRoot",
   "controlContent",
+  "controlEmpty",
   "controlList",
   "controlTrigger",
   "controlValue",
@@ -52,9 +53,11 @@ const rendererSpecScalarFields = [
   "itemHeadingProp",
   "valueProp",
   "controlListAttr",
+  "emptyText",
   "childMode",
 ]
 const rendererSpecStructuredFields = [
+  "requiredRegistryModules",
   "requiredExports",
   "rootByProp",
   "propMappings",

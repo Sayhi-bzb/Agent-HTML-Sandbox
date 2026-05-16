@@ -1,4 +1,11 @@
 const textChild = "#text"
+const fieldRegistryModules = [
+  {
+    registryItem: "field",
+    exports: ["Field", "FieldContent", "FieldDescription", "FieldLabel"],
+  },
+]
+
 const uiProtocolDefinitions = {
   page: {
     promptOrder: 0,
@@ -283,17 +290,21 @@ export const componentCapabilityDefinitions = {
     source: "shadcn",
     renderKind: "field-control",
     uiProtocol: uiProtocolDefinitions.input,
+    requiredRegistryModules: [
+      ...fieldRegistryModules,
+      {
+        registryItem: "input",
+        exports: ["Input"],
+      },
+    ],
     requiredRegistryItem: "input",
     requiredExports: ["Input"],
     renderer: {
       kind: "field-control",
-      root: "div",
-      label: "p",
+      root: "Field",
+      label: "FieldLabel",
       control: "Input",
-      description: "p",
-      rootClassName: "grid gap-2",
-      labelClassName: "m-0 text-sm font-medium leading-6 text-foreground",
-      descriptionClassName: "m-0 text-sm text-muted-foreground",
+      description: "FieldDescription",
       labelProp: "label",
       descriptionProp: "description",
       propMappings: [
@@ -306,17 +317,21 @@ export const componentCapabilityDefinitions = {
     source: "shadcn",
     renderKind: "field-control",
     uiProtocol: uiProtocolDefinitions.textarea,
+    requiredRegistryModules: [
+      ...fieldRegistryModules,
+      {
+        registryItem: "textarea",
+        exports: ["Textarea"],
+      },
+    ],
     requiredRegistryItem: "textarea",
     requiredExports: ["Textarea"],
     renderer: {
       kind: "field-control",
-      root: "div",
-      label: "p",
+      root: "Field",
+      label: "FieldLabel",
       control: "Textarea",
-      description: "p",
-      rootClassName: "grid gap-2",
-      labelClassName: "m-0 text-sm font-medium leading-6 text-foreground",
-      descriptionClassName: "m-0 text-sm text-muted-foreground",
+      description: "FieldDescription",
       labelProp: "label",
       descriptionProp: "description",
       propMappings: [
@@ -329,17 +344,21 @@ export const componentCapabilityDefinitions = {
     source: "shadcn",
     renderKind: "field-control",
     uiProtocol: uiProtocolDefinitions.checkbox,
+    requiredRegistryModules: [
+      ...fieldRegistryModules,
+      {
+        registryItem: "checkbox",
+        exports: ["Checkbox"],
+      },
+    ],
     requiredRegistryItem: "checkbox",
     requiredExports: ["Checkbox"],
     renderer: {
       kind: "field-control",
-      root: "div",
-      label: "p",
+      root: "Field",
+      label: "FieldLabel",
       control: "Checkbox",
-      description: "p",
-      rootClassName: "grid gap-2",
-      labelClassName: "m-0 text-sm font-medium leading-6 text-foreground",
-      descriptionClassName: "m-0 text-sm text-muted-foreground",
+      description: "FieldDescription",
       labelProp: "label",
       descriptionProp: "description",
       propMappings: [
@@ -352,17 +371,21 @@ export const componentCapabilityDefinitions = {
     source: "shadcn",
     renderKind: "field-control",
     uiProtocol: uiProtocolDefinitions.switch,
+    requiredRegistryModules: [
+      ...fieldRegistryModules,
+      {
+        registryItem: "switch",
+        exports: ["Switch"],
+      },
+    ],
     requiredRegistryItem: "switch",
     requiredExports: ["Switch"],
     renderer: {
       kind: "field-control",
-      root: "div",
-      label: "p",
+      root: "Field",
+      label: "FieldLabel",
       control: "Switch",
-      description: "p",
-      rootClassName: "grid gap-2",
-      labelClassName: "m-0 text-sm font-medium leading-6 text-foreground",
-      descriptionClassName: "m-0 text-sm text-muted-foreground",
+      description: "FieldDescription",
       labelProp: "label",
       descriptionProp: "description",
       propMappings: [
@@ -375,17 +398,21 @@ export const componentCapabilityDefinitions = {
     source: "shadcn",
     renderKind: "field-control",
     uiProtocol: uiProtocolDefinitions.slider,
+    requiredRegistryModules: [
+      ...fieldRegistryModules,
+      {
+        registryItem: "slider",
+        exports: ["Slider"],
+      },
+    ],
     requiredRegistryItem: "slider",
     requiredExports: ["Slider"],
     renderer: {
       kind: "field-control",
-      root: "div",
-      label: "p",
+      root: "Field",
+      label: "FieldLabel",
       control: "Slider",
-      description: "p",
-      rootClassName: "grid gap-2",
-      labelClassName: "m-0 text-sm font-medium leading-6 text-foreground",
-      descriptionClassName: "m-0 text-sm text-muted-foreground",
+      description: "FieldDescription",
       labelProp: "label",
       descriptionProp: "description",
       valueProp: "value",
@@ -400,21 +427,25 @@ export const componentCapabilityDefinitions = {
     source: "shadcn",
     renderKind: "field-control",
     uiProtocol: uiProtocolDefinitions["radio-group"],
+    requiredRegistryModules: [
+      ...fieldRegistryModules,
+      {
+        registryItem: "radio-group",
+        exports: ["RadioGroup", "RadioGroupItem"],
+      },
+    ],
     requiredRegistryItem: "radio-group",
     requiredExports: ["RadioGroup", "RadioGroupItem"],
     renderer: {
       kind: "field-control",
-      root: "div",
-      label: "p",
+      root: "Field",
+      label: "FieldLabel",
       control: "RadioGroup",
       item: "RadioGroupItem",
       itemSlot: "option",
       itemValueProp: "value",
       itemHeadingProp: "label",
-      description: "p",
-      rootClassName: "grid gap-3",
-      labelClassName: "m-0 text-sm font-medium leading-6 text-foreground",
-      descriptionClassName: "m-0 text-sm text-muted-foreground",
+      description: "FieldDescription",
       labelProp: "label",
       descriptionProp: "description",
       propMappings: [
@@ -427,21 +458,25 @@ export const componentCapabilityDefinitions = {
     source: "shadcn",
     renderKind: "option-set",
     uiProtocol: uiProtocolDefinitions["toggle-group"],
+    requiredRegistryModules: [
+      ...fieldRegistryModules,
+      {
+        registryItem: "toggle-group",
+        exports: ["ToggleGroup", "ToggleGroupItem"],
+      },
+    ],
     requiredRegistryItem: "toggle-group",
     requiredExports: ["ToggleGroup", "ToggleGroupItem"],
     renderer: {
       kind: "option-set",
-      root: "div",
-      label: "p",
+      root: "Field",
+      label: "FieldLabel",
       control: "ToggleGroup",
       item: "ToggleGroupItem",
       itemSlot: "option",
       itemValueProp: "value",
       itemHeadingProp: "label",
-      description: "p",
-      rootClassName: "grid gap-3",
-      labelClassName: "m-0 text-sm font-medium leading-6 text-foreground",
-      descriptionClassName: "m-0 text-sm text-muted-foreground",
+      description: "FieldDescription",
       labelProp: "label",
       descriptionProp: "description",
       staticProps: {
@@ -457,30 +492,43 @@ export const componentCapabilityDefinitions = {
     source: "shadcn",
     renderKind: "option-set",
     uiProtocol: uiProtocolDefinitions.select,
+    requiredRegistryModules: [
+      ...fieldRegistryModules,
+      {
+        registryItem: "select",
+        exports: [
+          "Select",
+          "SelectContent",
+          "SelectGroup",
+          "SelectItem",
+          "SelectTrigger",
+          "SelectValue",
+        ],
+      },
+    ],
     requiredRegistryItem: "select",
     requiredExports: [
       "Select",
       "SelectContent",
+      "SelectGroup",
       "SelectItem",
       "SelectTrigger",
       "SelectValue",
     ],
     renderer: {
       kind: "option-set",
-      root: "div",
-      label: "p",
+      root: "Field",
+      label: "FieldLabel",
       control: "Select",
       controlTrigger: "SelectTrigger",
       controlValue: "SelectValue",
       controlContent: "SelectContent",
+      itemContainer: "SelectGroup",
       item: "SelectItem",
       itemSlot: "option",
       itemValueProp: "value",
       itemHeadingProp: "label",
-      description: "p",
-      rootClassName: "grid gap-3",
-      labelClassName: "m-0 text-sm font-medium leading-6 text-foreground",
-      descriptionClassName: "m-0 text-sm text-muted-foreground",
+      description: "FieldDescription",
       labelProp: "label",
       descriptionProp: "description",
       fallback: true,
@@ -494,32 +542,49 @@ export const componentCapabilityDefinitions = {
     source: "shadcn",
     renderKind: "option-set",
     uiProtocol: uiProtocolDefinitions.combobox,
+    requiredRegistryModules: [
+      ...fieldRegistryModules,
+      {
+        registryItem: "combobox",
+        exports: [
+          "Combobox",
+          "ComboboxCollection",
+          "ComboboxContent",
+          "ComboboxEmpty",
+          "ComboboxInput",
+          "ComboboxItem",
+          "ComboboxList",
+        ],
+      },
+    ],
     requiredRegistryItem: "combobox",
     requiredExports: [
       "Combobox",
+      "ComboboxCollection",
       "ComboboxContent",
+      "ComboboxEmpty",
       "ComboboxInput",
       "ComboboxItem",
       "ComboboxList",
     ],
     renderer: {
       kind: "option-set",
-      root: "div",
-      label: "p",
+      root: "Field",
+      label: "FieldLabel",
       controlRoot: "Combobox",
       control: "ComboboxInput",
       controlContent: "ComboboxContent",
+      controlEmpty: "ComboboxEmpty",
       controlList: "ComboboxList",
+      itemContainer: "ComboboxCollection",
       item: "ComboboxItem",
       itemSlot: "option",
       itemValueProp: "value",
       itemHeadingProp: "label",
-      description: "p",
-      rootClassName: "grid gap-3",
-      labelClassName: "m-0 text-sm font-medium leading-6 text-foreground",
-      descriptionClassName: "m-0 text-sm text-muted-foreground",
+      description: "FieldDescription",
       labelProp: "label",
       descriptionProp: "description",
+      emptyText: "No results found.",
       fallback: true,
       propMappings: [
         { prop: "value", target: "defaultValue" },
@@ -621,6 +686,23 @@ export const componentCapabilityDefinitions = {
   },
 }
 
+function getDefinitionRequiredRegistryModules(definition) {
+  if (Array.isArray(definition?.requiredRegistryModules)) {
+    return definition.requiredRegistryModules
+  }
+
+  if (definition?.requiredRegistryItem && definition?.requiredExports) {
+    return [
+      {
+        registryItem: definition.requiredRegistryItem,
+        exports: definition.requiredExports,
+      },
+    ]
+  }
+
+  return []
+}
+
 export const structuralAgentComponents = [
   "accordion-item",
   "cell",
@@ -633,7 +715,11 @@ export const structuralAgentComponents = [
 export const requiredShadcnRuntimeComponents = [
   ...new Set(
     Object.values(componentCapabilityDefinitions)
-      .map((definition) => definition.requiredRegistryItem)
+      .flatMap((definition) =>
+        getDefinitionRequiredRegistryModules(definition).map(
+          (module) => module.registryItem,
+        ),
+      )
       .filter(Boolean),
   ),
 ]
@@ -654,12 +740,18 @@ export const schemaRenderableComponents = [
 ]
 
 export const requiredShadcnRuntimeExports = Object.fromEntries(
-  Object.values(componentCapabilityDefinitions)
-    .filter((definition) => definition.requiredRegistryItem)
-    .map((definition) => [
-      definition.requiredRegistryItem,
-      definition.requiredExports,
-    ]),
+  requiredShadcnRuntimeComponents.map((registryItem) => [
+    registryItem,
+    [
+      ...new Set(
+        Object.values(componentCapabilityDefinitions).flatMap((definition) =>
+          getDefinitionRequiredRegistryModules(definition)
+            .filter((module) => module.registryItem === registryItem)
+            .flatMap((module) => module.exports),
+        ),
+      ),
+    ],
+  ]),
 )
 
 export function getAgentComponentSource(name) {

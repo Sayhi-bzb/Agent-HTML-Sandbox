@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest"
 import type { AgentShellMessage } from "./types"
 import {
   getLatestProposalComparisonSummary,
+  getPreviewGroupKey,
+  getPreviewGroupsByKeys,
   getSourceComparisonSummary,
 } from "./source-comparison"
 
@@ -84,6 +86,39 @@ describe("source comparison helpers", () => {
         endLine: 3,
         savedText: "<card>Saved</card>\n<list>Old</list>",
         draftText: "<card>Draft</card>\n<list>New</list>",
+      },
+    ])
+  })
+
+  it("can recover a precise subset of preview groups from shared keys", () => {
+    const summary = getSourceComparisonSummary(
+      [
+        "<page>",
+        "  <card>Saved</card>",
+        "  <list>Old</list>",
+        "  <note>Stable</note>",
+        "  <footer>Before</footer>",
+        "</page>",
+      ].join("\n"),
+      [
+        "<page>",
+        "  <card>Draft</card>",
+        "  <list>New</list>",
+        "  <note>Stable</note>",
+        "  <footer>After</footer>",
+        "</page>",
+      ].join("\n"),
+    )
+
+    const keys = summary?.previewGroups.map(getPreviewGroupKey)
+    const focused = getPreviewGroupsByKeys(summary, keys?.slice(1))
+
+    expect(focused).toEqual([
+      {
+        startLine: 5,
+        endLine: 5,
+        savedText: "<footer>Before</footer>",
+        draftText: "<footer>After</footer>",
       },
     ])
   })

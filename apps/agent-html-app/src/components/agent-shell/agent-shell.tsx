@@ -20,6 +20,10 @@ import {
   parseStructuredMessageCard,
 } from "../../lib/review-flow"
 import { formatTimestampLabel } from "../../lib/time"
+import {
+  getPreviewGroupKey,
+  getPreviewGroupsByKeys,
+} from "../../lib/source-comparison"
 import type { SourceComparisonSummary } from "../../lib/source-comparison"
 import type {
   AgentShellMessage,
@@ -43,8 +47,13 @@ type AgentShellProps = {
   isRunningInspect: boolean
   isSending: boolean
   isDraftingProposal: boolean
+  reviewIntent?: AgentShellReviewIntent
+  onReviewFocusChange?: (focus?: AgentShellReviewFocusState) => void
   onSend: (text: string) => Promise<void> | void
-  onDecision: (proposalText: string, status: "approved" | "needs changes") => Promise<void> | void
+  onDecision: (
+    proposalText: string,
+    status: "approved" | "needs changes",
+  ) => Promise<void> | void
   onDraftProposal: () => Promise<void> | void
   onOpenView: (view: WorkbenchView) => Promise<void> | void
   onBuild: () => Promise<void> | void
@@ -57,6 +66,20 @@ type FocusedComparison = {
   mode: ComparisonMode
   keys: string[]
   label: string
+}
+
+export type AgentShellReviewIntent = {
+  mode: ComparisonMode
+  label: string
+  groupKeys?: string[]
+  requestKey: string
+}
+
+export type AgentShellReviewFocusState = {
+  mode: ComparisonMode
+  label: string
+  groupCount: number
+  groupKeys: string[]
 }
 
 export function AgentShell({
@@ -73,6 +96,8 @@ export function AgentShell({
   isRunningInspect,
   isSending,
   isDraftingProposal,
+  reviewIntent,
+  onReviewFocusChange,
   onSend,
   onDecision,
   onDraftProposal,
@@ -83,14 +108,26 @@ export function AgentShell({
 }: AgentShellProps) {
   const [draft, setDraft] = useState("")
   const [isDraftPreviewExpanded, setIsDraftPreviewExpanded] = useState(false)
+  const [isDecisionHistoryExpanded, setIsDecisionHistoryExpanded] =
+    useState(false)
   const [comparisonMode, setComparisonMode] = useState<ComparisonMode>("saved")
-  const [focusedComparison, setFocusedComparison] = useState<FocusedComparison | undefined>(undefined)
-  const latestProposal = [...messages].reverse().find((message) => message.kind === "proposal-placeholder")
+  const [focusedComparison, setFocusedComparison] = useState<
+    FocusedComparison | undefined
+  >(undefined)
+  const latestProposal = [...messages]
+    .reverse()
+    .find((message) => message.kind === "proposal-placeholder")
   const latestProposalDecision = findLatestProposalDecision(messages)
   const recentProposalDecisions = findRecentProposalDecisions(messages)
-  const proposalDecisionTrend = getProposalDecisionTrend(recentProposalDecisions)
-  const latestProposalIsStale = latestProposal ? isProposalStale(latestProposal.createdAt, session) : false
-  const latestProposalHasDraftDelta = Boolean(latestProposal && proposalComparison)
+  const proposalDecisionTrend = getProposalDecisionTrend(
+    recentProposalDecisions,
+  )
+  const latestProposalIsStale = latestProposal
+    ? isProposalStale(latestProposal.createdAt, session)
+    : false
+  const latestProposalHasDraftDelta = Boolean(
+    latestProposal && proposalComparison,
+  )
   const proposalProgress = getProposalChecklistProgress({
     proposalText: latestProposal?.text,
     build,
@@ -106,6 +143,7 @@ export function AgentShell({
     inspect,
     latestProposal,
     latestProposalDecision,
+    proposalDecisionTrend,
     latestProposalIsStale,
     messages,
     proposalComparison,
@@ -122,7 +160,11 @@ export function AgentShell({
     session,
   })
   const isProposalActionBusy =
-    isDraftingProposal || isSending || isSavingSource || isRunningBuild || isRunningInspect
+    isDraftingProposal ||
+    isSending ||
+    isSavingSource ||
+    isRunningBuild ||
+    isRunningInspect
   const proposalReadiness = getProposalReadiness({
     build,
     inspect,
@@ -135,9 +177,14 @@ export function AgentShell({
     proposalComparison,
     proposalProgress,
   })
-  const secondaryReadinessItems = getSecondaryReadinessItems(currentReviewStage, proposalReadiness.items)
+  const secondaryReadinessItems = getSecondaryReadinessItems(
+    currentReviewStage,
+    proposalReadiness.items,
+  )
   const activeComparison =
-    comparisonMode === "proposal" && proposalComparison ? proposalComparison : draftComparison
+    comparisonMode === "proposal" && proposalComparison
+      ? proposalComparison
+      : draftComparison
   const proposalFocusOptions = getProposalChecklistFocusOptions({
     proposalText: latestProposal?.text,
     comparisonMode,
@@ -154,6 +201,7 @@ export function AgentShell({
     hasUnsavedSourceChanges,
     inspect,
     latestProposalExists: Boolean(latestProposal),
+    latestProposalDecision,
     latestProposalIsStale,
     proposalComparison,
     sessionHasPreview: session.summary.hasPreview,
@@ -162,17 +210,22 @@ export function AgentShell({
     stage: currentReviewStage,
     latestProposalExists: Boolean(latestProposal),
     latestProposalDecision,
+    proposalDecisionTrend,
     latestProposalIsStale,
     proposalComparison,
   })
-  const showComparisonModeSwitch = Boolean(draftComparison && proposalComparison)
+  const showComparisonModeSwitch = Boolean(
+    draftComparison && proposalComparison,
+  )
   const showCompareCard = Boolean(activeComparison)
   const comparisonLabels =
     comparisonMode === "proposal"
       ? {
           cardTitle: "Proposal snapshot delta",
           baseLabel: "Proposal snapshot",
-          currentLabel: hasUnsavedSourceChanges ? "Current draft" : "Current source",
+          currentLabel: hasUnsavedSourceChanges
+            ? "Current draft"
+            : "Current source",
           helper:
             "This compare is anchored to the latest proposal snapshot, so you can review how far the current draft/source has drifted.",
         }
@@ -185,9 +238,7 @@ export function AgentShell({
         }
   const focusedPreviewGroups =
     activeComparison && focusedComparison?.mode === comparisonMode
-      ? activeComparison.previewGroups.filter((group) =>
-          focusedComparison.keys.includes(getPreviewGroupKey(group)),
-        )
+      ? getPreviewGroupsByKeys(activeComparison, focusedComparison.keys)
       : undefined
   const visibleDraftPreviewGroups = activeComparison
     ? focusedPreviewGroups && focusedPreviewGroups.length > 0
@@ -203,14 +254,59 @@ export function AgentShell({
 
   useEffect(() => {
     setIsDraftPreviewExpanded(false)
+    setIsDecisionHistoryExpanded(false)
     setFocusedComparison(undefined)
-  }, [session.summary.id, draftComparison?.changedLineCount, proposalComparison?.changedLineCount])
+  }, [
+    session.summary.id,
+    draftComparison?.changedLineCount,
+    proposalComparison?.changedLineCount,
+  ])
 
   useEffect(() => {
     if (comparisonMode === "proposal" && !proposalComparison) {
       setComparisonMode("saved")
     }
   }, [comparisonMode, proposalComparison])
+
+  useEffect(() => {
+    if (!onReviewFocusChange) {
+      return
+    }
+
+    if (!focusedComparison || focusedComparison.mode !== comparisonMode) {
+      onReviewFocusChange(undefined)
+      return
+    }
+
+    onReviewFocusChange({
+      mode: focusedComparison.mode,
+      label: focusedComparison.label,
+      groupCount: focusedPreviewGroups?.length ?? focusedComparison.keys.length,
+      groupKeys: focusedComparison.keys,
+    })
+  }, [
+    comparisonMode,
+    focusedComparison,
+    focusedPreviewGroups?.length,
+    onReviewFocusChange,
+  ])
+
+  useEffect(() => {
+    if (!reviewIntent) {
+      return
+    }
+
+    const groups =
+      reviewIntent.mode === "proposal"
+        ? getPreviewGroupsByKeys(proposalComparison, reviewIntent.groupKeys)
+        : getPreviewGroupsByKeys(draftComparison, reviewIntent.groupKeys)
+
+    focusComparisonGroups(reviewIntent.mode, reviewIntent.label, groups)
+  }, [
+    reviewIntent,
+    draftComparison?.changedLineCount,
+    proposalComparison?.changedLineCount,
+  ])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -226,9 +322,16 @@ export function AgentShell({
     return proposalFocusOptions[0]
   }
 
-  function focusChecklistOption(option?: { label: string; groups: SourceComparisonSummary["previewGroups"] }) {
+  function focusChecklistOption(option?: {
+    label: string
+    groups: SourceComparisonSummary["previewGroups"]
+  }) {
     if (!option) {
-      focusComparisonGroups("proposal", "Current proposal drift", proposalComparison?.previewGroups)
+      focusComparisonGroups(
+        "proposal",
+        "Current proposal drift",
+        proposalComparison?.previewGroups,
+      )
       return
     }
 
@@ -254,7 +357,14 @@ export function AgentShell({
   }
 
   function runWorkflowAction(
-    handler: "save" | "build" | "inspect" | "openInspect" | "reviewDiff" | "openPreview" | "draftProposal",
+    handler:
+      | "save"
+      | "build"
+      | "inspect"
+      | "openInspect"
+      | "reviewDiff"
+      | "openPreview"
+      | "draftProposal",
   ) {
     switch (handler) {
       case "save":
@@ -313,15 +423,26 @@ export function AgentShell({
         </div>
         <div className="timeline-list">
           {reviewTimeline.map((item) => (
-            <article className={item.id === currentReviewStage ? "timeline-item active" : "timeline-item"} key={item.id}>
+            <article
+              className={
+                item.id === currentReviewStage
+                  ? "timeline-item active"
+                  : "timeline-item"
+              }
+              key={item.id}
+            >
               <div className="message-topline">
                 <div className="timeline-label-group">
                   <h4>{item.label}</h4>
                   <span className="inline-meta">
-                    {item.timestamp ? formatTimestampLabel(item.timestamp) : "No event yet"}
+                    {item.timestamp
+                      ? formatTimestampLabel(item.timestamp)
+                      : "No event yet"}
                   </span>
                 </div>
-                <span className={`pill ${item.pillClassName}`}>{item.statusLabel}</span>
+                <span className={`pill ${item.pillClassName}`}>
+                  {item.statusLabel}
+                </span>
               </div>
               <p className="timeline-summary">{item.summary}</p>
             </article>
@@ -339,7 +460,13 @@ export function AgentShell({
             <div className="proposal-actions">
               <button
                 className="mini-button"
-                disabled={activeView === "source" || isSavingSource || isRunningBuild || isRunningInspect || isDraftingProposal}
+                disabled={
+                  activeView === "source" ||
+                  isSavingSource ||
+                  isRunningBuild ||
+                  isRunningInspect ||
+                  isDraftingProposal
+                }
                 onClick={() => void onOpenView("source")}
                 type="button"
               >
@@ -348,7 +475,12 @@ export function AgentShell({
               {hasUnsavedSourceChanges ? (
                 <button
                   className="mini-button"
-                  disabled={isSavingSource || isRunningBuild || isRunningInspect || isDraftingProposal}
+                  disabled={
+                    isSavingSource ||
+                    isRunningBuild ||
+                    isRunningInspect ||
+                    isDraftingProposal
+                  }
                   onClick={() => void onSaveDraft()}
                   type="button"
                 >
@@ -358,10 +490,18 @@ export function AgentShell({
             </div>
           </div>
           {showComparisonModeSwitch ? (
-            <div className="compare-mode-toggle" role="tablist" aria-label="Compare base">
+            <div
+              className="compare-mode-toggle"
+              role="tablist"
+              aria-label="Compare base"
+            >
               <button
                 aria-selected={comparisonMode === "saved"}
-                className={comparisonMode === "saved" ? "mini-button compare-mode-button active" : "mini-button compare-mode-button"}
+                className={
+                  comparisonMode === "saved"
+                    ? "mini-button compare-mode-button active"
+                    : "mini-button compare-mode-button"
+                }
                 onClick={() => setComparisonMode("saved")}
                 role="tab"
                 type="button"
@@ -370,7 +510,11 @@ export function AgentShell({
               </button>
               <button
                 aria-selected={comparisonMode === "proposal"}
-                className={comparisonMode === "proposal" ? "mini-button compare-mode-button active" : "mini-button compare-mode-button"}
+                className={
+                  comparisonMode === "proposal"
+                    ? "mini-button compare-mode-button active"
+                    : "mini-button compare-mode-button"
+                }
                 onClick={() => setComparisonMode("proposal")}
                 role="tab"
                 type="button"
@@ -392,7 +536,9 @@ export function AgentShell({
                   onClick={() =>
                     setFocusedComparison({
                       mode: comparisonMode,
-                      keys: option.groups.map((group) => getPreviewGroupKey(group)),
+                      keys: option.groups.map((group) =>
+                        getPreviewGroupKey(group),
+                      ),
                       label: option.label,
                     })
                   }
@@ -411,12 +557,19 @@ export function AgentShell({
             <dt>{comparisonLabels.currentLabel}</dt>
             <dd>{activeComparison.draftLineCount} lines</dd>
             <dt>First change</dt>
-            <dd>{activeComparison.firstChangedLine ? `Line ${activeComparison.firstChangedLine}` : "n/a"}</dd>
+            <dd>
+              {activeComparison.firstChangedLine
+                ? `Line ${activeComparison.firstChangedLine}`
+                : "n/a"}
+            </dd>
           </dl>
           {activeComparison.previewGroups.length > 0 ? (
             <div className="draft-preview-list">
               {visibleDraftPreviewGroups.map((group) => (
-                <article className="draft-preview-item" key={getPreviewGroupKey(group)}>
+                <article
+                  className="draft-preview-item"
+                  key={getPreviewGroupKey(group)}
+                >
                   <div className="message-topline">
                     <span className="pill">
                       {group.startLine === group.endLine
@@ -445,18 +598,25 @@ export function AgentShell({
                       Show all compare groups
                     </button>
                     <span className="inline-meta">
-                      Focused on {focusedComparison?.label ?? "selected checklist item"} with {focusedPreviewGroups.length} group(s).
+                      Focused on{" "}
+                      {focusedComparison?.label ?? "selected checklist item"}{" "}
+                      with {focusedPreviewGroups.length} group(s).
                     </span>
                   </>
                 ) : null}
-                {activeComparison.previewGroups.length > 3 || activeComparison.hasAdditionalChanges ? (
+                {activeComparison.previewGroups.length > 3 ||
+                activeComparison.hasAdditionalChanges ? (
                   <>
                     <button
                       className="mini-button"
-                      onClick={() => setIsDraftPreviewExpanded((current) => !current)}
+                      onClick={() =>
+                        setIsDraftPreviewExpanded((current) => !current)
+                      }
                       type="button"
                     >
-                      {isDraftPreviewExpanded ? "Show fewer changes" : "Show more changes"}
+                      {isDraftPreviewExpanded
+                        ? "Show fewer changes"
+                        : "Show more changes"}
                     </button>
                     <span className="inline-meta">
                       {isDraftPreviewExpanded
@@ -503,66 +663,163 @@ export function AgentShell({
             <p className="inline-meta">
               Latest proposal {formatTimestampLabel(latestProposal.createdAt)}
             </p>
-            {latestProposalIsStale ? <span className="pill status-dirty">Stale context</span> : null}
-            {proposalProgress?.totalTaggedItems ? (
-              <>
-                <span className="pill">
-                  Checklist {proposalProgress.doneCount}/{proposalProgress.totalTaggedItems}
-                </span>
-                {proposalProgress.pendingCount > 0 ? (
-                  <span className="pill status-dirty">Pending {proposalProgress.pendingCount}</span>
-                ) : null}
-                {proposalProgress.reviewCount > 0 ? (
-                  <span className="pill status-dirty">Review {proposalProgress.reviewCount}</span>
-                ) : null}
-              </>
+            {latestProposalIsStale ? (
+              <span className="pill status-dirty">Stale context</span>
             ) : null}
           </div>
         ) : (
-          <p className="inline-meta">No proposal drafted for this session yet.</p>
+          <p className="inline-meta">
+            No proposal drafted for this session yet.
+          </p>
         )}
         {recentProposalDecisions.length > 0 ? (
           <div className="proposal-decision-history">
             {proposalDecisionTrend ? (
               <div className="proposal-decision-history-item">
-                <span className={`pill ${proposalDecisionTrend.pillClassName}`}>{proposalDecisionTrend.label}</span>
-                <span className="inline-meta">{proposalDecisionTrend.summary}</span>
+                <span className={`pill ${proposalDecisionTrend.pillClassName}`}>
+                  {proposalDecisionTrend.label}
+                </span>
+                <span className="inline-meta">
+                  {proposalDecisionTrend.summary}
+                </span>
+                {recentProposalDecisions.length > 1 ? (
+                  <button
+                    className="mini-button"
+                    onClick={() =>
+                      setIsDecisionHistoryExpanded((current) => !current)
+                    }
+                    type="button"
+                  >
+                    {isDecisionHistoryExpanded
+                      ? "Hide history"
+                      : "Show history"}
+                  </button>
+                ) : null}
               </div>
             ) : null}
-            {recentProposalDecisions.map((decision, index) => (
-              <div className="proposal-decision-history-item" key={`${decision.createdAt}-${decision.status}-${index}`}>
-                <span className={decision.status === "approved" ? "pill status-ready" : "pill status-dirty"}>
-                  {decision.status === "approved" ? "Approved" : "Needs changes"}
-                </span>
-                <span className="inline-meta">{decision.proposalTitle}</span>
-                <span className="inline-meta">{formatTimestampLabel(decision.createdAt)}</span>
-              </div>
-            ))}
+            {isDecisionHistoryExpanded || recentProposalDecisions.length === 1
+              ? recentProposalDecisions.map((decision, index) => (
+                  <div
+                    className="proposal-decision-history-item"
+                    key={`${decision.createdAt}-${decision.status}-${index}`}
+                  >
+                    <span
+                      className={
+                        decision.status === "approved"
+                          ? "pill status-ready"
+                          : "pill status-dirty"
+                      }
+                    >
+                      {decision.status === "approved"
+                        ? "Approved"
+                        : "Needs changes"}
+                    </span>
+                    <span className="inline-meta">
+                      {decision.proposalTitle}
+                    </span>
+                    <span className="inline-meta">
+                      {formatTimestampLabel(decision.createdAt)}
+                    </span>
+                  </div>
+                ))
+              : null}
           </div>
         ) : null}
         <div className="proposal-snapshot-row">
           <span className="pill accent">Stage {currentReviewStage}</span>
-          {proposalProgress?.totalTaggedItems ? (
-            <span className="pill">Checklist {proposalProgress.doneCount}/{proposalProgress.totalTaggedItems}</span>
+          {proposalDecisionTrend ? (
+            <span className={`pill ${proposalDecisionTrend.pillClassName}`}>
+              Trend {proposalDecisionTrend.label}
+            </span>
           ) : null}
-          <span className={inspect.diagnostics.length > 0 ? "pill status-dirty" : "pill status-ready"}>
+          {proposalProgress?.totalTaggedItems ? (
+            <span className="pill">
+              Checklist {proposalProgress.doneCount}/
+              {proposalProgress.totalTaggedItems}
+            </span>
+          ) : null}
+          <button
+            className={`proposal-snapshot-chip pill ${inspect.diagnostics.length > 0 ? "status-dirty" : "status-ready"}`}
+            disabled={isProposalActionBusy}
+            onClick={() =>
+              runWorkflowAction(
+                activeView === "inspect" ? "inspect" : "openInspect",
+              )
+            }
+            type="button"
+          >
             Diagnostics {inspect.diagnostics.length}
-          </span>
+          </button>
           {proposalComparison?.changedLineCount ? (
-            <span className="pill status-dirty">Drift {proposalComparison.changedLineCount}</span>
+            <button
+              className="proposal-snapshot-chip pill status-dirty"
+              disabled={isProposalActionBusy}
+              onClick={() => runWorkflowAction("reviewDiff")}
+              type="button"
+            >
+              Drift {proposalComparison.changedLineCount}
+            </button>
           ) : (
             <span className="pill status-ready">Drift 0</span>
           )}
-          <span className={session.summary.hasPreview ? "pill status-ready" : "pill status-dirty"}>
+          <button
+            className={`proposal-snapshot-chip pill ${session.summary.hasPreview ? "status-ready" : "status-dirty"}`}
+            disabled={
+              isProposalActionBusy ||
+              (session.summary.hasPreview
+                ? activeView === "preview"
+                : build.status === "running")
+            }
+            onClick={() =>
+              runWorkflowAction(
+                session.summary.hasPreview ? "openPreview" : "build",
+              )
+            }
+            type="button"
+          >
             Preview {session.summary.hasPreview ? "ready" : "missing"}
-          </span>
+          </button>
+          {latestProposal ? (
+            <>
+              <button
+                className="proposal-snapshot-chip mini-button"
+                disabled={
+                  isProposalActionBusy ||
+                  latestProposalDecision?.status === "approved"
+                }
+                onClick={() => void onDecision(latestProposal.text, "approved")}
+                type="button"
+              >
+                Approve
+              </button>
+              <button
+                className="proposal-snapshot-chip mini-button"
+                disabled={
+                  isProposalActionBusy ||
+                  latestProposalDecision?.status === "needs-changes"
+                }
+                onClick={() =>
+                  void onDecision(latestProposal.text, "needs changes")
+                }
+                type="button"
+              >
+                Needs changes
+              </button>
+            </>
+          ) : null}
         </div>
         <div className="proposal-readiness">
           <div className="message-topline">
             <p className="eyebrow">Proposal readiness</p>
-            <span className={`pill ${proposalReadiness.pillClassName}`}>{proposalReadiness.label}</span>
+            <span className={`pill ${proposalReadiness.pillClassName}`}>
+              {proposalReadiness.label}
+            </span>
           </div>
-          <div className="proposal-stage-strip" role="list" aria-label="Review path">
+          <div
+            className="proposal-stage-strip"
+            role="list"
+            aria-label="Review path"
+          >
             {reviewTimeline.map((item) => {
               const stageAction = getReviewTimelineActionConfig({
                 stage: item.id,
@@ -571,6 +828,7 @@ export function AgentShell({
                 hasUnsavedSourceChanges,
                 inspect,
                 latestProposalExists: Boolean(latestProposal),
+                latestProposalDecision,
                 latestProposalIsStale,
                 proposalComparison,
                 sessionHasPreview: session.summary.hasPreview,
@@ -578,7 +836,11 @@ export function AgentShell({
 
               return (
                 <button
-                  className={item.id === currentReviewStage ? "proposal-stage-chip active" : "proposal-stage-chip"}
+                  className={
+                    item.id === currentReviewStage
+                      ? "proposal-stage-chip active"
+                      : "proposal-stage-chip"
+                  }
                   disabled={!stageAction || isProposalActionBusy}
                   key={item.id}
                   onClick={() => {
@@ -590,7 +852,9 @@ export function AgentShell({
                   type="button"
                 >
                   <span className="proposal-stage-name">{item.label}</span>
-                  <span className={`pill ${item.pillClassName}`}>{item.statusLabel}</span>
+                  <span className={`pill ${item.pillClassName}`}>
+                    {item.statusLabel}
+                  </span>
                 </button>
               )
             })}
@@ -613,7 +877,9 @@ export function AgentShell({
               >
                 {currentStageAction.label}
               </button>
-              <span className="inline-meta">{currentStageAction.description}</span>
+              <span className="inline-meta">
+                {currentStageAction.description}
+              </span>
             </div>
           ) : null}
         </div>
@@ -631,7 +897,10 @@ export function AgentShell({
             latestDecision={
               latestProposal?.id === message.id &&
               latestProposalDecision?.proposalTitle ===
-                (parseProposalMessage(message.text)?.title?.replace(/^Proposal for\s+/, "") ?? "")
+                (parseProposalMessage(message.text)?.title?.replace(
+                  /^Proposal for\s+/,
+                  "",
+                ) ?? "")
                 ? latestProposalDecision
                 : undefined
             }
@@ -646,7 +915,11 @@ export function AgentShell({
             onOpenView={onOpenView}
             onSaveDraft={onSaveDraft}
             draftComparison={draftComparison}
-            proposalComparison={latestProposal?.id === message.id && latestProposalHasDraftDelta ? proposalComparison : undefined}
+            proposalComparison={
+              latestProposal?.id === message.id && latestProposalHasDraftDelta
+                ? proposalComparison
+                : undefined
+            }
             session={session}
             isStale={latestProposal?.id === message.id && latestProposalIsStale}
           />
@@ -661,7 +934,11 @@ export function AgentShell({
           placeholder="Store a prompt draft or note in this session."
           value={draft}
         />
-        <button className="primary-button" disabled={isSending || !draft.trim()} type="submit">
+        <button
+          className="primary-button"
+          disabled={isSending || !draft.trim()}
+          type="submit"
+        >
           {isSending ? "Saving..." : "Store draft"}
         </button>
       </form>
@@ -678,12 +955,18 @@ type AgentShellMessageCardProps = {
   hasUnsavedSourceChanges: boolean
   isProposalActionBusy: boolean
   isStale: boolean
-  latestDecision?: { proposalTitle: string; status: "approved" | "needs-changes" }
+  latestDecision?: {
+    proposalTitle: string
+    status: "approved" | "needs-changes"
+  }
   draftComparison?: SourceComparisonSummary
   proposalComparison?: SourceComparisonSummary
   onOpenView: (view: WorkbenchView) => Promise<void> | void
   onBuild: () => Promise<void> | void
-  onDecision: (proposalText: string, status: "approved" | "needs changes") => Promise<void> | void
+  onDecision: (
+    proposalText: string,
+    status: "approved" | "needs changes",
+  ) => Promise<void> | void
   onFocusCompare: (
     mode: ComparisonMode,
     label: string,
@@ -696,10 +979,6 @@ type AgentShellMessageCardProps = {
 
 function parseProposalMessage(text: string) {
   return parseProposalChecklist(text)
-}
-
-function getPreviewGroupKey(group: SourceComparisonSummary["previewGroups"][number]) {
-  return `${group.startLine}:${group.endLine}`
 }
 
 function AgentShellMessageCard({
@@ -724,20 +1003,30 @@ function AgentShellMessageCard({
 }: AgentShellMessageCardProps) {
   const isProposal = message.kind === "proposal-placeholder"
   const isContextCard = message.kind === "context-card"
-  const parsedProposal = isProposal ? parseProposalMessage(message.text) : undefined
-  const parsedContextCard = isContextCard ? parseStructuredMessageCard(message.text) : undefined
+  const parsedProposal = isProposal
+    ? parseProposalMessage(message.text)
+    : undefined
+  const parsedContextCard = isContextCard
+    ? parseStructuredMessageCard(message.text)
+    : undefined
 
   return (
     <article
       className={
-        isProposal ? "message-card proposal-card" : isContextCard ? "message-card context-message-card" : "message-card"
+        isProposal
+          ? "message-card proposal-card"
+          : isContextCard
+            ? "message-card context-message-card"
+            : "message-card"
       }
     >
       <div className="message-topline">
         <span className={isProposal || isContextCard ? "pill accent" : "pill"}>
           {isProposal ? "proposal" : isContextCard ? "context" : message.role}
         </span>
-        <span className="inline-meta">{formatTimestampLabel(message.createdAt)}</span>
+        <span className="inline-meta">
+          {formatTimestampLabel(message.createdAt)}
+        </span>
       </div>
       {parsedProposal ? (
         <div className="proposal-body">
@@ -745,27 +1034,45 @@ function AgentShellMessageCard({
           {latestDecision ? (
             <div className="proposal-decision-row">
               <span className="pill accent">Decision</span>
-              <span className={latestDecision.status === "approved" ? "pill status-ready" : "pill status-dirty"}>
-                {latestDecision.status === "approved" ? "Approved" : "Needs changes"}
+              <span
+                className={
+                  latestDecision.status === "approved"
+                    ? "pill status-ready"
+                    : "pill status-dirty"
+                }
+              >
+                {latestDecision.status === "approved"
+                  ? "Approved"
+                  : "Needs changes"}
               </span>
             </div>
           ) : null}
           {isStale ? (
             <p className="proposal-stale-note">
-              This proposal is based on older session state. Rebuild, reinspect, or redraft before applying it.
+              This proposal is based on older session state. Rebuild, reinspect,
+              or redraft before applying it.
             </p>
           ) : null}
           {proposalComparison ? (
             <div className="proposal-compare-panel">
               <div className="message-topline">
                 <p className="eyebrow">Proposal Compare</p>
-                <span className="pill status-dirty">{proposalComparison.changedLineCount} changed line(s)</span>
+                <span className="pill status-dirty">
+                  {proposalComparison.changedLineCount} changed line(s)
+                </span>
               </div>
               <p className="proposal-compare-summary">
-                The current unsaved draft has diverged from the proposal snapshot.
-                {proposalComparison.firstChangedLine ? ` First change around line ${proposalComparison.firstChangedLine}.` : ""}
+                The current unsaved draft has diverged from the proposal
+                snapshot.
+                {proposalComparison.firstChangedLine
+                  ? ` First change around line ${proposalComparison.firstChangedLine}.`
+                  : ""}
               </p>
-              <button className="mini-button" onClick={onReviewDraftDiff} type="button">
+              <button
+                className="mini-button"
+                onClick={onReviewDraftDiff}
+                type="button"
+              >
                 Review draft diff
               </button>
             </div>
@@ -798,30 +1105,40 @@ function AgentShellMessageCard({
                 })
 
                 return (
-                  <li key={`${item.action ?? "free"}-${item.text}`} className="proposal-checklist-item">
+                  <li
+                    key={`${item.action ?? "free"}-${item.text}`}
+                    className="proposal-checklist-item"
+                  >
                     <div className="proposal-checklist-main">
                       <span>{item.text}</span>
                       {checklistContext ? (
                         <div className="proposal-checklist-context">
-                          <p className="inline-meta">{checklistContext.summary}</p>
+                          <p className="inline-meta">
+                            {checklistContext.summary}
+                          </p>
                           {checklistContext.previewGroups?.length ? (
                             <div className="proposal-checklist-diff-list">
-                              {checklistContext.previewGroups.map((previewGroup) => (
-                                <div
-                                  className="proposal-checklist-diff"
-                                  key={`${previewGroup.startLine}-${previewGroup.endLine}-${previewGroup.savedText}-${previewGroup.draftText}`}
-                                >
-                                  <span className="pill">
-                                    {previewGroup.startLine === previewGroup.endLine
-                                      ? `Line ${previewGroup.startLine}`
-                                      : `Lines ${previewGroup.startLine}-${previewGroup.endLine}`}
-                                  </span>
-                                  <pre>
-                                    {previewGroup.savedText || "(empty)"}{"\n"}{"->"}{" "}
-                                    {previewGroup.draftText || "(empty)"}
-                                  </pre>
-                                </div>
-                              ))}
+                              {checklistContext.previewGroups.map(
+                                (previewGroup) => (
+                                  <div
+                                    className="proposal-checklist-diff"
+                                    key={`${previewGroup.startLine}-${previewGroup.endLine}-${previewGroup.savedText}-${previewGroup.draftText}`}
+                                  >
+                                    <span className="pill">
+                                      {previewGroup.startLine ===
+                                      previewGroup.endLine
+                                        ? `Line ${previewGroup.startLine}`
+                                        : `Lines ${previewGroup.startLine}-${previewGroup.endLine}`}
+                                    </span>
+                                    <pre>
+                                      {previewGroup.savedText || "(empty)"}
+                                      {"\n"}
+                                      {"->"}{" "}
+                                      {previewGroup.draftText || "(empty)"}
+                                    </pre>
+                                  </div>
+                                ),
+                              )}
                             </div>
                           ) : null}
                         </div>
@@ -829,7 +1146,11 @@ function AgentShellMessageCard({
                     </div>
                     <span className="proposal-checklist-actions">
                       {checklistStatus ? (
-                        <span className={`pill ${checklistStatus.pillClassName}`}>{checklistStatus.label}</span>
+                        <span
+                          className={`pill ${checklistStatus.pillClassName}`}
+                        >
+                          {checklistStatus.label}
+                        </span>
                       ) : null}
                       {checklistContext?.previewGroups?.length ? (
                         <button
@@ -904,27 +1225,11 @@ function AgentShellMessageCard({
         <p>{message.text}</p>
       )}
       {isProposal ? (
-          <div className="proposal-actions">
-            <button
-              className="mini-button"
-              disabled={isProposalActionBusy}
-              onClick={() => void onDecision(message.text, "approved")}
-              type="button"
-            >
-              Approve
-            </button>
-            <button
-              className="mini-button"
-              disabled={isProposalActionBusy}
-              onClick={() => void onDecision(message.text, "needs changes")}
-              type="button"
-            >
-              Needs changes
-            </button>
-            <button
-              className="mini-button"
-              disabled={activeView === "source" || isProposalActionBusy}
-              onClick={() => void onOpenView("source")}
+        <div className="proposal-actions">
+          <button
+            className="mini-button"
+            disabled={activeView === "source" || isProposalActionBusy}
+            onClick={() => void onOpenView("source")}
             type="button"
           >
             Open Source
@@ -947,7 +1252,11 @@ function AgentShellMessageCard({
           </button>
           <button
             className="mini-button"
-            disabled={!session.summary.hasPreview || activeView === "preview" || isProposalActionBusy}
+            disabled={
+              !session.summary.hasPreview ||
+              activeView === "preview" ||
+              isProposalActionBusy
+            }
             onClick={() => void onOpenView("preview")}
             type="button"
           >

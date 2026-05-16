@@ -33,20 +33,42 @@ describe("createRuntimeElementRegistrySpec", () => {
         {
           name: "switch",
           kind: "field-control",
+          requiredRegistryModules: [
+            {
+              registryItem: "field",
+              exports: ["Field", "FieldContent", "FieldDescription", "FieldLabel"],
+            },
+            {
+              registryItem: "switch",
+              exports: ["Switch"],
+            },
+          ],
           requiredRegistryItem: "switch",
           requiredExports: ["Switch"],
-          root: "div",
-          label: "p",
+          root: "Field",
+          label: "FieldLabel",
           control: "Switch",
+          description: "FieldDescription",
         },
         {
           name: "slider",
           kind: "field-control",
+          requiredRegistryModules: [
+            {
+              registryItem: "field",
+              exports: ["Field", "FieldContent", "FieldDescription", "FieldLabel"],
+            },
+            {
+              registryItem: "slider",
+              exports: ["Slider"],
+            },
+          ],
           requiredRegistryItem: "slider",
           requiredExports: ["Slider"],
-          root: "div",
-          label: "p",
+          root: "Field",
+          label: "FieldLabel",
           control: "Slider",
+          description: "FieldDescription",
         },
         {
           name: "list",
@@ -72,40 +94,83 @@ describe("createRuntimeElementRegistrySpec", () => {
         {
           name: "select",
           kind: "option-set",
+          requiredRegistryModules: [
+            {
+              registryItem: "field",
+              exports: ["Field", "FieldContent", "FieldDescription", "FieldLabel"],
+            },
+            {
+              registryItem: "select",
+              exports: [
+                "Select",
+                "SelectContent",
+                "SelectGroup",
+                "SelectItem",
+                "SelectTrigger",
+                "SelectValue",
+              ],
+            },
+          ],
           requiredRegistryItem: "select",
           requiredExports: [
             "Select",
             "SelectContent",
+            "SelectGroup",
             "SelectItem",
             "SelectTrigger",
             "SelectValue",
           ],
-          root: "div",
-          label: "p",
+          root: "Field",
+          label: "FieldLabel",
           control: "Select",
           controlTrigger: "SelectTrigger",
           controlValue: "SelectValue",
           controlContent: "SelectContent",
+          itemContainer: "SelectGroup",
           item: "SelectItem",
+          description: "FieldDescription",
         },
         {
           name: "combobox",
           kind: "option-set",
+          requiredRegistryModules: [
+            {
+              registryItem: "field",
+              exports: ["Field", "FieldContent", "FieldDescription", "FieldLabel"],
+            },
+            {
+              registryItem: "combobox",
+              exports: [
+                "Combobox",
+                "ComboboxCollection",
+                "ComboboxContent",
+                "ComboboxEmpty",
+                "ComboboxInput",
+                "ComboboxItem",
+                "ComboboxList",
+              ],
+            },
+          ],
           requiredRegistryItem: "combobox",
           requiredExports: [
             "Combobox",
+            "ComboboxCollection",
             "ComboboxContent",
+            "ComboboxEmpty",
             "ComboboxInput",
             "ComboboxItem",
             "ComboboxList",
           ],
-          root: "div",
-          label: "p",
+          root: "Field",
+          label: "FieldLabel",
           controlRoot: "Combobox",
           control: "ComboboxInput",
           controlContent: "ComboboxContent",
+          controlEmpty: "ComboboxEmpty",
           controlList: "ComboboxList",
+          itemContainer: "ComboboxCollection",
           item: "ComboboxItem",
+          description: "FieldDescription",
         },
       ],
     })
@@ -114,11 +179,9 @@ describe("createRuntimeElementRegistrySpec", () => {
       version: 1,
       nativeElements: [
         "article",
-        "div",
         "h1",
         "li",
         "ol",
-        "p",
         "ul",
       ],
       modules: [
@@ -130,17 +193,24 @@ describe("createRuntimeElementRegistrySpec", () => {
           registryItem: "combobox",
           exports: [
             "Combobox",
+            "ComboboxCollection",
             "ComboboxContent",
+            "ComboboxEmpty",
             "ComboboxInput",
             "ComboboxItem",
             "ComboboxList",
           ],
         },
         {
+          registryItem: "field",
+          exports: ["Field", "FieldContent", "FieldDescription", "FieldLabel"],
+        },
+        {
           registryItem: "select",
           exports: [
             "Select",
             "SelectContent",
+            "SelectGroup",
             "SelectItem",
             "SelectTrigger",
             "SelectValue",
@@ -179,7 +249,7 @@ describe("createRuntimeElementRegistrySpec", () => {
         ],
       }),
     ).toThrow(
-      'Renderer element "CardHeader" is not backed by a requiredRegistryItem export.',
+      'Renderer element "CardHeader" is not backed by a required registry export.',
     )
   })
 

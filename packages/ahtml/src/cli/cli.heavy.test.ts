@@ -276,8 +276,14 @@ describe("agent-html CLI heavy runtime flows", () => {
       path.join(outputDir, "index.html"),
       'data-slot="accordion"',
     )
-    await expectFile(path.join(outputDir, "index.html"), 'data-slot="select"')
-    await expectFile(path.join(outputDir, "index.html"), 'data-slot="input"')
+    await expectFile(
+      path.join(outputDir, "index.html"),
+      'data-slot="select-trigger"',
+    )
+    await expectFile(
+      path.join(outputDir, "index.html"),
+      'data-slot="input-group"',
+    )
     await expectFile(path.join(outputDir, "index.html"), 'data-slot="slider"')
     await expectFile(path.join(outputDir, "index.html"), 'data-slot="switch"')
     await expectFile(path.join(outputDir, "index.html"), 'data-slot="alert"')
@@ -298,7 +304,7 @@ describe("agent-html CLI heavy runtime flows", () => {
       path.join(outputDir, "index.html"),
       "Today (selected)",
     )
-    await expectFile(path.join(outputDir, "index.html"), "<datalist")
+    await expectFileMissingText(path.join(outputDir, "index.html"), "<datalist")
     await expectFile(
       path.join(outputDir, "index.html"),
       "Ops reviewer (selected)",

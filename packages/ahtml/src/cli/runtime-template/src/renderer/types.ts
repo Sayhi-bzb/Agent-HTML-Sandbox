@@ -52,6 +52,10 @@ export type RendererSpecComponent = {
   source?: string
   kind: RendererKind | "structural"
   renderKind: string
+  requiredRegistryModules?: {
+    registryItem: string
+    exports: string[]
+  }[]
   requiredRegistryItem?: string
   requiredExports?: string[]
   slots: RendererSlot[]
@@ -60,6 +64,7 @@ export type RendererSpecComponent = {
   control?: string
   controlRoot?: string
   controlContent?: string
+  controlEmpty?: string
   controlList?: string
   controlTrigger?: string
   controlValue?: string
@@ -97,6 +102,7 @@ export type RendererSpecComponent = {
   itemHeadingProp?: string
   valueProp?: string
   controlListAttr?: string
+  emptyText?: string
   rootByProp?: RendererRootByProp
   propMappings?: RendererPropMapping[]
   staticProps?: Record<string, RendererPropValue>

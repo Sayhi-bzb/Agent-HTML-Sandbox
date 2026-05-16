@@ -102,6 +102,7 @@ export function createRendererNode(
     rendererSpec: RendererSpecComponent,
   ) {
     const Root = resolveElement(rendererSpec.root)
+    const FieldContent = resolveElement("FieldContent")
     const Label = resolveElement(rendererSpec.label)
     const Control = resolveElement(rendererSpec.control)
     const Description = resolveElement(rendererSpec.description)
@@ -146,22 +147,19 @@ export function createRendererNode(
                 const itemHeading = getStructuredItemHeading(item, itemHeadingProp)
 
                 return (
-                  <label
-                    className="flex items-start gap-3"
-                    key={itemValue || itemHeading}
-                  >
+                  <Root key={itemValue || itemHeading} orientation="horizontal">
                     <Item aria-label={itemHeading} value={itemValue} />
-                    <span className="grid gap-1">
-                      <span className={rendererSpec.labelClassName}>
+                    <FieldContent>
+                      <Label className={rendererSpec.labelClassName}>
                         {itemHeading}
-                      </span>
+                      </Label>
                       {item.children.length > 0 ? (
-                        <span className={rendererSpec.descriptionClassName}>
+                        <Description className={rendererSpec.descriptionClassName}>
                           {renderInlineChildren(item)}
-                        </span>
+                        </Description>
                       ) : null}
-                    </span>
-                  </label>
+                    </FieldContent>
+                  </Root>
                 )
               })}
             </Control>
@@ -198,6 +196,7 @@ export function createRendererNode(
     const ControlTrigger = resolveElement(rendererSpec.controlTrigger)
     const ControlValue = resolveElement(rendererSpec.controlValue)
     const ControlContent = resolveElement(rendererSpec.controlContent)
+    const ControlEmpty = resolveElement(rendererSpec.controlEmpty)
     const ControlList = rendererSpec.controlList
       ? resolveElement(rendererSpec.controlList)
       : undefined
@@ -239,12 +238,19 @@ export function createRendererNode(
       items,
       itemValueProp,
     })
-    const renderedOptionSetContent =
-      ControlList && rendererSpec.controlContent ? (
-        <ControlList>{renderedItems}</ControlList>
-      ) : (
-        renderedItems
-      )
+    const renderedOptionSetList = ControlList ? (
+      <ControlList>{renderedItems}</ControlList>
+    ) : (
+      renderedItems
+    )
+    const renderedOptionSetContent = (
+      <>
+        {ControlEmpty && rendererSpec.emptyText ? (
+          <ControlEmpty>{rendererSpec.emptyText}</ControlEmpty>
+        ) : null}
+        {renderedOptionSetList}
+      </>
+    )
 
     return (
       <>
@@ -547,6 +553,10 @@ export function createRendererNode(
     itemValueProp: string
     selectedValue?: RendererPropValue
   }) {
+    const Field = resolveElement("Field")
+    const Label = resolveElement("FieldLabel")
+    const Description = resolveElement("FieldDescription")
+
     return (
       <noscript>
         <section className="grid gap-3">
@@ -556,17 +566,17 @@ export function createRendererNode(
             const selected = selectedValue === itemValue
 
             return (
-              <section className="grid gap-1" key={itemValue || itemHeading}>
-                <h2 className="m-0 text-lg font-medium leading-7">
+              <Field key={itemValue || itemHeading}>
+                <Label>
                   {itemHeading}
                   {selected ? " (selected)" : ""}
-                </h2>
+                </Label>
                 {item.children.length > 0 ? (
-                  <p className="m-0 text-sm text-muted-foreground">
+                  <Description>
                     {renderInlineChildren(item)}
-                  </p>
+                  </Description>
                 ) : null}
-              </section>
+              </Field>
             )
           })}
         </section>
@@ -618,19 +628,23 @@ export function createRendererNode(
     label?: string
     value?: string
   }) {
+    const Field = resolveElement("Field")
+    const Label = resolveElement("FieldLabel")
+    const Description = resolveElement("FieldDescription")
+
     return (
       <noscript>
-        <section className="grid gap-1">
+        <Field>
           {label ? (
-            <h2 className="m-0 text-lg font-medium leading-7">{label}</h2>
+            <Label>{label}</Label>
           ) : null}
           {typeof value === "string" && value.length > 0 ? (
-            <p className="m-0 text-sm text-muted-foreground">{value}</p>
+            <Description>{value}</Description>
           ) : null}
           {description ? (
-            <p className="m-0 text-sm text-muted-foreground">{description}</p>
+            <Description>{description}</Description>
           ) : null}
-        </section>
+        </Field>
       </noscript>
     )
   }
@@ -660,8 +674,10 @@ export function createRendererNode(
       }),
     )
 
-    if (itemContainerId && ItemContainer) {
-      return <ItemContainer id={itemContainerId}>{renderedItems}</ItemContainer>
+    if (ItemContainer) {
+      const containerProps = itemContainerId ? { id: itemContainerId } : undefined
+
+      return <ItemContainer {...containerProps}>{renderedItems}</ItemContainer>
     }
 
     return renderedItems

@@ -20,11 +20,19 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Combobox,
+  ComboboxCollection,
   ComboboxContent,
+  ComboboxEmpty,
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import {
@@ -34,6 +42,7 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -83,16 +92,23 @@ const runtimeElementRegistry: Record<string, React.ElementType> = {
   CardTitle,
   Checkbox,
   Combobox,
+  ComboboxCollection,
   ComboboxContent,
+  ComboboxEmpty,
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldLabel,
   Input,
   Progress,
   RadioGroup,
   RadioGroupItem,
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,

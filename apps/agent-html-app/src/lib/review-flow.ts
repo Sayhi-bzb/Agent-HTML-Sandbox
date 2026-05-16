@@ -8,7 +8,7 @@ import type { SourceComparisonSummary } from "./source-comparison"
 import { getTimestampMillis } from "./time"
 
 export type ProposalReadinessSummary = {
-  label: "Blocked" | "Needs review" | "Ready"
+  label: "Blocked" | "Needs review" | "Ready" | "Approved"
   pillClassName: "status-error" | "status-dirty" | "status-ready"
   summary: string
   items: string[]
@@ -59,7 +59,12 @@ export type ReviewTimelineItem = {
   id: "source" | "build" | "inspect" | "proposal"
   label: string
   statusLabel: string
-  pillClassName: "status-dirty" | "status-ready" | "status-error" | "status-building" | ""
+  pillClassName:
+    | "status-dirty"
+    | "status-ready"
+    | "status-error"
+    | "status-building"
+    | ""
   summary: string
   timestamp?: string
 }
@@ -92,6 +97,12 @@ export type ProposalDecisionTrend = {
   pillClassName: "status-ready" | "status-dirty"
 }
 
+export type ProposalStageState = {
+  statusLabel: string
+  pillClassName: ReviewTimelineItem["pillClassName"]
+  summary: string
+}
+
 export function getSecondaryReadinessItems(
   stage: ReviewTimelineItem["id"],
   items: string[],
@@ -113,7 +124,9 @@ export function getSecondaryReadinessItems(
         return !(
           item.startsWith("No proposal has been drafted") ||
           item.startsWith("The latest proposal predates") ||
-          item.startsWith("The current source differs from the latest proposal snapshot")
+          item.startsWith(
+            "The current source differs from the latest proposal snapshot",
+          )
         )
       default:
         return true
@@ -126,12 +139,14 @@ export function getCurrentReviewStageGuidance({
   latestProposalExists,
   latestProposalIsStale,
   latestProposalDecision,
+  proposalDecisionTrend,
   proposalComparison,
 }: {
   stage: ReviewTimelineItem["id"]
   latestProposalExists: boolean
   latestProposalIsStale: boolean
   latestProposalDecision?: ProposalDecision
+  proposalDecisionTrend?: ProposalDecisionTrend
   proposalComparison?: SourceComparisonSummary
 }) {
   switch (stage) {
@@ -152,6 +167,10 @@ export function getCurrentReviewStageGuidance({
 
       if (latestProposalDecision?.status === "needs-changes") {
         return "The latest decision still requests changes, so review the proposal drift before proceeding."
+      }
+
+      if (proposalDecisionTrend?.label === "Mixed") {
+        return "Recent proposal decisions changed direction, so confirm the current drift before proceeding."
       }
 
       if (proposalComparison?.changedLineCount) {
@@ -193,11 +212,20 @@ export function getCurrentReviewStage({
     return "inspect"
   }
 
-  if (build.status === "failed" || build.status === "running" || !session.summary.hasPreview || session.summary.status === "dirty") {
+  if (
+    build.status === "failed" ||
+    build.status === "running" ||
+    !session.summary.hasPreview ||
+    session.summary.status === "dirty"
+  ) {
     return "build"
   }
 
-  if (!latestProposalExists || latestProposalIsStale || proposalComparison?.changedLineCount) {
+  if (
+    !latestProposalExists ||
+    latestProposalIsStale ||
+    proposalComparison?.changedLineCount
+  ) {
     return "proposal"
   }
 
@@ -232,7 +260,9 @@ export function parseProposalDecision(text: string) {
     return undefined
   }
 
-  const proposalLine = parsed.items.find((item) => item.startsWith("Proposal: "))
+  const proposalLine = parsed.items.find((item) =>
+    item.startsWith("Proposal: "),
+  )
   const statusLine = parsed.items.find((item) => item.startsWith("Status: "))
   if (!proposalLine || !statusLine) {
     return undefined
@@ -256,7 +286,10 @@ export function findLatestProposalDecision(messages: AgentShellMessage[]) {
     .find((decision) => decision !== undefined)
 }
 
-export function findRecentProposalDecisions(messages: AgentShellMessage[], limit = 3) {
+export function findRecentProposalDecisions(
+  messages: AgentShellMessage[],
+  limit = 3,
+) {
   const decisions: ProposalDecisionEntry[] = []
 
   for (let index = messages.length - 1; index >= 0; index -= 1) {
@@ -288,22 +321,106 @@ export function getProposalDecisionTrend(decisions: ProposalDecisionEntry[]) {
   if (uniqueStatuses.size === 1) {
     const onlyStatus = decisions[0].status
     return onlyStatus === "approved"
-      ? {
+      ? ({
           label: "Approved",
-          summary: "Recent decisions are consistently approving the proposal direction.",
-          pillClassName: "status-ready" as const,
-        }
-      : {
+          summary:
+            "Recent decisions are consistently approving the proposal direction.",
+          pillClassName: "status-ready",
+        } satisfies ProposalDecisionTrend)
+      : ({
           label: "Needs changes",
-          summary: "Recent decisions are consistently requesting more changes before approval.",
-          pillClassName: "status-dirty" as const,
-        }
+          summary:
+            "Recent decisions are consistently requesting more changes before approval.",
+          pillClassName: "status-dirty",
+        } satisfies ProposalDecisionTrend)
   }
 
   return {
     label: "Mixed",
-    summary: "Recent decisions changed direction, so review the latest drift and rationale before proceeding.",
-    pillClassName: "status-dirty" as const,
+    summary:
+      "Recent decisions changed direction, so review the latest drift and rationale before proceeding.",
+    pillClassName: "status-dirty",
+  } satisfies ProposalDecisionTrend
+}
+
+export function getProposalStageState({
+  latestProposalExists,
+  latestProposalDecision,
+  latestProposalIsStale,
+  proposalComparison,
+  proposalDecisionTrend,
+  proposalProgress,
+}: {
+  latestProposalExists: boolean
+  latestProposalDecision?: ProposalDecision
+  latestProposalIsStale: boolean
+  proposalComparison?: SourceComparisonSummary
+  proposalDecisionTrend?: ProposalDecisionTrend
+  proposalProgress?: ProposalChecklistProgress
+}): ProposalStageState {
+  if (!latestProposalExists) {
+    return {
+      statusLabel: "Missing",
+      pillClassName: "status-error",
+      summary: "No proposal has been drafted for the current session yet.",
+    }
+  }
+
+  if (latestProposalIsStale) {
+    return {
+      statusLabel: "Stale",
+      pillClassName: "status-dirty",
+      summary: "The latest proposal predates the current session state.",
+    }
+  }
+
+  if (proposalDecisionTrend?.label === "Mixed") {
+    return {
+      statusLabel: "Mixed",
+      pillClassName: "status-dirty",
+      summary:
+        "Recent proposal decisions changed direction, so the proposal history is not yet stable.",
+    }
+  }
+
+  if (latestProposalDecision?.status === "needs-changes") {
+    return {
+      statusLabel: "Needs changes",
+      pillClassName: "status-dirty",
+      summary:
+        "The latest recorded decision still requests changes on this proposal.",
+    }
+  }
+
+  if (proposalComparison?.changedLineCount) {
+    return {
+      statusLabel: "Drifted",
+      pillClassName: "status-dirty",
+      summary: `The current source differs from the proposal snapshot by ${proposalComparison.changedLineCount} line(s).`,
+    }
+  }
+
+  if (latestProposalDecision?.status === "approved") {
+    return {
+      statusLabel: "Approved",
+      pillClassName: "status-ready",
+      summary: "The latest proposal has already been approved.",
+    }
+  }
+
+  if (proposalProgress?.totalTaggedItems) {
+    return {
+      statusLabel: "Current",
+      pillClassName: "status-ready",
+      summary: `Checklist ${proposalProgress.doneCount}/${proposalProgress.totalTaggedItems} item(s) are already in a done state.`,
+    }
+  }
+
+  return {
+    statusLabel: "Current",
+    pillClassName: "status-ready",
+    summary:
+      "The latest proposal snapshot still matches the current source state.",
   }
 }
 
@@ -332,7 +449,10 @@ export function parseProposalChecklist(text: string) {
   }
 }
 
-export function findLatestStructuredMessage(messages: AgentShellMessage[], title: string) {
+export function findLatestStructuredMessage(
+  messages: AgentShellMessage[],
+  title: string,
+) {
   return [...messages].reverse().find((message) => {
     const parsed = parseStructuredMessageCard(message.text)
     return parsed?.title === title
@@ -359,6 +479,7 @@ export function getReviewTimeline({
   inspect,
   latestProposal,
   latestProposalDecision,
+  proposalDecisionTrend,
   latestProposalIsStale,
   messages,
   proposalComparison,
@@ -370,6 +491,7 @@ export function getReviewTimeline({
   inspect: InspectSnapshot
   latestProposal?: AgentShellMessage
   latestProposalDecision?: ProposalDecision
+  proposalDecisionTrend?: ProposalDecisionTrend
   latestProposalIsStale: boolean
   messages: AgentShellMessage[]
   proposalComparison?: SourceComparisonSummary
@@ -377,8 +499,22 @@ export function getReviewTimeline({
   session: SessionDetail
 }): ReviewTimelineItem[] {
   const latestSourceSave = findLatestStructuredMessage(messages, "Source saved")
-  const latestBuildUpdate = findLatestStructuredMessage(messages, "Build update")
-  const latestInspectUpdate = findLatestStructuredMessage(messages, "Inspect update")
+  const latestBuildUpdate = findLatestStructuredMessage(
+    messages,
+    "Build update",
+  )
+  const latestInspectUpdate = findLatestStructuredMessage(
+    messages,
+    "Inspect update",
+  )
+  const proposalStage = getProposalStageState({
+    latestProposalExists: Boolean(latestProposal),
+    latestProposalDecision,
+    latestProposalIsStale,
+    proposalComparison,
+    proposalDecisionTrend,
+    proposalProgress,
+  })
 
   return [
     {
@@ -418,13 +554,15 @@ export function getReviewTimeline({
             : build.status === "running"
               ? "The next preview artifact is still being generated."
               : "No successful preview artifact has been generated yet.",
-      timestamp: latestBuildUpdate?.createdAt ?? build.finishedAt ?? build.startedAt,
+      timestamp:
+        latestBuildUpdate?.createdAt ?? build.finishedAt ?? build.startedAt,
     },
     {
       id: "inspect",
       label: "Inspect",
       statusLabel: inspect.diagnostics.length > 0 ? "Needs review" : "Current",
-      pillClassName: inspect.diagnostics.length > 0 ? "status-dirty" : "status-ready",
+      pillClassName:
+        inspect.diagnostics.length > 0 ? "status-dirty" : "status-ready",
       summary:
         inspect.diagnostics.length > 0
           ? `${inspect.diagnostics.length} diagnostic(s) still need review before the proposal can be trusted.`
@@ -434,33 +572,9 @@ export function getReviewTimeline({
     {
       id: "proposal",
       label: "Proposal",
-      statusLabel: !latestProposal
-        ? "Missing"
-        : latestProposalIsStale
-          ? "Stale"
-          : proposalComparison?.changedLineCount
-            ? "Drifted"
-            : "Current",
-      pillClassName: !latestProposal
-        ? "status-error"
-        : latestProposalIsStale
-          ? "status-dirty"
-          : proposalComparison?.changedLineCount
-            ? "status-dirty"
-            : "status-ready",
-      summary: !latestProposal
-        ? "No proposal has been drafted for the current session yet."
-        : latestProposalIsStale
-          ? "The latest proposal predates the current session state."
-          : latestProposalDecision?.status === "needs-changes"
-            ? "The latest recorded decision still requests changes on this proposal."
-          : proposalComparison?.changedLineCount
-            ? `The current source differs from the proposal snapshot by ${proposalComparison.changedLineCount} line(s).`
-            : latestProposalDecision?.status === "approved"
-              ? "The latest proposal has already been approved."
-            : proposalProgress?.totalTaggedItems
-              ? `Checklist ${proposalProgress.doneCount}/${proposalProgress.totalTaggedItems} item(s) are already in a done state.`
-              : "The latest proposal snapshot still matches the current source state.",
+      statusLabel: proposalStage.statusLabel,
+      pillClassName: proposalStage.pillClassName,
+      summary: proposalStage.summary,
       timestamp: latestProposal?.createdAt,
     },
   ]
@@ -505,11 +619,15 @@ export function getProposalReadiness({
   }
 
   if (inspect.diagnostics.length > 0) {
-    blockers.push(`${inspect.diagnostics.length} inspect diagnostic(s) still need review.`)
+    blockers.push(
+      `${inspect.diagnostics.length} inspect diagnostic(s) still need review.`,
+    )
   }
 
   if (build.status === "failed") {
-    blockers.push("The latest build failed, so preview review is not trustworthy yet.")
+    blockers.push(
+      "The latest build failed, so preview review is not trustworthy yet.",
+    )
   } else if (build.status === "running") {
     warnings.push("A build is currently running.")
   } else if (!session.summary.hasPreview) {
@@ -533,18 +651,23 @@ export function getProposalReadiness({
   }
 
   if (proposalProgress?.pendingCount) {
-    warnings.push(`${proposalProgress.pendingCount} checklist item(s) are still pending.`)
+    warnings.push(
+      `${proposalProgress.pendingCount} checklist item(s) are still pending.`,
+    )
   }
 
   if (proposalProgress?.reviewCount) {
-    warnings.push(`${proposalProgress.reviewCount} checklist item(s) still require review.`)
+    warnings.push(
+      `${proposalProgress.reviewCount} checklist item(s) still require review.`,
+    )
   }
 
   if (blockers.length > 0) {
     return {
       label: "Blocked",
       pillClassName: "status-error",
-      summary: "Resolve the blocking issues before trusting the next proposal review.",
+      summary:
+        "Resolve the blocking issues before trusting the next proposal review.",
       items: [...blockers, ...warnings],
     }
   }
@@ -553,15 +676,27 @@ export function getProposalReadiness({
     return {
       label: "Needs review",
       pillClassName: "status-dirty",
-      summary: "The proposal flow is usable, but some context still needs attention.",
+      summary:
+        "The proposal flow is usable, but some context still needs attention.",
       items: warnings,
+    }
+  }
+
+  if (latestProposalDecision?.status === "approved") {
+    return {
+      label: "Approved",
+      pillClassName: "status-ready",
+      summary:
+        "The proposal is approved and its current review signals are clean.",
+      items: [],
     }
   }
 
   return {
     label: "Ready",
     pillClassName: "status-ready",
-    summary: "Proposal, preview, and inspect context are aligned enough for review.",
+    summary:
+      "Proposal, preview, and inspect context are aligned enough for review.",
     items: [],
   }
 }
@@ -593,7 +728,9 @@ export function getProposalChecklistStatus({
         ? { label: "Pending", pillClassName: "status-dirty" as const }
         : { label: "Done", pillClassName: "status-ready" as const }
     case "build":
-      return build.status === "succeeded" && session.summary.hasPreview && session.summary.status !== "dirty"
+      return build.status === "succeeded" &&
+        session.summary.hasPreview &&
+        session.summary.status !== "dirty"
         ? { label: "Done", pillClassName: "status-ready" as const }
         : { label: "Pending", pillClassName: "status-dirty" as const }
     case "inspect":
@@ -601,7 +738,9 @@ export function getProposalChecklistStatus({
         ? { label: "Done", pillClassName: "status-ready" as const }
         : { label: "Pending", pillClassName: "status-dirty" as const }
     case "review":
-      return !staleProposal && !proposalComparison?.changedLineCount && session.summary.hasPreview
+      return !staleProposal &&
+        !proposalComparison?.changedLineCount &&
+        session.summary.hasPreview
         ? { label: "Ready", pillClassName: "status-ready" as const }
         : { label: "Review", pillClassName: "status-dirty" as const }
     default:
@@ -628,7 +767,9 @@ export function getProposalChecklistActionConfig({
 
   switch (action) {
     case "save":
-      return hasUnsavedSourceChanges ? { label: "Save now", handler: "save" } : undefined
+      return hasUnsavedSourceChanges
+        ? { label: "Save now", handler: "save" }
+        : undefined
     case "build":
       return hasUnsavedSourceChanges
         ? { label: "Save first", handler: "save" }
@@ -659,6 +800,7 @@ export function getReviewTimelineActionConfig({
   hasUnsavedSourceChanges,
   inspect,
   latestProposalExists,
+  latestProposalDecision,
   latestProposalIsStale,
   proposalComparison,
   sessionHasPreview,
@@ -669,6 +811,7 @@ export function getReviewTimelineActionConfig({
   hasUnsavedSourceChanges: boolean
   inspect: InspectSnapshot
   latestProposalExists: boolean
+  latestProposalDecision?: ProposalDecision
   latestProposalIsStale: boolean
   proposalComparison?: SourceComparisonSummary
   sessionHasPreview: boolean
@@ -698,7 +841,8 @@ export function getReviewTimelineActionConfig({
       return activeView === "inspect"
         ? {
             label: "Run Inspect",
-            description: "Refresh diagnostics and structure after the latest changes.",
+            description:
+              "Refresh diagnostics and structure after the latest changes.",
             handler: "inspect",
           }
         : {
@@ -709,8 +853,10 @@ export function getReviewTimelineActionConfig({
     case "proposal":
       if (!latestProposalExists || latestProposalIsStale) {
         return {
-          label: "Draft proposal",
-          description: "Generate a fresh proposal from the current session state.",
+          label: latestProposalExists ? "Redraft proposal" : "Draft proposal",
+          description: latestProposalExists
+            ? "Generate a fresh proposal from the current session state."
+            : "Generate the first proposal from the current session state.",
           handler: "draftProposal",
         }
       }
@@ -723,10 +869,20 @@ export function getReviewTimelineActionConfig({
         }
       }
 
+      if (latestProposalDecision?.status === "needs-changes") {
+        return {
+          label: "Redraft proposal",
+          description:
+            "Refresh the proposal after the latest review requested changes.",
+          handler: "draftProposal",
+        }
+      }
+
       return sessionHasPreview && activeView !== "preview"
         ? {
             label: "Open Preview",
-            description: "Compare the current artifact before approving the proposal.",
+            description:
+              "Compare the current artifact before approving the proposal.",
             handler: "openPreview",
           }
         : undefined
@@ -775,21 +931,33 @@ export function getProposalChecklistContext({
       }
 
       if (build.status === "idle") {
-        return { summary: "No successful build has been recorded for this session yet." }
+        return {
+          summary:
+            "No successful build has been recorded for this session yet.",
+        }
       }
 
-      return { summary: "Preview is already built from the current session state." }
+      return {
+        summary: "Preview is already built from the current session state.",
+      }
     case "inspect":
       return inspect.diagnostics.length > 0
-        ? { summary: `${inspect.diagnostics.length} diagnostic(s) are still pending review.` }
-        : { summary: "No structured diagnostics are currently blocking review." }
+        ? {
+            summary: `${inspect.diagnostics.length} diagnostic(s) are still pending review.`,
+          }
+        : {
+            summary: "No structured diagnostics are currently blocking review.",
+          }
     case "review":
       return proposalComparison
         ? {
             summary: `${proposalComparison.changedLineCount} changed line(s) relative to the latest proposal snapshot.`,
             previewGroups: proposalComparison.previewGroups.slice(0, 2),
           }
-        : { summary: "The latest proposal snapshot still matches the current source state." }
+        : {
+            summary:
+              "The latest proposal snapshot still matches the current source state.",
+          }
     default:
       return undefined
   }

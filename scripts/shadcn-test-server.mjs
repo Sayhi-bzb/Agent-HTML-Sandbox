@@ -1,22 +1,19 @@
 import { createServer } from "node:http"
-import { readFile } from "node:fs/promises"
+import { readdir, readFile } from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-
-import { requiredShadcnRuntimeComponents } from "../packages/ahtml/src/config/render-capabilities.mjs"
 
 const fixtureRoot = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "shadcn-test-fixtures",
 )
-const componentNames = [
-  ...new Set(["button", "input-group", ...requiredShadcnRuntimeComponents]),
-]
 const styleNames = ["nova", "vega", "maia", "lyra", "mira", "luma", "sera"]
 const registryComponentMetadata = {
   combobox: {
-    dependencies: ["@base-ui/react"],
     registryDependencies: ["button", "input-group"],
+  },
+  field: {
+    registryDependencies: ["label", "separator"],
   },
   "input-group": {
     registryDependencies: ["button", "input", "textarea"],
@@ -76,7 +73,7 @@ export async function startShadcnTestServer() {
       }
 
       if (styleComponentIndexMatch) {
-        respondJson(response, 200, createStyleComponentIndex())
+        respondJson(response, 200, createStyleComponentIndex(fixtures))
         return
       }
 
@@ -128,6 +125,11 @@ export async function startShadcnTestServer() {
 }
 
 async function loadFixtures() {
+  const componentsDir = path.join(fixtureRoot, "components", "ui")
+  const componentNames = (await readdir(componentsDir))
+    .filter((name) => name.endsWith(".tsx"))
+    .map((name) => name.replace(/\.tsx$/, ""))
+    .sort()
   const [baseCss, utilsSource, componentEntries] = await Promise.all([
     readFile(path.join(fixtureRoot, "base", "index.css"), "utf8"),
     readFile(path.join(fixtureRoot, "lib", "utils.ts"), "utf8"),
@@ -135,7 +137,7 @@ async function loadFixtures() {
       componentNames.map(async (name) => [
         name,
         await readFile(
-          path.join(fixtureRoot, "components", "ui", `${name}.tsx`),
+          path.join(componentsDir, `${name}.tsx`),
           "utf8",
         ),
       ]),
@@ -211,12 +213,14 @@ function createComponentItem({ componentName, componentSource }) {
   }
 }
 
-function createStyleComponentIndex() {
-  return componentNames.map((name) => ({
-    name,
-    type: "registry:ui",
-    title: name,
-  }))
+function createStyleComponentIndex(fixtures) {
+  return Object.keys(fixtures.components)
+    .sort()
+    .map((name) => ({
+      name,
+      type: "registry:ui",
+      title: name,
+    }))
 }
 
 function capitalize(value) {

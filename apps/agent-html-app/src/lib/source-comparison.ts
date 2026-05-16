@@ -19,22 +19,59 @@ export type SourceComparisonSummary = {
   }>
 }
 
+export type SourceComparisonPreviewGroup =
+  SourceComparisonSummary["previewGroups"][number]
+
+export function getPreviewGroupKey(group: SourceComparisonPreviewGroup) {
+  return `${group.startLine}:${group.endLine}`
+}
+
+export function getPreviewGroupsByKeys(
+  summary: SourceComparisonSummary | undefined,
+  keys: string[] | undefined,
+) {
+  if (!summary) {
+    return undefined
+  }
+
+  if (!keys?.length) {
+    return summary.previewGroups
+  }
+
+  const keySet = new Set(keys)
+  const matchingGroups = summary.previewGroups.filter((group) =>
+    keySet.has(getPreviewGroupKey(group)),
+  )
+
+  return matchingGroups.length > 0 ? matchingGroups : summary.previewGroups
+}
+
 export function getLatestProposalComparisonSummary(
   messages: AgentShellMessage[],
   currentSource: string,
 ) {
   const latestProposal = [...messages]
     .reverse()
-    .find((message) => message.kind === "proposal-placeholder" && message.proposalSnapshot?.source)
+    .find(
+      (message) =>
+        message.kind === "proposal-placeholder" &&
+        message.proposalSnapshot?.source,
+    )
 
   if (!latestProposal?.proposalSnapshot?.source) {
     return undefined
   }
 
-  return getSourceComparisonSummary(latestProposal.proposalSnapshot.source, currentSource)
+  return getSourceComparisonSummary(
+    latestProposal.proposalSnapshot.source,
+    currentSource,
+  )
 }
 
-export function getSourceComparisonSummary(baseSource: string, nextSource: string) {
+export function getSourceComparisonSummary(
+  baseSource: string,
+  nextSource: string,
+) {
   if (baseSource === nextSource) {
     return undefined
   }

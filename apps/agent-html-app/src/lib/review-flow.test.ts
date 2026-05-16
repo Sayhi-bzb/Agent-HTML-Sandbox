@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest"
 
-import type { AgentShellMessage, BuildRunSummary, InspectSnapshot, SessionDetail } from "./types"
+import type {
+  AgentShellMessage,
+  BuildRunSummary,
+  InspectSnapshot,
+  SessionDetail,
+} from "./types"
 import {
   getProposalDecisionTrend,
+  getProposalStageState,
   findRecentProposalDecisions,
   findLatestProposalDecision,
   getCurrentReviewStageGuidance,
@@ -81,6 +87,29 @@ describe("review flow helpers", () => {
     expect(readiness.items[0]).toContain("Unsaved draft changes")
   })
 
+  it("marks readiness approved when the latest decision is approved and no warnings remain", () => {
+    const readiness = getProposalReadiness({
+      build: succeededBuild,
+      inspect: cleanInspect,
+      session: baseSession,
+      latestProposalExists: true,
+      latestProposalDecision: {
+        proposalTitle: "Session One",
+        status: "approved",
+      },
+      latestProposalIsStale: false,
+      hasUnsavedSourceChanges: false,
+    })
+
+    expect(readiness).toEqual({
+      label: "Approved",
+      pillClassName: "status-ready",
+      summary:
+        "The proposal is approved and its current review signals are clean.",
+      items: [],
+    })
+  })
+
   it("summarizes the latest proposal drift in the review timeline", () => {
     const proposal: AgentShellMessage = {
       id: "proposal-1",
@@ -116,7 +145,9 @@ describe("review flow helpers", () => {
       session: baseSession,
     })
 
-    expect(timeline.find((item) => item.id === "source")?.statusLabel).toBe("Current")
+    expect(timeline.find((item) => item.id === "source")?.statusLabel).toBe(
+      "Current",
+    )
     expect(timeline.find((item) => item.id === "proposal")).toMatchObject({
       statusLabel: "Drifted",
       pillClassName: "status-dirty",
@@ -127,7 +158,10 @@ describe("review flow helpers", () => {
     const guidance = getCurrentReviewStageGuidance({
       stage: "proposal",
       latestProposalExists: true,
-      latestProposalDecision: { proposalTitle: "Session One", status: "needs-changes" },
+      latestProposalDecision: {
+        proposalTitle: "Session One",
+        status: "needs-changes",
+      },
       latestProposalIsStale: false,
     })
     const timeline = getReviewTimeline({
@@ -141,19 +175,68 @@ describe("review flow helpers", () => {
         text: "Proposal for Session One",
         kind: "proposal-placeholder",
       },
-      latestProposalDecision: { proposalTitle: "Session One", status: "needs-changes" },
+      latestProposalDecision: {
+        proposalTitle: "Session One",
+        status: "needs-changes",
+      },
       latestProposalIsStale: false,
       messages: [],
       session: baseSession,
     })
 
     expect(guidance).toContain("requests changes")
-    expect(timeline.find((item) => item.id === "proposal")?.summary).toContain("requests changes")
+    expect(timeline.find((item) => item.id === "proposal")?.summary).toContain(
+      "requests changes",
+    )
+  })
+
+  it("surfaces mixed decision trend in proposal guidance and timeline summary when the latest decision is not enough on its own", () => {
+    const guidance = getCurrentReviewStageGuidance({
+      stage: "proposal",
+      latestProposalExists: true,
+      latestProposalIsStale: false,
+      proposalDecisionTrend: {
+        label: "Mixed",
+        summary:
+          "Recent decisions changed direction, so review the latest drift and rationale before proceeding.",
+        pillClassName: "status-dirty",
+      },
+    })
+    const timeline = getReviewTimeline({
+      build: succeededBuild,
+      hasUnsavedSourceChanges: false,
+      inspect: cleanInspect,
+      latestProposal: {
+        id: "proposal-1",
+        role: "placeholder",
+        createdAt: "2026-05-15T11:57:00.000Z",
+        text: "Proposal for Session One",
+        kind: "proposal-placeholder",
+      },
+      proposalDecisionTrend: {
+        label: "Mixed",
+        summary:
+          "Recent decisions changed direction, so review the latest drift and rationale before proceeding.",
+        pillClassName: "status-dirty",
+      },
+      latestProposalIsStale: false,
+      messages: [],
+      session: baseSession,
+    })
+
+    expect(guidance).toContain("changed direction")
+    expect(timeline.find((item) => item.id === "proposal")?.summary).toContain(
+      "changed direction",
+    )
   })
 
   it("parses tagged proposal checklist items and marks save/build actions as done when state is current", () => {
     const proposal = parseProposalChecklist(
-      ["Proposal for Session One", "- [save] Save the latest draft.", "- [build] Run Build."].join("\n"),
+      [
+        "Proposal for Session One",
+        "- [save] Save the latest draft.",
+        "- [build] Run Build.",
+      ].join("\n"),
     )
 
     expect(proposal?.items).toEqual([
@@ -179,31 +262,49 @@ describe("review flow helpers", () => {
     })
 
     expect(saveStatus).toEqual({ label: "Done", pillClassName: "status-ready" })
-    expect(buildStatus).toEqual({ label: "Done", pillClassName: "status-ready" })
+    expect(buildStatus).toEqual({
+      label: "Done",
+      pillClassName: "status-ready",
+    })
   })
 
   it("parses and finds the latest proposal decision from structured context cards", () => {
     const decision = parseProposalDecision(
-      ["Proposal decision", "- Proposal: Session One", "- Status: approved"].join("\n"),
+      [
+        "Proposal decision",
+        "- Proposal: Session One",
+        "- Status: approved",
+      ].join("\n"),
     )
     const latest = findLatestProposalDecision([
       {
         id: "msg-1",
         role: "system",
         createdAt: "2026-05-15T12:00:00.000Z",
-        text: ["Proposal decision", "- Proposal: Session One", "- Status: needs changes"].join("\n"),
+        text: [
+          "Proposal decision",
+          "- Proposal: Session One",
+          "- Status: needs changes",
+        ].join("\n"),
         kind: "context-card",
       },
       {
         id: "msg-2",
         role: "system",
         createdAt: "2026-05-15T12:05:00.000Z",
-        text: ["Proposal decision", "- Proposal: Session One", "- Status: approved"].join("\n"),
+        text: [
+          "Proposal decision",
+          "- Proposal: Session One",
+          "- Status: approved",
+        ].join("\n"),
         kind: "context-card",
       },
     ])
 
-    expect(decision).toEqual({ proposalTitle: "Session One", status: "approved" })
+    expect(decision).toEqual({
+      proposalTitle: "Session One",
+      status: "approved",
+    })
     expect(latest).toEqual({ proposalTitle: "Session One", status: "approved" })
   })
 
@@ -213,7 +314,11 @@ describe("review flow helpers", () => {
         id: "msg-1",
         role: "system",
         createdAt: "2026-05-15T12:00:00.000Z",
-        text: ["Proposal decision", "- Proposal: Session One", "- Status: needs changes"].join("\n"),
+        text: [
+          "Proposal decision",
+          "- Proposal: Session One",
+          "- Status: needs changes",
+        ].join("\n"),
         kind: "context-card",
       },
       {
@@ -227,7 +332,11 @@ describe("review flow helpers", () => {
         id: "msg-3",
         role: "system",
         createdAt: "2026-05-15T12:10:00.000Z",
-        text: ["Proposal decision", "- Proposal: Session One", "- Status: approved"].join("\n"),
+        text: [
+          "Proposal decision",
+          "- Proposal: Session One",
+          "- Status: approved",
+        ].join("\n"),
         kind: "context-card",
       },
     ])
@@ -248,23 +357,71 @@ describe("review flow helpers", () => {
 
   it("summarizes proposal decision trend across recent decisions", () => {
     const approvedTrend = getProposalDecisionTrend([
-      { proposalTitle: "Session One", status: "approved", createdAt: "2026-05-15T12:10:00.000Z" },
-      { proposalTitle: "Session One", status: "approved", createdAt: "2026-05-15T12:00:00.000Z" },
+      {
+        proposalTitle: "Session One",
+        status: "approved",
+        createdAt: "2026-05-15T12:10:00.000Z",
+      },
+      {
+        proposalTitle: "Session One",
+        status: "approved",
+        createdAt: "2026-05-15T12:00:00.000Z",
+      },
     ])
     const mixedTrend = getProposalDecisionTrend([
-      { proposalTitle: "Session One", status: "approved", createdAt: "2026-05-15T12:10:00.000Z" },
-      { proposalTitle: "Session One", status: "needs-changes", createdAt: "2026-05-15T12:00:00.000Z" },
+      {
+        proposalTitle: "Session One",
+        status: "approved",
+        createdAt: "2026-05-15T12:10:00.000Z",
+      },
+      {
+        proposalTitle: "Session One",
+        status: "needs-changes",
+        createdAt: "2026-05-15T12:00:00.000Z",
+      },
     ])
 
     expect(approvedTrend).toEqual({
       label: "Approved",
-      summary: "Recent decisions are consistently approving the proposal direction.",
+      summary:
+        "Recent decisions are consistently approving the proposal direction.",
       pillClassName: "status-ready",
     })
     expect(mixedTrend).toEqual({
       label: "Mixed",
-      summary: "Recent decisions changed direction, so review the latest drift and rationale before proceeding.",
+      summary:
+        "Recent decisions changed direction, so review the latest drift and rationale before proceeding.",
       pillClassName: "status-dirty",
+    })
+  })
+
+  it("derives proposal stage state from decision trend and current drift", () => {
+    const stage = getProposalStageState({
+      latestProposalExists: true,
+      latestProposalDecision: {
+        proposalTitle: "Session One",
+        status: "approved",
+      },
+      latestProposalIsStale: false,
+      proposalDecisionTrend: {
+        label: "Mixed",
+        summary:
+          "Recent decisions changed direction, so review the latest drift and rationale before proceeding.",
+        pillClassName: "status-dirty",
+      },
+      proposalProgress: {
+        totalTaggedItems: 3,
+        doneCount: 1,
+        pendingCount: 1,
+        reviewCount: 1,
+      },
+    })
+
+    expect(stage).toEqual({
+      statusLabel: "Mixed",
+      pillClassName: "status-dirty",
+      summary:
+        "Recent proposal decisions changed direction, so the proposal history is not yet stable.",
     })
   })
 
@@ -518,7 +675,9 @@ describe("review flow helpers", () => {
       hasUnsavedSourceChanges: false,
       inspect: {
         ...cleanInspect,
-        diagnostics: [{ id: "diag-1", severity: "error", message: "x", source: "inspect" }],
+        diagnostics: [
+          { id: "diag-1", severity: "error", message: "x", source: "inspect" },
+        ],
       },
       latestProposalExists: true,
       latestProposalIsStale: false,
@@ -534,6 +693,30 @@ describe("review flow helpers", () => {
       label: "Open Inspect",
       description: "Review diagnostics before trusting the proposal.",
       handler: "openInspect",
+    })
+  })
+
+  it("suggests redrafting the proposal when the latest decision still requests changes", () => {
+    const proposalAction = getReviewTimelineActionConfig({
+      stage: "proposal",
+      activeView: "preview",
+      build: succeededBuild,
+      hasUnsavedSourceChanges: false,
+      inspect: cleanInspect,
+      latestProposalExists: true,
+      latestProposalDecision: {
+        proposalTitle: "Session One",
+        status: "needs-changes",
+      },
+      latestProposalIsStale: false,
+      sessionHasPreview: true,
+    })
+
+    expect(proposalAction).toEqual({
+      label: "Redraft proposal",
+      description:
+        "Refresh the proposal after the latest review requested changes.",
+      handler: "draftProposal",
     })
   })
 

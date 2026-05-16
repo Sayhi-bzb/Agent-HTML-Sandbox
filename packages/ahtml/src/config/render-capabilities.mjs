@@ -34,7 +34,6 @@ export const rendererKindDefinitions = {
     requiredFields: [
       "root",
       "label",
-      "controlRoot",
       "control",
       "item",
       "itemSlot",
@@ -47,7 +46,6 @@ export const rendererKindDefinitions = {
       controlTrigger: ["controlContent"],
       controlValue: ["controlTrigger"],
       controlList: ["controlContent"],
-      itemContainer: ["controlListAttr"],
       controlListAttr: ["itemContainer"],
     },
   },
@@ -200,6 +198,7 @@ const rendererElementKeys = [
   "control",
   "controlRoot",
   "controlContent",
+  "controlEmpty",
   "controlList",
   "controlTrigger",
   "controlValue",
@@ -229,12 +228,26 @@ export function createRuntimeElementRegistrySpec(rendererMapping) {
   const referencedElementNames = new Set()
 
   for (const component of components) {
-    addModuleExports({
-      exportOwners,
-      exports: component.requiredExports ?? [],
-      modulesByRegistryItem,
-      registryItem: component.requiredRegistryItem,
-    })
+    const requiredRegistryModules =
+      component.requiredRegistryModules?.length > 0
+        ? component.requiredRegistryModules
+        : component.requiredRegistryItem && component.requiredExports
+          ? [
+              {
+                registryItem: component.requiredRegistryItem,
+                exports: component.requiredExports,
+              },
+            ]
+          : []
+
+    for (const module of requiredRegistryModules) {
+      addModuleExports({
+        exportOwners,
+        exports: module.exports ?? [],
+        modulesByRegistryItem,
+        registryItem: module.registryItem,
+      })
+    }
 
     for (const elementName of collectRendererElementNames(component)) {
       referencedElementNames.add(elementName)
@@ -251,7 +264,7 @@ export function createRuntimeElementRegistrySpec(rendererMapping) {
 
     if (!exportOwners.has(elementName)) {
       throw new Error(
-        `Renderer element "${elementName}" is not backed by a requiredRegistryItem export.`,
+        `Renderer element "${elementName}" is not backed by a required registry export.`,
       )
     }
   }
@@ -359,6 +372,7 @@ function createRendererMappingComponent(component, componentMap) {
     name: component.name,
     renderKind: definition?.renderKind ?? "structural",
     source: definition?.source ?? "ahtml-standard",
+    requiredRegistryModules: definition?.requiredRegistryModules,
     requiredRegistryItem: definition?.requiredRegistryItem,
     requiredExports: definition?.requiredExports,
     ...rendererMapping,
