@@ -8,17 +8,6 @@ const fixtureRoot = path.join(
   "shadcn-test-fixtures",
 )
 const styleNames = ["nova", "vega", "maia", "lyra", "mira", "luma", "sera"]
-const registryComponentMetadata = {
-  combobox: {
-    registryDependencies: ["button", "input-group"],
-  },
-  field: {
-    registryDependencies: ["label", "separator"],
-  },
-  "input-group": {
-    registryDependencies: ["button", "input", "textarea"],
-  },
-}
 
 export async function startShadcnTestServer() {
   const fixtures = await loadFixtures()
@@ -197,11 +186,14 @@ function createRegistryIndex(fixtures) {
 }
 
 function createComponentItem({ componentName, componentSource }) {
+  const registryDependencies =
+    collectUiRegistryDependencies(componentSource)
+
   return {
     name: componentName,
     type: "registry:ui",
     title: componentName,
-    ...(registryComponentMetadata[componentName] ?? {}),
+    ...(registryDependencies.length > 0 ? { registryDependencies } : {}),
     files: [
       {
         path: `ui/${componentName}.tsx`,
@@ -221,6 +213,16 @@ function createStyleComponentIndex(fixtures) {
       type: "registry:ui",
       title: name,
     }))
+}
+
+function collectUiRegistryDependencies(componentSource) {
+  return [
+    ...new Set(
+      [...componentSource.matchAll(/from\s+["']@\/components\/ui\/([^"']+)["']/g)]
+        .map((match) => match[1])
+        .filter(Boolean),
+    ),
+  ].sort()
 }
 
 function capitalize(value) {

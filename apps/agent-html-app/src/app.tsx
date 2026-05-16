@@ -1,16 +1,17 @@
 import { startTransition, useEffect, useState } from "react"
 
-import {
-  AgentShell,
-  type AgentShellReviewFocusState,
-  type AgentShellReviewIntent,
-} from "./components/agent-shell/agent-shell"
+import { AgentShell } from "./components/agent-shell/agent-shell"
 import { SessionsSidebar } from "./components/layout/sessions-sidebar"
 import { Workbench } from "./components/workbench/workbench"
+import {
+  getAvailableReviewFocusTargets,
+  isSameReviewFocusTarget,
+  type ReviewFocusIntent,
+  type ReviewFocusTarget,
+} from "./lib/review-focus"
 import type { ReviewTimelineActionConfig } from "./lib/review-flow"
 import {
   getLatestProposalComparisonSummary,
-  getPreviewGroupKey,
   getSourceComparisonSummary,
 } from "./lib/source-comparison"
 import { mockAppState } from "./lib/mock-data"
@@ -82,9 +83,11 @@ export function App() {
   const [appState, setAppState] = useState<AppState>(mockAppState)
   const [sessionDrafts, setSessionDrafts] = useState<Record<string, string>>({})
   const [agentShellReviewIntent, setAgentShellReviewIntent] =
-    useState<AgentShellReviewIntent>()
+    useState<ReviewFocusIntent>()
+  const [agentShellClearReviewFocusKey, setAgentShellClearReviewFocusKey] =
+    useState<string>()
   const [agentShellReviewFocus, setAgentShellReviewFocus] =
-    useState<AgentShellReviewFocusState>()
+    useState<ReviewFocusTarget>()
   const [activeView, setActiveView] = useState<WorkbenchView>(
     mockAppState.currentSession.currentView,
   )
@@ -104,6 +107,17 @@ export function App() {
     appState.chat,
     currentDraftSource,
   )
+  const latestProposalText = [...appState.chat]
+    .reverse()
+    .find((message) => message.kind === "proposal-placeholder")?.text
+  const availableReviewFocusTargets = getAvailableReviewFocusTargets({
+    proposalText: latestProposalText,
+    build: appState.currentBuild,
+    hasUnsavedSourceChanges,
+    inspect: appState.currentInspect,
+    draftComparison,
+    proposalComparison,
+  })
   const isWorkbenchActionBusy =
     commandState.savingSource ||
     commandState.runningBuild ||
@@ -125,6 +139,7 @@ export function App() {
 
   useEffect(() => {
     setAgentShellReviewIntent(undefined)
+    setAgentShellClearReviewFocusKey(undefined)
     setAgentShellReviewFocus(undefined)
   }, [appState.currentSession.summary.id])
 
@@ -1063,16 +1078,10 @@ export function App() {
     }
   }
 
-  function queueAgentShellReviewIntent(
-    mode: "saved" | "proposal",
-    label: string,
-    groupKeys?: string[],
-  ) {
+  function queueAgentShellReviewIntent(target: ReviewFocusTarget) {
     setAgentShellReviewIntent({
-      mode,
-      label,
-      groupKeys,
-      requestKey: `${mode}-${Date.now()}`,
+      ...target,
+      requestKey: `${target.mode}-${Date.now()}`,
     })
   }
 
@@ -1099,25 +1108,17 @@ export function App() {
         await handleDraftProposal()
         break
       case "reviewDiff": {
-        if (proposalComparison) {
-          queueAgentShellReviewIntent(
-            "proposal",
-            "Inspect review drift",
-            proposalComparison.previewGroups.map(getPreviewGroupKey),
-          )
-          break
-        }
-
-        if (draftComparison) {
-          queueAgentShellReviewIntent(
-            "saved",
-            "Unsaved source drift",
-            draftComparison.previewGroups.map(getPreviewGroupKey),
-          )
+        const defaultTarget = availableReviewFocusTargets[0]
+        if (defaultTarget) {
+          queueAgentShellReviewIntent(defaultTarget)
         }
         break
       }
     }
+  }
+
+  function handleSelectReviewFocus(target: ReviewFocusTarget) {
+    queueAgentShellReviewIntent(target)
   }
 
   function handleRevisitReviewFocus() {
@@ -1125,11 +1126,27 @@ export function App() {
       return
     }
 
-    queueAgentShellReviewIntent(
-      agentShellReviewFocus.mode,
-      agentShellReviewFocus.label,
-      agentShellReviewFocus.groupKeys,
-    )
+    queueAgentShellReviewIntent(agentShellReviewFocus)
+  }
+
+  function handleClearReviewFocus() {
+    setAgentShellReviewIntent(undefined)
+    setAgentShellClearReviewFocusKey(`clear-${Date.now()}`)
+    setAgentShellReviewFocus(undefined)
+  }
+
+  function handleReviewFocusChange(focus?: ReviewFocusTarget) {
+    setAgentShellReviewFocus((current) => {
+      if (!current && !focus) {
+        return current
+      }
+
+      if (isSameReviewFocusTarget(current, focus)) {
+        return current
+      }
+
+      return focus
+    })
   }
 
   function replaceCurrentSession(
@@ -1192,6 +1209,7 @@ export function App() {
         <Workbench
           activeView={activeView}
           activeReviewFocus={agentShellReviewFocus}
+          availableReviewFocusTargets={availableReviewFocusTargets}
           build={appState.currentBuild}
           draftComparison={draftComparison}
           draftSource={currentDraftSource}
@@ -1204,10 +1222,12 @@ export function App() {
           logs={appState.currentLogs}
           messages={appState.chat}
           onBuild={handleBuild}
+          onClearReviewFocus={handleClearReviewFocus}
           onDraftSourceChange={handleDraftSourceChange}
           onInspect={handleInspect}
           onRevisitReviewFocus={handleRevisitReviewFocus}
           onRunReviewAction={handleRunReviewAction}
+          onSelectReviewFocus={handleSelectReviewFocus}
           onSaveSource={handleSaveSource}
           onValidateSource={handleValidateSource}
           onViewChange={handleViewChange}
@@ -1233,8 +1253,9 @@ export function App() {
           isSending={commandState.sendingMessage}
           messages={appState.chat}
           onDraftProposal={handleDraftProposal}
+          clearReviewFocusKey={agentShellClearReviewFocusKey}
           proposalComparison={proposalComparison}
-          onReviewFocusChange={setAgentShellReviewFocus}
+          onReviewFocusChange={handleReviewFocusChange}
           reviewIntent={agentShellReviewIntent}
           onSend={handleSendMessage}
           session={appState.currentSession}

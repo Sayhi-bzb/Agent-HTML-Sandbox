@@ -38,9 +38,5 @@ Reopen roadmap work only if one of these changes:
 
 ## Reopen Candidates
 
-- If field/control or option-set rendering should follow more official shadcn
-  field/form composition patterns instead of custom wrappers, fallback markup,
-  or the current minimal `select` / `combobox` path, reopen renderer
-  composition work.
 - If local fixture or registry snapshots become costly to maintain across
   shadcn upgrades, reopen fixture and registry maintenance work.

@@ -1,8 +1,11 @@
 import { getInspectReviewSummary } from "../../lib/inspect-review"
+import {
+  isSameReviewFocusTarget,
+  type ReviewFocusTarget,
+} from "../../lib/review-focus"
 import type { ReviewTimelineActionConfig } from "../../lib/review-flow"
 import type { SourceComparisonSummary } from "../../lib/source-comparison"
 import { formatTimestampLabel } from "../../lib/time"
-import type { AgentShellReviewFocusState } from "../agent-shell/agent-shell"
 import type {
   AgentShellMessage,
   BuildRunSummary,
@@ -12,7 +15,8 @@ import type {
 } from "../../lib/types"
 
 type InspectPanelProps = {
-  activeReviewFocus?: AgentShellReviewFocusState
+  activeReviewFocus?: ReviewFocusTarget
+  availableReviewFocusTargets: ReviewFocusTarget[]
   build: BuildRunSummary
   session: SessionDetail
   inspect: InspectSnapshot
@@ -22,6 +26,8 @@ type InspectPanelProps = {
   isActionBusy: boolean
   draftComparison?: SourceComparisonSummary
   proposalComparison?: SourceComparisonSummary
+  onClearReviewFocus: () => void
+  onSelectReviewFocus: (target: ReviewFocusTarget) => void
   onRevisitReviewFocus: () => void
   onRunReviewAction: (
     handler: ReviewTimelineActionConfig["handler"],
@@ -30,6 +36,7 @@ type InspectPanelProps = {
 
 export function InspectPanel({
   activeReviewFocus,
+  availableReviewFocusTargets,
   build,
   session,
   inspect,
@@ -39,6 +46,8 @@ export function InspectPanel({
   isActionBusy,
   draftComparison,
   proposalComparison,
+  onClearReviewFocus,
+  onSelectReviewFocus,
   onRevisitReviewFocus,
   onRunReviewAction,
 }: InspectPanelProps) {
@@ -109,39 +118,92 @@ export function InspectPanel({
             </span>
           </div>
         ) : null}
-        {activeReviewFocus ? (
+        {activeReviewFocus || availableReviewFocusTargets.length > 0 ? (
           <div className="inspect-linked-review">
             <div className="message-topline">
               <div>
-                <p className="eyebrow">Linked compare</p>
-                <h5>{activeReviewFocus.label}</h5>
+                <p className="eyebrow">Review focus</p>
+                <h5>
+                  {activeReviewFocus
+                    ? activeReviewFocus.label
+                    : "No compare pinned yet"}
+                </h5>
               </div>
-              <button
-                className="mini-button"
-                disabled={isActionBusy}
-                onClick={onRevisitReviewFocus}
-                type="button"
-              >
-                Revisit compare
-              </button>
+              <div className="inspect-linked-review-actions">
+                {activeReviewFocus ? (
+                  <>
+                    <button
+                      className="mini-button"
+                      disabled={isActionBusy}
+                      onClick={onRevisitReviewFocus}
+                      type="button"
+                    >
+                      Revisit compare
+                    </button>
+                    <button
+                      className="mini-button"
+                      disabled={isActionBusy}
+                      onClick={onClearReviewFocus}
+                      type="button"
+                    >
+                      Clear focus
+                    </button>
+                  </>
+                ) : null}
+              </div>
             </div>
             <p className="inspect-linked-review-summary">
-              Agent Shell is already focused on the{" "}
-              {activeReviewFocus.mode === "proposal"
-                ? "proposal snapshot"
-                : "saved source"}{" "}
-              compare for this review target.
+              {activeReviewFocus
+                ? `Agent Shell is currently focused on the ${
+                    activeReviewFocus.mode === "proposal"
+                      ? "proposal snapshot"
+                      : "saved source"
+                  } compare for this review target.`
+                : "Pick a compare target to keep Inspect and Agent Shell aligned on the same diff groups."}
             </p>
-            <div className="proposal-meta-row">
-              <span className="pill accent">
-                {activeReviewFocus.mode === "proposal"
-                  ? "Proposal compare"
-                  : "Saved compare"}
-              </span>
-              <span className="inline-meta">
-                {activeReviewFocus.groupCount} focused group(s)
-              </span>
-            </div>
+            {activeReviewFocus ? (
+              <div className="proposal-meta-row">
+                <span className="pill accent">
+                  {activeReviewFocus.mode === "proposal"
+                    ? "Proposal compare"
+                    : "Saved compare"}
+                </span>
+                <span className="inline-meta">
+                  {activeReviewFocus.groupCount} focused group(s)
+                </span>
+              </div>
+            ) : null}
+            {availableReviewFocusTargets.length > 0 ? (
+              <div className="inspect-review-targets">
+                {availableReviewFocusTargets.map((target) => {
+                  const isActive = isSameReviewFocusTarget(
+                    activeReviewFocus,
+                    target,
+                  )
+
+                  return (
+                    <button
+                      className={
+                        isActive
+                          ? "inspect-review-target active"
+                          : "inspect-review-target"
+                      }
+                      disabled={isActionBusy || isActive}
+                      key={`${target.mode}-${target.label}-${target.groupKeys.join(",")}`}
+                      onClick={() => onSelectReviewFocus(target)}
+                      type="button"
+                    >
+                      <span className="inspect-review-target-label">
+                        {target.label}
+                      </span>
+                      <span className="inline-meta">
+                        {target.groupCount} group(s)
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : null}
           </div>
         ) : null}
         <div className="inspect-audit-chip-grid">

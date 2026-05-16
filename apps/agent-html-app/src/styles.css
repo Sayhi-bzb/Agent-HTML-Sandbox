@@ -387,6 +387,34 @@ button:disabled {
   color: #5d6b84;
 }
 
+.inspect-linked-review-actions,
+.inspect-review-targets {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.inspect-review-target {
+  border: 1px solid rgba(20, 33, 61, 0.08);
+  border-radius: 999px;
+  background: rgba(237, 242, 251, 0.78);
+  color: #22314d;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+}
+
+.inspect-review-target.active {
+  border-color: rgba(20, 33, 61, 0.16);
+  background: rgba(219, 234, 254, 0.92);
+}
+
+.inspect-review-target-label {
+  font-size: 0.84rem;
+}
+
 .inspect-audit-chip-grid,
 .inspect-audit-grid {
   display: grid;

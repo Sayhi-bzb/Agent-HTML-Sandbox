@@ -58,11 +58,5 @@ semantic component contract
 
 ## Open Debt
 
-- Field/control rendering still relies on custom wrapper and fallback
-  composition that is not fully aligned with official shadcn composition
-  guidance.
-- Option-set rendering still uses generic wrapper composition rather than the
-  more official shadcn field/form patterns, and current `select` / `combobox`
-  support only covers the minimal runtime path.
 - Local shadcn fixture snapshots and test registry responses can drift from
   upstream registry and docs behavior.

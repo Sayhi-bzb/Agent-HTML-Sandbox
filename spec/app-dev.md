@@ -93,12 +93,14 @@ Status: Partial.
 - `Inspect` review audit 现在也可直接触发 save / build / inspect / preview / proposal / diff review 等 workflow 动作，而不只是停在解释层
 - `Inspect` 与右栏 compare 现在有共享的 review focus 状态，当前已聚焦的 compare 目标会回流到 `Inspect`，并支持一键 revisit 同一 review target
 - shared review focus 现在也会保留精确的 diff group target，而不只是 compare 模式和标签
+- `Inspect` 现在也可直接 clear / switch review focus target，不必回到右栏内部先解除再重选
+- 当最新 proposal 带 checklist focus 线索时，`Inspect` 现在也会优先露出 checklist-derived review targets，而不是只回退到通用 drift 标签
 - build 失败时可转向 inspect，而不是只停留在抽象错误提示
 
 当前缺口：
 
 - `Inspect` 还不是完整分析工作台，但已经不再只是原始日志堆叠或纯 diagnostics 面
-- review audit 与右栏 compare 已有共享 focus / revisit 能力，但整体仍不是完整统一的 review control surface
+- review audit 与右栏 compare 已有共享 focus / revisit / clear / switch 能力，但整体仍不是完整统一的 review control surface
 - source diagnostics、build diagnostics、structure summary 仍有继续做深的空间
 
 ### Agent Shell

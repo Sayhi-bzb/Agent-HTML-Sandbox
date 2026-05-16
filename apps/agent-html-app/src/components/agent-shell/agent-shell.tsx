@@ -19,6 +19,10 @@ import {
   parseProposalChecklist,
   parseStructuredMessageCard,
 } from "../../lib/review-flow"
+import type {
+  ReviewFocusIntent,
+  ReviewFocusTarget,
+} from "../../lib/review-focus"
 import { formatTimestampLabel } from "../../lib/time"
 import {
   getPreviewGroupKey,
@@ -47,8 +51,9 @@ type AgentShellProps = {
   isRunningInspect: boolean
   isSending: boolean
   isDraftingProposal: boolean
-  reviewIntent?: AgentShellReviewIntent
-  onReviewFocusChange?: (focus?: AgentShellReviewFocusState) => void
+  clearReviewFocusKey?: string
+  reviewIntent?: ReviewFocusIntent
+  onReviewFocusChange?: (focus?: ReviewFocusTarget) => void
   onSend: (text: string) => Promise<void> | void
   onDecision: (
     proposalText: string,
@@ -68,20 +73,6 @@ type FocusedComparison = {
   label: string
 }
 
-export type AgentShellReviewIntent = {
-  mode: ComparisonMode
-  label: string
-  groupKeys?: string[]
-  requestKey: string
-}
-
-export type AgentShellReviewFocusState = {
-  mode: ComparisonMode
-  label: string
-  groupCount: number
-  groupKeys: string[]
-}
-
 export function AgentShell({
   session,
   messages,
@@ -96,6 +87,7 @@ export function AgentShell({
   isRunningInspect,
   isSending,
   isDraftingProposal,
+  clearReviewFocusKey,
   reviewIntent,
   onReviewFocusChange,
   onSend,
@@ -267,6 +259,15 @@ export function AgentShell({
       setComparisonMode("saved")
     }
   }, [comparisonMode, proposalComparison])
+
+  useEffect(() => {
+    if (!clearReviewFocusKey) {
+      return
+    }
+
+    setFocusedComparison(undefined)
+    setIsDraftPreviewExpanded(false)
+  }, [clearReviewFocusKey])
 
   useEffect(() => {
     if (!onReviewFocusChange) {

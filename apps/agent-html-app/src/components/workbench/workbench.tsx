@@ -1,4 +1,4 @@
-import type { AgentShellReviewFocusState } from "../agent-shell/agent-shell"
+import type { ReviewFocusTarget } from "../../lib/review-focus"
 import type {
   AgentShellMessage,
   BuildRunSummary,
@@ -20,7 +20,8 @@ type WorkbenchProps = {
   inspect: InspectSnapshot
   logs: LogSnapshot
   messages: AgentShellMessage[]
-  activeReviewFocus?: AgentShellReviewFocusState
+  activeReviewFocus?: ReviewFocusTarget
+  availableReviewFocusTargets: ReviewFocusTarget[]
   draftSource: string
   draftComparison?: SourceComparisonSummary
   proposalComparison?: SourceComparisonSummary
@@ -31,10 +32,12 @@ type WorkbenchProps = {
   onViewChange: (view: WorkbenchView) => void
   onBuild: () => Promise<void> | void
   onInspect: () => Promise<void> | void
+  onClearReviewFocus: () => void
   onRevisitReviewFocus: () => void
   onRunReviewAction: (
     handler: ReviewTimelineActionConfig["handler"],
   ) => Promise<void> | void
+  onSelectReviewFocus: (target: ReviewFocusTarget) => void
   onDraftSourceChange: (source: string) => void
   onSaveSource: (source: string) => Promise<void> | void
   onValidateSource: (source: string) => Promise<SourceValidationSnapshot>
@@ -52,6 +55,7 @@ export function Workbench({
   logs,
   messages,
   activeReviewFocus,
+  availableReviewFocusTargets,
   draftSource,
   draftComparison,
   proposalComparison,
@@ -61,9 +65,11 @@ export function Workbench({
   activeView,
   onViewChange,
   onBuild,
+  onClearReviewFocus,
   onInspect,
   onRevisitReviewFocus,
   onRunReviewAction,
+  onSelectReviewFocus,
   onDraftSourceChange,
   onSaveSource,
   onValidateSource,
@@ -136,6 +142,7 @@ export function Workbench({
       {activeView === "inspect" ? (
         <InspectPanel
           activeReviewFocus={activeReviewFocus}
+          availableReviewFocusTargets={availableReviewFocusTargets}
           build={build}
           draftComparison={draftComparison}
           hasUnsavedSourceChanges={hasUnsavedSourceChanges}
@@ -143,8 +150,10 @@ export function Workbench({
           isActionBusy={isActionBusy}
           logs={logs}
           messages={messages}
+          onClearReviewFocus={onClearReviewFocus}
           onRevisitReviewFocus={onRevisitReviewFocus}
           onRunReviewAction={onRunReviewAction}
+          onSelectReviewFocus={onSelectReviewFocus}
           proposalComparison={proposalComparison}
           session={session}
         />
