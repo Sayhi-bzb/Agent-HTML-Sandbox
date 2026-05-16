@@ -1,3 +1,5 @@
+import { Suspense, lazy } from "react"
+
 import type { ReviewFocusTarget } from "../../lib/review-focus"
 import type {
   SourceFocusReviewStatus,
@@ -16,7 +18,12 @@ import type { ReviewTimelineActionConfig } from "../../lib/review-flow"
 import type { SourceComparisonSummary } from "../../lib/source-comparison"
 import { InspectPanel } from "./inspect-panel"
 import { PreviewPanel } from "./preview-panel"
-import { SourcePanel } from "./source-panel"
+
+const SourcePanel = lazy(() =>
+  import("./source-panel").then((module) => ({
+    default: module.SourcePanel,
+  })),
+)
 
 type WorkbenchProps = {
   session: SessionDetail
@@ -147,22 +154,38 @@ export function Workbench({
         />
       ) : null}
       {activeView === "source" ? (
-        <SourcePanel
-          activeSourceFocus={activeSourceFocus}
-          activeSourceFocusReviewStatus={activeSourceFocusReviewStatus}
-          canRevealSourceOrigin={canRevealSourceOrigin}
-          draftSource={draftSource}
-          isSaving={isSavingSource}
-          sourceValidation={sourceValidation}
-          onClearSourceFocus={onClearSourceFocus}
-          onDraftChange={onDraftSourceChange}
-          onOpenSourceFocus={onOpenSourceFocus}
-          onRefreshSourceFocus={onRefreshSourceFocus}
-          onRevealReviewTarget={onRevealSourceReviewTarget}
-          onSave={onSaveSource}
-          source={session.source}
-          sourcePath={session.sourcePath}
-        />
+        <Suspense
+          fallback={
+            <section className="workbench-card">
+              <div className="workbench-card-header">
+                <div>
+                  <p className="eyebrow">Source</p>
+                  <h3>Loading editor</h3>
+                </div>
+              </div>
+              <p className="validation-empty">
+                Preparing the CodeMirror editor for this session.
+              </p>
+            </section>
+          }
+        >
+          <SourcePanel
+            activeSourceFocus={activeSourceFocus}
+            activeSourceFocusReviewStatus={activeSourceFocusReviewStatus}
+            canRevealSourceOrigin={canRevealSourceOrigin}
+            draftSource={draftSource}
+            isSaving={isSavingSource}
+            sourceValidation={sourceValidation}
+            onClearSourceFocus={onClearSourceFocus}
+            onDraftChange={onDraftSourceChange}
+            onOpenSourceFocus={onOpenSourceFocus}
+            onRefreshSourceFocus={onRefreshSourceFocus}
+            onRevealReviewTarget={onRevealSourceReviewTarget}
+            onSave={onSaveSource}
+            source={session.source}
+            sourcePath={session.sourcePath}
+          />
+        </Suspense>
       ) : null}
       {activeView === "inspect" ? (
         <InspectPanel

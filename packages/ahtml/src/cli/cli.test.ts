@@ -49,13 +49,7 @@ describe("agent-html CLI contracts", () => {
     const { formatPrompt, getCliSchemaOutput } = await importSchemaModule()
     const schema = await getCliSchemaOutput(root)
     const prompt = await readFile(
-      path.join(
-        root,
-        "packages",
-        "core",
-        "src",
-        "component-schema-prompt.txt",
-      ),
+      path.join(root, "packages", "core", "src", "component-schema-prompt.txt"),
       "utf8",
     )
 
@@ -270,6 +264,10 @@ describe("agent-html CLI contracts", () => {
       runCliWithServer(["build", inputPath, "--format", "yaml"], {}, tempDir),
       'build --format must be "text" or "json".',
     )
+    await expectCliFailure(
+      runCliWithServer(["preview", inputPath], {}, tempDir),
+      "unknown-attr",
+    )
     await expectPathMissing(path.join(outputDir, "index.html"))
     await expectCliFailure(
       runCliWithServer(["prompt", "--format"]),
@@ -353,6 +351,36 @@ describe("agent-html CLI contracts", () => {
         severity: "error",
       }),
     ])
+    await expectPathMissing(path.join(runtimeHome, "config", "runtime.json"))
+    await rm(tempDir, { force: true, recursive: true })
+  })
+
+  it("fails inspect with validation diagnostics before runtime inspection", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
+    const runtimeHome = path.join(tempDir, ".ahtml")
+    const invalidInputPath = path.join(tempDir, "invalid.agent.html")
+
+    await writeFile(
+      invalidInputPath,
+      '<page title="Bad"><card className="x" /></page>',
+    )
+
+    await expectCliFailure(
+      runCliWithServer(
+        ["inspect", "--input", invalidInputPath],
+        { AHTML_HOME: runtimeHome },
+        tempDir,
+      ),
+      "Cannot inspect an invalid agent-html document.",
+    )
+    await expectCliFailure(
+      runCliWithServer(
+        ["inspect", "--input", invalidInputPath],
+        { AHTML_HOME: runtimeHome },
+        tempDir,
+      ),
+      "unknown-attr",
+    )
     await expectPathMissing(path.join(runtimeHome, "config", "runtime.json"))
     await rm(tempDir, { force: true, recursive: true })
   })

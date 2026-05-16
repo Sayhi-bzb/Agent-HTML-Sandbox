@@ -2,7 +2,7 @@ import { z } from "zod"
 
 import type { RenderConfig } from "./types"
 
-const PUBLIC_PROFILE_VALUES = [
+export const PUBLIC_PROFILE_VALUES = [
   "report-default",
   "ops-compact",
   "review-dense",
@@ -45,15 +45,16 @@ export const PUBLIC_RENDER_CONFIG_DEFAULTS = {
   profile: "report-default",
 } as const
 
-export const RenderConfigSchema = z
-  .object({
-    profile: z.string(),
-    theme: z.string(),
-    density: z.string(),
-    tone: z.string(),
-    width: z.string(),
-  })
-  .strict()
+const resolvedRenderConfigSchemas = [
+  createResolvedRenderConfigSchema("report-default"),
+  createResolvedRenderConfigSchema("ops-compact"),
+  createResolvedRenderConfigSchema("review-dense"),
+] as const
+
+export const RenderConfigSchema = z.discriminatedUnion(
+  "profile",
+  resolvedRenderConfigSchemas,
+)
 
 export const DEFAULT_RENDER_CONFIG = resolveResolvedProfileTokens(
   PUBLIC_RENDER_CONFIG_DEFAULTS.profile,
@@ -80,4 +81,20 @@ function resolveResolvedProfileTokens(
     profile,
     ...RESOLVED_PROFILE_TOKENS_BY_PROFILE[profile],
   }
+}
+
+function createResolvedRenderConfigSchema(
+  profile: (typeof PUBLIC_PROFILE_VALUES)[number],
+) {
+  const tokens = RESOLVED_PROFILE_TOKENS_BY_PROFILE[profile]
+
+  return z
+    .object({
+      profile: z.literal(profile),
+      theme: z.literal(tokens.theme),
+      density: z.literal(tokens.density),
+      tone: z.literal(tokens.tone),
+      width: z.literal(tokens.width),
+    })
+    .strict()
 }

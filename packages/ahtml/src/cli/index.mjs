@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url"
 
 import { cliDefaults } from "../config/defaults.mjs"
 import {
+  ArtifactWorkflowValidationError,
   createArtifactWorkflow,
   formatInspectionSummary,
 } from "./artifact-workflow.mjs"
@@ -271,6 +272,10 @@ async function buildCommand(commandArgs, definition) {
   if (format === "json") {
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
   }
+
+  if (!result.ok) {
+    process.exitCode = 1
+  }
 }
 
 async function validateCommand(commandArgs, definition) {
@@ -296,11 +301,12 @@ async function validateCommand(commandArgs, definition) {
 
   if (format === "json") {
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
-    return
+  } else if (result.ok) {
+    process.stdout.write(formatInspectionSummary(result.inspection))
   }
 
-  if (result.ok) {
-    process.stdout.write(formatInspectionSummary(result.inspection))
+  if (!result.ok) {
+    process.exitCode = 1
   }
 }
 
@@ -314,6 +320,7 @@ async function previewCommand(commandArgs, definition) {
 
   const result = await buildArtifact(inputPath, options.out)
   if (!result?.ok) {
+    process.exitCode = 1
     return
   }
 
@@ -341,9 +348,26 @@ async function inspectCommand(commandArgs, definition) {
     fail('inspect --format must be "summary" or "json".')
   }
 
-  const inspection = options.input
-    ? await inspectDocument(options.input)
-    : await inspectArtifactDir(options.dir)
+  let inspection
+  try {
+    inspection = options.input
+      ? await inspectDocument(options.input)
+      : await inspectArtifactDir(options.dir)
+  } catch (error) {
+    if (error instanceof ArtifactWorkflowValidationError) {
+      process.exitCode = 1
+      process.stdout.write(`${error.message}\n`)
+      process.stdout.write("\n")
+      for (const diagnostic of error.diagnostics) {
+        process.stdout.write(
+          `${diagnostic.severity} ${diagnostic.code} ${diagnostic.path} ${diagnostic.message}\n`,
+        )
+      }
+      return
+    }
+
+    throw error
+  }
   const output =
     format === "json"
       ? `${JSON.stringify(inspection, null, 2)}\n`
@@ -353,7 +377,7 @@ async function inspectCommand(commandArgs, definition) {
 }
 
 async function doctorCommand(commandArgs) {
-  await runDoctorCommand({
+  const report = await runDoctorCommand({
     commandArgs,
     defaultOutputDir,
     ensureManagedRuntime,
@@ -361,6 +385,10 @@ async function doctorCommand(commandArgs) {
     readPackageVersion,
     runtimePaths,
   })
+
+  if (report.status === "fail") {
+    process.exitCode = 1
+  }
 }
 
 function fail(message) {

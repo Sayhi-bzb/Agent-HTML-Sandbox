@@ -113,6 +113,11 @@ Status: Partial.
 - 右栏 `Agent Shell` 现在也会在 diagnostics 非空时展示一块详细 diagnostics panel，而不只剩顶部 chip 入口
 - `Inspect` summary 与右栏 diagnostics panel 现在也会列出前几条 diagnostics 并支持逐条 `Open in Source`，不再只停在单条 primary issue
 - 右栏 `Agent Shell` 的 `Source validation / Source focus / Diagnostics` 三类顶部 review 入口现在也共用同一套 entry view model，不再各自拼 chip 与 detail panel
+- proposal snapshot 里的 `Drift / Preview` 入口现在也收口到同一套 shared entry model；需要解释时会直接露出对应 detail panel，而不再分别手拼 chip 动作和状态文案
+- proposal snapshot 顶部的 `Stage / Trend / Checklist` 现在也开始收口到同一套 shared entry model；其中 `Stage` 已能直接复用 readiness 的主动作，`Checklist` 也有了自己的状态 panel，而不再只是三枚内联静态 chip
+- 最新 proposal 的 `Decision` 状态、最近几次 decision history，以及 `Approve / Needs changes` 动作现在也通过 shared entry panel 暴露，不再依赖顶部内联 history 区和独立按钮
+- `Proposal readiness` 区里的 review path stage actions 和当前主 CTA 现在也走 shared readiness view，而不再在 JSX 里重复现算 workflow action
+- proposal message card 里的 stale note、proposal compare 摘要、checklist status/context/focus/action 现在也走 shared proposal view model，不再在 `AgentShellMessageCard` 内联现算
 - `Source focus` 现在也会显式标记 provenance，例如来自 proposal review target、saved compare 或 inspect diagnostic，三栏对源码焦点来源的解释更一致
 - source focus provenance 现在优先依赖稳定的 `originKind` 协议，而不是散落在 UI 里的自由文本标签
 - source focus provenance 现在也会显式区分 `checklist target` 与 `compare diff` 两类 review 来源实例，而不只是粗粒度的 review/compare 文案
@@ -135,6 +140,7 @@ Status: Partial.
 - `Source` / `Inspect` / `Agent Shell` 现在也共用同一套 source-validation view model，不再各自拼接主要诊断项与主动作
 - `Inspect` 与右栏 `Agent Shell` 的 source validation 现在也会列出前几条 issue，并支持逐条 `Open in Source`，不再只停在“首个问题”级别
 - source validation 现在会在 draft 变动后立即切到 `Validating`，而不是在 debounce 窗口里继续显示旧状态
+- `Source` 面板现在已把原生 `textarea` 替换为 `CodeMirror 6` editor adapter，并通过 `SourcePanel` chunk 按需加载，继续复用现有 source focus / diagnostic jump 协议
 - build 失败时可转向 inspect，而不是只停留在抽象错误提示
 
 当前缺口：
@@ -226,6 +232,99 @@ Status: First local proposal pass.
 - `Inspect` 仍偏 first-pass 诊断面，不是完整审查工作台
 - workbench 整体还在 v1 收口阶段，不是发布级桌面产品
 - 需要继续验证 app 与 `ahtml` CLI 边界的长期稳定性
+
+## Library Migration Plan
+
+当前 app 的主要“手搓债务”不在 review/workflow 业务模型本身，而在它们依赖的
+UI primitives、编辑器壳层和样式基础设施。
+
+迁移原则：
+
+- 保留现有业务协议与纯逻辑模型，例如 `review-flow`、`source-focus`、
+  `inspect-review`、`agent-shell-review-entry-view`、`proposal-message-view`
+  等；它们继续表达 app 自己的 review / drift / focus 语义。
+- 不再继续扩展 `textarea + styles.css + ad hoc button/panel classes`
+  这条基础设施路线。
+- 迁移目标是“把基础件标准化”，不是把 app 重写成另一套产品结构。
+
+### Locked Decisions
+
+- UI primitives 统一到 `shadcn/ui + Radix`，作为 app 内部的标准基础件层。
+- `Source` 面板编辑器统一到 `CodeMirror 6`，不继续增强原生 `textarea`。
+- `agent-html-app` 自身补齐需要的前端依赖与 app-local 组件目录，不再只依赖
+  root workspace 已安装但未实际接入的 UI 相关库。
+- 本轮不引入 `XState`、`Zustand`、`react-hook-form`、Monaco 或 provider
+  集成；状态机、表单框架和富编辑器都不作为这次迁移前提。
+
+### Migration Scope
+
+本计划只迁移基础视图层与编辑器壳层：
+
+- `Button` / `Card` / `Badge` / `Tabs` / `Separator` / `ScrollArea` /
+  `Textarea` 等基础 UI primitives
+- `Source` 面板的编辑器实现
+- `Workbench`、`Inspect`、`Agent Shell`、`SessionsSidebar` 对这些 primitives
+  的消费方式
+
+本计划明确不迁移：
+
+- `review-flow`、`source-focus`、`review-focus`、`inspect-review`、
+  `proposal-message-view` 这些业务逻辑到第三方状态库
+- patch apply / approve apply / provider 集成
+- `spec/components-adoption.md` 中 artifact contract 的组件暴露决策
+
+### Phased Rollout
+
+1. UI foundation
+   在 `apps/agent-html-app` 内建立 app-local `components/ui/*` 基础层，
+   标准化 `Button`、`Card`、`Badge`、`Tabs`、`Separator`、`ScrollArea`、
+   `Textarea`。`styles.css` 后续只保留 app layout、页面级结构和无法落入
+   组件 token 的样式，不再继续承载 primitives 定义。
+
+2. Source editor
+   用 `CodeMirror 6` 替换 `SourcePanel` 的原生 `textarea`，新增 app-local
+   editor adapter（例如 `SourceEditor`）。现有 source focus、diagnostic jump、
+   selection refresh、save 前后草稿同步行为必须保持等价。
+
+3. Workbench shell
+   先迁移 `SessionsSidebar`、`Workbench` 顶部 view switch、通用 header
+   actions 和 status pills，收掉 `.primary-button`、`.mini-button`、`.panel`
+   这一类“样式即组件”的基础件债务。
+
+4. Inspect and Agent Shell surfaces
+   再迁移 `InspectPanel` 与 `Agent Shell` 的 snapshot entries、detail panels、
+   readiness cards 和 proposal message card。继续复用现有 shared view models，
+   只替换它们依赖的 primitives 与 editor shell，不重写业务规则。
+
+5. Cleanup
+   删除不再需要的重复样式和自定义 primitives，确保新 UI 代码默认走
+   `components/ui/*` 和 editor adapter，而不是回到 ad hoc JSX + CSS。
+
+### Implementation Defaults
+
+- `shadcn/ui` 只作为 app 内部实现手段，不改变 `agent-html-app` 对外的产品边界。
+- app 内部组件默认通过 app-local wrapper 暴露，不直接在业务组件里散落原始
+  Radix primitives。
+- `CodeMirror 6` 第一阶段只承担文本编辑、选区控制、按行聚焦、diagnostic
+  跳转和 source focus 高亮；不在本计划里追加 LSP、复杂 diff editor 或 Monaco
+  兼容层。
+
+### Migration Gates
+
+每个迁移批次至少满足：
+
+- `npm --workspace agent-html-app run build`
+- 对新增纯逻辑 adapter / view model 补窄测试
+- 若涉及 `SourceEditor`，必须额外验证：
+  `Open in Source`、diagnostic jump、focus refresh、save 前后草稿同步不回退
+
+最终验收标准：
+
+- `Source -> Build -> Preview -> Inspect` 主闭环行为不回退
+- `Agent Shell` 的 snapshot entries、decision/review/readiness actions
+  仍与现有 shared models 对齐
+- app 不再继续扩大基础 UI 的“手搓面”，新增 UI 默认走 `shadcn/Radix` 与
+  `CodeMirror 6`
 
 ## Next Steps
 

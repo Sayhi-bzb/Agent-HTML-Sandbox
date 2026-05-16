@@ -28,6 +28,18 @@ describe("profile-first render config", () => {
     })
   })
 
+  it("rejects resolved token combinations that do not match the selected profile", () => {
+    expect(() =>
+      RenderConfigSchema.parse({
+        profile: "ops-compact",
+        theme: "neutral",
+        density: "comfortable",
+        tone: "dashboard",
+        width: "dashboard",
+      }),
+    ).toThrow()
+  })
+
   it("rejects unknown keys and CSS-like values", () => {
     expect(() =>
       parseRenderConfig({

@@ -1,5 +1,3 @@
-import { useEffect, useRef } from "react"
-
 import type {
   SourceFocusReviewStatus,
   SourceFocusTarget,
@@ -7,14 +5,11 @@ import type {
 import {
   createSourceFocusTargetFromDiagnostic,
   getSourceSelectionRange,
-  type SourceFocusPrimaryAction,
 } from "../../lib/source-focus"
 import { getSourceFocusViewModel } from "../../lib/source-focus-view"
+import { SourceEditor } from "../ui/source-editor"
 import type { SourceValidationState } from "../../lib/types"
-import {
-  formatSourceValidationDiagnosticMeta,
-  getSourceValidationViewModel,
-} from "../../lib/source-validation-view"
+import { getSourceValidationViewModel } from "../../lib/source-validation-view"
 import { formatTimestampLabel } from "../../lib/time"
 
 type SourcePanelProps = {
@@ -50,7 +45,6 @@ export function SourcePanel({
   onSave,
   isSaving,
 }: SourcePanelProps) {
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const sourceFocusView = getSourceFocusViewModel({
     sourceFocus: activeSourceFocus,
     reviewStatus: activeSourceFocusReviewStatus,
@@ -58,23 +52,13 @@ export function SourcePanel({
   })
   const sourceValidationView = getSourceValidationViewModel(sourceValidation)
   const primaryValidationDiagnostic = sourceValidationView.primaryDiagnostic
-
-  useEffect(() => {
-    if (!activeSourceFocus || !textareaRef.current) {
-      return
-    }
-
-    const textarea = textareaRef.current
-    const selection = getSourceSelectionRange(draftSource, activeSourceFocus)
-    const lineHeight =
-      Number.parseFloat(window.getComputedStyle(textarea).lineHeight) || 20
-
-    textarea.focus()
-    textarea.setSelectionRange(selection.selectionStart, selection.selectionEnd)
-    textarea.scrollTop = Math.max(selection.startLine - 2, 0) * lineHeight
-  }, [activeSourceFocus?.requestKey, draftSource])
-
   const hasUnsavedChanges = draftSource !== source
+  const sourceFocusSelection = activeSourceFocus
+    ? {
+        requestKey: activeSourceFocus.requestKey,
+        ...getSourceSelectionRange(draftSource, activeSourceFocus),
+      }
+    : undefined
 
   return (
     <section className="workbench-card">
@@ -263,11 +247,9 @@ export function SourcePanel({
           </div>
         </div>
       ) : null}
-      <textarea
-        ref={textareaRef}
-        className="source-editor"
-        onChange={(event) => onDraftChange(event.target.value)}
-        spellCheck={false}
+      <SourceEditor
+        focusSelection={sourceFocusSelection}
+        onChange={onDraftChange}
         value={draftSource}
       />
     </section>

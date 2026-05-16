@@ -31,9 +31,7 @@ type RuntimePaths = {
 }
 
 type LoadedModules = {
-  readonly createShadcnBaseLayerExpectation: (
-    cssVariables: boolean,
-  ) => {
+  readonly createShadcnBaseLayerExpectation: (cssVariables: boolean) => {
     readonly cssVariables: boolean
     readonly imports: readonly string[]
     readonly tokens: readonly string[]
@@ -47,7 +45,7 @@ type LoadedModules = {
     readonly packageRoot: string
     readonly readPackageVersion: () => Promise<string>
     readonly runtimePaths: RuntimePaths
-  }) => Promise<void>
+  }) => Promise<{ readonly status: string }>
   readonly getRuntimePaths: (env?: Record<string, string>) => RuntimePaths
   readonly runtimeRenderer: string
   readonly runtimeVersion: number
@@ -177,16 +175,16 @@ describe("runtime surface completeness", () => {
   it("fails doctor on missing shadcn css imports and skips built css when no artifact exists", async () => {
     const { runDoctorCommand } = await loadModules()
     const fixture = await createRuntimeFixture({ includeCssImports: false })
-    const { output, exitCode } = await captureStdout(async () => {
-      await runDoctorCommand({
+    const { output, result } = await captureStdout(async () =>
+      runDoctorCommand({
         commandArgs: [],
         defaultOutputDir: fixture.outputDir,
         ensureManagedRuntime: async () => {},
         packageRoot: process.cwd(),
         readPackageVersion: async () => "0.0.0",
         runtimePaths: fixture.runtimePaths,
-      })
-    })
+      }),
+    )
 
     expect(output).toContain("ok runtime:components-json")
     expect(output).toContain("ok runtime:shadcn-template-vite-config")
@@ -196,7 +194,7 @@ describe("runtime surface completeness", () => {
     expect(output).toContain(
       "skip artifact:built-css No built artifact CSS found",
     )
-    expect(exitCode).toBe(1)
+    expect(result.status).toBe("fail")
   })
 
   it("rejects runtime surface drift between manifest and components.json", async () => {
@@ -621,9 +619,8 @@ function getRequiredComponentExports(
   return [...exports]
 }
 
-async function captureStdout(callback: () => Promise<void>) {
+async function captureStdout<T>(callback: () => Promise<T>) {
   let output = ""
-  const originalExitCode = process.exitCode
   const writeSpy = vi.spyOn(process.stdout, "write").mockImplementation(((
     chunk: string | Uint8Array,
   ) => {
@@ -631,13 +628,11 @@ async function captureStdout(callback: () => Promise<void>) {
     return true
   }) as typeof process.stdout.write)
 
-  process.exitCode = 0
   try {
-    await callback()
-    return { output, exitCode: process.exitCode }
+    const result = await callback()
+    return { output, result }
   } finally {
     writeSpy.mockRestore()
-    process.exitCode = originalExitCode
   }
 }
 
@@ -693,12 +688,20 @@ async function loadModules(): Promise<LoadedModules> {
     ),
     import(
       pathToFileURL(
-        path.join(root, "packages", "ahtml", "src", "cli", "runtime-status.mjs"),
+        path.join(
+          root,
+          "packages",
+          "ahtml",
+          "src",
+          "cli",
+          "runtime-status.mjs",
+        ),
       ).href
     ),
     import(
-      pathToFileURL(path.join(root, "packages", "ahtml", "src", "cli", "schema.mjs"))
-        .href,
+      pathToFileURL(
+        path.join(root, "packages", "ahtml", "src", "cli", "schema.mjs"),
+      ).href
     ),
   ])
 

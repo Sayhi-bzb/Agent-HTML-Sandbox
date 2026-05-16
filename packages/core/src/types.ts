@@ -50,7 +50,7 @@ export type RenderTone = "dashboard" | "decision" | "report"
 
 export type RenderWidth = "article" | "dashboard" | "wide"
 
-export type RenderProfile = string
+export type RenderProfile = "report-default" | "ops-compact" | "review-dense"
 
 export type RenderConfig = {
   readonly profile: RenderProfile

@@ -160,10 +160,8 @@ export async function runDoctorCommand({
     }),
   )
   checks.push(
-    await runDoctorCheck(
-      "runtime",
-      "shadcn-template-vite-config",
-      async () => assertRuntimeTemplateViteConfig(runtimePaths),
+    await runDoctorCheck("runtime", "shadcn-template-vite-config", async () =>
+      assertRuntimeTemplateViteConfig(runtimePaths),
     ),
   )
   checks.push(
@@ -258,10 +256,6 @@ export async function runDoctorCommand({
         `${check.status} ${check.category}:${check.name} ${check.detail}\n`,
       )
     }
-  }
-
-  if (checks.some((check) => check.status === "fail")) {
-    process.exitCode = 1
   }
 
   return report

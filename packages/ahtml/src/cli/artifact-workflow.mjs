@@ -14,6 +14,14 @@ import { getRuntimeRenderDiagnostics } from "./runtime-renderability.mjs"
 import { validateAgentHtmlSource } from "./validate.mjs"
 import { parseJson, printDiagnostics, writeJsonFile } from "./cli-io.mjs"
 
+export class ArtifactWorkflowValidationError extends Error {
+  constructor(message, diagnostics) {
+    super(message)
+    this.name = "ArtifactWorkflowValidationError"
+    this.diagnostics = diagnostics
+  }
+}
+
 export function createArtifactWorkflow({
   userRoot,
   defaultOutputDir,
@@ -31,7 +39,6 @@ export function createArtifactWorkflow({
       if (options.printDiagnostics !== false) {
         printDiagnostics(validation.diagnostics)
       }
-      process.exitCode = 1
       return createBuildResult({
         diagnostics: validation.diagnostics,
         inputPath: inputFilePath,
@@ -54,7 +61,6 @@ export function createArtifactWorkflow({
       if (options.printDiagnostics !== false) {
         printDiagnostics(runtimeDiagnostics)
       }
-      process.exitCode = 1
       return createBuildResult({
         diagnostics: runtimeDiagnostics,
         inputPath: inputFilePath,
@@ -117,8 +123,10 @@ export function createArtifactWorkflow({
     const validation = await validateAgentHtmlSource(source)
 
     if (validation.diagnostics.length > 0) {
-      printDiagnostics(validation.diagnostics)
-      process.exit(1)
+      throw new ArtifactWorkflowValidationError(
+        "Cannot inspect an invalid agent-html document.",
+        validation.diagnostics,
+      )
     }
 
     return createInspection(validation.document)
@@ -142,7 +150,6 @@ export function createArtifactWorkflow({
       if (options.printDiagnostics !== false) {
         printDiagnostics(validation.diagnostics)
       }
-      process.exitCode = 1
       return createValidationResult({
         diagnostics: validation.diagnostics,
         inputPath: inputFilePath,
@@ -203,7 +210,12 @@ function createBuildResult({
   }
 }
 
-function createValidationResult({ diagnostics = [], inputPath, inspection, ok }) {
+function createValidationResult({
+  diagnostics = [],
+  inputPath,
+  inspection,
+  ok,
+}) {
   return {
     kind: "agent-html-validation-result",
     version: 1,
