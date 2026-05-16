@@ -11,7 +11,10 @@ import path from "node:path"
 import { promisify } from "node:util"
 
 import { getRuntimePaths, runtimePackageRoot } from "./runtime-paths.mjs"
-import { resolveRuntimeDependencies } from "./runtime-template.mjs"
+import {
+  ensureRuntimeBuildConfig,
+  resolveRuntimeDependencies,
+} from "./runtime-template.mjs"
 
 const execFileAsync = promisify(execFile)
 
@@ -24,6 +27,7 @@ export async function buildRuntimeArtifact({
   await mkdir(outputDir, { recursive: true })
 
   const { viteBin } = resolveRuntimeDependencies(packageRoot)
+  await ensureRuntimeBuildConfig({ packageRoot, paths })
   await execFileAsync(
     process.execPath,
     [

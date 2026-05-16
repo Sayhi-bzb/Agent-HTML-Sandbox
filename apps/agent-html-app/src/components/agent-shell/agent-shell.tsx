@@ -20,19 +20,32 @@ import {
   parseStructuredMessageCard,
 } from "../../lib/review-flow"
 import {
+  getInspectDiagnosticsEntryView,
+  getSourceFocusEntryView,
+  getSourceValidationEntryView,
+  type AgentShellDetailAction,
+} from "../../lib/agent-shell-review-entry-view"
+import {
   createReviewFocusTargetFromGroups,
   type ReviewFocusIntent,
   type ReviewFocusTarget,
 } from "../../lib/review-focus"
 import {
+  createSourceFocusTargetFromDiagnostic,
   createSourceFocusTargetFromGroup,
-  getSourceFocusLineLabel,
-  getSourceFocusPrimaryAction,
   getSourceFocusReadinessWarning,
-  getSourceFocusStatusPill,
   type SourceFocusReviewStatus,
   type SourceFocusTarget,
 } from "../../lib/source-focus"
+import {
+  formatInspectDiagnosticMeta,
+  getInspectDiagnosticsViewModel,
+} from "../../lib/inspect-diagnostics-view"
+import { getSourceFocusViewModel } from "../../lib/source-focus-view"
+import {
+  formatSourceValidationDiagnosticMeta,
+  getSourceValidationViewModel,
+} from "../../lib/source-validation-view"
 import { formatTimestampLabel } from "../../lib/time"
 import {
   getPreviewGroupKey,
@@ -44,6 +57,7 @@ import type {
   BuildRunSummary,
   InspectSnapshot,
   SessionDetail,
+  SourceValidationState,
   WorkbenchView,
 } from "../../lib/types"
 
@@ -56,6 +70,7 @@ type AgentShellProps = {
   hasUnsavedSourceChanges: boolean
   draftComparison?: SourceComparisonSummary
   proposalComparison?: SourceComparisonSummary
+  sourceValidation: SourceValidationState
   activeSourceFocus?: SourceFocusTarget
   activeSourceFocusReviewStatus?: SourceFocusReviewStatus
   isSavingSource: boolean
@@ -63,6 +78,7 @@ type AgentShellProps = {
   isRunningInspect: boolean
   isSending: boolean
   isDraftingProposal: boolean
+  canRevealSourceOrigin: boolean
   clearReviewFocusKey?: string
   reviewIntent?: ReviewFocusIntent
   onReviewFocusChange?: (focus?: ReviewFocusTarget) => void
@@ -98,6 +114,7 @@ export function AgentShell({
   hasUnsavedSourceChanges,
   draftComparison,
   proposalComparison,
+  sourceValidation,
   activeSourceFocus,
   activeSourceFocusReviewStatus,
   isSavingSource,
@@ -105,6 +122,7 @@ export function AgentShell({
   isRunningInspect,
   isSending,
   isDraftingProposal,
+  canRevealSourceOrigin,
   clearReviewFocusKey,
   reviewIntent,
   onReviewFocusChange,
@@ -162,6 +180,7 @@ export function AgentShell({
     proposalComparison,
     proposalProgress,
     session,
+    sourceValidation,
   })
   const currentReviewStage = getCurrentReviewStage({
     build,
@@ -171,6 +190,7 @@ export function AgentShell({
     latestProposalIsStale,
     proposalComparison,
     session,
+    sourceValidation,
   })
   const isProposalActionBusy =
     isDraftingProposal ||
@@ -190,6 +210,7 @@ export function AgentShell({
     proposalComparison,
     proposalProgress,
     sourceFocusReviewStatus: activeSourceFocusReviewStatus,
+    sourceValidation,
   })
   const sourceFocusReadinessWarning = getSourceFocusReadinessWarning(
     activeSourceFocusReviewStatus,
@@ -211,11 +232,20 @@ export function AgentShell({
     draftComparison,
     proposalComparison,
   })
-  const sourceFocusStatusPill = getSourceFocusStatusPill(
-    activeSourceFocusReviewStatus,
-  )
-  const sourceFocusPrimaryAction = getSourceFocusPrimaryAction(
-    activeSourceFocusReviewStatus,
+  const sourceFocusView = getSourceFocusViewModel({
+    sourceFocus: activeSourceFocus,
+    reviewStatus: activeSourceFocusReviewStatus,
+    canRevealSourceOrigin,
+  })
+  const sourceValidationView = getSourceValidationViewModel(sourceValidation)
+  const inspectDiagnosticsView = getInspectDiagnosticsViewModel(inspect)
+  const sourceValidationEntry = getSourceValidationEntryView({
+    sourceValidation,
+    sourceValidationView,
+  })
+  const sourceFocusEntry = getSourceFocusEntryView(sourceFocusView)
+  const inspectDiagnosticsEntry = getInspectDiagnosticsEntryView(
+    inspectDiagnosticsView,
   )
   const currentStageAction = getReviewTimelineActionConfig({
     stage: currentReviewStage,
@@ -228,6 +258,7 @@ export function AgentShell({
     latestProposalIsStale,
     proposalComparison,
     sessionHasPreview: session.summary.hasPreview,
+    sourceValidation,
   })
   const currentStageGuidance = getCurrentReviewStageGuidance({
     stage: currentReviewStage,
@@ -236,6 +267,7 @@ export function AgentShell({
     proposalDecisionTrend,
     latestProposalIsStale,
     proposalComparison,
+    sourceValidationStatus: sourceValidation.status,
   })
   const showComparisonModeSwitch = Boolean(
     draftComparison && proposalComparison,
@@ -425,6 +457,7 @@ export function AgentShell({
       | "build"
       | "inspect"
       | "openInspect"
+      | "openSource"
       | "reviewDiff"
       | "openPreview"
       | "draftProposal",
@@ -442,6 +475,9 @@ export function AgentShell({
       case "openInspect":
         void onOpenView("inspect")
         break
+      case "openSource":
+        void onOpenView("source")
+        break
       case "reviewDiff":
         focusChecklistOption(getDefaultProposalFocusOption())
         break
@@ -450,6 +486,37 @@ export function AgentShell({
         break
       case "draftProposal":
         void onDraftProposal()
+        break
+    }
+  }
+
+  function runDetailAction(action: AgentShellDetailAction) {
+    switch (action.kind) {
+      case "open-source":
+        runWorkflowAction("openSource")
+        break
+      case "open-inspect":
+        runWorkflowAction(activeView === "inspect" ? "inspect" : "openInspect")
+        break
+      case "focus-diagnostic": {
+        const target = createSourceFocusTargetFromDiagnostic({
+          diagnostic: action.diagnostic,
+        })
+        if (target) {
+          void onOpenSourceFocus(target)
+        }
+        break
+      }
+      case "open-source-focus":
+        if (activeSourceFocus) {
+          void onOpenSourceFocus(activeSourceFocus)
+        }
+        break
+      case "refresh-source-focus":
+        void onRefreshSourceFocus()
+        break
+      case "reveal-source-origin":
+        void onRevealSourceReviewTarget()
         break
     }
   }
@@ -650,6 +717,7 @@ export function AgentShell({
                               focusedComparison?.label ??
                               comparisonLabels.cardTitle,
                             group,
+                            compareMode: comparisonMode,
                             reviewTarget:
                               getFocusedReviewTarget(focusedPreviewGroups),
                           }),
@@ -821,40 +889,42 @@ export function AgentShell({
               {proposalProgress.totalTaggedItems}
             </span>
           ) : null}
-          {activeSourceFocus && sourceFocusStatusPill ? (
+          {sourceValidationEntry ? (
             <button
-              className={`proposal-snapshot-chip pill ${sourceFocusStatusPill.className}`}
-              disabled={isProposalActionBusy}
-              onClick={() => {
-                switch (sourceFocusPrimaryAction) {
-                  case "refresh-source-focus":
-                    void onRefreshSourceFocus()
-                    break
-                  case "reveal-review-target":
-                    void onRevealSourceReviewTarget()
-                    break
-                  default:
-                    void onOpenSourceFocus(activeSourceFocus)
-                    break
-                }
-              }}
+              className={`proposal-snapshot-chip pill ${sourceValidationEntry.chip.pillClassName}`}
+              disabled={
+                isProposalActionBusy ||
+                (sourceValidationEntry.chip.action.kind === "open-source" &&
+                  activeView === "source")
+              }
+              onClick={() => runDetailAction(sourceValidationEntry.chip.action)}
               type="button"
             >
-              Source {sourceFocusStatusPill.label}
+              {sourceValidationEntry.chip.label}
             </button>
           ) : null}
-          <button
-            className={`proposal-snapshot-chip pill ${inspect.diagnostics.length > 0 ? "status-dirty" : "status-ready"}`}
-            disabled={isProposalActionBusy}
-            onClick={() =>
-              runWorkflowAction(
-                activeView === "inspect" ? "inspect" : "openInspect",
-              )
-            }
-            type="button"
-          >
-            Diagnostics {inspect.diagnostics.length}
-          </button>
+          {sourceFocusEntry ? (
+            <button
+              className={`proposal-snapshot-chip pill ${sourceFocusEntry.chip.pillClassName}`}
+              disabled={isProposalActionBusy}
+              onClick={() => runDetailAction(sourceFocusEntry.chip.action)}
+              type="button"
+            >
+              {sourceFocusEntry.chip.label}
+            </button>
+          ) : null}
+          {inspectDiagnosticsEntry ? (
+            <button
+              className={`proposal-snapshot-chip pill ${inspectDiagnosticsEntry.chip.pillClassName}`}
+              disabled={isProposalActionBusy}
+              onClick={() =>
+                runDetailAction(inspectDiagnosticsEntry.chip.action)
+              }
+              type="button"
+            >
+              {inspectDiagnosticsEntry.chip.label}
+            </button>
+          ) : null}
           {proposalComparison?.changedLineCount ? (
             <button
               className="proposal-snapshot-chip pill status-dirty"
@@ -913,61 +983,178 @@ export function AgentShell({
             </>
           ) : null}
         </div>
-        {activeSourceFocus && activeSourceFocusReviewStatus ? (
+        {inspectDiagnosticsEntry ? (
+          <div className="proposal-source-focus-panel">
+            <div className="message-topline">
+              <div>
+                <p className="eyebrow">Inspect diagnostics</p>
+                <h4>{inspectDiagnosticsEntry.panel.title}</h4>
+              </div>
+              <span
+                className={`pill ${inspectDiagnosticsEntry.panel.pillClassName}`}
+              >
+                {inspectDiagnosticsEntry.panel.pillLabel}
+              </span>
+            </div>
+            <p className="proposal-starter-copy">
+              {inspectDiagnosticsEntry.panel.summary}
+            </p>
+            <div className="proposal-meta-row">
+              {inspectDiagnosticsEntry.panel.meta.map((item) => (
+                <span className="pill" key={item}>
+                  {item}
+                </span>
+              ))}
+            </div>
+            {inspectDiagnosticsEntry.panel.issues?.length ? (
+              <div className="proposal-list">
+                {inspectDiagnosticsEntry.panel.issues.map((issue) => (
+                  <div className="proposal-meta-row" key={issue.id}>
+                    <span className="inline-meta">{issue.message}</span>
+                    <span className="inline-meta">{issue.meta}</span>
+                    {issue.action ? (
+                      <button
+                        className="mini-button"
+                        disabled={isProposalActionBusy}
+                        onClick={() => {
+                          const action = issue.action
+                          if (action) {
+                            runDetailAction(action)
+                          }
+                        }}
+                        type="button"
+                      >
+                        {issue.action.label}
+                      </button>
+                    ) : null}
+                  </div>
+                ))}
+                {inspectDiagnosticsEntry.panel.hasAdditionalIssues ? (
+                  <span className="inline-meta">
+                    More inspect diagnostics are available in the Inspect panel.
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+            <div className="proposal-actions">
+              {inspectDiagnosticsEntry.panel.actions.map((action) => (
+                <button
+                  className="mini-button"
+                  disabled={isProposalActionBusy}
+                  key={action.id}
+                  onClick={() => runDetailAction(action)}
+                  type="button"
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+        {sourceValidationEntry ? (
+          <div className="proposal-source-focus-panel">
+            <div className="message-topline">
+              <div>
+                <p className="eyebrow">Source validation</p>
+                <h4>{sourceValidationEntry.panel.title}</h4>
+              </div>
+              <span
+                className={`pill ${sourceValidationEntry.panel.pillClassName}`}
+              >
+                {sourceValidationEntry.panel.pillLabel}
+              </span>
+            </div>
+            <p className="proposal-starter-copy">
+              {sourceValidationEntry.panel.summary}
+            </p>
+            <div className="proposal-meta-row">
+              {sourceValidationEntry.panel.meta.map((item) => (
+                <span className="pill" key={item}>
+                  {item}
+                </span>
+              ))}
+            </div>
+            {sourceValidationEntry.panel.issues?.length ? (
+              <div className="proposal-list">
+                {sourceValidationEntry.panel.issues.map((issue) => (
+                  <div className="proposal-meta-row" key={issue.id}>
+                    <span className="inline-meta">{issue.message}</span>
+                    <span className="inline-meta">{issue.meta}</span>
+                    {issue.action ? (
+                      <button
+                        className="mini-button"
+                        disabled={isProposalActionBusy}
+                        onClick={() => {
+                          const action = issue.action
+                          if (action) {
+                            runDetailAction(action)
+                          }
+                        }}
+                        type="button"
+                      >
+                        {issue.action.label}
+                      </button>
+                    ) : null}
+                  </div>
+                ))}
+                {sourceValidationEntry.panel.hasAdditionalIssues ? (
+                  <span className="inline-meta">
+                    More validation issues are available in the Source panel.
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+            <div className="proposal-actions">
+              {sourceValidationEntry.panel.actions.map((action) => (
+                <button
+                  className="mini-button"
+                  disabled={isProposalActionBusy}
+                  key={action.id}
+                  onClick={() => runDetailAction(action)}
+                  type="button"
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+        {sourceFocusEntry ? (
           <div className="proposal-source-focus-panel">
             <div className="message-topline">
               <div>
                 <p className="eyebrow">Source focus</p>
-                <h4>{activeSourceFocus.label}</h4>
+                <h4>{sourceFocusEntry.panel.title}</h4>
               </div>
-              {sourceFocusStatusPill ? (
-                <span className={`pill ${sourceFocusStatusPill.className}`}>
-                  {sourceFocusStatusPill.label}
-                </span>
-              ) : null}
+              <span className={`pill ${sourceFocusEntry.panel.pillClassName}`}>
+                {sourceFocusEntry.panel.pillLabel}
+              </span>
             </div>
             <p className="proposal-starter-copy">
-              {activeSourceFocusReviewStatus.summary}
+              {sourceFocusEntry.panel.summary}
             </p>
             <div className="proposal-meta-row">
-              <span className="pill">
-                {getSourceFocusLineLabel(activeSourceFocus)}
-              </span>
-              {activeSourceFocus.reviewOrigin ? (
-                <span className="inline-meta">
-                  From {activeSourceFocus.reviewOrigin.label}
+              {sourceFocusEntry.panel.meta.map((item, index) => (
+                <span
+                  className={index === 0 ? "pill accent" : "inline-meta"}
+                  key={item}
+                >
+                  {item}
                 </span>
-              ) : null}
+              ))}
             </div>
             <div className="proposal-actions">
-              <button
-                className="mini-button"
-                disabled={isProposalActionBusy}
-                onClick={() => void onOpenSourceFocus(activeSourceFocus)}
-                type="button"
-              >
-                Open Source focus
-              </button>
-              {activeSourceFocusReviewStatus.currentReviewTarget ? (
+              {sourceFocusEntry.panel.actions.map((action) => (
                 <button
                   className="mini-button"
                   disabled={isProposalActionBusy}
-                  onClick={() => void onRevealSourceReviewTarget()}
+                  key={action.id}
+                  onClick={() => runDetailAction(action)}
                   type="button"
                 >
-                  Reveal review target
+                  {action.label}
                 </button>
-              ) : null}
-              {activeSourceFocusReviewStatus.kind === "moved" ? (
-                <button
-                  className="mini-button"
-                  disabled={isProposalActionBusy}
-                  onClick={() => void onRefreshSourceFocus()}
-                  type="button"
-                >
-                  Refresh focus
-                </button>
-              ) : null}
+              ))}
             </div>
           </div>
         ) : null}
@@ -995,6 +1182,7 @@ export function AgentShell({
                 latestProposalIsStale,
                 proposalComparison,
                 sessionHasPreview: session.summary.hasPreview,
+                sourceValidation,
               })
 
               return (
@@ -1306,6 +1494,10 @@ function AgentShellMessageCard({
                                             createSourceFocusTargetFromGroup({
                                               label: item.text,
                                               group: previewGroup,
+                                              compareMode:
+                                                item.action === "review"
+                                                  ? "proposal"
+                                                  : "saved",
                                               reviewTarget:
                                                 createReviewFocusTargetFromGroups(
                                                   {

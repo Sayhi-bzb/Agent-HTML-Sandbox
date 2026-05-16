@@ -577,12 +577,32 @@ button:disabled {
   margin-top: 8px;
 }
 
+.inspect-summary-meta,
+.inspect-summary-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.inspect-summary-detail {
+  color: #5d6b84;
+  margin: 0;
+}
+
 .validation-topline,
 .validation-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.validation-topline-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .validation-topline h4,

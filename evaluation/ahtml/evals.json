@@ -1,0 +1,148 @@
+{
+  "skill_name": "ahtml",
+  "version": 1,
+  "layers": [
+    {
+      "id": "A",
+      "name": "write-only",
+      "inputs": ["SKILL.md"],
+      "student_output": "agent_html",
+      "scenarios": [
+        {
+          "id": "A1",
+          "task": "Write a review artifact with one card, one list, one tabs or accordion block, and one field or option block.",
+          "hard_requirements": [
+            "Produces valid .agent.html syntax",
+            "Includes page",
+            "Includes card",
+            "Includes list",
+            "Includes one of tabs or accordion",
+            "Includes one of radio-group, toggle-group, select, combobox, input, textarea, checkbox, switch, slider",
+            "Does not use class, className, style, scripts, event handlers, raw HTML, shadcn props, Radix props, or unknown attrs"
+          ]
+        },
+        {
+          "id": "A2",
+          "task": "Write a decision artifact with one card, one table, and one alert.",
+          "hard_requirements": [
+            "Produces valid .agent.html syntax",
+            "Includes page",
+            "Includes card",
+            "Includes table",
+            "Includes alert"
+          ]
+        },
+        {
+          "id": "A3",
+          "task": "Write a structured handoff artifact with one card, one accordion or tabs block, and at least one select-like control.",
+          "hard_requirements": [
+            "Produces valid .agent.html syntax",
+            "Includes page",
+            "Includes card",
+            "Includes one of tabs or accordion",
+            "Includes one of select or combobox or radio-group or toggle-group"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "name": "install-only",
+      "inputs": ["SKILL.md", "references/install.md"],
+      "student_output": "commands",
+      "scenarios": [
+        {
+          "id": "B1",
+          "task": "Install ahtml for a normal user environment.",
+          "hard_requirements": [
+            "Uses a supported install command",
+            "Does not use removed scaffold/init flows"
+          ]
+        },
+        {
+          "id": "B2",
+          "task": "Set up ahtml from a local repository checkout for development.",
+          "hard_requirements": [
+            "Uses npm install and npm link or equivalent local-dev setup",
+            "Does not claim the current project is the runtime target"
+          ]
+        },
+        {
+          "id": "B3",
+          "task": "Prepare an isolated runtime with AHTML_HOME and non-interactive setup.",
+          "hard_requirements": [
+            "Mentions AHTML_HOME for isolation",
+            "Uses ahtml setup --yes"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "name": "command-use",
+      "inputs": ["SKILL.md", "references/usage.md"],
+      "student_output": "commands",
+      "scenarios": [
+        {
+          "id": "C1",
+          "task": "Read the public contract, write an artifact, and build it.",
+          "hard_requirements": [
+            "Uses ahtml prompt",
+            "Uses ahtml build",
+            "Keeps command order correct"
+          ]
+        },
+        {
+          "id": "C2",
+          "task": "Preview an artifact locally and explain when inspect is needed.",
+          "hard_requirements": [
+            "Uses ahtml preview",
+            "Uses inspect only when task needs document or artifact details"
+          ]
+        },
+        {
+          "id": "C3",
+          "task": "Given an existing artifact file, validate the shape by using prompt, build or preview, and inspect if needed.",
+          "hard_requirements": [
+            "Does not invent unsupported commands",
+            "Does not use removed flows"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "D",
+      "name": "debug",
+      "inputs": ["SKILL.md", "references/usage.md", "references/debug.md"],
+      "student_output": "debug_plan",
+      "scenarios": [
+        {
+          "id": "D1",
+          "task": "Build fails before artifact output.",
+          "hard_requirements": [
+            "Starts with ahtml doctor",
+            "Uses ahtml build as the rebuild step"
+          ]
+        },
+        {
+          "id": "D2",
+          "task": "Preview fails locally.",
+          "hard_requirements": [
+            "Starts with ahtml doctor or explicit build check",
+            "Checks build before changing preview logic",
+            "Uses preview --port 0 when diagnosing port conflicts"
+          ]
+        },
+        {
+          "id": "D3",
+          "task": "A local runtime issue remains reproducible after normal repair steps.",
+          "hard_requirements": [
+            "Starts with ahtml doctor",
+            "Uses ahtml setup --force when appropriate",
+            "Escalates to bug reporting when the issue remains reproducible"
+          ]
+        }
+      ]
+    }
+  ]
+}

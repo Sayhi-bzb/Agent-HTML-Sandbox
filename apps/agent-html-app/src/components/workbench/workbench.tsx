@@ -9,7 +9,7 @@ import type {
   InspectSnapshot,
   LogSnapshot,
   SessionDetail,
-  SourceValidationSnapshot,
+  SourceValidationState,
   WorkbenchView,
 } from "../../lib/types"
 import type { ReviewTimelineActionConfig } from "../../lib/review-flow"
@@ -24,6 +24,7 @@ type WorkbenchProps = {
   inspect: InspectSnapshot
   logs: LogSnapshot
   messages: AgentShellMessage[]
+  sourceValidation: SourceValidationState
   activeReviewFocus?: ReviewFocusTarget
   activeSourceFocus?: SourceFocusTarget
   activeSourceFocusReviewStatus?: SourceFocusReviewStatus
@@ -37,6 +38,7 @@ type WorkbenchProps = {
   activeView: WorkbenchView
   onViewChange: (view: WorkbenchView) => void
   onBuild: () => Promise<void> | void
+  canRevealSourceOrigin: boolean
   onInspect: () => Promise<void> | void
   onClearReviewFocus: () => void
   onClearSourceFocus: () => void
@@ -50,7 +52,6 @@ type WorkbenchProps = {
   onSelectReviewFocus: (target: ReviewFocusTarget) => void
   onDraftSourceChange: (source: string) => void
   onSaveSource: (source: string) => Promise<void> | void
-  onValidateSource: (source: string) => Promise<SourceValidationSnapshot>
   isSavingSource: boolean
   isRunningBuild: boolean
   isRunningInspect: boolean
@@ -64,6 +65,7 @@ export function Workbench({
   inspect,
   logs,
   messages,
+  sourceValidation,
   activeReviewFocus,
   activeSourceFocus,
   activeSourceFocusReviewStatus,
@@ -77,6 +79,7 @@ export function Workbench({
   activeView,
   onViewChange,
   onBuild,
+  canRevealSourceOrigin,
   onClearReviewFocus,
   onClearSourceFocus,
   onInspect,
@@ -88,7 +91,6 @@ export function Workbench({
   onSelectReviewFocus,
   onDraftSourceChange,
   onSaveSource,
-  onValidateSource,
   isSavingSource,
   isRunningBuild,
   isRunningInspect,
@@ -148,14 +150,16 @@ export function Workbench({
         <SourcePanel
           activeSourceFocus={activeSourceFocus}
           activeSourceFocusReviewStatus={activeSourceFocusReviewStatus}
+          canRevealSourceOrigin={canRevealSourceOrigin}
           draftSource={draftSource}
           isSaving={isSavingSource}
+          sourceValidation={sourceValidation}
           onClearSourceFocus={onClearSourceFocus}
           onDraftChange={onDraftSourceChange}
+          onOpenSourceFocus={onOpenSourceFocus}
           onRefreshSourceFocus={onRefreshSourceFocus}
           onRevealReviewTarget={onRevealSourceReviewTarget}
           onSave={onSaveSource}
-          onValidate={onValidateSource}
           source={session.source}
           sourcePath={session.sourcePath}
         />
@@ -167,15 +171,18 @@ export function Workbench({
           activeSourceFocusReviewStatus={activeSourceFocusReviewStatus}
           availableReviewFocusTargets={availableReviewFocusTargets}
           build={build}
+          canRevealSourceOrigin={canRevealSourceOrigin}
           draftComparison={draftComparison}
           hasUnsavedSourceChanges={hasUnsavedSourceChanges}
           inspect={inspect}
           isActionBusy={isActionBusy}
           logs={logs}
           messages={messages}
+          sourceValidation={sourceValidation}
           onClearReviewFocus={onClearReviewFocus}
           onOpenSourceFocus={onOpenSourceFocus}
           onRefreshSourceFocus={onRefreshSourceFocus}
+          onRevealSourceReviewTarget={onRevealSourceReviewTarget}
           onRevisitReviewFocus={onRevisitReviewFocus}
           onRunReviewAction={onRunReviewAction}
           onSelectReviewFocus={onSelectReviewFocus}

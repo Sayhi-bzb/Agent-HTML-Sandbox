@@ -72,11 +72,9 @@ import {
 
 const runtimeElementRegistry: Record<string, React.ElementType> = {
   article: "article",
-  div: "div",
   h1: "h1",
   li: "li",
   ol: "ol",
-  p: "p",
   ul: "ul",
   Accordion,
   AccordionContent,

@@ -5,6 +5,7 @@ import type {
   BuildRunSummary,
   InspectSnapshot,
   SessionDetail,
+  SourceValidationState,
 } from "./types"
 import {
   getProposalDecisionTrend,
@@ -61,6 +62,22 @@ const cleanInspect: InspectSnapshot = {
   diagnostics: [],
   structureSummary: "1 page",
   lastBuild: succeededBuild,
+}
+
+const invalidSourceValidation: SourceValidationState = {
+  status: "invalid",
+  validatedAt: "2026-05-15T11:57:00.000Z",
+  diagnostics: [
+    {
+      id: "validation-1",
+      severity: "error",
+      message: "Missing <page> root.",
+      source: "validation",
+      line: 1,
+      code: "missing-page",
+    },
+  ],
+  structureSummary: "Validation found source issues.",
 }
 
 describe("review flow helpers", () => {
@@ -143,6 +160,39 @@ describe("review flow helpers", () => {
     expect(missingReadiness.label).toBe("Needs review")
     expect(missingReadiness.items).toContain(
       "The current source focus no longer maps to an available review target.",
+    )
+  })
+
+  it("treats invalid source validation as a readiness blocker and running validation as a warning", () => {
+    const blockedReadiness = getProposalReadiness({
+      build: succeededBuild,
+      inspect: cleanInspect,
+      session: baseSession,
+      latestProposalExists: true,
+      latestProposalIsStale: false,
+      hasUnsavedSourceChanges: false,
+      sourceValidation: invalidSourceValidation,
+    })
+    const runningReadiness = getProposalReadiness({
+      build: succeededBuild,
+      inspect: cleanInspect,
+      session: baseSession,
+      latestProposalExists: true,
+      latestProposalIsStale: false,
+      hasUnsavedSourceChanges: false,
+      sourceValidation: {
+        status: "running",
+        diagnostics: [],
+      },
+    })
+
+    expect(blockedReadiness.label).toBe("Blocked")
+    expect(blockedReadiness.items).toContain(
+      "1 source validation diagnostic(s) still need review.",
+    )
+    expect(runningReadiness.label).toBe("Needs review")
+    expect(runningReadiness.items).toContain(
+      "Source validation is still running.",
     )
   })
 
@@ -729,6 +779,40 @@ describe("review flow helpers", () => {
       label: "Open Inspect",
       description: "Review diagnostics before trusting the proposal.",
       handler: "openInspect",
+    })
+  })
+
+  it("treats source validation as a source-stage signal in current stage, guidance, and timeline", () => {
+    const stage = getCurrentReviewStage({
+      build: succeededBuild,
+      hasUnsavedSourceChanges: false,
+      inspect: cleanInspect,
+      latestProposalExists: true,
+      latestProposalIsStale: false,
+      session: baseSession,
+      sourceValidation: invalidSourceValidation,
+    })
+    const guidance = getCurrentReviewStageGuidance({
+      stage,
+      latestProposalExists: true,
+      latestProposalIsStale: false,
+      sourceValidationStatus: "invalid",
+    })
+    const timeline = getReviewTimeline({
+      build: succeededBuild,
+      hasUnsavedSourceChanges: false,
+      inspect: cleanInspect,
+      latestProposalIsStale: false,
+      messages: [],
+      session: baseSession,
+      sourceValidation: invalidSourceValidation,
+    })
+
+    expect(stage).toBe("source")
+    expect(guidance).toContain("Fix the source validation issues")
+    expect(timeline.find((item) => item.id === "source")).toMatchObject({
+      statusLabel: "Needs review",
+      pillClassName: "status-dirty",
     })
   })
 

@@ -108,6 +108,33 @@ Status: Partial.
 - source focus drift 现在也会进入 `Proposal readiness` 的 warnings，避免顶部摘要与实际 review object 漂移状态脱节
 - proposal snapshot 中的 `Source` chip 现在也会根据 `Aligned / Moved / Missing` 自动切换到打开源码、刷新焦点或回显 review target 的主动作，并避免在 readiness 列表里重复同一条 source-focus warning
 - `Inspect` 的 diagnostics 列表现在也可在带行号时直接 `Open in Source`，把异常定位直接落到源码行段
+- `Inspect` summary 与右栏 `Diagnostics` chip 现在也会共用同一套 diagnostics 主动作语义，在可定位时直接 `Focus first issue`
+- `Inspect` summary 与右栏 `Diagnostics` chip 现在也共用同一套 inspect-diagnostics view model，不再分别拼装 headline / count / main issue / 主动作
+- 右栏 `Agent Shell` 现在也会在 diagnostics 非空时展示一块详细 diagnostics panel，而不只剩顶部 chip 入口
+- `Inspect` summary 与右栏 diagnostics panel 现在也会列出前几条 diagnostics 并支持逐条 `Open in Source`，不再只停在单条 primary issue
+- 右栏 `Agent Shell` 的 `Source validation / Source focus / Diagnostics` 三类顶部 review 入口现在也共用同一套 entry view model，不再各自拼 chip 与 detail panel
+- `Source focus` 现在也会显式标记 provenance，例如来自 proposal review target、saved compare 或 inspect diagnostic，三栏对源码焦点来源的解释更一致
+- source focus provenance 现在优先依赖稳定的 `originKind` 协议，而不是散落在 UI 里的自由文本标签
+- source focus provenance 现在也会显式区分 `checklist target` 与 `compare diff` 两类 review 来源实例，而不只是粗粒度的 review/compare 文案
+- `Source` 侧的来源回跳现在也可覆盖 generic compare diff provenance，不再只在有 checklist target 时才露回跳入口
+- generic compare diff provenance 现在也会被统一解析成稳定的 reveal target，三栏对 source origin 的回跳语义更一致
+- `Source` / `Inspect` / `Agent Shell` 现在也共用同一套 source-focus provenance summary helper，不再各自拼接来源解释文案
+- `Source` / `Inspect` / `Agent Shell` 现在也共用同一套 source-focus view model，不再各自拼接 selection / origin / summary / status 片段
+- `Source` / `Inspect` / `Agent Shell` 现在也共用同一套 source-focus action model，不再各自分支判断 open / reveal / refresh 的显示条件
+- 右栏 `Agent Shell` 的 source-focus 详细面板现在也完全复用 shared action model，不再重复拼主动作与次动作按钮
+- 三栏现在也会展示统一的 provenance reference（如 `Ref review-0 · 5:7`），便于区分文案相近但来源实例不同的 source focus
+- `inspect diagnostic` 来源的 source focus 现在也会参与 `Aligned / Moved / Missing` 状态计算，并在诊断行移动时支持 `Refresh focus`
+- `source validation diagnostic` 现在也进入同一条 source focus provenance/state 流，并支持直接 `Open in Source` 与对齐状态判断
+- `source validation` 现在也会提升到 `current stage / review timeline / proposal readiness / inspect summary` 这层，而不再只停留在 `Source` 局部
+- 右栏 `Agent Shell` 现在也会把 `source validation` 作为顶层 review 输入展示，并支持直接打开源码或聚焦首个 validation issue
+- 顶部 `Validation` chip 现在也会在 validation invalid 时直接聚焦首个 validation issue，而不只是机械地打开源码页
+- `Inspect` 里的 source validation summary 现在也会复用同一套主动作语义，在 invalid 时直接聚焦首个 validation issue
+- `Source` 面板自己的 validation 卡现在也会在 invalid 时直接露出 `Focus first issue`，不必先滚到具体诊断项再定位源码
+- source validation 现在由 `App` 统一维护为 workbench 级状态，而不是只在 `SourcePanel` 挂载时才更新
+- `Source` / `Inspect` / `Agent Shell` 现在也共用同一套 source-validation headline / summary / pill helper，不再各自分支解释状态
+- `Source` / `Inspect` / `Agent Shell` 现在也共用同一套 source-validation view model，不再各自拼接主要诊断项与主动作
+- `Inspect` 与右栏 `Agent Shell` 的 source validation 现在也会列出前几条 issue，并支持逐条 `Open in Source`，不再只停在“首个问题”级别
+- source validation 现在会在 draft 变动后立即切到 `Validating`，而不是在 debounce 窗口里继续显示旧状态
 - build 失败时可转向 inspect，而不是只停留在抽象错误提示
 
 当前缺口：

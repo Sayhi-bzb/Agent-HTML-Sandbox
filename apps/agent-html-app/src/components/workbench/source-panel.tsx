@@ -1,121 +1,63 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef } from "react"
 
 import type {
   SourceFocusReviewStatus,
   SourceFocusTarget,
 } from "../../lib/source-focus"
 import {
-  getSourceFocusLineLabel,
-  getSourceFocusStatusPill,
+  createSourceFocusTargetFromDiagnostic,
   getSourceSelectionRange,
+  type SourceFocusPrimaryAction,
 } from "../../lib/source-focus"
-import type { DiagnosticItem, SourceValidationSnapshot } from "../../lib/types"
+import { getSourceFocusViewModel } from "../../lib/source-focus-view"
+import type { SourceValidationState } from "../../lib/types"
+import {
+  formatSourceValidationDiagnosticMeta,
+  getSourceValidationViewModel,
+} from "../../lib/source-validation-view"
 import { formatTimestampLabel } from "../../lib/time"
 
 type SourcePanelProps = {
   source: string
   draftSource: string
   sourcePath: string
+  sourceValidation: SourceValidationState
   activeSourceFocus?: SourceFocusTarget
   activeSourceFocusReviewStatus?: SourceFocusReviewStatus
+  canRevealSourceOrigin: boolean
+  onOpenSourceFocus: (target: SourceFocusTarget) => void
   onDraftChange: (nextSource: string) => void
   onClearSourceFocus: () => void
   onRefreshSourceFocus: () => void
   onRevealReviewTarget: () => void
   onSave: (nextSource: string) => Promise<void> | void
-  onValidate: (nextSource: string) => Promise<SourceValidationSnapshot>
   isSaving: boolean
-}
-
-type ValidationState = {
-  status: "idle" | "running" | "valid" | "invalid"
-  validatedAt?: string
-  diagnostics: DiagnosticItem[]
-  structureSummary?: string
-}
-
-const initialValidationState: ValidationState = {
-  status: "idle",
-  diagnostics: [],
 }
 
 export function SourcePanel({
   source,
   draftSource,
   sourcePath,
+  sourceValidation,
   activeSourceFocus,
   activeSourceFocusReviewStatus,
+  canRevealSourceOrigin,
+  onOpenSourceFocus,
   onDraftChange,
   onClearSourceFocus,
   onRefreshSourceFocus,
   onRevealReviewTarget,
   onSave,
-  onValidate,
   isSaving,
 }: SourcePanelProps) {
-  const [validation, setValidation] = useState<ValidationState>(
-    initialValidationState,
-  )
-  const validationRequestId = useRef(0)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
-  const sourceFocusStatusPill = getSourceFocusStatusPill(
-    activeSourceFocusReviewStatus,
-  )
-
-  useEffect(() => {
-    setValidation(initialValidationState)
-  }, [source, sourcePath])
-
-  useEffect(() => {
-    const requestId = validationRequestId.current + 1
-    validationRequestId.current = requestId
-    let cancelled = false
-
-    const timeout = window.setTimeout(() => {
-      setValidation((current) => ({
-        ...current,
-        status: "running",
-      }))
-
-      void onValidate(draftSource)
-        .then((result) => {
-          if (cancelled || validationRequestId.current !== requestId) {
-            return
-          }
-
-          setValidation({
-            status: result.status,
-            validatedAt: result.validatedAt,
-            diagnostics: result.diagnostics,
-            structureSummary: result.structureSummary,
-          })
-        })
-        .catch((error: unknown) => {
-          if (cancelled || validationRequestId.current !== requestId) {
-            return
-          }
-
-          setValidation({
-            status: "invalid",
-            validatedAt: new Date().toISOString(),
-            diagnostics: [
-              {
-                id: `validation-error-${requestId}`,
-                severity: "error",
-                message: formatValidationError(error),
-                source: "validation",
-              },
-            ],
-            structureSummary: "Validation could not complete.",
-          })
-        })
-    }, 400)
-
-    return () => {
-      cancelled = true
-      window.clearTimeout(timeout)
-    }
-  }, [draftSource, onValidate, sourcePath])
+  const sourceFocusView = getSourceFocusViewModel({
+    sourceFocus: activeSourceFocus,
+    reviewStatus: activeSourceFocusReviewStatus,
+    canRevealSourceOrigin,
+  })
+  const sourceValidationView = getSourceValidationViewModel(sourceValidation)
+  const primaryValidationDiagnostic = sourceValidationView.primaryDiagnostic
 
   useEffect(() => {
     if (!activeSourceFocus || !textareaRef.current) {
@@ -160,40 +102,84 @@ export function SourcePanel({
         <div className="validation-topline">
           <div>
             <p className="eyebrow">Validation</p>
-            <h4>{validationHeadline(validation.status)}</h4>
+            <h4>{sourceValidationView.headline}</h4>
           </div>
-          <span className={validationPillClassName(validation.status)}>
-            {validationPillLabel(validation.status)}
-          </span>
+          <div className="validation-topline-actions">
+            <span className={`pill ${sourceValidationView.pill.className}`}>
+              {sourceValidationView.pill.label}
+            </span>
+            {sourceValidationView.primaryAction === "focus-first-issue" &&
+            primaryValidationDiagnostic ? (
+              <button
+                className="mini-button"
+                onClick={() => {
+                  const target = createSourceFocusTargetFromDiagnostic({
+                    diagnostic: primaryValidationDiagnostic,
+                  })
+                  if (target) {
+                    onOpenSourceFocus(target)
+                  }
+                }}
+                type="button"
+              >
+                Focus first issue
+              </button>
+            ) : null}
+          </div>
         </div>
-        <p className="validation-summary">
-          {validation.status === "idle"
-            ? "Lightweight validation will run automatically after you pause typing."
-            : (validation.structureSummary ??
-              "Validation summary unavailable.")}
-        </p>
+        <p className="validation-summary">{sourceValidationView.summary}</p>
         <div className="validation-meta">
           <span className="inline-meta">
-            {validation.validatedAt
-              ? `Last checked ${formatTimestampLabel(validation.validatedAt)}`
+            {sourceValidationView.validatedAt
+              ? `Last checked ${formatTimestampLabel(sourceValidationView.validatedAt)}`
               : "No validation run yet"}
           </span>
           <span className="inline-meta">
-            {validation.diagnostics.length} diagnostic(s)
+            {sourceValidationView.diagnosticsCount} diagnostic(s)
           </span>
         </div>
-        {validation.diagnostics.length > 0 ? (
+        {sourceValidation.diagnostics.length > 0 ? (
           <ul className="diagnostic-list">
-            {validation.diagnostics.map((diagnostic) => (
+            {sourceValidation.diagnostics.map((diagnostic) => (
               <li
                 className={`diagnostic-item severity-${diagnostic.severity}`}
                 key={diagnostic.id}
               >
-                <strong>{diagnostic.severity.toUpperCase()}</strong>
+                <div className="message-topline">
+                  <strong>{diagnostic.severity.toUpperCase()}</strong>
+                  {typeof diagnostic.line === "number" ? (
+                    <button
+                      className="mini-button"
+                      onClick={() => {
+                        const target = createSourceFocusTargetFromDiagnostic({
+                          diagnostic,
+                        })
+                        if (target) {
+                          onOpenSourceFocus(target)
+                        }
+                      }}
+                      type="button"
+                    >
+                      Open in Source
+                    </button>
+                  ) : null}
+                </div>
                 <span>{diagnostic.message}</span>
-                {diagnostic.code || diagnostic.source ? (
+                {diagnostic.code ||
+                diagnostic.source ||
+                typeof diagnostic.line === "number" ? (
                   <span className="inline-meta">
-                    {[diagnostic.code, diagnostic.source]
+                    {[
+                      typeof diagnostic.line === "number"
+                        ? `line ${diagnostic.line}${
+                            typeof diagnostic.column === "number"
+                              ? `:${diagnostic.column}`
+                              : ""
+                          }`
+                        : undefined,
+                      diagnostic.code,
+                      diagnostic.source,
+                    ]
                       .filter(Boolean)
                       .join(" · ")}
                   </span>
@@ -209,50 +195,56 @@ export function SourcePanel({
         <div className="source-focus-banner">
           <div>
             <p className="eyebrow">Source focus</p>
-            <h4>{activeSourceFocus.label}</h4>
+            <h4>{sourceFocusView?.label ?? activeSourceFocus.label}</h4>
             <p className="validation-empty">
-              {getSourceFocusLineLabel(activeSourceFocus)} is selected in the
-              current draft.
+              {sourceFocusView?.selectionLabel ?? "Current selection"} is
+              selected in the current draft.
             </p>
-            {activeSourceFocus.reviewOrigin ? (
+            {sourceFocusView?.originLabel ||
+            sourceFocusView?.reviewOriginLabel ? (
               <div className="proposal-meta-row">
-                <span className="pill accent">
-                  {activeSourceFocus.reviewOrigin.mode === "proposal"
-                    ? "Proposal compare"
-                    : "Saved compare"}
-                </span>
-                <span className="pill">
-                  {activeSourceFocus.reviewOrigin.lineLabel}
-                </span>
-                <span className="inline-meta">
-                  From {activeSourceFocus.reviewOrigin.label}
-                </span>
-              </div>
-            ) : null}
-            {activeSourceFocusReviewStatus ? (
-              <div className="proposal-meta-row">
-                {sourceFocusStatusPill ? (
-                  <span className={`pill ${sourceFocusStatusPill.className}`}>
-                    {sourceFocusStatusPill.label}
+                {sourceFocusView?.originLabel ? (
+                  <span className="pill accent">
+                    {sourceFocusView.originLabel}
                   </span>
                 ) : null}
-                <span className="inline-meta">
-                  {activeSourceFocusReviewStatus.summary}
-                </span>
+                <span className="pill">{sourceFocusView?.selectionLabel}</span>
+                {sourceFocusView?.reviewOriginLabel ? (
+                  <span className="inline-meta">
+                    From {sourceFocusView.reviewOriginLabel}
+                  </span>
+                ) : null}
+                {sourceFocusView?.originReference ? (
+                  <span className="inline-meta">
+                    {sourceFocusView.originReference}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+            {sourceFocusView?.summary ? (
+              <div className="proposal-meta-row">
+                {sourceFocusView.statusPill ? (
+                  <span
+                    className={`pill ${sourceFocusView.statusPill.className}`}
+                  >
+                    {sourceFocusView.statusPill.label}
+                  </span>
+                ) : null}
+                <span className="inline-meta">{sourceFocusView.summary}</span>
               </div>
             ) : null}
           </div>
           <div className="source-focus-actions">
-            {activeSourceFocusReviewStatus?.currentReviewTarget ? (
+            {sourceFocusView?.actions.canRevealSourceOrigin ? (
               <button
                 className="mini-button"
                 onClick={onRevealReviewTarget}
                 type="button"
               >
-                Reveal review target
+                Reveal source origin
               </button>
             ) : null}
-            {activeSourceFocusReviewStatus?.kind === "moved" ? (
+            {sourceFocusView?.actions.canRefreshFocus ? (
               <button
                 className="mini-button"
                 onClick={onRefreshSourceFocus}
@@ -280,58 +272,4 @@ export function SourcePanel({
       />
     </section>
   )
-}
-
-function validationHeadline(status: ValidationState["status"]) {
-  switch (status) {
-    case "running":
-      return "Analyzing draft"
-    case "valid":
-      return "Draft is structurally valid"
-    case "invalid":
-      return "Draft needs attention"
-    default:
-      return "Validation is standing by"
-  }
-}
-
-function validationPillClassName(status: ValidationState["status"]) {
-  switch (status) {
-    case "running":
-      return "pill status-building"
-    case "valid":
-      return "pill status-ready"
-    case "invalid":
-      return "pill status-error"
-    default:
-      return "pill"
-  }
-}
-
-function validationPillLabel(status: ValidationState["status"]) {
-  switch (status) {
-    case "running":
-      return "Validating"
-    case "valid":
-      return "Valid"
-    case "invalid":
-      return "Invalid"
-    default:
-      return "Idle"
-  }
-}
-
-function formatValidationError(error: unknown) {
-  if (typeof error === "string" && error.trim()) {
-    return error
-  }
-
-  if (error && typeof error === "object" && "message" in error) {
-    const message = (error as { message?: unknown }).message
-    if (typeof message === "string" && message.trim()) {
-      return message
-    }
-  }
-
-  return "Validation command failed."
 }

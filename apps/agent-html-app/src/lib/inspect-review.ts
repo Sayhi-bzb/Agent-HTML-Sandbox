@@ -19,6 +19,7 @@ import type {
   InspectSnapshot,
   LogSnapshot,
   SessionDetail,
+  SourceValidationState,
 } from "./types"
 
 type ReviewStatusClassName =
@@ -64,6 +65,7 @@ export function getInspectReviewSummary({
   messages,
   proposalComparison,
   session,
+  sourceValidation,
 }: {
   build: BuildRunSummary
   draftComparison?: SourceComparisonSummary
@@ -73,6 +75,7 @@ export function getInspectReviewSummary({
   messages: AgentShellMessage[]
   proposalComparison?: SourceComparisonSummary
   session: SessionDetail
+  sourceValidation?: SourceValidationState
 }): InspectReviewSummary {
   const latestProposal = [...messages]
     .reverse()
@@ -102,6 +105,7 @@ export function getInspectReviewSummary({
     latestProposalIsStale,
     proposalComparison,
     session,
+    sourceValidation,
   })
   const reviewTimeline = getReviewTimeline({
     build,
@@ -115,6 +119,7 @@ export function getInspectReviewSummary({
     proposalComparison,
     proposalProgress,
     session,
+    sourceValidation,
   })
   const currentStageState = reviewTimeline.find(
     (item) => item.id === currentStage,
@@ -130,6 +135,7 @@ export function getInspectReviewSummary({
     draftComparison,
     proposalComparison,
     proposalProgress,
+    sourceValidation,
   })
   const proposalState = getProposalStageState({
     latestProposalExists: Boolean(latestProposal),
@@ -150,6 +156,7 @@ export function getInspectReviewSummary({
     latestProposalIsStale,
     proposalComparison,
     sessionHasPreview: session.summary.hasPreview,
+    sourceValidation,
   })
 
   return {
@@ -165,6 +172,7 @@ export function getInspectReviewSummary({
       latestProposalIsStale,
       proposalDecisionTrend,
       proposalComparison,
+      sourceValidationStatus: sourceValidation?.status,
     }),
     currentAction,
     readiness,
@@ -180,6 +188,7 @@ export function getInspectReviewSummary({
       logs,
       proposalComparison,
       session,
+      sourceValidation,
     }),
     evidence: buildInspectEvidence({
       draftComparison,
@@ -188,6 +197,7 @@ export function getInspectReviewSummary({
       latestProposalExists: Boolean(latestProposal),
       latestProposalIsStale,
       proposalComparison,
+      sourceValidation,
     }),
   }
 }
@@ -203,6 +213,7 @@ function buildInspectReviewSteps({
   logs,
   proposalComparison,
   session,
+  sourceValidation,
 }: {
   build: BuildRunSummary
   currentStage: InspectReviewSummary["currentStage"]
@@ -217,6 +228,7 @@ function buildInspectReviewSteps({
   logs: LogSnapshot
   proposalComparison?: SourceComparisonSummary
   session: SessionDetail
+  sourceValidation?: SourceValidationState
 }) {
   const steps: InspectReviewStep[] = []
 
@@ -231,6 +243,28 @@ function buildInspectReviewSteps({
         description: "Persist the current draft before continuing review.",
         handler: "save",
       },
+    })
+  }
+
+  if (sourceValidation?.status === "invalid") {
+    steps.push({
+      id: "review-source-validation",
+      title: `Review ${sourceValidation.diagnostics.length} source validation diagnostic(s)`,
+      detail:
+        "Source validation already found issues in the current draft, so fix those before trusting build or proposal review.",
+      action: {
+        label: "Open Source",
+        description:
+          "Review the current source and validation state before continuing.",
+        handler: "openSource",
+      },
+    })
+  } else if (sourceValidation?.status === "running") {
+    steps.push({
+      id: "wait-source-validation",
+      title: "Wait for source validation to settle",
+      detail:
+        "Source validation is still running on the current draft, so the review state may still change.",
     })
   }
 
@@ -359,6 +393,7 @@ function buildInspectEvidence({
   latestProposalExists,
   latestProposalIsStale,
   proposalComparison,
+  sourceValidation,
 }: {
   draftComparison?: SourceComparisonSummary
   inspect: InspectSnapshot
@@ -366,8 +401,20 @@ function buildInspectEvidence({
   latestProposalExists: boolean
   latestProposalIsStale: boolean
   proposalComparison?: SourceComparisonSummary
+  sourceValidation?: SourceValidationState
 }) {
   const evidence: InspectEvidenceItem[] = []
+
+  if (sourceValidation?.status === "invalid") {
+    for (const diagnostic of sourceValidation.diagnostics.slice(0, 2)) {
+      evidence.push({
+        id: `source-validation-${diagnostic.id}`,
+        label: "SOURCE validation",
+        detail: formatDiagnosticEvidence(diagnostic),
+        pillClassName: "status-dirty",
+      })
+    }
+  }
 
   for (const diagnostic of inspect.diagnostics.slice(0, 2)) {
     evidence.push({

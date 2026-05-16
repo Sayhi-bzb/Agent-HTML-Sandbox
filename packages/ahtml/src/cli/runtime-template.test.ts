@@ -1,7 +1,8 @@
 /// <reference types="node" />
 // @vitest-environment node
 
-import { readFile } from "node:fs/promises"
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 
@@ -46,6 +47,59 @@ describe("runtime template override guard", () => {
 })
 
 describe("checked-in runtime templates", () => {
+  it("rewrites runtime vite configs to an ESM-safe template", async () => {
+    const { ensureRuntimeBuildConfig } = await importRuntimeTemplateModule()
+    const runtimeDir = await mkdtemp(
+      path.join(tmpdir(), "ahtml-runtime-template-"),
+    )
+    const runtimeViteConfigPath = path.join(runtimeDir, "vite.ahtml.config.mjs")
+
+    try {
+      await writeFile(
+        path.join(runtimeDir, "vite.config.ts"),
+        [
+          'import path from "path"',
+          'import tailwindcss from "@tailwindcss/vite"',
+          'import react from "@vitejs/plugin-react"',
+          'import { defineConfig } from "vite"',
+          "",
+          "export default defineConfig({",
+          "  plugins: [react(), tailwindcss()],",
+          "  resolve: {",
+          "    alias: {",
+          '      "@": path.resolve(__dirname, "./src"),',
+          "    },",
+          "  },",
+          "})",
+          "",
+        ].join("\n"),
+      )
+
+      await ensureRuntimeBuildConfig({
+        packageRoot: process.cwd(),
+        paths: {
+          runtimeDir,
+          runtimeViteConfigPath,
+        },
+      })
+
+      const templateConfig = await readFile(
+        path.join(runtimeDir, "vite.config.ts"),
+        "utf8",
+      )
+      const ahtmlConfig = await readFile(runtimeViteConfigPath, "utf8")
+
+      expect(templateConfig).toContain(
+        'const rootDir = path.dirname(fileURLToPath(import.meta.url))',
+      )
+      expect(templateConfig).toContain('path.resolve(rootDir, "./src")')
+      expect(templateConfig).not.toContain("__dirname")
+      expect(ahtmlConfig).toContain("rewriteTemplateRoot")
+    } finally {
+      await rm(runtimeDir, { force: true, recursive: true })
+    }
+  })
+
   it("keeps the checked-in runtime element registry template in sync with shared mapping", async () => {
     const root = process.cwd()
     const { createRuntimeElementRegistrySource } =
@@ -154,6 +208,13 @@ async function importRuntimeTemplateModule() {
       registrySpec: unknown,
     ) => string
     readonly createRuntimeRendererKindSource: (kindSpec: unknown) => string
+    readonly ensureRuntimeBuildConfig: (input: {
+      readonly packageRoot: string
+      readonly paths: {
+        readonly runtimeDir: string
+        readonly runtimeViteConfigPath: string
+      }
+    }) => Promise<void>
     readonly resolveShadcnTemplateDir: () => string | undefined
   }>
 }

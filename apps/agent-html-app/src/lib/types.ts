@@ -63,6 +63,13 @@ export type SourceValidationSnapshot = {
   structureSummary: string
 }
 
+export type SourceValidationState = {
+  status: "idle" | "running" | "valid" | "invalid"
+  validatedAt?: string
+  diagnostics: DiagnosticItem[]
+  structureSummary?: string
+}
+
 export type LogSnapshot = {
   stdout?: string
   stderr?: string

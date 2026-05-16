@@ -1,24 +1,6 @@
 # ahtml Install And Runtime
 
-Use this when the user wants to install `ahtml`, prepare the runtime, repair it, or isolate it.
-
-## Mental model
-
-`ahtml` is the tool that renders semantic `.agent.html` into HTML artifacts.
-
-Default runtime home:
-
-```txt
-~/.ahtml
-```
-
-Windows equivalent:
-
-```txt
-%USERPROFILE%\.ahtml
-```
-
-Set `AHTML_HOME` only when a task needs an isolated runtime.
+Use this when the user wants to install `ahtml`, prepare the managed runtime, repair it, or isolate it.
 
 ## Normal install
 
@@ -45,7 +27,16 @@ npm link
 ahtml
 ```
 
-For non-interactive setup, use:
+Managed runtime home:
+
+```txt
+~/.ahtml
+%USERPROFILE%\.ahtml
+```
+
+Set `AHTML_HOME` only when the task needs an isolated runtime.
+
+Non-interactive setup:
 
 ```bash
 ahtml setup --yes
@@ -53,7 +44,7 @@ ahtml setup --yes
 
 ## Runtime repair
 
-The normal entrypoint is `ahtml`. Use explicit repair only when needed:
+Force a runtime rewrite only when needed:
 
 ```bash
 ahtml setup --force
@@ -61,20 +52,11 @@ ahtml setup --force
 
 `ahtml setup --preset`, `ahtml setup --components`, and `ahtml setup --component-source shadcn-cli` configure the managed runtime under `.ahtml`; they do not configure the current project.
 
-Do not use removed project-local commands or flags such as `init`, `--template`, `--apply`, or `--scaffold`.
+Do not use removed project-local scaffold flows such as `init`, `--template`, `--apply`, or `--scaffold`.
 
 ## After install
 
-For a normal artifact workflow:
-
 ```bash
 ahtml prompt
-```
-
-Then write `.agent.html`, and build or preview it.
-
-For runtime diagnostics:
-
-```bash
-ahtml doctor
+ahtml build artifact.agent.html
 ```

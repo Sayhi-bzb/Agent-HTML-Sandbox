@@ -1,10 +1,9 @@
-import { startTransition, useEffect, useState } from "react"
+import { startTransition, useEffect, useRef, useState } from "react"
 
 import { AgentShell } from "./components/agent-shell/agent-shell"
 import { SessionsSidebar } from "./components/layout/sessions-sidebar"
 import { Workbench } from "./components/workbench/workbench"
 import {
-  findReviewFocusTargetById,
   getAvailableReviewFocusTargets,
   isSameReviewFocusTarget,
   type ReviewFocusIntent,
@@ -12,8 +11,10 @@ import {
 } from "./lib/review-focus"
 import type { ReviewTimelineActionConfig } from "./lib/review-flow"
 import {
+  createSourceFocusTargetFromDiagnostic,
   createSourceFocusTargetFromGroup,
   getSourceFocusReviewStatus,
+  getSourceFocusRevealTarget,
   type SourceFocusTarget,
 } from "./lib/source-focus"
 import {
@@ -48,6 +49,7 @@ import type {
   BuildRunSummary,
   InspectSnapshot,
   SourceValidationSnapshot,
+  SourceValidationState,
   SessionDetail,
   SessionStatus,
   SessionSummary,
@@ -78,6 +80,11 @@ const initialCommandState: CommandState = {
   runningDoctor: false,
 }
 
+const initialSourceValidationState: SourceValidationState = {
+  status: "idle",
+  diagnostics: [],
+}
+
 type HydratedSessionState = {
   session: SessionDetail
   chat: AppState["chat"]
@@ -96,6 +103,9 @@ export function App() {
     useState<ReviewFocusTarget>()
   const [activeSourceFocus, setActiveSourceFocus] =
     useState<SourceFocusTarget>()
+  const [currentSourceValidation, setCurrentSourceValidation] =
+    useState<SourceValidationState>(initialSourceValidationState)
+  const sourceValidationRequestId = useRef(0)
   const [activeView, setActiveView] = useState<WorkbenchView>(
     mockAppState.currentSession.currentView,
   )
@@ -126,15 +136,20 @@ export function App() {
     draftComparison,
     proposalComparison,
   })
-  const sourceFocusReviewTarget = findReviewFocusTargetById(
-    availableReviewFocusTargets,
-    activeSourceFocus?.reviewOrigin?.targetId,
-  )
-  const sourceFocusReviewStatus = getSourceFocusReviewStatus({
+  const sourceFocusRevealTarget = getSourceFocusRevealTarget({
     sourceFocus: activeSourceFocus,
     availableReviewFocusTargets,
     draftComparison,
     proposalComparison,
+  })
+  const canRevealSourceOrigin = Boolean(sourceFocusRevealTarget)
+  const sourceFocusReviewStatus = getSourceFocusReviewStatus({
+    sourceFocus: activeSourceFocus,
+    availableReviewFocusTargets,
+    draftComparison,
+    inspectDiagnostics: appState.currentInspect.diagnostics,
+    proposalComparison,
+    validationDiagnostics: currentSourceValidation.diagnostics,
   })
   const isWorkbenchActionBusy =
     commandState.savingSource ||
@@ -160,7 +175,67 @@ export function App() {
     setAgentShellClearReviewFocusKey(undefined)
     setAgentShellReviewFocus(undefined)
     setActiveSourceFocus(undefined)
+    setCurrentSourceValidation(initialSourceValidationState)
   }, [appState.currentSession.summary.id])
+
+  useEffect(() => {
+    if (commandState.loading) {
+      return
+    }
+
+    const requestId = sourceValidationRequestId.current + 1
+    sourceValidationRequestId.current = requestId
+    let cancelled = false
+
+    setCurrentSourceValidation((current) => ({
+      ...current,
+      status: "running",
+    }))
+
+    const timeout = window.setTimeout(() => {
+      void handleValidateSource(currentDraftSource)
+        .then((result) => {
+          if (cancelled || sourceValidationRequestId.current !== requestId) {
+            return
+          }
+
+          setCurrentSourceValidation({
+            status: result.status,
+            validatedAt: result.validatedAt,
+            diagnostics: result.diagnostics,
+            structureSummary: result.structureSummary,
+          })
+        })
+        .catch((error: unknown) => {
+          if (cancelled || sourceValidationRequestId.current !== requestId) {
+            return
+          }
+
+          setCurrentSourceValidation({
+            status: "invalid",
+            validatedAt: new Date().toISOString(),
+            diagnostics: [
+              {
+                id: `validation-error-${requestId}`,
+                severity: "error",
+                message: formatError(error),
+                source: "validation",
+              },
+            ],
+            structureSummary: "Validation could not complete.",
+          })
+        })
+    }, 400)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timeout)
+    }
+  }, [
+    appState.currentSession.summary.id,
+    commandState.loading,
+    currentDraftSource,
+  ])
 
   async function bootstrap() {
     if (!isTauriRuntime()) {
@@ -1117,6 +1192,9 @@ export function App() {
       case "inspect":
         await handleInspect()
         break
+      case "openSource":
+        await handleViewChange("source")
+        break
       case "openInspect":
         await handleViewChange("inspect")
         break
@@ -1164,26 +1242,34 @@ export function App() {
   }
 
   function handleRevealSourceReviewTarget() {
-    if (sourceFocusReviewTarget) {
-      queueAgentShellReviewIntent(sourceFocusReviewTarget)
+    if (sourceFocusRevealTarget) {
+      queueAgentShellReviewIntent(sourceFocusRevealTarget)
     }
   }
 
   function handleRefreshSourceFocus() {
     if (
-      !sourceFocusReviewStatus?.currentGroup ||
-      !sourceFocusReviewStatus.currentReviewTarget
+      sourceFocusReviewStatus?.currentGroup &&
+      sourceFocusReviewStatus.currentReviewTarget
     ) {
+      setActiveSourceFocus(
+        createSourceFocusTargetFromGroup({
+          label: sourceFocusReviewStatus.currentReviewTarget.label,
+          group: sourceFocusReviewStatus.currentGroup,
+          reviewTarget: sourceFocusReviewStatus.currentReviewTarget,
+        }),
+      )
       return
     }
 
-    setActiveSourceFocus(
-      createSourceFocusTargetFromGroup({
-        label: sourceFocusReviewStatus.currentReviewTarget.label,
-        group: sourceFocusReviewStatus.currentGroup,
-        reviewTarget: sourceFocusReviewStatus.currentReviewTarget,
-      }),
-    )
+    if (sourceFocusReviewStatus?.currentDiagnostic) {
+      const nextTarget = createSourceFocusTargetFromDiagnostic({
+        diagnostic: sourceFocusReviewStatus.currentDiagnostic,
+      })
+      if (nextTarget) {
+        setActiveSourceFocus(nextTarget)
+      }
+    }
   }
 
   function handleReviewFocusChange(focus?: ReviewFocusTarget) {
@@ -1274,7 +1360,9 @@ export function App() {
           isSavingSource={commandState.savingSource}
           logs={appState.currentLogs}
           messages={appState.chat}
+          sourceValidation={currentSourceValidation}
           onBuild={handleBuild}
+          canRevealSourceOrigin={canRevealSourceOrigin}
           onClearReviewFocus={handleClearReviewFocus}
           onClearSourceFocus={handleClearSourceFocus}
           onDraftSourceChange={handleDraftSourceChange}
@@ -1286,7 +1374,6 @@ export function App() {
           onRunReviewAction={handleRunReviewAction}
           onSelectReviewFocus={handleSelectReviewFocus}
           onSaveSource={handleSaveSource}
-          onValidateSource={handleValidateSource}
           onViewChange={handleViewChange}
           previewHtml={previewHtml}
           proposalComparison={proposalComparison}
@@ -1297,6 +1384,8 @@ export function App() {
           activeSourceFocus={activeSourceFocus}
           activeSourceFocusReviewStatus={sourceFocusReviewStatus}
           build={appState.currentBuild}
+          sourceValidation={currentSourceValidation}
+          canRevealSourceOrigin={canRevealSourceOrigin}
           draftComparison={draftComparison}
           hasUnsavedSourceChanges={hasUnsavedSourceChanges}
           inspect={appState.currentInspect}

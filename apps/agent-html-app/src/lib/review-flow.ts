@@ -3,6 +3,7 @@ import type {
   BuildRunSummary,
   InspectSnapshot,
   SessionDetail,
+  SourceValidationState,
 } from "./types"
 import type { SourceComparisonSummary } from "./source-comparison"
 import type { SourceFocusReviewStatus } from "./source-focus"
@@ -78,6 +79,7 @@ export type ReviewTimelineActionConfig = {
     | "build"
     | "inspect"
     | "openInspect"
+    | "openSource"
     | "draftProposal"
     | "reviewDiff"
     | "openPreview"
@@ -111,7 +113,11 @@ export function getSecondaryReadinessItems(
   return items.filter((item) => {
     switch (stage) {
       case "source":
-        return !item.startsWith("Unsaved draft changes")
+        return !(
+          item.startsWith("Unsaved draft changes") ||
+          item.startsWith("Source validation is still running.") ||
+          item.includes("source validation diagnostic(s) still need review.")
+        )
       case "build":
         return !(
           item.startsWith("The latest build failed") ||
@@ -142,6 +148,7 @@ export function getCurrentReviewStageGuidance({
   latestProposalDecision,
   proposalDecisionTrend,
   proposalComparison,
+  sourceValidationStatus,
 }: {
   stage: ReviewTimelineItem["id"]
   latestProposalExists: boolean
@@ -149,9 +156,18 @@ export function getCurrentReviewStageGuidance({
   latestProposalDecision?: ProposalDecision
   proposalDecisionTrend?: ProposalDecisionTrend
   proposalComparison?: SourceComparisonSummary
+  sourceValidationStatus?: SourceValidationState["status"]
 }) {
   switch (stage) {
     case "source":
+      if (sourceValidationStatus === "running") {
+        return "Wait for source validation to finish, or keep editing until the draft settles."
+      }
+
+      if (sourceValidationStatus === "invalid") {
+        return "Fix the source validation issues before trusting build or proposal review."
+      }
+
       return "Save the current draft first so every downstream review step uses session truth."
     case "build":
       return "Refresh the preview artifact before trusting proposal review or artifact-level comparison."
@@ -196,6 +212,7 @@ export function getCurrentReviewStage({
   latestProposalIsStale,
   proposalComparison,
   session,
+  sourceValidation,
 }: {
   build: BuildRunSummary
   hasUnsavedSourceChanges: boolean
@@ -204,8 +221,16 @@ export function getCurrentReviewStage({
   latestProposalIsStale: boolean
   proposalComparison?: SourceComparisonSummary
   session: SessionDetail
+  sourceValidation?: SourceValidationState
 }): ReviewTimelineItem["id"] {
   if (hasUnsavedSourceChanges) {
+    return "source"
+  }
+
+  if (
+    sourceValidation?.status === "running" ||
+    sourceValidation?.status === "invalid"
+  ) {
     return "source"
   }
 
@@ -486,6 +511,7 @@ export function getReviewTimeline({
   proposalComparison,
   proposalProgress,
   session,
+  sourceValidation,
 }: {
   build: BuildRunSummary
   hasUnsavedSourceChanges: boolean
@@ -498,6 +524,7 @@ export function getReviewTimeline({
   proposalComparison?: SourceComparisonSummary
   proposalProgress?: ProposalChecklistProgress
   session: SessionDetail
+  sourceValidation?: SourceValidationState
 }): ReviewTimelineItem[] {
   const latestSourceSave = findLatestStructuredMessage(messages, "Source saved")
   const latestBuildUpdate = findLatestStructuredMessage(
@@ -521,12 +548,31 @@ export function getReviewTimeline({
     {
       id: "source",
       label: "Source saved",
-      statusLabel: hasUnsavedSourceChanges ? "Pending" : "Current",
-      pillClassName: hasUnsavedSourceChanges ? "status-dirty" : "status-ready",
+      statusLabel: hasUnsavedSourceChanges
+        ? "Pending"
+        : sourceValidation?.status === "running"
+          ? "Validating"
+          : sourceValidation?.status === "invalid"
+            ? "Needs review"
+            : "Current",
+      pillClassName: hasUnsavedSourceChanges
+        ? "status-dirty"
+        : sourceValidation?.status === "running"
+          ? "status-building"
+          : sourceValidation?.status === "invalid"
+            ? "status-dirty"
+            : "status-ready",
       summary: hasUnsavedSourceChanges
         ? "The current draft has diverged from session truth and should be saved before trusting review output."
-        : "Session truth is up to date with the current source state.",
-      timestamp: latestSourceSave?.createdAt ?? session.summary.updatedAt,
+        : sourceValidation?.status === "running"
+          ? "Lightweight source validation is still running on the current draft."
+          : sourceValidation?.status === "invalid"
+            ? `${sourceValidation.diagnostics.length} source validation diagnostic(s) still need review before build or proposal steps are trusted.`
+            : "Session truth is up to date with the current source state.",
+      timestamp:
+        sourceValidation?.validatedAt ??
+        latestSourceSave?.createdAt ??
+        session.summary.updatedAt,
     },
     {
       id: "build",
@@ -593,6 +639,7 @@ export function getProposalReadiness({
   proposalComparison,
   proposalProgress,
   sourceFocusReviewStatus,
+  sourceValidation,
 }: {
   build: BuildRunSummary
   inspect: InspectSnapshot
@@ -605,6 +652,7 @@ export function getProposalReadiness({
   proposalComparison?: SourceComparisonSummary
   proposalProgress?: ProposalChecklistProgress
   sourceFocusReviewStatus?: SourceFocusReviewStatus
+  sourceValidation?: SourceValidationState
 }): ProposalReadinessSummary {
   const blockers: string[] = []
   const warnings: string[] = []
@@ -619,6 +667,17 @@ export function getProposalReadiness({
         ? `Unsaved draft changes are still pending (${draftComparison.changedLineCount} changed lines).`
         : "Unsaved draft changes are still pending.",
     )
+  }
+
+  if (
+    sourceValidation?.status === "invalid" &&
+    sourceValidation.diagnostics.length > 0
+  ) {
+    blockers.push(
+      `${sourceValidation.diagnostics.length} source validation diagnostic(s) still need review.`,
+    )
+  } else if (sourceValidation?.status === "running") {
+    warnings.push("Source validation is still running.")
   }
 
   if (inspect.diagnostics.length > 0) {
@@ -817,6 +876,7 @@ export function getReviewTimelineActionConfig({
   latestProposalIsStale,
   proposalComparison,
   sessionHasPreview,
+  sourceValidation,
 }: {
   stage: ReviewTimelineItem["id"]
   activeView: "preview" | "source" | "inspect"
@@ -828,6 +888,7 @@ export function getReviewTimelineActionConfig({
   latestProposalIsStale: boolean
   proposalComparison?: SourceComparisonSummary
   sessionHasPreview: boolean
+  sourceValidation?: SourceValidationState
 }): ReviewTimelineActionConfig | undefined {
   switch (stage) {
     case "source":
@@ -837,7 +898,17 @@ export function getReviewTimelineActionConfig({
             description: "Persist the current draft before continuing review.",
             handler: "save",
           }
-        : undefined
+        : sourceValidation?.status === "invalid" ||
+            sourceValidation?.status === "running"
+          ? activeView === "source"
+            ? undefined
+            : {
+                label: "Open Source",
+                description:
+                  "Review the current source and validation state before continuing.",
+                handler: "openSource",
+              }
+          : undefined
     case "build":
       return build.status === "succeeded" && sessionHasPreview
         ? undefined

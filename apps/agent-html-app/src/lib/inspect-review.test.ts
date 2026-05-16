@@ -52,6 +52,48 @@ const emptyLogs: LogSnapshot = {
 }
 
 describe("inspect review helpers", () => {
+  it("treats invalid source validation as a source-stage review signal", () => {
+    const summary = getInspectReviewSummary({
+      build: succeededBuild,
+      hasUnsavedSourceChanges: false,
+      inspect: cleanInspect,
+      logs: emptyLogs,
+      messages: [],
+      session: baseSession,
+      sourceValidation: {
+        status: "invalid",
+        validatedAt: "2026-05-15T11:57:00.000Z",
+        diagnostics: [
+          {
+            id: "validation-1",
+            severity: "error",
+            message: "Missing <page> root.",
+            source: "validation",
+            line: 1,
+          },
+        ],
+        structureSummary: "Validation found source issues.",
+      },
+    })
+
+    expect(summary.currentStage).toBe("source")
+    expect(summary.currentAction).toEqual({
+      label: "Open Source",
+      description:
+        "Review the current source and validation state before continuing.",
+      handler: "openSource",
+    })
+    expect(summary.nextSteps[0]?.id).toBe("review-source-validation")
+    expect(summary.evidence).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: "SOURCE validation",
+          detail: expect.stringContaining("Missing <page> root."),
+        }),
+      ]),
+    )
+  })
+
   it("surfaces inspect as the current gate when diagnostics and a failed build both need attention", () => {
     const summary = getInspectReviewSummary({
       build: { ...succeededBuild, status: "failed", exitCode: 1 },

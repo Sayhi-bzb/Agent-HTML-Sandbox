@@ -69,7 +69,7 @@ export async function writeRuntimeTemplate({
     rendererMapping,
     runtimeSurface,
   })
-  await renderViteConfig({ dependencies, paths })
+  await ensureRuntimeBuildConfig({ packageRoot, paths, dependencies })
   const provenRuntimeSurface = await recordAhtmlGlueProof({
     paths,
     surface: runtimeSurface,
@@ -199,6 +199,7 @@ async function initShadcnRuntime({
 
   await rm(paths.runtimeDir, { force: true, recursive: true })
   await rename(generatedRuntimeDir, paths.runtimeDir)
+  await normalizeRuntimeTemplateViteConfig(paths)
 }
 
 async function injectRendererFiles({ paths, rendererMapping, runtimeSurface }) {
@@ -256,6 +257,45 @@ async function renderViteConfig({ dependencies, paths }) {
 
   await mkdir(path.dirname(paths.runtimeViteConfigPath), { recursive: true })
   await writeFile(paths.runtimeViteConfigPath, rendered)
+}
+
+export async function ensureRuntimeBuildConfig({
+  packageRoot,
+  paths,
+  dependencies = resolveRuntimeDependencies(packageRoot),
+}) {
+  await normalizeRuntimeTemplateViteConfig(paths)
+  await renderViteConfig({ dependencies, paths })
+}
+
+async function normalizeRuntimeTemplateViteConfig(paths) {
+  await writeFile(
+    path.join(paths.runtimeDir, "vite.config.ts"),
+    createManagedRuntimeTemplateViteConfigSource(),
+  )
+}
+
+function createManagedRuntimeTemplateViteConfigSource() {
+  return [
+    'import path from "node:path"',
+    'import { fileURLToPath } from "node:url"',
+    "",
+    'import react from "@vitejs/plugin-react"',
+    'import tailwindcss from "@tailwindcss/vite"',
+    'import { defineConfig } from "vite"',
+    "",
+    "const rootDir = path.dirname(fileURLToPath(import.meta.url))",
+    "",
+    "export default defineConfig({",
+    "  plugins: [react(), tailwindcss()],",
+    "  resolve: {",
+    "    alias: {",
+    '      "@": path.resolve(rootDir, "./src"),',
+    "    },",
+    "  },",
+    "})",
+    "",
+  ].join("\n")
 }
 
 function withLocalNoProxy(value) {

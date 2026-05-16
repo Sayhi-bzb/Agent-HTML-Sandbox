@@ -1,34 +1,10 @@
 # ahtml Usage
 
-Use this when the output needs more structure than Markdown.
-
-## Typical outputs
-
-`ahtml` is strongest for:
-
-- implementation plans
-- code-review explainers
-- research or investigation reports
-- decision records
-- side-by-side comparisons
-- structured handoff or feedback artifacts
-
-If the result is only a short answer, stay in chat.
-
-## User flow
-
-```txt
-user asks
-  -> agent decides Markdown is not enough
-  -> agent reads the ahtml prompt
-  -> agent writes semantic .agent.html
-  -> ahtml validates and renders
-  -> user gets a stable HTML artifact
-```
+Use this after reading `SKILL.md` when the task is to write, build, preview, or inspect an artifact.
 
 ## Main commands
 
-Start with the writing prompt:
+Read the public contract:
 
 ```bash
 ahtml prompt
@@ -52,24 +28,59 @@ Preview locally:
 ahtml preview artifact.agent.html
 ```
 
-Use `inspect` only when you need deeper diagnostics:
+Use `inspect` when the task needs document or artifact details:
 
 ```bash
 ahtml inspect --input artifact.agent.html
 ahtml inspect --dir dist/html
 ```
 
-## Document shape
+## Writing rules
 
-Use a named presentation profile and standard agent-html components. The agent writes information structure, not page implementation.
-Public visual choice is only the profile id. Do not try to author free-form `theme`, `density`, `tone`, or `width` values.
+- Write semantic structure, not implementation details.
+- Public visual choice is only the profile id.
+- Use registered components and registered attrs only.
+- Prefer `page -> card -> list/table/alert/text` unless the content needs tabs, accordion, or field blocks.
 
 ```html
 <meta-agent profile="report-default" />
 
 <page title="CLI Demo">
-  <card title="Overview">Generated from agent-html.</card>
+  <card title="Overview">
+    Generated from agent-html.
+  </card>
 </page>
 ```
 
-Never add Tailwind classes, `className`, `style`, event handlers, scripts, arbitrary HTML attributes, raw HTML, Radix props, or full shadcn props to agent-facing input.
+Common structured patterns:
+
+```html
+<list variant="unordered">
+  <item>Point</item>
+</list>
+
+<table>
+  <row kind="header">
+    <cell>Name</cell>
+    <cell>Status</cell>
+  </row>
+  <row kind="body">
+    <cell>Runtime</cell>
+    <cell>Ready</cell>
+  </row>
+</table>
+```
+
+```html
+<tabs default="summary">
+  <tab value="summary" label="Summary">
+    <card title="Overview">Tab content.</card>
+  </tab>
+</tabs>
+
+<accordion>
+  <accordion-item value="details" title="Details">
+    Body
+  </accordion-item>
+</accordion>
+```
