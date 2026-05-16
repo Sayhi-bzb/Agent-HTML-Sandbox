@@ -1,5 +1,8 @@
 import { Suspense, lazy } from "react"
 
+import { Button } from "@/components/ui/button"
+import { PanelShell, PanelShellHeader } from "../ui/panel-shell"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { ReviewFocusTarget } from "../../lib/review-focus"
 import type {
   SourceFocusReviewStatus,
@@ -103,116 +106,115 @@ export function Workbench({
   isRunningInspect,
 }: WorkbenchProps) {
   return (
-    <main className="panel workbench-shell">
-      <div className="panel-header workbench-header">
-        <div>
-          <p className="eyebrow">Workbench</p>
-          <h1>{session.summary.name}</h1>
-        </div>
+    <PanelShell as="main" variant="workbench">
+      <PanelShellHeader
+        className="workbench-header"
+        eyebrow="Workbench"
+        title={session.summary.name}
+      >
         <div className="header-actions">
-          <button
-            className="ghost-button"
+          <Button
             disabled={isRunningBuild}
             onClick={onBuild}
+            size="sm"
             type="button"
+            variant="outline"
           >
             {isRunningBuild ? "Building..." : "Build"}
-          </button>
-          <button
-            className="primary-button"
+          </Button>
+          <Button
             disabled={isRunningInspect}
             onClick={onInspect}
+            size="sm"
             type="button"
           >
             {isRunningInspect ? "Inspecting..." : "Inspect"}
-          </button>
+          </Button>
         </div>
-      </div>
+      </PanelShellHeader>
 
-      <div className="tab-strip" role="tablist" aria-label="Workbench views">
-        {views.map((view) => (
-          <button
-            aria-selected={activeView === view}
-            className={activeView === view ? "tab active" : "tab"}
-            key={view}
-            onClick={() => onViewChange(view)}
-            role="tab"
-            type="button"
-          >
-            {view}
-          </button>
-        ))}
-      </div>
-
-      {activeView === "preview" ? (
-        <PreviewPanel
-          build={build}
-          title={session.summary.name}
-          previewPath={session.previewPath}
-          lastBuildAt={session.summary.lastBuildAt}
-          previewHtml={previewHtml}
-        />
-      ) : null}
-      {activeView === "source" ? (
-        <Suspense
-          fallback={
-            <section className="workbench-card">
-              <div className="workbench-card-header">
-                <div>
-                  <p className="eyebrow">Source</p>
-                  <h3>Loading editor</h3>
+      <Tabs
+        className="workbench-tabs"
+        onValueChange={(value) => onViewChange(value as WorkbenchView)}
+        value={activeView}
+      >
+        <TabsList className="tab-strip" variant="line">
+          {views.map((view) => (
+            <TabsTrigger key={view} value={view}>
+              {view}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        <TabsContent value="preview">
+          <PreviewPanel
+            build={build}
+            title={session.summary.name}
+            previewPath={session.previewPath}
+            lastBuildAt={session.summary.lastBuildAt}
+            previewHtml={previewHtml}
+          />
+        </TabsContent>
+        <TabsContent value="source">
+          <Suspense
+            fallback={
+              <section className="workbench-card">
+                <div className="workbench-card-header">
+                  <div>
+                    <p className="eyebrow">Source</p>
+                    <h3>Loading editor</h3>
+                  </div>
                 </div>
-              </div>
-              <p className="validation-empty">
-                Preparing the CodeMirror editor for this session.
-              </p>
-            </section>
-          }
-        >
-          <SourcePanel
+                <p className="validation-empty">
+                  Preparing the CodeMirror editor for this session.
+                </p>
+              </section>
+            }
+          >
+            <SourcePanel
+              activeSourceFocus={activeSourceFocus}
+              activeSourceFocusReviewStatus={activeSourceFocusReviewStatus}
+              canRevealSourceOrigin={canRevealSourceOrigin}
+              draftSource={draftSource}
+              isSaving={isSavingSource}
+              sourceValidation={sourceValidation}
+              onClearSourceFocus={onClearSourceFocus}
+              onDraftChange={onDraftSourceChange}
+              onOpenSourceFocus={onOpenSourceFocus}
+              onRefreshSourceFocus={onRefreshSourceFocus}
+              onRevealReviewTarget={onRevealSourceReviewTarget}
+              onSave={onSaveSource}
+              source={session.source}
+              sourcePath={session.sourcePath}
+            />
+          </Suspense>
+        </TabsContent>
+        <TabsContent value="inspect">
+          <InspectPanel
+            activeReviewFocus={activeReviewFocus}
             activeSourceFocus={activeSourceFocus}
             activeSourceFocusReviewStatus={activeSourceFocusReviewStatus}
+            availableReviewFocusTargets={availableReviewFocusTargets}
+            build={build}
             canRevealSourceOrigin={canRevealSourceOrigin}
-            draftSource={draftSource}
-            isSaving={isSavingSource}
+            draftComparison={draftComparison}
+            hasUnsavedSourceChanges={hasUnsavedSourceChanges}
+            inspect={inspect}
+            isActionBusy={isActionBusy}
+            logs={logs}
+            messages={messages}
             sourceValidation={sourceValidation}
-            onClearSourceFocus={onClearSourceFocus}
-            onDraftChange={onDraftSourceChange}
+            onClearReviewFocus={onClearReviewFocus}
             onOpenSourceFocus={onOpenSourceFocus}
             onRefreshSourceFocus={onRefreshSourceFocus}
-            onRevealReviewTarget={onRevealSourceReviewTarget}
-            onSave={onSaveSource}
-            source={session.source}
-            sourcePath={session.sourcePath}
+            onRevealSourceReviewTarget={onRevealSourceReviewTarget}
+            onRevisitReviewFocus={onRevisitReviewFocus}
+            onRunReviewAction={onRunReviewAction}
+            onSelectReviewFocus={onSelectReviewFocus}
+            proposalComparison={proposalComparison}
+            session={session}
           />
-        </Suspense>
-      ) : null}
-      {activeView === "inspect" ? (
-        <InspectPanel
-          activeReviewFocus={activeReviewFocus}
-          activeSourceFocus={activeSourceFocus}
-          activeSourceFocusReviewStatus={activeSourceFocusReviewStatus}
-          availableReviewFocusTargets={availableReviewFocusTargets}
-          build={build}
-          canRevealSourceOrigin={canRevealSourceOrigin}
-          draftComparison={draftComparison}
-          hasUnsavedSourceChanges={hasUnsavedSourceChanges}
-          inspect={inspect}
-          isActionBusy={isActionBusy}
-          logs={logs}
-          messages={messages}
-          sourceValidation={sourceValidation}
-          onClearReviewFocus={onClearReviewFocus}
-          onOpenSourceFocus={onOpenSourceFocus}
-          onRefreshSourceFocus={onRefreshSourceFocus}
-          onRevealSourceReviewTarget={onRevealSourceReviewTarget}
-          onRevisitReviewFocus={onRevisitReviewFocus}
-          onRunReviewAction={onRunReviewAction}
-          onSelectReviewFocus={onSelectReviewFocus}
-          proposalComparison={proposalComparison}
-          session={session}
-        />
-      ) : null}
-    </main>
+        </TabsContent>
+      </Tabs>
+    </PanelShell>
   )
 }

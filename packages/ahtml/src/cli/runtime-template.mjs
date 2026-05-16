@@ -1,18 +1,24 @@
 import { execFile } from "node:child_process"
 import { existsSync } from "node:fs"
 import { createRequire } from "node:module"
-import { access, cp, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises"
+import {
+  access,
+  cp,
+  mkdir,
+  readFile,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { promisify } from "node:util"
 
+import { supportedRuntimeBase } from "../config/render-capabilities.mjs"
 import {
-  createRuntimeVerificationData,
-  createRendererMapping,
-  createRuntimeElementRegistrySpec,
-  createRuntimeRendererKindSpec,
-  supportedRuntimeBase,
-} from "../config/render-capabilities.mjs"
+  createRuntimeContract,
+  createRuntimeVerificationState,
+} from "../config/runtime-contract.mjs"
 import {
   createShadcnRuntimeSurface,
   recordAhtmlGlueProof,
@@ -37,11 +43,7 @@ export async function writeRuntimeTemplate({
     ? "shadcn-template-override"
     : "shadcn-official-template"
   const dependencies = resolveRuntimeDependencies(packageRoot)
-  const components = Array.isArray(schema?.components) ? schema.components : []
-  const verificationData =
-    schema?.verificationData ?? createRuntimeVerificationData(components)
-  const rendererMapping =
-    schema?.rendererMapping ?? createRendererMapping(components)
+  const runtimeContract = createRuntimeContract(schema?.components)
 
   await rm(paths.runtimeDir, { force: true, recursive: true })
   await initShadcnRuntime({
@@ -66,7 +68,7 @@ export async function writeRuntimeTemplate({
   })
   await injectRendererFiles({
     paths,
-    rendererMapping,
+    runtimeContract,
     runtimeSurface,
   })
   await ensureRuntimeBuildConfig({ packageRoot, paths, dependencies })
@@ -75,12 +77,10 @@ export async function writeRuntimeTemplate({
     surface: runtimeSurface,
   })
   await writeRuntimeVerificationState({
-    components,
     paths,
-    rendererMapping,
+    runtimeContract,
     runtimeSurface: provenRuntimeSurface,
     setup,
-    verificationData,
   })
 
   return provenRuntimeSurface
@@ -192,7 +192,9 @@ async function initShadcnRuntime({
       shadcnTemplateDir,
     })
   } catch (error) {
-    if (!(await canContinueAfterInitInstallFailure(error, generatedRuntimeDir))) {
+    if (
+      !(await canContinueAfterInitInstallFailure(error, generatedRuntimeDir))
+    ) {
       throw error
     }
   }
@@ -202,7 +204,7 @@ async function initShadcnRuntime({
   await normalizeRuntimeTemplateViteConfig(paths)
 }
 
-async function injectRendererFiles({ paths, rendererMapping, runtimeSurface }) {
+async function injectRendererFiles({ paths, runtimeContract, runtimeSurface }) {
   await mkdir(paths.runtimeSrcDir, { recursive: true })
   await cp(
     path.join(rendererSourceDir, "renderer"),
@@ -217,8 +219,8 @@ async function injectRendererFiles({ paths, rendererMapping, runtimeSurface }) {
     path.join(rendererSourceDir, "ssr.tsx"),
     path.join(paths.runtimeSrcDir, "ssr.tsx"),
   )
-  await writeRuntimeRendererKindSource({ paths })
-  await writeRuntimeElementRegistrySource({ paths, rendererMapping })
+  await writeRuntimeRendererKindSource({ paths, runtimeContract })
+  await writeRuntimeElementRegistrySource({ paths, runtimeContract })
   await writeRendererMain({ paths, cssPath: runtimeSurface.cssPath })
 }
 
@@ -327,27 +329,18 @@ function isLocalRegistryUrl(value) {
 }
 
 async function writeRuntimeVerificationState({
-  components,
   paths,
-  rendererMapping,
+  runtimeContract,
   setup,
   runtimeSurface,
-  verificationData,
 }) {
-  const renderableAgentComponents =
-    components.length > 0
-      ? components.map((component) => component.name)
-      : (verificationData.components ?? []).map((component) => component.name)
-  const runtimeVerificationState = {
-    kind: "ahtml-runtime-render-verification",
-    version: 1,
+  const runtimeVerificationState = createRuntimeVerificationState({
+    components: setup.components,
     runtimeBase: supportedRuntimeBase,
-    shadcnRuntimeSurface: runtimeSurface,
-    installedUiComponents: setup.components,
-    renderableAgentComponents,
-    verificationData,
-    rendererMapping,
-  }
+    runtimeContract,
+    runtimeSurface,
+    version: 1,
+  })
 
   await writeFile(
     paths.runtimeVerificationPath,
@@ -355,8 +348,8 @@ async function writeRuntimeVerificationState({
   )
 }
 
-async function writeRuntimeElementRegistrySource({ paths, rendererMapping }) {
-  const registrySpec = createRuntimeElementRegistrySpec(rendererMapping)
+async function writeRuntimeElementRegistrySource({ paths, runtimeContract }) {
+  const registrySpec = runtimeContract.elementRegistrySpec
   const source = createRuntimeElementRegistrySource(registrySpec)
 
   await writeFile(
@@ -365,8 +358,8 @@ async function writeRuntimeElementRegistrySource({ paths, rendererMapping }) {
   )
 }
 
-async function writeRuntimeRendererKindSource({ paths }) {
-  const kindSpec = createRuntimeRendererKindSpec()
+async function writeRuntimeRendererKindSource({ paths, runtimeContract }) {
+  const kindSpec = runtimeContract.rendererKindSpec
   const source = createRuntimeRendererKindSource(kindSpec)
 
   await writeFile(
@@ -554,4 +547,3 @@ async function canContinueAfterInitInstallFailure(error, generatedRuntimeDir) {
     return false
   }
 }
-

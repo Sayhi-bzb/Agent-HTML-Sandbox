@@ -5,6 +5,7 @@ import {
   structuralAgentComponents,
   supportedRendererKinds,
 } from "../config/render-capabilities.mjs"
+import { createRuntimeContractFromSchema } from "../config/runtime-contract.mjs"
 import { parseJson } from "./cli-io.mjs"
 
 const rendererSpecScalarFields = [
@@ -91,10 +92,11 @@ export function createRuntimeRenderDiagnostics({
   schema,
 }) {
   const diagnostics = []
+  const runtimeContract = createRuntimeContractFromSchema(schema)
   const runtimeVerificationData = runtimeVerificationState.verificationData
-  const schemaVerificationData = schema.verificationData
+  const schemaVerificationData = runtimeContract.verificationData
   const runtimeRendererMapping = runtimeVerificationState.rendererMapping
-  const schemaRendererMapping = schema.rendererMapping
+  const schemaRendererMapping = runtimeContract.rendererMapping
 
   pushRuntimeCheckDiagnostic({
     actual: runtimeVerificationData,
@@ -458,7 +460,7 @@ function collectDocumentRenderDiagnostics({
             rendererSpecByName,
           }),
         )
-          continue
+        continue
       }
 
       diagnostics.push(

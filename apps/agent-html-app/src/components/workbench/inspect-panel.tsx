@@ -1,11 +1,18 @@
 import { getInspectReviewSummary } from "../../lib/inspect-review"
+import { Button } from "../ui/button"
+import {
+  SurfaceCard,
+  SurfaceCardBody,
+  SurfaceCardHeader,
+} from "../ui/surface-card"
+import { StatusBadge } from "../ui/status-badge"
+import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group"
 import {
   formatInspectDiagnosticMeta,
   getInspectDiagnosticsViewModel,
 } from "../../lib/inspect-diagnostics-view"
 import {
   getReviewFocusPreview,
-  isSameReviewFocusTarget,
   type ReviewFocusTarget,
 } from "../../lib/review-focus"
 import type { ReviewTimelineActionConfig } from "../../lib/review-flow"
@@ -120,9 +127,9 @@ export function InspectPanel({
           <h3>Diagnostics and structure</h3>
         </div>
         <div className="inspect-header-meta">
-          <span className={`pill ${buildStatusClassName}`}>
+          <StatusBadge tone={statusToneForClassName(buildStatusClassName)}>
             {buildStatusLabel(inspectBuildStatus)}
-          </span>
+          </StatusBadge>
           <span className="inline-meta">
             Generated {formatTimestampLabel(inspect.generatedAt)}
           </span>
@@ -136,27 +143,31 @@ export function InspectPanel({
             <h4>{reviewAudit.stageLabel} is the current gate</h4>
           </div>
           <div className="inspect-audit-meta">
-            <span className={`pill ${reviewAudit.stagePillClassName}`}>
+            <StatusBadge
+              tone={statusToneForClassName(reviewAudit.stagePillClassName)}
+            >
               {reviewAudit.stageStatusLabel}
-            </span>
-            <span className={`pill ${reviewAudit.readiness.pillClassName}`}>
+            </StatusBadge>
+            <StatusBadge
+              tone={statusToneForClassName(reviewAudit.readiness.pillClassName)}
+            >
               {reviewAudit.readiness.label}
-            </span>
+            </StatusBadge>
           </div>
         </div>
         <p className="inspect-audit-summary">{reviewAudit.stageSummary}</p>
         {reviewAudit.currentAction ? (
           <div className="inspect-audit-actions">
-            <button
-              className="primary-button"
+            <Button
               disabled={isActionBusy}
               onClick={() =>
                 void onRunReviewAction(reviewAudit.currentAction!.handler)
               }
+              size="sm"
               type="button"
             >
               {reviewAudit.currentAction.label}
-            </button>
+            </Button>
             <span className="inline-meta">
               {reviewAudit.currentAction.description}
             </span>
@@ -176,22 +187,24 @@ export function InspectPanel({
               <div className="inspect-linked-review-actions">
                 {activeReviewFocus ? (
                   <>
-                    <button
-                      className="mini-button"
+                    <Button
                       disabled={isActionBusy}
                       onClick={onRevisitReviewFocus}
+                      size="sm"
                       type="button"
+                      variant="outline"
                     >
                       Revisit compare
-                    </button>
-                    <button
-                      className="mini-button"
+                    </Button>
+                    <Button
                       disabled={isActionBusy}
                       onClick={onClearReviewFocus}
+                      size="sm"
                       type="button"
+                      variant="outline"
                     >
                       Clear focus
-                    </button>
+                    </Button>
                   </>
                 ) : null}
               </div>
@@ -207,12 +220,12 @@ export function InspectPanel({
             </p>
             {activeReviewFocus ? (
               <div className="proposal-meta-row">
-                <span className="pill accent">
+                <StatusBadge tone="accent">
                   {activeReviewFocus.mode === "proposal"
                     ? "Proposal compare"
                     : "Saved compare"}
-                </span>
-                <span className="pill">{activeReviewFocus.lineLabel}</span>
+                </StatusBadge>
+                <StatusBadge>{activeReviewFocus.lineLabel}</StatusBadge>
                 <span className="inline-meta">
                   {activeReviewFocus.groupCount} focused group(s)
                 </span>
@@ -226,13 +239,12 @@ export function InspectPanel({
                     key={`${group.startLine}-${group.endLine}-${group.savedText}-${group.draftText}`}
                   >
                     <div className="message-topline">
-                      <span className="pill">
+                      <StatusBadge>
                         {group.startLine === group.endLine
                           ? `Line ${group.startLine}`
                           : `Lines ${group.startLine}-${group.endLine}`}
-                      </span>
-                      <button
-                        className="mini-button"
+                      </StatusBadge>
+                      <Button
                         disabled={isActionBusy}
                         onClick={() =>
                           onOpenSourceFocus(
@@ -243,10 +255,12 @@ export function InspectPanel({
                             }),
                           )
                         }
+                        size="sm"
                         type="button"
+                        variant="outline"
                       >
                         Open in Source
-                      </button>
+                      </Button>
                     </div>
                     <div className="inspect-focus-preview-code">
                       <p className="draft-preview-label">Before</p>
@@ -267,484 +281,535 @@ export function InspectPanel({
               </div>
             ) : null}
             {activeSourceFocus && activeSourceFocusReviewStatus ? (
-              <div className="inspect-source-focus-status">
-                <div className="message-topline">
-                  <div>
-                    <p className="eyebrow">Source focus</p>
-                    <h5>{sourceFocusView?.label ?? activeSourceFocus.label}</h5>
-                  </div>
+              <SurfaceCard
+                className="inspect-source-focus-status"
+                variant="summary"
+              >
+                <SurfaceCardHeader
+                  eyebrow="Source focus"
+                  title={sourceFocusView?.label ?? activeSourceFocus.label}
+                >
                   {sourceFocusView?.statusPill ? (
-                    <span
-                      className={`pill ${sourceFocusView.statusPill.className}`}
+                    <StatusBadge
+                      tone={statusToneForClassName(
+                        sourceFocusView.statusPill.className,
+                      )}
                     >
                       {sourceFocusView.statusPill.label}
-                    </span>
+                    </StatusBadge>
                   ) : null}
-                </div>
-                <p className="inspect-linked-review-summary">
-                  {sourceFocusView?.summary}
-                </p>
-                <div className="proposal-meta-row">
-                  {sourceFocusView?.originLabel ? (
-                    <span className="pill accent">
-                      {sourceFocusView.originLabel}
-                    </span>
-                  ) : null}
-                  <span className="pill">
-                    {sourceFocusView?.selectionLabel}
-                  </span>
-                  {sourceFocusView?.reviewOriginLabel ? (
-                    <span className="inline-meta">
-                      From {sourceFocusView.reviewOriginLabel}
-                    </span>
-                  ) : null}
-                  {sourceFocusView?.originReference ? (
-                    <span className="inline-meta">
-                      {sourceFocusView.originReference}
-                    </span>
-                  ) : null}
-                </div>
-                <div className="inspect-linked-review-actions">
-                  <button
-                    className="mini-button"
-                    disabled={isActionBusy}
-                    onClick={() => onOpenSourceFocus(activeSourceFocus)}
-                    type="button"
-                  >
-                    {sourceFocusView?.actions.primaryLabel ??
-                      "Open Source focus"}
-                  </button>
-                  {sourceFocusView?.actions.canRevealSourceOrigin ? (
-                    <button
-                      className="mini-button"
+                </SurfaceCardHeader>
+                <SurfaceCardBody className="grid gap-3 px-[14px] pb-[14px]">
+                  <p className="inspect-linked-review-summary">
+                    {sourceFocusView?.summary}
+                  </p>
+                  <div className="proposal-meta-row">
+                    {sourceFocusView?.originLabel ? (
+                      <StatusBadge tone="accent">
+                        {sourceFocusView.originLabel}
+                      </StatusBadge>
+                    ) : null}
+                    <StatusBadge>{sourceFocusView?.selectionLabel}</StatusBadge>
+                    {sourceFocusView?.reviewOriginLabel ? (
+                      <span className="inline-meta">
+                        From {sourceFocusView.reviewOriginLabel}
+                      </span>
+                    ) : null}
+                    {sourceFocusView?.originReference ? (
+                      <span className="inline-meta">
+                        {sourceFocusView.originReference}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="inspect-linked-review-actions">
+                    <Button
                       disabled={isActionBusy}
-                      onClick={onRevealSourceReviewTarget}
+                      onClick={() => onOpenSourceFocus(activeSourceFocus)}
+                      size="sm"
                       type="button"
+                      variant="outline"
                     >
-                      Reveal source origin
-                    </button>
-                  ) : null}
-                  {sourceFocusView?.actions.canRefreshFocus ? (
-                    <button
-                      className="mini-button"
-                      disabled={isActionBusy}
-                      onClick={onRefreshSourceFocus}
-                      type="button"
-                    >
-                      Refresh focus
-                    </button>
-                  ) : null}
-                </div>
-              </div>
+                      {sourceFocusView?.actions.primaryLabel ??
+                        "Open Source focus"}
+                    </Button>
+                    {sourceFocusView?.actions.canRevealSourceOrigin ? (
+                      <Button
+                        disabled={isActionBusy}
+                        onClick={onRevealSourceReviewTarget}
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        Reveal source origin
+                      </Button>
+                    ) : null}
+                    {sourceFocusView?.actions.canRefreshFocus ? (
+                      <Button
+                        disabled={isActionBusy}
+                        onClick={onRefreshSourceFocus}
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        Refresh focus
+                      </Button>
+                    ) : null}
+                  </div>
+                </SurfaceCardBody>
+              </SurfaceCard>
             ) : null}
             {availableReviewFocusTargets.length > 0 ? (
-              <div className="inspect-review-targets">
-                {availableReviewFocusTargets.map((target) => {
-                  const isActive = isSameReviewFocusTarget(
-                    activeReviewFocus,
-                    target,
+              <ToggleGroup
+                className="inspect-review-targets"
+                onValueChange={(value) => {
+                  const target = availableReviewFocusTargets.find(
+                    (candidate) => candidate.targetId === value,
                   )
-
-                  return (
-                    <button
-                      className={
-                        isActive
-                          ? "inspect-review-target active"
-                          : "inspect-review-target"
-                      }
-                      disabled={isActionBusy || isActive}
-                      key={target.targetId}
-                      onClick={() => onSelectReviewFocus(target)}
-                      type="button"
-                    >
-                      <span className="inspect-review-target-label">
-                        {target.label}
-                      </span>
-                      <span className="pill">{target.lineLabel}</span>
-                      <span className="inline-meta">
-                        {target.groupCount} group(s)
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
+                  if (target) {
+                    onSelectReviewFocus(target)
+                  }
+                }}
+                type="single"
+                value={activeReviewFocus?.targetId}
+                variant="outline"
+              >
+                {availableReviewFocusTargets.map((target) => (
+                  <ToggleGroupItem
+                    className="inspect-review-target"
+                    disabled={isActionBusy}
+                    key={target.targetId}
+                    size="sm"
+                    value={target.targetId}
+                  >
+                    <span className="inspect-review-target-label">
+                      {target.label}
+                    </span>
+                    <StatusBadge>{target.lineLabel}</StatusBadge>
+                    <span className="inline-meta">
+                      {target.groupCount} group(s)
+                    </span>
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
             ) : null}
           </div>
         ) : null}
         <div className="inspect-audit-chip-grid">
-          <article className="inspect-audit-chip">
-            <p className="eyebrow">Proposal state</p>
-            <h5>{reviewAudit.proposalState.statusLabel}</h5>
-            <p>{reviewAudit.proposalState.summary}</p>
-          </article>
-          <article className="inspect-audit-chip">
-            <p className="eyebrow">Readiness</p>
-            <h5>{reviewAudit.readiness.label}</h5>
-            <p>{reviewAudit.readiness.summary}</p>
-          </article>
-          <article className="inspect-audit-chip">
-            <p className="eyebrow">Signals</p>
-            <h5>{reviewAudit.evidence.length} captured</h5>
-            <p>
-              Diagnostics, drift, and logs are condensed here so the next review
-              move is obvious.
-            </p>
-          </article>
+          <SurfaceCard className="inspect-audit-chip" variant="summary">
+            <SurfaceCardHeader eyebrow="Proposal state" />
+            <SurfaceCardBody className="grid gap-2 px-[14px] pb-[14px]">
+              <h5>{reviewAudit.proposalState.statusLabel}</h5>
+              <p>{reviewAudit.proposalState.summary}</p>
+            </SurfaceCardBody>
+          </SurfaceCard>
+          <SurfaceCard className="inspect-audit-chip" variant="summary">
+            <SurfaceCardHeader eyebrow="Readiness" />
+            <SurfaceCardBody className="grid gap-2 px-[14px] pb-[14px]">
+              <h5>{reviewAudit.readiness.label}</h5>
+              <p>{reviewAudit.readiness.summary}</p>
+            </SurfaceCardBody>
+          </SurfaceCard>
+          <SurfaceCard className="inspect-audit-chip" variant="summary">
+            <SurfaceCardHeader eyebrow="Signals" />
+            <SurfaceCardBody className="grid gap-2 px-[14px] pb-[14px]">
+              <h5>{reviewAudit.evidence.length} captured</h5>
+              <p>
+                Diagnostics, drift, and logs are condensed here so the next
+                review move is obvious.
+              </p>
+            </SurfaceCardBody>
+          </SurfaceCard>
         </div>
         <div className="inspect-audit-grid">
-          <section className="inspect-audit-block">
-            <h4>Recovery path</h4>
-            <ol className="inspect-step-list">
-              {reviewAudit.nextSteps.map((step) => (
-                <li className="inspect-step-item" key={step.id}>
-                  <div className="inspect-step-topline">
-                    <strong>{step.title}</strong>
-                    {step.action ? (
-                      <button
-                        className="mini-button"
-                        disabled={isActionBusy}
-                        onClick={() =>
-                          void onRunReviewAction(step.action!.handler)
-                        }
-                        type="button"
-                      >
-                        {step.action.label}
-                      </button>
-                    ) : null}
-                  </div>
-                  <p>{step.detail}</p>
-                </li>
-              ))}
-            </ol>
-            {reviewAudit.readiness.items.length > 0 ? (
-              <div className="inspect-open-checks">
-                <p className="eyebrow">Open checks</p>
-                <ul className="inspect-focus-list">
-                  {reviewAudit.readiness.items.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </section>
+          <SurfaceCard className="inspect-audit-block" variant="summary">
+            <SurfaceCardHeader title="Recovery path" />
+            <SurfaceCardBody className="grid gap-3 px-[14px] pb-[14px]">
+              <ol className="inspect-step-list">
+                {reviewAudit.nextSteps.map((step) => (
+                  <li className="inspect-step-item" key={step.id}>
+                    <div className="inspect-step-topline">
+                      <strong>{step.title}</strong>
+                      {step.action ? (
+                        <Button
+                          disabled={isActionBusy}
+                          onClick={() =>
+                            void onRunReviewAction(step.action!.handler)
+                          }
+                          size="sm"
+                          type="button"
+                          variant="outline"
+                        >
+                          {step.action.label}
+                        </Button>
+                      ) : null}
+                    </div>
+                    <p>{step.detail}</p>
+                  </li>
+                ))}
+              </ol>
+              {reviewAudit.readiness.items.length > 0 ? (
+                <div className="inspect-open-checks">
+                  <p className="eyebrow">Open checks</p>
+                  <ul className="inspect-focus-list">
+                    {reviewAudit.readiness.items.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </SurfaceCardBody>
+          </SurfaceCard>
 
-          <section className="inspect-audit-block">
-            <h4>Key evidence</h4>
-            <ul className="inspect-evidence-list">
-              {reviewAudit.evidence.map((item) => (
-                <li className="inspect-evidence-item" key={item.id}>
-                  <div className="message-topline">
-                    <span className={`pill ${item.pillClassName}`}>
-                      {item.label}
-                    </span>
-                  </div>
-                  <p>{item.detail}</p>
-                </li>
-              ))}
-            </ul>
-          </section>
+          <SurfaceCard className="inspect-audit-block" variant="summary">
+            <SurfaceCardHeader title="Key evidence" />
+            <SurfaceCardBody className="px-[14px] pb-[14px]">
+              <ul className="inspect-evidence-list">
+                {reviewAudit.evidence.map((item) => (
+                  <li className="inspect-evidence-item" key={item.id}>
+                    <div className="message-topline">
+                      <StatusBadge
+                        tone={statusToneForClassName(item.pillClassName)}
+                      >
+                        {item.label}
+                      </StatusBadge>
+                    </div>
+                    <p>{item.detail}</p>
+                  </li>
+                ))}
+              </ul>
+            </SurfaceCardBody>
+          </SurfaceCard>
         </div>
       </section>
 
       <div className="inspect-summary-grid">
-        <section className="inspect-summary-card">
-          <div className="message-topline">
-            <p className="eyebrow">Source validation</p>
-            <span className={`pill ${sourceValidationView.pill.className}`}>
+        <SurfaceCard variant="summary">
+          <SurfaceCardHeader eyebrow="Source validation">
+            <StatusBadge
+              tone={statusToneForClassName(sourceValidationView.pill.className)}
+            >
               {sourceValidationView.pill.label}
-            </span>
-          </div>
-          <h4>{sourceValidationView.headline}</h4>
-          <p>{sourceValidationView.summary}</p>
-          <div className="inspect-summary-meta">
-            <span className="inline-meta">
-              {sourceValidationView.diagnosticsCount} diagnostic(s)
-            </span>
-            <span className="inline-meta">
-              {sourceValidationView.validatedAt
-                ? formatTimestampLabel(sourceValidationView.validatedAt)
-                : "No validation run yet"}
-            </span>
-          </div>
-          {sourceValidationView.issues.length > 0 ? (
-            <div className="inspect-summary-issue-list">
-              {sourceValidationView.issues.map((issue) => (
-                <div
-                  className="proposal-meta-row"
-                  key={`${issue.diagnostic.id}-${issue.diagnostic.message}`}
-                >
-                  <span className="inline-meta">
-                    {issue.diagnostic.message}
-                  </span>
-                  <span className="inline-meta">{issue.meta}</span>
-                  {issue.canOpenInSource ? (
-                    <button
-                      className="mini-button"
-                      disabled={isActionBusy}
-                      onClick={() => {
-                        const target = createSourceFocusTargetFromDiagnostic({
-                          diagnostic: issue.diagnostic,
-                        })
-                        if (target) {
-                          onOpenSourceFocus(target)
-                        }
-                      }}
-                      type="button"
-                    >
-                      Open in Source
-                    </button>
-                  ) : null}
-                </div>
-              ))}
-              {sourceValidationView.hasAdditionalIssues ? (
-                <span className="inline-meta inspect-summary-detail">
-                  More validation issues are available in the Source panel.
-                </span>
-              ) : null}
+            </StatusBadge>
+          </SurfaceCardHeader>
+          <SurfaceCardBody className="grid gap-3 px-[16px] pb-[16px]">
+            <h4>{sourceValidationView.headline}</h4>
+            <p>{sourceValidationView.summary}</p>
+            <div className="inspect-summary-meta">
+              <span className="inline-meta">
+                {sourceValidationView.diagnosticsCount} diagnostic(s)
+              </span>
+              <span className="inline-meta">
+                {sourceValidationView.validatedAt
+                  ? formatTimestampLabel(sourceValidationView.validatedAt)
+                  : "No validation run yet"}
+              </span>
             </div>
-          ) : null}
-          <div className="inspect-summary-actions">
-            <button
-              className="mini-button"
-              disabled={isActionBusy}
-              onClick={() => {
-                if (
-                  sourceValidationView.primaryAction === "focus-first-issue" &&
-                  sourceValidationView.primaryDiagnostic
-                ) {
-                  const target = createSourceFocusTargetFromDiagnostic({
-                    diagnostic: sourceValidationView.primaryDiagnostic,
-                  })
-                  if (target) {
-                    onOpenSourceFocus(target)
-                  }
-                  return
-                }
-
-                void onRunReviewAction("openSource")
-              }}
-              type="button"
-            >
-              {sourceValidationView.primaryActionLabel}
-            </button>
-          </div>
-        </section>
-        <section className="inspect-summary-card">
-          <p className="eyebrow">Artifact state</p>
-          <h4>{artifactHeadline(inspect)}</h4>
-          <p>{artifactSummary(inspect)}</p>
-        </section>
-
-        <section className="inspect-summary-card">
-          <div className="message-topline">
-            <p className="eyebrow">Diagnostics</p>
-            <span className={`pill ${inspectDiagnosticsView.pill.className}`}>
-              {inspectDiagnosticsView.pill.label}
-            </span>
-          </div>
-          <h4>{inspectDiagnosticsView.headline}</h4>
-          <p>
-            {diagnosticCounts.error} error, {diagnosticCounts.warning} warning,{" "}
-            {diagnosticCounts.info} info.
-          </p>
-          {inspectDiagnosticsView.issues.length > 0 ? (
-            <div className="inspect-summary-issue-list">
-              {inspectDiagnosticsView.issues.map((issue) => (
-                <div
-                  className="proposal-meta-row"
-                  key={`${issue.diagnostic.id}-${issue.diagnostic.message}`}
-                >
-                  <span className="inline-meta">
-                    {issue.diagnostic.message}
-                  </span>
-                  <span className="inline-meta">{issue.meta}</span>
-                  {issue.canOpenInSource ? (
-                    <button
-                      className="mini-button"
-                      disabled={isActionBusy}
-                      onClick={() => {
-                        const target = createSourceFocusTargetFromDiagnostic({
-                          diagnostic: issue.diagnostic,
-                        })
-                        if (target) {
-                          onOpenSourceFocus(target)
-                        }
-                      }}
-                      type="button"
-                    >
-                      Open in Source
-                    </button>
-                  ) : null}
-                </div>
-              ))}
-              {inspectDiagnosticsView.hasAdditionalIssues ? (
-                <span className="inline-meta inspect-summary-detail">
-                  More inspect diagnostics are available below.
-                </span>
-              ) : null}
-            </div>
-          ) : null}
-          <div className="inspect-summary-actions">
-            <button
-              className="mini-button"
-              disabled={isActionBusy}
-              onClick={() => {
-                if (
-                  inspectDiagnosticsView.primaryAction ===
-                    "focus-first-issue" &&
-                  inspectDiagnosticsView.primaryDiagnostic
-                ) {
-                  const target = createSourceFocusTargetFromDiagnostic({
-                    diagnostic: inspectDiagnosticsView.primaryDiagnostic,
-                  })
-                  if (target) {
-                    onOpenSourceFocus(target)
-                  }
-                  return
-                }
-
-                void onRunReviewAction("openInspect")
-              }}
-              type="button"
-            >
-              {inspectDiagnosticsView.primaryActionLabel}
-            </button>
-          </div>
-        </section>
-
-        <section className="inspect-summary-card">
-          <p className="eyebrow">Captured outputs</p>
-          <h4>
-            {stdoutAvailable || stderrAvailable
-              ? "Logs ready for review"
-              : "No logs captured yet"}
-          </h4>
-          <p>
-            stdout {stdoutAvailable ? "available" : "missing"} · stderr{" "}
-            {stderrAvailable ? "available" : "missing"}
-          </p>
-        </section>
-      </div>
-
-      <div className="inspect-grid">
-        <div className="inspect-block">
-          <h4>Review focus</h4>
-          <ul className="inspect-focus-list">
-            {reviewFocus.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="inspect-block">
-          <h4>Structure</h4>
-          <p>{inspect.structureSummary}</p>
-        </div>
-
-        <div className="inspect-block">
-          <h4>Diagnostics</h4>
-          {inspect.diagnostics.length > 0 ? (
-            <ul className="diagnostic-list">
-              {inspect.diagnostics.map((diagnostic) => (
-                <li
-                  className={`diagnostic-item severity-${diagnostic.severity}`}
-                  key={diagnostic.id}
-                >
-                  <div className="message-topline">
-                    <strong>{diagnostic.severity.toUpperCase()}</strong>
-                    {typeof diagnostic.line === "number" ? (
-                      <button
-                        className="mini-button"
+            {sourceValidationView.issues.length > 0 ? (
+              <div className="inspect-summary-issue-list">
+                {sourceValidationView.issues.map((issue) => (
+                  <div
+                    className="proposal-meta-row"
+                    key={`${issue.diagnostic.id}-${issue.diagnostic.message}`}
+                  >
+                    <span className="inline-meta">
+                      {issue.diagnostic.message}
+                    </span>
+                    <span className="inline-meta">{issue.meta}</span>
+                    {issue.canOpenInSource ? (
+                      <Button
                         disabled={isActionBusy}
                         onClick={() => {
                           const target = createSourceFocusTargetFromDiagnostic({
-                            diagnostic,
+                            diagnostic: issue.diagnostic,
                           })
                           if (target) {
                             onOpenSourceFocus(target)
                           }
                         }}
+                        size="sm"
                         type="button"
+                        variant="outline"
                       >
                         Open in Source
-                      </button>
+                      </Button>
                     ) : null}
                   </div>
-                  <span>{diagnostic.message}</span>
-                  {diagnostic.code ||
-                  diagnostic.source ||
-                  typeof diagnostic.line === "number" ? (
+                ))}
+                {sourceValidationView.hasAdditionalIssues ? (
+                  <span className="inline-meta inspect-summary-detail">
+                    More validation issues are available in the Source panel.
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+            <div className="inspect-summary-actions">
+              <Button
+                disabled={isActionBusy}
+                onClick={() => {
+                  if (
+                    sourceValidationView.primaryAction ===
+                      "focus-first-issue" &&
+                    sourceValidationView.primaryDiagnostic
+                  ) {
+                    const target = createSourceFocusTargetFromDiagnostic({
+                      diagnostic: sourceValidationView.primaryDiagnostic,
+                    })
+                    if (target) {
+                      onOpenSourceFocus(target)
+                    }
+                    return
+                  }
+
+                  void onRunReviewAction("openSource")
+                }}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                {sourceValidationView.primaryActionLabel}
+              </Button>
+            </div>
+          </SurfaceCardBody>
+        </SurfaceCard>
+        <SurfaceCard variant="summary">
+          <SurfaceCardHeader eyebrow="Artifact state" />
+          <SurfaceCardBody className="grid gap-3 px-[16px] pb-[16px]">
+            <h4>{artifactHeadline(inspect)}</h4>
+            <p>{artifactSummary(inspect)}</p>
+          </SurfaceCardBody>
+        </SurfaceCard>
+
+        <SurfaceCard variant="summary">
+          <SurfaceCardHeader eyebrow="Diagnostics">
+            <StatusBadge
+              tone={statusToneForClassName(
+                inspectDiagnosticsView.pill.className,
+              )}
+            >
+              {inspectDiagnosticsView.pill.label}
+            </StatusBadge>
+          </SurfaceCardHeader>
+          <SurfaceCardBody className="grid gap-3 px-[16px] pb-[16px]">
+            <h4>{inspectDiagnosticsView.headline}</h4>
+            <p>
+              {diagnosticCounts.error} error, {diagnosticCounts.warning}{" "}
+              warning, {diagnosticCounts.info} info.
+            </p>
+            {inspectDiagnosticsView.issues.length > 0 ? (
+              <div className="inspect-summary-issue-list">
+                {inspectDiagnosticsView.issues.map((issue) => (
+                  <div
+                    className="proposal-meta-row"
+                    key={`${issue.diagnostic.id}-${issue.diagnostic.message}`}
+                  >
                     <span className="inline-meta">
-                      {[
-                        typeof diagnostic.line === "number"
-                          ? `line ${diagnostic.line}${
-                              typeof diagnostic.column === "number"
-                                ? `:${diagnostic.column}`
-                                : ""
-                            }`
-                          : undefined,
-                        diagnostic.code,
-                        diagnostic.source,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
+                      {issue.diagnostic.message}
                     </span>
-                  ) : null}
-                </li>
+                    <span className="inline-meta">{issue.meta}</span>
+                    {issue.canOpenInSource ? (
+                      <Button
+                        disabled={isActionBusy}
+                        onClick={() => {
+                          const target = createSourceFocusTargetFromDiagnostic({
+                            diagnostic: issue.diagnostic,
+                          })
+                          if (target) {
+                            onOpenSourceFocus(target)
+                          }
+                        }}
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        Open in Source
+                      </Button>
+                    ) : null}
+                  </div>
+                ))}
+                {inspectDiagnosticsView.hasAdditionalIssues ? (
+                  <span className="inline-meta inspect-summary-detail">
+                    More inspect diagnostics are available below.
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+            <div className="inspect-summary-actions">
+              <Button
+                disabled={isActionBusy}
+                onClick={() => {
+                  if (
+                    inspectDiagnosticsView.primaryAction ===
+                      "focus-first-issue" &&
+                    inspectDiagnosticsView.primaryDiagnostic
+                  ) {
+                    const target = createSourceFocusTargetFromDiagnostic({
+                      diagnostic: inspectDiagnosticsView.primaryDiagnostic,
+                    })
+                    if (target) {
+                      onOpenSourceFocus(target)
+                    }
+                    return
+                  }
+
+                  void onRunReviewAction("openInspect")
+                }}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                {inspectDiagnosticsView.primaryActionLabel}
+              </Button>
+            </div>
+          </SurfaceCardBody>
+        </SurfaceCard>
+
+        <SurfaceCard variant="summary">
+          <SurfaceCardHeader eyebrow="Captured outputs" />
+          <SurfaceCardBody className="grid gap-3 px-[16px] pb-[16px]">
+            <h4>
+              {stdoutAvailable || stderrAvailable
+                ? "Logs ready for review"
+                : "No logs captured yet"}
+            </h4>
+            <p>
+              stdout {stdoutAvailable ? "available" : "missing"} · stderr{" "}
+              {stderrAvailable ? "available" : "missing"}
+            </p>
+          </SurfaceCardBody>
+        </SurfaceCard>
+      </div>
+
+      <div className="inspect-grid">
+        <SurfaceCard variant="summary">
+          <SurfaceCardHeader eyebrow="Review focus" />
+          <SurfaceCardBody className="px-[16px] pb-[16px]">
+            <ul className="inspect-focus-list">
+              {reviewFocus.map((item) => (
+                <li key={item}>{item}</li>
               ))}
             </ul>
-          ) : (
-            <p className="validation-empty">
-              No structured diagnostics from the latest inspect run.
-            </p>
-          )}
-        </div>
+          </SurfaceCardBody>
+        </SurfaceCard>
 
-        <div className="inspect-block">
-          <h4>Last build</h4>
-          <dl className="key-value-grid">
-            <dt>Run ID</dt>
-            <dd>{inspect.lastBuild?.runId ?? "n/a"}</dd>
-            <dt>Status</dt>
-            <dd>{inspect.lastBuild?.status ?? "n/a"}</dd>
-            <dt>Started</dt>
-            <dd>{formatTimestampLabel(inspect.lastBuild?.startedAt)}</dd>
-            <dt>Finished</dt>
-            <dd>{formatTimestampLabel(inspect.lastBuild?.finishedAt)}</dd>
-            <dt>Exit code</dt>
-            <dd>{inspect.lastBuild?.exitCode ?? "n/a"}</dd>
-            <dt>Preview</dt>
-            <dd>{inspect.lastBuild?.previewPath ?? "No preview artifact"}</dd>
-            <dt>stdout log</dt>
-            <dd>
-              {inspect.lastBuild?.stdoutPath ??
-                (stdoutAvailable ? "Captured for this session" : "n/a")}
-            </dd>
-            <dt>stderr log</dt>
-            <dd>
-              {inspect.lastBuild?.stderrPath ??
-                (stderrAvailable ? "Captured for this session" : "n/a")}
-            </dd>
-          </dl>
-        </div>
+        <SurfaceCard variant="summary">
+          <SurfaceCardHeader eyebrow="Structure" />
+          <SurfaceCardBody className="px-[16px] pb-[16px]">
+            <p>{inspect.structureSummary}</p>
+          </SurfaceCardBody>
+        </SurfaceCard>
 
-        <div className="inspect-block">
-          <h4>Logs</h4>
-          <div className="log-grid">
-            <div>
-              <p className="eyebrow">stdout</p>
-              <pre className="log-surface">
-                {logs.stdout ?? "No stdout log yet."}
-              </pre>
+        <SurfaceCard variant="summary">
+          <SurfaceCardHeader eyebrow="Diagnostics" />
+          <SurfaceCardBody className="px-[16px] pb-[16px]">
+            {inspect.diagnostics.length > 0 ? (
+              <ul className="diagnostic-list">
+                {inspect.diagnostics.map((diagnostic) => (
+                  <li
+                    className={`diagnostic-item severity-${diagnostic.severity}`}
+                    key={diagnostic.id}
+                  >
+                    <div className="message-topline">
+                      <strong>{diagnostic.severity.toUpperCase()}</strong>
+                      {typeof diagnostic.line === "number" ? (
+                        <Button
+                          disabled={isActionBusy}
+                          onClick={() => {
+                            const target =
+                              createSourceFocusTargetFromDiagnostic({
+                                diagnostic,
+                              })
+                            if (target) {
+                              onOpenSourceFocus(target)
+                            }
+                          }}
+                          size="sm"
+                          type="button"
+                          variant="outline"
+                        >
+                          Open in Source
+                        </Button>
+                      ) : null}
+                    </div>
+                    <span>{diagnostic.message}</span>
+                    {diagnostic.code ||
+                    diagnostic.source ||
+                    typeof diagnostic.line === "number" ? (
+                      <span className="inline-meta">
+                        {[
+                          typeof diagnostic.line === "number"
+                            ? `line ${diagnostic.line}${
+                                typeof diagnostic.column === "number"
+                                  ? `:${diagnostic.column}`
+                                  : ""
+                              }`
+                            : undefined,
+                          diagnostic.code,
+                          diagnostic.source,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="validation-empty">
+                No structured diagnostics from the latest inspect run.
+              </p>
+            )}
+          </SurfaceCardBody>
+        </SurfaceCard>
+
+        <SurfaceCard variant="summary">
+          <SurfaceCardHeader eyebrow="Last build" />
+          <SurfaceCardBody className="px-[16px] pb-[16px]">
+            <dl className="key-value-grid">
+              <dt>Run ID</dt>
+              <dd>{inspect.lastBuild?.runId ?? "n/a"}</dd>
+              <dt>Status</dt>
+              <dd>{inspect.lastBuild?.status ?? "n/a"}</dd>
+              <dt>Started</dt>
+              <dd>{formatTimestampLabel(inspect.lastBuild?.startedAt)}</dd>
+              <dt>Finished</dt>
+              <dd>{formatTimestampLabel(inspect.lastBuild?.finishedAt)}</dd>
+              <dt>Exit code</dt>
+              <dd>{inspect.lastBuild?.exitCode ?? "n/a"}</dd>
+              <dt>Preview</dt>
+              <dd>{inspect.lastBuild?.previewPath ?? "No preview artifact"}</dd>
+              <dt>stdout log</dt>
+              <dd>
+                {inspect.lastBuild?.stdoutPath ??
+                  (stdoutAvailable ? "Captured for this session" : "n/a")}
+              </dd>
+              <dt>stderr log</dt>
+              <dd>
+                {inspect.lastBuild?.stderrPath ??
+                  (stderrAvailable ? "Captured for this session" : "n/a")}
+              </dd>
+            </dl>
+          </SurfaceCardBody>
+        </SurfaceCard>
+
+        <SurfaceCard variant="summary">
+          <SurfaceCardHeader eyebrow="Logs" />
+          <SurfaceCardBody className="px-[16px] pb-[16px]">
+            <div className="log-grid">
+              <div>
+                <p className="eyebrow">stdout</p>
+                <pre className="log-surface">
+                  {logs.stdout ?? "No stdout log yet."}
+                </pre>
+              </div>
+              <div>
+                <p className="eyebrow">stderr</p>
+                <pre className="log-surface">
+                  {logs.stderr?.length ? logs.stderr : "No stderr log yet."}
+                </pre>
+              </div>
             </div>
-            <div>
-              <p className="eyebrow">stderr</p>
-              <pre className="log-surface">
-                {logs.stderr?.length ? logs.stderr : "No stderr log yet."}
-              </pre>
-            </div>
-          </div>
-        </div>
+          </SurfaceCardBody>
+        </SurfaceCard>
       </div>
     </section>
   )
@@ -783,6 +848,25 @@ function statusClassNameForBuild(status: BuildRunSummary["status"]) {
       return "status-ready"
     default:
       return ""
+  }
+}
+
+function statusToneForClassName(
+  className?: string,
+): "default" | "accent" | "ready" | "dirty" | "error" | "building" {
+  switch (className) {
+    case "status-ready":
+      return "ready"
+    case "status-dirty":
+      return "dirty"
+    case "status-error":
+      return "error"
+    case "status-building":
+      return "building"
+    case "accent":
+      return "accent"
+    default:
+      return "default"
   }
 }
 

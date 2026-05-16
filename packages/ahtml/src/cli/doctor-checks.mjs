@@ -6,6 +6,7 @@ import {
   requiredShadcnRuntimeExports,
   supportedRuntimeBase,
 } from "../config/render-capabilities.mjs"
+import { createRuntimeContractFromSchema } from "../config/runtime-contract.mjs"
 import { getCliSchemaOutput } from "./schema.mjs"
 import {
   assertBuiltArtifactCss,
@@ -30,15 +31,13 @@ import { checkForPackageUpdate } from "./update-check.mjs"
 import { readRuntimeManifest } from "./runtime-status.mjs"
 
 export async function runDoctorCommand({
-  commandArgs,
   defaultOutputDir,
   ensureManagedRuntime,
+  format = "text",
   packageRoot,
   readPackageVersion,
   runtimePaths,
 }) {
-  const format = parseDoctorFormat(commandArgs)
-
   const packageVersion = await readPackageVersion()
   await ensureManagedRuntime(packageVersion)
   const checks = []
@@ -81,15 +80,13 @@ export async function runDoctorCommand({
     await runDoctorCheck("runtime", "schema-renderer-parity", async () => {
       const manifest = await readRuntimeManifest(runtimePaths)
       const schema = await getCliSchemaOutput()
-      const schemaComponents = schema.components.map(
-        (component) => component.name,
-      )
+      const runtimeContract = createRuntimeContractFromSchema(schema)
 
       assertSameStringSet({
         actual: manifest.renderableAgentComponents,
         actualName: "runtime manifest renderableAgentComponents",
-        expected: schemaComponents,
-        expectedName: "schema components",
+        expected: runtimeContract.renderableAgentComponents,
+        expectedName: "schema renderableAgentComponents",
       })
 
       return `${manifest.renderableAgentComponents.length} components`
@@ -179,14 +176,15 @@ export async function runDoctorCommand({
   checks.push(
     await runDoctorCheck("runtime", "verification-data-parity", async () => {
       const schema = await getCliSchemaOutput()
+      const runtimeContract = createRuntimeContractFromSchema(schema)
       const runtimeVerificationState =
         await readRuntimeVerificationState(runtimePaths)
 
       assertVerificationDataParity({
         actual: runtimeVerificationState.verificationData,
         actualName: "runtime verification data",
-        expected: schema.verificationData,
-        expectedName: "schema verification data",
+        expected: runtimeContract.verificationData,
+        expectedName: "schema runtime contract verification data",
       })
 
       return `${runtimeVerificationState.verificationData.components.length} verification entries`
@@ -195,14 +193,15 @@ export async function runDoctorCommand({
   checks.push(
     await runDoctorCheck("runtime", "renderer-mapping-parity", async () => {
       const schema = await getCliSchemaOutput()
+      const runtimeContract = createRuntimeContractFromSchema(schema)
       const runtimeVerificationState =
         await readRuntimeVerificationState(runtimePaths)
 
       assertRendererSpecParity({
         actual: runtimeVerificationState.rendererMapping,
         actualName: "runtime renderer verification mapping",
-        expected: schema.rendererMapping,
-        expectedName: "schema renderer verification mapping",
+        expected: runtimeContract.rendererMapping,
+        expectedName: "schema runtime contract renderer mapping",
       })
 
       return `${runtimeVerificationState.rendererMapping.components.length} renderer mapping entries`
@@ -375,24 +374,6 @@ async function runDoctorCheck(category, name, check, options = {}) {
       detail: error instanceof Error ? error.message : String(error),
     }
   }
-}
-
-function parseDoctorFormat(commandArgs) {
-  if (commandArgs.length === 0) {
-    return "text"
-  }
-
-  if (commandArgs.length === 2 && commandArgs[0] === "--format") {
-    const format = commandArgs[1]
-
-    if (format === "text" || format === "json") {
-      return format
-    }
-
-    throw new Error('doctor --format must be "text" or "json".')
-  }
-
-  throw new Error("doctor does not accept arguments other than --format.")
 }
 
 function createDoctorReport({

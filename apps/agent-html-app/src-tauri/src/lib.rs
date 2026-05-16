@@ -1,11 +1,13 @@
+use camino::{Utf8Path, Utf8PathBuf};
+use fs_err as fs;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::env;
-use std::fs;
-use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Manager};
+use thiserror::Error;
+use tracing::{info, info_span};
 
 const SOURCE_FILE_NAME: &str = "source.agent.html";
 const SESSION_FILE_NAME: &str = "session.json";
@@ -165,23 +167,110 @@ struct SessionRecord {
 }
 
 struct CliExecution {
-    stdout_path: PathBuf,
-    stderr_path: PathBuf,
+    stdout_path: Utf8PathBuf,
+    stderr_path: Utf8PathBuf,
     exit_code: Option<i32>,
     json: Option<Value>,
 }
 
-impl AppError {
-    fn new(code: &str, message: impl Into<String>) -> Self {
-        Self {
-            code: code.into(),
+#[derive(Debug, Error)]
+enum BackendError {
+    #[error("{message}")]
+    Io {
+        code: &'static str,
+        message: &'static str,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("{message}")]
+    Json {
+        code: &'static str,
+        message: String,
+        #[source]
+        source: serde_json::Error,
+    },
+    #[error("{message}")]
+    Message { code: &'static str, message: String },
+}
+
+impl BackendError {
+    fn code(&self) -> &'static str {
+        match self {
+            Self::Io { code, .. } => code,
+            Self::Json { code, .. } => code,
+            Self::Message { code, .. } => code,
+        }
+    }
+
+    fn details(&self) -> Option<String> {
+        match self {
+            Self::Io { source, .. } => Some(source.to_string()),
+            Self::Json { source, .. } => Some(source.to_string()),
+            Self::Message { .. } => None,
+        }
+    }
+
+    fn session_io(message: &'static str, source: std::io::Error) -> Self {
+        Self::Io {
+            code: "session-io",
+            message,
+            source,
+        }
+    }
+
+    fn cli_launch(message: &'static str, source: std::io::Error) -> Self {
+        Self::Io {
+            code: "cli-launch",
+            message,
+            source,
+        }
+    }
+
+    fn preview_missing(message: &'static str, source: std::io::Error) -> Self {
+        Self::Io {
+            code: "preview-missing",
+            message,
+            source,
+        }
+    }
+
+    fn json(
+        code: &'static str,
+        message: impl Into<String>,
+        source: serde_json::Error,
+    ) -> Self {
+        Self::Json {
+            code,
             message: message.into(),
-            details: None,
+            source,
+        }
+    }
+
+    fn message(code: &'static str, message: impl Into<String>) -> Self {
+        Self::Message {
+            code,
+            message: message.into(),
+        }
+    }
+
+    fn ui_validation(message: impl Into<String>) -> Self {
+        Self::message("ui-validation", message)
+    }
+}
+
+impl From<BackendError> for AppError {
+    fn from(error: BackendError) -> Self {
+        Self {
+            code: error.code().into(),
+            message: error.to_string(),
+            details: error.details(),
             session_id: None,
             run_id: None,
         }
     }
+}
 
+impl AppError {
     fn with_details(mut self, details: impl Into<String>) -> Self {
         self.details = Some(details.into());
         self
@@ -195,21 +284,26 @@ impl AppError {
 
 #[tauri::command]
 fn list_sessions(app: AppHandle) -> Result<Vec<SessionSummary>, AppError> {
+    let _span = info_span!("list_sessions").entered();
     let root = ensure_sessions_root(&app)?;
     let mut sessions = Vec::new();
 
     let entries = fs::read_dir(root).map_err(|error| {
-        AppError::new("session-io", "Unable to read sessions directory.")
-            .with_details(error.to_string())
+        AppError::from(BackendError::session_io(
+            "Unable to read sessions directory.",
+            error,
+        ))
     })?;
 
     for entry in entries.flatten() {
-        let path = entry.path();
+        let Ok(path) = Utf8PathBuf::from_path_buf(entry.path()) else {
+            continue;
+        };
         if !path.is_dir() {
             continue;
         }
 
-        if let Ok(session) = load_session_detail_from_dir(&path) {
+        if let Ok(session) = load_session_detail_from_dir(path.as_path()) {
             sessions.push(session.summary);
         }
     }
@@ -222,11 +316,13 @@ fn list_sessions(app: AppHandle) -> Result<Vec<SessionSummary>, AppError> {
             .then_with(|| left.name.cmp(&right.name))
     });
 
+    info!(count = sessions.len(), "loaded session summaries");
     Ok(sessions)
 }
 
 #[tauri::command]
 fn create_session(app: AppHandle, input: SessionCreateInput) -> Result<SessionDetail, AppError> {
+    let _span = info_span!("create_session", requested_name = %input.name).entered();
     let name = if input.name.trim().is_empty() {
         "Untitled Session".to_string()
     } else {
@@ -236,14 +332,18 @@ fn create_session(app: AppHandle, input: SessionCreateInput) -> Result<SessionDe
     let session_dir = ensure_sessions_root(&app)?.join(&session_id);
 
     fs::create_dir_all(session_dir.join(BUILD_DIR_NAME)).map_err(|error| {
-        AppError::new("session-io", "Unable to create build directory.")
-            .with_details(error.to_string())
-            .with_session(session_id.clone())
+        AppError::from(BackendError::session_io(
+            "Unable to create build directory.",
+            error,
+        ))
+        .with_session(session_id.clone())
     })?;
     fs::create_dir_all(session_dir.join(LOGS_DIR_NAME)).map_err(|error| {
-        AppError::new("session-io", "Unable to create logs directory.")
-            .with_details(error.to_string())
-            .with_session(session_id.clone())
+        AppError::from(BackendError::session_io(
+            "Unable to create logs directory.",
+            error,
+        ))
+        .with_session(session_id.clone())
     })?;
 
     let record = SessionRecord {
@@ -259,12 +359,15 @@ fn create_session(app: AppHandle, input: SessionCreateInput) -> Result<SessionDe
 
     write_session_record(&session_dir, &record)?;
     fs::write(session_dir.join(SOURCE_FILE_NAME), default_source(&name)).map_err(|error| {
-        AppError::new("session-io", "Unable to write initial source file.")
-            .with_details(error.to_string())
-            .with_session(session_id.clone())
+        AppError::from(BackendError::session_io(
+            "Unable to write initial source file.",
+            error,
+        ))
+        .with_session(session_id.clone())
     })?;
     write_chat_messages(&session_dir, &default_chat_messages())?;
 
+    info!(session_id = %session_id, "created session");
     load_session_detail_from_dir(&session_dir)
 }
 
@@ -285,10 +388,10 @@ fn rename_session(
     let name = input.name.trim();
 
     if name.is_empty() {
-        return Err(
-            AppError::new("ui-validation", "Session names cannot be empty.")
-                .with_session(session_id),
-        );
+        return Err(AppError::from(BackendError::ui_validation(
+            "Session names cannot be empty.",
+        ))
+        .with_session(session_id));
     }
 
     record.name = name.to_string();
@@ -316,9 +419,11 @@ fn set_session_pinned(
 fn delete_session(app: AppHandle, session_id: String) -> Result<(), AppError> {
     let session_dir = session_dir(&app, &session_id)?;
     fs::remove_dir_all(&session_dir).map_err(|error| {
-        AppError::new("session-io", "Unable to delete the session directory.")
-            .with_details(error.to_string())
-            .with_session(session_id)
+        AppError::from(BackendError::session_io(
+            "Unable to delete the session directory.",
+            error,
+        ))
+        .with_session(session_id)
     })
 }
 
@@ -343,9 +448,11 @@ fn save_source(
     let mut record = read_session_record(&session_dir)?;
 
     fs::write(session_dir.join(SOURCE_FILE_NAME), source).map_err(|error| {
-        AppError::new("session-io", "Unable to write source file.")
-            .with_details(error.to_string())
-            .with_session(session_id.clone())
+        AppError::from(BackendError::session_io(
+            "Unable to write source file.",
+            error,
+        ))
+        .with_session(session_id.clone())
     })?;
 
     record.status = "dirty".into();
@@ -362,6 +469,7 @@ fn run_build(app: AppHandle, session_id: String) -> Result<BuildRunSummary, AppE
 
 #[tauri::command]
 fn run_inspect(app: AppHandle, session_id: String) -> Result<InspectSnapshot, AppError> {
+    let _span = info_span!("run_inspect", session_id = %session_id).entered();
     let session_dir = session_dir(&app, &session_id)?;
     let mut record = read_session_record(&session_dir)?;
     let ahtml_home = ensure_ahtml_home(&app)?;
@@ -370,9 +478,11 @@ fn run_inspect(app: AppHandle, session_id: String) -> Result<InspectSnapshot, Ap
     let run_id = format!("inspect-{}", now_epoch_millis());
 
     fs::create_dir_all(&logs_dir).map_err(|error| {
-        AppError::new("session-io", "Unable to prepare session logs directory.")
-            .with_details(error.to_string())
-            .with_session(session_id.clone())
+        AppError::from(BackendError::session_io(
+            "Unable to prepare session logs directory.",
+            error,
+        ))
+        .with_session(session_id.clone())
     })?;
 
     let validation = run_validation_command(
@@ -409,7 +519,7 @@ fn run_inspect(app: AppHandle, session_id: String) -> Result<InspectSnapshot, Ap
         &[
             "inspect".into(),
             "--input".into(),
-            source_path.display().to_string(),
+            source_path.to_string(),
             "--format".into(),
             "json".into(),
         ],
@@ -441,14 +551,18 @@ fn validate_source(
     let input_path = logs_dir.join(format!("{run_id}.draft.agent.html"));
 
     fs::create_dir_all(&logs_dir).map_err(|error| {
-        AppError::new("session-io", "Unable to prepare session logs directory.")
-            .with_details(error.to_string())
-            .with_session(session_id.clone())
+        AppError::from(BackendError::session_io(
+            "Unable to prepare session logs directory.",
+            error,
+        ))
+        .with_session(session_id.clone())
     })?;
     fs::write(&input_path, source).map_err(|error| {
-        AppError::new("session-io", "Unable to write validation draft input.")
-            .with_details(error.to_string())
-            .with_session(session_id.clone())
+        AppError::from(BackendError::session_io(
+            "Unable to write validation draft input.",
+            error,
+        ))
+        .with_session(session_id.clone())
     })?;
 
     let execution = run_ahtml_json(
@@ -458,7 +572,7 @@ fn validate_source(
         &[
             "validate".into(),
             "--input".into(),
-            input_path.display().to_string(),
+            input_path.to_string(),
             "--format".into(),
             "json".into(),
         ],
@@ -484,11 +598,14 @@ fn validate_source(
 
 #[tauri::command]
 fn check_runtime(app: AppHandle) -> Result<Value, AppError> {
+    let _span = info_span!("check_runtime").entered();
     let logs_dir = ensure_support_root(&app)?.join(LOGS_DIR_NAME);
     let ahtml_home = ensure_ahtml_home(&app)?;
     fs::create_dir_all(&logs_dir).map_err(|error| {
-        AppError::new("session-io", "Unable to prepare runtime log directory.")
-            .with_details(error.to_string())
+        AppError::from(BackendError::session_io(
+            "Unable to prepare runtime log directory.",
+            error,
+        ))
     })?;
 
     let execution = run_ahtml_json(
@@ -499,11 +616,14 @@ fn check_runtime(app: AppHandle) -> Result<Value, AppError> {
     )?;
 
     execution.json.ok_or_else(|| {
-        AppError::new("cli-launch", "ahtml doctor did not return valid JSON.")
-            .with_details(format!(
-                "stdout log: {}; stderr log: {}",
-                execution.stdout_path.display(),
-                execution.stderr_path.display()
+        AppError::from(BackendError::message(
+            "cli-launch",
+            "ahtml doctor did not return valid JSON.",
+        ))
+        .with_details(format!(
+            "stdout log: {}; stderr log: {}",
+                execution.stdout_path,
+                execution.stderr_path
             ))
     })
 }
@@ -512,15 +632,18 @@ fn check_runtime(app: AppHandle) -> Result<Value, AppError> {
 fn read_preview_html(app: AppHandle, session_id: String) -> Result<String, AppError> {
     let session_dir = session_dir(&app, &session_id)?;
     let Some(preview_path) = preview_path(&session_dir) else {
-        return Err(
-            AppError::new("preview-missing", "No built preview is available for this session.")
-                .with_session(session_id),
-        );
+        return Err(AppError::from(BackendError::message(
+            "preview-missing",
+            "No built preview is available for this session.",
+        ))
+        .with_session(session_id));
     };
 
     fs::read_to_string(preview_path).map_err(|error| {
-        AppError::new("preview-missing", "Unable to read the built preview HTML.")
-            .with_details(error.to_string())
+        AppError::from(BackendError::preview_missing(
+            "Unable to read the built preview HTML.",
+            error,
+        ))
     })
 }
 
@@ -552,10 +675,10 @@ fn append_chat_message(
     let text = input.text.trim();
 
     if text.is_empty() {
-        return Err(
-            AppError::new("ui-validation", "Chat messages cannot be empty.")
-                .with_session(session_id),
-        );
+        return Err(AppError::from(BackendError::ui_validation(
+            "Chat messages cannot be empty.",
+        ))
+        .with_session(session_id));
     }
 
     let message = AgentShellMessage {
@@ -578,12 +701,15 @@ fn generate_session_proposal(
     app: AppHandle,
     session_id: String,
 ) -> Result<Vec<AgentShellMessage>, AppError> {
+    let _span = info_span!("generate_session_proposal", session_id = %session_id).entered();
     let session_dir = session_dir(&app, &session_id)?;
     let mut record = read_session_record(&session_dir)?;
     let source = fs::read_to_string(session_dir.join(SOURCE_FILE_NAME)).map_err(|error| {
-        AppError::new("session-io", "Unable to read source file for proposal generation.")
-            .with_details(error.to_string())
-            .with_session(session_id.clone())
+        AppError::from(BackendError::session_io(
+            "Unable to read source file for proposal generation.",
+            error,
+        ))
+        .with_session(session_id.clone())
     })?;
     let logs_dir = session_dir.join(LOGS_DIR_NAME);
     let logs = LogSnapshot {
@@ -612,6 +738,7 @@ fn generate_session_proposal(
 }
 
 fn run_build_internal(app: &AppHandle, session_id: &str) -> Result<BuildRunSummary, AppError> {
+    let _span = info_span!("run_build_internal", session_id = %session_id).entered();
     let session_dir = session_dir(app, session_id)?;
     let mut record = read_session_record(&session_dir)?;
     let ahtml_home = ensure_ahtml_home(app)?;
@@ -622,14 +749,18 @@ fn run_build_internal(app: &AppHandle, session_id: &str) -> Result<BuildRunSumma
     let started_at = now_iso_stub();
 
     fs::create_dir_all(&logs_dir).map_err(|error| {
-        AppError::new("session-io", "Unable to prepare session logs directory.")
-            .with_details(error.to_string())
-            .with_session(session_id.to_string())
+        AppError::from(BackendError::session_io(
+            "Unable to prepare session logs directory.",
+            error,
+        ))
+        .with_session(session_id.to_string())
     })?;
     fs::create_dir_all(&build_dir).map_err(|error| {
-        AppError::new("session-io", "Unable to prepare build directory.")
-            .with_details(error.to_string())
-            .with_session(session_id.to_string())
+        AppError::from(BackendError::session_io(
+            "Unable to prepare build directory.",
+            error,
+        ))
+        .with_session(session_id.to_string())
     })?;
 
     let execution = run_ahtml_json(
@@ -638,9 +769,9 @@ fn run_build_internal(app: &AppHandle, session_id: &str) -> Result<BuildRunSumma
         &run_id,
         &[
             "build".into(),
-            source_path.display().to_string(),
+            source_path.to_string(),
             "--out".into(),
-            build_dir.display().to_string(),
+            build_dir.to_string(),
             "--format".into(),
             "json".into(),
         ],
@@ -683,17 +814,20 @@ fn run_build_internal(app: &AppHandle, session_id: &str) -> Result<BuildRunSumma
 }
 
 fn run_ahtml_json(
-    ahtml_home: &Path,
-    logs_dir: &Path,
+    ahtml_home: &Utf8Path,
+    logs_dir: &Utf8Path,
     run_id: &str,
     args: &[String],
 ) -> Result<CliExecution, AppError> {
+    let _span = info_span!("run_ahtml_json", run_id = %run_id, args = ?args).entered();
     let mut command = configured_ahtml_command(ahtml_home);
     command.args(args);
 
     let output = command.output().map_err(|error| {
-        AppError::new("cli-launch", "Unable to start the ahtml CLI.")
-            .with_details(error.to_string())
+        AppError::from(BackendError::cli_launch(
+            "Unable to start the ahtml CLI.",
+            error,
+        ))
     })?;
 
     let stdout_raw = String::from_utf8_lossy(&output.stdout).to_string();
@@ -702,14 +836,25 @@ fn run_ahtml_json(
     let stderr_path = logs_dir.join(format!("{run_id}.stderr.log"));
 
     fs::write(&stdout_path, &stdout_raw).map_err(|error| {
-        AppError::new("session-io", "Unable to write stdout log.")
-            .with_details(error.to_string())
+        AppError::from(BackendError::session_io(
+            "Unable to write stdout log.",
+            error,
+        ))
     })?;
     fs::write(&stderr_path, &stderr_raw).map_err(|error| {
-        AppError::new("session-io", "Unable to write stderr log.")
-            .with_details(error.to_string())
+        AppError::from(BackendError::session_io(
+            "Unable to write stderr log.",
+            error,
+        ))
     })?;
 
+    info!(
+        run_id = %run_id,
+        exit_code = ?output.status.code(),
+        stdout_path = %stdout_path,
+        stderr_path = %stderr_path,
+        "ahtml CLI completed"
+    );
     Ok(CliExecution {
         stdout_path,
         stderr_path,
@@ -719,10 +864,10 @@ fn run_ahtml_json(
 }
 
 fn run_validation_command(
-    ahtml_home: &Path,
-    logs_dir: &Path,
+    ahtml_home: &Utf8Path,
+    logs_dir: &Utf8Path,
     run_id: &str,
-    input_path: &Path,
+    input_path: &Utf8Path,
 ) -> Result<CliExecution, AppError> {
     run_ahtml_json(
         ahtml_home,
@@ -731,14 +876,14 @@ fn run_validation_command(
         &[
             "validate".into(),
             "--input".into(),
-            input_path.display().to_string(),
+            input_path.to_string(),
             "--format".into(),
             "json".into(),
         ],
     )
 }
 
-fn configured_ahtml_command(ahtml_home: &Path) -> Command {
+fn configured_ahtml_command(ahtml_home: &Utf8Path) -> Command {
     let executable = env::var("AHTML_CLI").unwrap_or_else(|_| "ahtml".into());
     let mut command = Command::new(executable);
 
@@ -752,56 +897,74 @@ fn configured_ahtml_command(ahtml_home: &Path) -> Command {
     command
 }
 
-fn ensure_support_root(app: &AppHandle) -> Result<PathBuf, AppError> {
+fn ensure_support_root(app: &AppHandle) -> Result<Utf8PathBuf, AppError> {
     let root = app.path().app_data_dir().map_err(|error| {
-        AppError::new("session-io", "Unable to resolve the app data directory.")
-            .with_details(error.to_string())
+        AppError::from(BackendError::message(
+            "session-io",
+            "Unable to resolve the app data directory.",
+        ))
+        .with_details(error.to_string())
+    })?;
+    let root = Utf8PathBuf::from_path_buf(root).map_err(|path| {
+        AppError::from(BackendError::message(
+            "session-io",
+            format!("App support path is not valid UTF-8: {}", path.display()),
+        ))
     })?;
     fs::create_dir_all(&root).map_err(|error| {
-        AppError::new("session-io", "Unable to create the app support directory.")
-            .with_details(error.to_string())
+        AppError::from(BackendError::session_io(
+            "Unable to create the app support directory.",
+            error,
+        ))
     })?;
     Ok(root)
 }
 
-fn ensure_sessions_root(app: &AppHandle) -> Result<PathBuf, AppError> {
+fn ensure_sessions_root(app: &AppHandle) -> Result<Utf8PathBuf, AppError> {
     let sessions_dir = ensure_support_root(app)?.join("sessions");
     fs::create_dir_all(&sessions_dir).map_err(|error| {
-        AppError::new("session-io", "Unable to create the sessions directory.")
-            .with_details(error.to_string())
+        AppError::from(BackendError::session_io(
+            "Unable to create the sessions directory.",
+            error,
+        ))
     })?;
     Ok(sessions_dir)
 }
 
-fn ensure_ahtml_home(app: &AppHandle) -> Result<PathBuf, AppError> {
+fn ensure_ahtml_home(app: &AppHandle) -> Result<Utf8PathBuf, AppError> {
     let ahtml_home = ensure_support_root(app)?.join("ahtml-home");
     fs::create_dir_all(&ahtml_home).map_err(|error| {
-        AppError::new("session-io", "Unable to create the isolated ahtml home.")
-            .with_details(error.to_string())
+        AppError::from(BackendError::session_io(
+            "Unable to create the isolated ahtml home.",
+            error,
+        ))
     })?;
     Ok(ahtml_home)
 }
 
-fn session_dir(app: &AppHandle, session_id: &str) -> Result<PathBuf, AppError> {
+fn session_dir(app: &AppHandle, session_id: &str) -> Result<Utf8PathBuf, AppError> {
     let path = ensure_sessions_root(app)?.join(session_id);
     if !path.exists() {
-        return Err(
-            AppError::new("session-io", format!("Session {session_id} was not found."))
-                .with_session(session_id.to_string()),
-        );
+        return Err(AppError::from(BackendError::message(
+            "session-io",
+            format!("Session {session_id} was not found."),
+        ))
+        .with_session(session_id.to_string()));
     }
     Ok(path)
 }
 
-fn load_session_detail_from_dir(session_dir: &Path) -> Result<SessionDetail, AppError> {
+fn load_session_detail_from_dir(session_dir: &Utf8Path) -> Result<SessionDetail, AppError> {
     let record = read_session_record(session_dir)?;
     let source_path = session_dir.join(SOURCE_FILE_NAME);
     let chat_path = session_dir.join(CHAT_FILE_NAME);
     let log_directory = session_dir.join(LOGS_DIR_NAME);
     let source = fs::read_to_string(&source_path).map_err(|error| {
-        AppError::new("session-io", "Unable to read source file.")
-            .with_details(error.to_string())
-            .with_session(record.id.clone())
+        AppError::from(BackendError::session_io(
+            "Unable to read source file.",
+            error,
+        ))
+        .with_session(record.id.clone())
     })?;
 
     Ok(SessionDetail {
@@ -824,20 +987,25 @@ fn load_session_detail_from_dir(session_dir: &Path) -> Result<SessionDetail, App
     })
 }
 
-fn read_session_record(session_dir: &Path) -> Result<SessionRecord, AppError> {
+fn read_session_record(session_dir: &Utf8Path) -> Result<SessionRecord, AppError> {
     let record_path = session_dir.join(SESSION_FILE_NAME);
     let raw = fs::read_to_string(&record_path).map_err(|error| {
-        AppError::new("session-io", "Unable to read session metadata.")
-            .with_details(error.to_string())
+        AppError::from(BackendError::session_io(
+            "Unable to read session metadata.",
+            error,
+        ))
     })?;
 
     serde_json::from_str(&raw).map_err(|error| {
-        AppError::new("session-io", "Session metadata is invalid JSON.")
-            .with_details(error.to_string())
+        AppError::from(BackendError::json(
+            "session-io",
+            "Session metadata is invalid JSON.",
+            error,
+        ))
     })
 }
 
-fn read_chat_messages(session_dir: &Path) -> Result<Vec<AgentShellMessage>, AppError> {
+fn read_chat_messages(session_dir: &Utf8Path) -> Result<Vec<AgentShellMessage>, AppError> {
     let chat_path = session_dir.join(CHAT_FILE_NAME);
 
     if !chat_path.exists() {
@@ -847,8 +1015,10 @@ fn read_chat_messages(session_dir: &Path) -> Result<Vec<AgentShellMessage>, AppE
     }
 
     let source = fs::read_to_string(&chat_path).map_err(|error| {
-        AppError::new("session-io", "Unable to read chat log.")
-            .with_details(error.to_string())
+        AppError::from(BackendError::session_io(
+            "Unable to read chat log.",
+            error,
+        ))
     })?;
 
     if source.trim().is_empty() {
@@ -861,15 +1031,18 @@ fn read_chat_messages(session_dir: &Path) -> Result<Vec<AgentShellMessage>, AppE
         .filter(|(_, line)| !line.trim().is_empty())
         .map(|(index, line)| {
             serde_json::from_str::<AgentShellMessage>(line).map_err(|error| {
-                AppError::new("session-io", format!("Invalid chat log entry at line {}.", index + 1))
-                    .with_details(error.to_string())
+                AppError::from(BackendError::json(
+                    "session-io",
+                    format!("Invalid chat log entry at line {}.", index + 1),
+                    error,
+                ))
             })
         })
         .collect()
 }
 
 fn write_chat_messages(
-    session_dir: &Path,
+    session_dir: &Utf8Path,
     messages: &[AgentShellMessage],
 ) -> Result<(), AppError> {
     let chat_path = session_dir.join(CHAT_FILE_NAME);
@@ -883,21 +1056,26 @@ fn write_chat_messages(
                 .map(|message| serde_json::to_string(message))
                 .collect::<Result<Vec<_>, _>>()
                 .map_err(|error| {
-                    AppError::new("session-io", "Unable to serialize chat messages.")
-                        .with_details(error.to_string())
+                    AppError::from(BackendError::json(
+                        "session-io",
+                        "Unable to serialize chat messages.",
+                        error,
+                    ))
                 })?
                 .join("\n")
         )
     };
 
     fs::write(chat_path, content).map_err(|error| {
-        AppError::new("session-io", "Unable to write chat log.")
-            .with_details(error.to_string())
+        AppError::from(BackendError::session_io(
+            "Unable to write chat log.",
+            error,
+        ))
     })
 }
 
 fn append_chat_message_to_file(
-    session_dir: &Path,
+    session_dir: &Utf8Path,
     message: &AgentShellMessage,
 ) -> Result<(), AppError> {
     let mut messages = read_chat_messages(session_dir)?;
@@ -905,16 +1083,24 @@ fn append_chat_message_to_file(
     write_chat_messages(session_dir, &messages)
 }
 
-fn write_session_record(session_dir: &Path, record: &SessionRecord) -> Result<(), AppError> {
+fn write_session_record(
+    session_dir: &Utf8Path,
+    record: &SessionRecord,
+) -> Result<(), AppError> {
     let record_path = session_dir.join(SESSION_FILE_NAME);
     let serialized = serde_json::to_string_pretty(record).map_err(|error| {
-        AppError::new("session-io", "Unable to serialize session metadata.")
-            .with_details(error.to_string())
+        AppError::from(BackendError::json(
+            "session-io",
+            "Unable to serialize session metadata.",
+            error,
+        ))
     })?;
 
     fs::write(record_path, serialized).map_err(|error| {
-        AppError::new("session-io", "Unable to write session metadata.")
-            .with_details(error.to_string())
+        AppError::from(BackendError::session_io(
+            "Unable to write session metadata.",
+            error,
+        ))
     })
 }
 
@@ -998,7 +1184,7 @@ fn build_session_proposal_text(
 
 fn build_run_summary_from_record(
     record: &SessionRecord,
-    session_dir: &Path,
+    session_dir: &Utf8Path,
 ) -> Option<BuildRunSummary> {
     let started_at = record
         .last_build_at
@@ -1034,15 +1220,14 @@ fn build_run_summary_from_record(
 }
 
 fn update_session_view_record(
-    session_dir: &Path,
+    session_dir: &Utf8Path,
     view: &str,
     session_id: Option<String>,
 ) -> Result<(), AppError> {
     if !matches!(view, "preview" | "source" | "inspect") {
-        let error = AppError::new(
-            "ui-validation",
+        let error = AppError::from(BackendError::ui_validation(
             "Session view must be preview, source, or inspect.",
-        );
+        ));
 
         return Err(match session_id {
             Some(id) => error.with_session(id),
@@ -1055,7 +1240,7 @@ fn update_session_view_record(
     write_session_record(session_dir, &record)
 }
 
-fn preview_path(session_dir: &Path) -> Option<PathBuf> {
+fn preview_path(session_dir: &Utf8Path) -> Option<Utf8PathBuf> {
     let path = session_dir.join(BUILD_DIR_NAME).join("index.html");
     if path.exists() {
         Some(path)
@@ -1064,14 +1249,13 @@ fn preview_path(session_dir: &Path) -> Option<PathBuf> {
     }
 }
 
-fn read_latest_log(logs_dir: &Path, suffix: &str) -> Option<String> {
+fn read_latest_log(logs_dir: &Utf8Path, suffix: &str) -> Option<String> {
     let mut matches = fs::read_dir(logs_dir)
         .ok()?
         .flatten()
-        .map(|entry| entry.path())
+        .filter_map(|entry| Utf8PathBuf::from_path_buf(entry.path()).ok())
         .filter(|path| {
             path.file_name()
-                .and_then(|name| name.to_str())
                 .map(|name| name.ends_with(suffix))
                 .unwrap_or(false)
         })
@@ -1286,17 +1470,24 @@ fn now_iso_stub() -> String {
     format!("epoch-{}", now_epoch_millis())
 }
 
-fn path_to_string(path: PathBuf) -> String {
-    path.to_string_lossy().replace('\\', "/")
+fn path_to_string(path: Utf8PathBuf) -> String {
+    path.into_string()
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let _ = tracing_subscriber::fmt()
+        .with_target(false)
+        .compact()
+        .try_init();
+
     tauri::Builder::default()
         .setup(|app| {
+            let _span = info_span!("tauri_setup").entered();
             let main_window = app.get_webview_window("main").expect("main window");
             main_window.set_title("agent-html-app").ok();
             ensure_sessions_root(app.handle()).expect("sessions root");
+            info!("tauri app setup completed");
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -1328,8 +1519,8 @@ mod tests {
         build_session_proposal_text, read_session_record, update_session_view_record,
         write_session_record, BuildRunSummary, LogSnapshot, SessionRecord,
     };
+    use camino::Utf8PathBuf;
     use std::fs;
-    use std::path::PathBuf;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
@@ -1426,11 +1617,14 @@ mod tests {
         assert!(text.contains("[build] The latest build failed"));
     }
 
-    fn test_session_dir(suffix: &str) -> PathBuf {
+    fn test_session_dir(suffix: &str) -> Utf8PathBuf {
         let nonce = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_nanos();
-        std::env::temp_dir().join(format!("agent-html-app-{suffix}-{nonce}"))
+        Utf8PathBuf::from_path_buf(
+            std::env::temp_dir().join(format!("agent-html-app-{suffix}-{nonce}")),
+        )
+        .expect("temp dir should be valid UTF-8")
     }
 }

@@ -10,6 +10,12 @@ export {
   VALIDATED_STANDARD_COMPONENT_SCHEMAS,
 } from "./component-schema"
 export {
+  createPublicAgentContract,
+  createPublicRenderConfigContract,
+  createPublicSafetyPolicy,
+  formatForbiddenPolicy,
+} from "./public-agent-contract"
+export {
   DEFAULT_RENDER_CONFIG,
   parseRenderConfig,
   PUBLIC_PROFILE_VALUES,
@@ -30,6 +36,9 @@ export type {
 export type {
   ComponentPropSchema,
   ComponentSchema,
+  PublicAgentContract,
+  PublicRenderConfigContract,
+  PublicSafetyPolicy,
   RenderConfig,
   SanitizedAgentHtml,
   SanitizedNode,

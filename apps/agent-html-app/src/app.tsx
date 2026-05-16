@@ -1,5 +1,13 @@
 import { startTransition, useEffect, useRef, useState } from "react"
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import {
+  SurfaceCard,
+  SurfaceCardBody,
+  SurfaceCardHeader,
+} from "@/components/ui/surface-card"
+import { StatusBadge } from "@/components/ui/status-badge"
 import { AgentShell } from "./components/agent-shell/agent-shell"
 import { SessionsSidebar } from "./components/layout/sessions-sidebar"
 import { Workbench } from "./components/workbench/workbench"
@@ -1302,31 +1310,43 @@ export function App() {
 
   return (
     <div className="app-root">
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">agent-html app</p>
-          <h1>Local-first workbench</h1>
-        </div>
-        <div className="topbar-meta">
-          <button
-            className="ghost-button"
-            disabled={commandState.runningDoctor}
-            onClick={handleDoctor}
-            type="button"
-          >
-            {commandState.runningDoctor ? "Checking runtime..." : "Doctor"}
-          </button>
-          <span className="pill">
-            {isTauriRuntime() ? "Tauri runtime" : "Mock runtime"}
-          </span>
-          {commandState.error ? (
-            <span className="pill status-error">Needs attention</span>
-          ) : null}
-        </div>
-      </header>
+      <SurfaceCard className="topbar" variant="banner">
+        <SurfaceCardHeader
+          eyebrow="agent-html app"
+          title="Local-first workbench"
+        >
+          <div className="topbar-meta">
+            <Button
+              disabled={commandState.runningDoctor}
+              onClick={handleDoctor}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              {commandState.runningDoctor ? "Checking runtime..." : "Doctor"}
+            </Button>
+            <StatusBadge>
+              {isTauriRuntime() ? "Tauri runtime" : "Mock runtime"}
+            </StatusBadge>
+            {commandState.error ? (
+              <StatusBadge tone="error">Needs attention</StatusBadge>
+            ) : null}
+          </div>
+        </SurfaceCardHeader>
+      </SurfaceCard>
 
       {commandState.error ? (
-        <div className="error-banner">{commandState.error}</div>
+        <SurfaceCard className="error-banner" variant="banner">
+          <SurfaceCardBody className="px-[16px] py-[14px]">
+            <Alert
+              className="border-none bg-transparent p-0 shadow-none"
+              variant="destructive"
+            >
+              <AlertTitle>Command error</AlertTitle>
+              <AlertDescription>{commandState.error}</AlertDescription>
+            </Alert>
+          </SurfaceCardBody>
+        </SurfaceCard>
       ) : null}
       {appState.runtimeReport ? (
         <RuntimeBanner report={appState.runtimeReport} />
@@ -1724,20 +1744,24 @@ function inspectEventMessage(inspect: InspectSnapshot) {
 
 function RuntimeBanner({ report }: { report: RuntimeReport }) {
   return (
-    <div className="runtime-banner">
-      <div>
-        <p className="eyebrow">Runtime health</p>
-        <h2>
-          {report.status === "ok"
+    <SurfaceCard className="runtime-banner" variant="banner">
+      <SurfaceCardHeader
+        eyebrow="Runtime health"
+        title={
+          report.status === "ok"
             ? "Managed runtime ready"
-            : "Managed runtime has failures"}
-        </h2>
-      </div>
-      <div className="runtime-banner-meta">
-        <span className="pill">ok {report.counts.ok}</span>
-        <span className="pill">warn {report.counts.warn}</span>
-        <span className="pill">fail {report.counts.fail}</span>
-      </div>
-    </div>
+            : "Managed runtime has failures"
+        }
+      >
+        <div className="runtime-banner-meta">
+          <StatusBadge>ok {report.counts.ok}</StatusBadge>
+          <StatusBadge tone="dirty">warn {report.counts.warn}</StatusBadge>
+          <StatusBadge tone="error">fail {report.counts.fail}</StatusBadge>
+        </div>
+      </SurfaceCardHeader>
+      <SurfaceCardBody className="sr-only">
+        Runtime health summary
+      </SurfaceCardBody>
+    </SurfaceCard>
   )
 }

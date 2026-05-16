@@ -60,6 +60,24 @@ export type RenderConfig = {
   readonly width: RenderWidth
 }
 
+export type PublicRenderConfigContract = {
+  readonly defaults: Readonly<Record<string, string>>
+  readonly keys: readonly string[]
+  readonly values: Readonly<Record<string, readonly string[]>>
+}
+
+export type PublicSafetyPolicy = {
+  readonly blockedNames: readonly string[]
+  readonly forbidden: string
+}
+
+export type PublicAgentContract = {
+  readonly components: readonly ComponentSchema[]
+  readonly renderConfig: PublicRenderConfigContract
+  readonly safetyPolicy: PublicSafetyPolicy
+  readonly forbidden: string
+}
+
 export type SanitizedTextNode = {
   readonly type: "text"
   readonly value: string

@@ -176,7 +176,7 @@ Use direct references instead of maintaining parallel facts:
 
 - Verification gate names live in `package.json`; CI/release usage lives in `.github/workflows/`.
 - Verification timing and scope live in `AGENTS.md`.
-- Agent-facing component and prop choices live in `ahtml prompt`, generated through `scripts/generate-component-schema-prompt.mjs`.
+- Agent-facing component and prop choices live in `ahtml prompt`, derived from the shared public agent contract and runtime contract builders.
 - Renderable component capability and runtime export requirements live in `packages/ahtml/src/config/component-capabilities.mjs` and `packages/ahtml/src/config/render-capabilities.mjs`.
 - Managed runtime completeness checks live in `packages/ahtml/src/cli/runtime-surface.mjs` and `ahtml doctor`.
 

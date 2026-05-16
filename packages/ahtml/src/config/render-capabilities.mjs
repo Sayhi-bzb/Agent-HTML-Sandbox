@@ -1,11 +1,8 @@
 export {
   getAgentComponentSource,
   getAgentRenderKind,
-  nativeRenderableAgentComponents,
-  renderableAgentComponents,
   requiredShadcnRuntimeComponents,
   requiredShadcnRuntimeExports,
-  schemaRenderableComponents,
   structuralAgentComponents,
 } from "./component-capabilities.mjs"
 

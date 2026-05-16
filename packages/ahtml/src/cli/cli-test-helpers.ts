@@ -187,7 +187,7 @@ export async function importValidateModule(): Promise<ValidateModule> {
 
 export async function importCommandMetadata(): Promise<CommandMetadataModule> {
   const commandModuleUrl = pathToFileURL(
-    path.join(root, "packages", "ahtml", "src", "cli", "commands.mjs"),
+    path.join(root, "packages", "ahtml", "src", "cli", "command-contract.mjs"),
   ).href
 
   return (await import(commandModuleUrl)) as CommandMetadataModule
@@ -195,7 +195,14 @@ export async function importCommandMetadata(): Promise<CommandMetadataModule> {
 
 export async function importRenderCapabilitiesModule(): Promise<RenderCapabilitiesModule> {
   const renderCapabilitiesUrl = pathToFileURL(
-    path.join(root, "packages", "ahtml", "src", "config", "render-capabilities.mjs"),
+    path.join(
+      root,
+      "packages",
+      "ahtml",
+      "src",
+      "config",
+      "render-capabilities.mjs",
+    ),
   ).href
 
   return (await import(renderCapabilitiesUrl)) as RenderCapabilitiesModule

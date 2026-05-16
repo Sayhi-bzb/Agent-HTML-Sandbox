@@ -5,7 +5,10 @@
   "description": "Workspace for agent-html packages, docs, and verification.",
   "license": "MIT",
   "type": "module",
-  "workspaces": ["packages/*", "apps/*"],
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
     "build": "tsc -b packages/core/tsconfig.json packages/ahtml/tsconfig.json",
     "app:dev": "npm --workspace agent-html-app run dev",
@@ -36,7 +39,6 @@
     "release:check:ci": "npm run check:package:release",
     "release:tag": "node scripts/release-tag.mjs",
     "schema:generate": "node scripts/generate-component-schema.mjs",
-    "schema:prompt": "node scripts/generate-component-schema-prompt.mjs",
     "gitnexus:analyze": "npx gitnexus analyze --skip-agents-md",
     "gitnexus:analyze:force": "npx gitnexus analyze --force --skip-agents-md",
     "check:quick": "npm run format:check:source && npm run lint && npm run test:run",

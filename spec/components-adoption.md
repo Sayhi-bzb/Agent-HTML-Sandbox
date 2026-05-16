@@ -92,90 +92,67 @@ Status:
 - 当前 lane 不包含 overlay、menu、navigation 或 app-shell 语义。
 - 当前无 active shadcn debt；只有在未来升级导致本地 fixture drift 时再重开。
 
-## Label Rules
-
-- `semantic_role`: 组件的主职责。允许值：
-  `action` / `display` / `feedback` / `input` / `selection` / `structure` /
-  `overlay` / `navigation` / `layout` / `utility`
-- `component_form`: 组件的 UI 或组合形态。允许值：
-  `token` / `text-block` / `field-single` / `field-multiline` /
-  `field-segmented` / `field-toggle` / `field-range` / `choice-native` /
-  `choice-group` / `choice-inline` / `choice-overlay` / `container` /
-  `group-shell` / `item-node` / `divider` / `structured-block` /
-  `disclosure` / `switcher` / `modal-shell` / `panel-shell` /
-  `contextual-shell` / `menu-shell` / `layout-helper` / `utility-node`
-- `visibility_model`: 内容如何进入可见区域。允许值：
-  `always-visible` / `expandable` / `toggle-reveal` / `overlay-reveal` /
-  `contextual-reveal`
-- `trigger_modality`: 用户靠什么动作触发或操作。允许值：
-  `none` / `click-tap` / `text-entry` / `hover-focus` / `right-click` /
-  `keyboard-command` / `drag-resize` / `scroll`
-- `state_dependency`: 组件核心依赖的内部 UI 状态。允许值：
-  `stateless` / `input-state` / `selection-state` / `open-close-state` /
-  `async-state` / `viewport-state`
-- `resource_dependency`: 组件是否依赖外部资源、环境或运行时行为。允许值：
-  `none` / `media` / `external-data` / `environment` / `runtime-behavior`
 
 ## components list
 
-| Components      | semantic_role | component_form   | visibility_model  | trigger_modality | state_dependency | resource_dependency |
-|-----------------|---------------|------------------|-------------------|------------------|------------------|---------------------|
-| Toggle          | action        | token            | always-visible    | click-tap        | input-state      | none                |
-| Dropdown Menu   | action        | menu-shell       | overlay-reveal    | click-tap        | open-close-state | none                |
-| Menubar         | action        | menu-shell       | overlay-reveal    | click-tap        | open-close-state | none                |
-| Context Menu    | action        | menu-shell       | contextual-reveal | right-click      | open-close-state | none                |
-| Button          | action        | token            | always-visible    | click-tap        | stateless        | none                |
-| Command         | action        | menu-shell       | overlay-reveal    | keyboard-command | open-close-state | runtime-behavior    |
-| Data Table      | display       | structured-block | always-visible    | click-tap        | stateless        | external-data       |
-| Chart           | display       | structured-block | always-visible    | hover-focus      | stateless        | external-data       |
-| Avatar          | display       | token            | always-visible    | none             | stateless        | media               |
-| Table           | display       | structured-block | always-visible    | none             | stateless        | none                |
-| Typography      | display       | text-block       | always-visible    | none             | stateless        | none                |
-| Badge           | display       | token            | always-visible    | none             | stateless        | none                |
-| Kbd             | display       | token            | always-visible    | none             | stateless        | none                |
-| Empty           | feedback      | text-block       | always-visible    | none             | stateless        | external-data       |
-| Progress        | feedback      | token            | always-visible    | none             | async-state      | none                |
-| Alert           | feedback      | container        | always-visible    | none             | stateless        | none                |
-| Skeleton        | feedback      | token            | always-visible    | none             | async-state      | runtime-behavior    |
-| Spinner         | feedback      | token            | always-visible    | none             | async-state      | runtime-behavior    |
-| Sonner          | feedback      | contextual-shell | overlay-reveal    | none             | async-state      | runtime-behavior    |
-| Toast           | feedback      | contextual-shell | overlay-reveal    | none             | async-state      | runtime-behavior    |
-| Checkbox        | input         | field-toggle     | always-visible    | click-tap        | input-state      | none                |
-| Switch          | input         | field-toggle     | always-visible    | click-tap        | input-state      | none                |
-| Slider          | input         | field-range      | always-visible    | drag-resize      | input-state      | none                |
-| Textarea        | input         | field-multiline  | always-visible    | text-entry       | input-state      | none                |
-| Input OTP       | input         | field-segmented  | always-visible    | text-entry       | input-state      | none                |
-| Input           | input         | field-single     | always-visible    | text-entry       | input-state      | none                |
-| Aspect Ratio    | layout        | layout-helper    | always-visible    | none             | stateless        | none                |
-| Resizable       | layout        | layout-helper    | always-visible    | drag-resize      | viewport-state   | none                |
-| Scroll Area     | layout        | layout-helper    | always-visible    | scroll           | viewport-state   | none                |
-| Pagination      | navigation    | structured-block | always-visible    | click-tap        | selection-state  | none                |
-| Navigation Menu | navigation    | menu-shell       | overlay-reveal    | click-tap        | selection-state  | none                |
-| Sidebar         | navigation    | panel-shell      | always-visible    | click-tap        | viewport-state   | none                |
-| Breadcrumb      | navigation    | structured-block | always-visible    | click-tap        | viewport-state   | none                |
-| Carousel        | navigation    | switcher         | toggle-reveal     | drag-resize      | selection-state  | runtime-behavior    |
-| Popover         | overlay       | contextual-shell | overlay-reveal    | click-tap        | open-close-state | none                |
-| Alert Dialog    | overlay       | modal-shell      | overlay-reveal    | click-tap        | open-close-state | none                |
-| Dialog          | overlay       | modal-shell      | overlay-reveal    | click-tap        | open-close-state | none                |
-| Drawer          | overlay       | panel-shell      | overlay-reveal    | click-tap        | open-close-state | none                |
-| Sheet           | overlay       | panel-shell      | overlay-reveal    | click-tap        | open-close-state | none                |
-| Hover Card      | overlay       | contextual-shell | contextual-reveal | hover-focus      | open-close-state | none                |
-| Tooltip         | overlay       | contextual-shell | contextual-reveal | hover-focus      | open-close-state | none                |
-| Calendar        | selection     | choice-group     | always-visible    | click-tap        | selection-state  | environment         |
-| Date Picker     | selection     | choice-overlay   | overlay-reveal    | click-tap        | selection-state  | environment         |
-| Radio Group     | selection     | choice-group     | always-visible    | click-tap        | selection-state  | none                |
-| Toggle Group    | selection     | choice-inline    | always-visible    | click-tap        | selection-state  | none                |
-| Native Select   | selection     | choice-native    | always-visible    | click-tap        | selection-state  | none                |
-| Select          | selection     | choice-overlay   | overlay-reveal    | click-tap        | selection-state  | none                |
-| Combobox        | selection     | choice-overlay   | overlay-reveal    | click-tap        | selection-state  | runtime-behavior    |
-| Accordion       | structure     | disclosure       | expandable        | click-tap        | open-close-state | none                |
-| Collapsible     | structure     | disclosure       | expandable        | click-tap        | open-close-state | none                |
-| Tabs            | structure     | switcher         | toggle-reveal     | click-tap        | selection-state  | none                |
-| Button Group    | structure     | group-shell      | always-visible    | click-tap        | stateless        | none                |
-| Card            | structure     | container        | always-visible    | none             | stateless        | none                |
-| Separator       | structure     | divider          | always-visible    | none             | stateless        | none                |
-| Field           | structure     | group-shell      | always-visible    | none             | stateless        | none                |
-| Input Group     | structure     | group-shell      | always-visible    | none             | stateless        | none                |
-| Item            | structure     | item-node        | always-visible    | none             | stateless        | none                |
-| Direction       | utility       | utility-node     | always-visible    | none             | stateless        | environment         |
-| Label           | utility       | utility-node     | always-visible    | none             | stateless        | none                |
+| Components      | surface_level | semantic_role | component_form   | visibility_model  | trigger_modality | state_dependency | resource_dependency |
+|-----------------|---------------|---------------|------------------|-------------------|------------------|------------------|---------------------|
+| Calendar        | control       | selection     | choice-group     | always-visible    | click-tap        | selection-state  | environment         |
+| Date Picker     | control       | selection     | choice-overlay   | overlay-reveal    | click-tap        | selection-state  | environment         |
+| Checkbox        | control       | input         | field-toggle     | always-visible    | click-tap        | input-state      | none                |
+| Switch          | control       | input         | field-toggle     | always-visible    | click-tap        | input-state      | none                |
+| Slider          | control       | input         | field-range      | always-visible    | drag-resize      | input-state      | none                |
+| Textarea        | control       | input         | field-multiline  | always-visible    | text-entry       | input-state      | none                |
+| Input OTP       | control       | input         | field-segmented  | always-visible    | text-entry       | input-state      | none                |
+| Input           | control       | input         | field-single     | always-visible    | text-entry       | input-state      | none                |
+| Radio Group     | control       | selection     | choice-group     | always-visible    | click-tap        | selection-state  | none                |
+| Toggle Group    | control       | selection     | choice-inline    | always-visible    | click-tap        | selection-state  | none                |
+| Native Select   | control       | selection     | choice-native    | always-visible    | click-tap        | selection-state  | none                |
+| Pagination      | control       | navigation    | structured-block | always-visible    | click-tap        | selection-state  | none                |
+| Select          | control       | selection     | choice-overlay   | overlay-reveal    | click-tap        | selection-state  | none                |
+| Button          | control       | action        | token            | always-visible    | click-tap        | stateless        | none                |
+| Combobox        | control       | selection     | choice-overlay   | overlay-reveal    | click-tap        | selection-state  | runtime-behavior    |
+| Button Group    | helper        | structure     | group-shell      | always-visible    | none             | stateless        | none                |
+| Field           | helper        | structure     | group-shell      | always-visible    | none             | stateless        | none                |
+| Input Group     | helper        | structure     | group-shell      | always-visible    | none             | stateless        | none                |
+| Item            | helper        | structure     | item-node        | always-visible    | none             | stateless        | none                |
+| Aspect Ratio    | helper        | layout        | layout-helper    | always-visible    | none             | stateless        | none                |
+| Label           | helper        | utility       | utility-node     | always-visible    | none             | stateless        | none                |
+| Accordion       | public-block  | structure     | disclosure       | expandable        | click-tap        | open-close-state | none                |
+| Collapsible     | public-block  | structure     | disclosure       | expandable        | click-tap        | open-close-state | none                |
+| Tabs            | public-block  | structure     | switcher         | toggle-reveal     | click-tap        | selection-state  | none                |
+| Alert           | public-block  | feedback      | container        | always-visible    | none             | stateless        | none                |
+| Card            | public-block  | structure     | container        | always-visible    | none             | stateless        | none                |
+| Separator       | public-block  | structure     | divider          | always-visible    | none             | stateless        | none                |
+| Table           | public-block  | display       | structured-block | always-visible    | none             | stateless        | none                |
+| Typography      | public-block  | display       | text-block       | always-visible    | none             | stateless        | none                |
+| Empty           | public-block  | feedback      | text-block       | always-visible    | none             | stateless        | none                |
+| Badge           | public-block  | display       | token            | always-visible    | none             | stateless        | none                |
+| Kbd             | public-block  | display       | token            | always-visible    | none             | stateless        | none                |
+| Progress        | public-block  | feedback      | token            | always-visible    | none             | stateless        | none                |
+| Direction       | runtime-only  | utility       | utility-node     | always-visible    | none             | stateless        | environment         |
+| Avatar          | runtime-only  | display       | token            | always-visible    | none             | stateless        | media               |
+| Toggle          | runtime-only  | action        | token            | always-visible    | click-tap        | input-state      | none                |
+| Popover         | runtime-only  | overlay       | contextual-shell | overlay-reveal    | click-tap        | open-close-state | none                |
+| Dropdown Menu   | runtime-only  | action        | menu-shell       | overlay-reveal    | click-tap        | open-close-state | none                |
+| Menubar         | runtime-only  | action        | menu-shell       | overlay-reveal    | click-tap        | open-close-state | none                |
+| Alert Dialog    | runtime-only  | overlay       | modal-shell      | overlay-reveal    | click-tap        | open-close-state | none                |
+| Dialog          | runtime-only  | overlay       | modal-shell      | overlay-reveal    | click-tap        | open-close-state | none                |
+| Drawer          | runtime-only  | overlay       | panel-shell      | overlay-reveal    | click-tap        | open-close-state | none                |
+| Sheet           | runtime-only  | overlay       | panel-shell      | overlay-reveal    | click-tap        | open-close-state | none                |
+| Hover Card      | runtime-only  | overlay       | contextual-shell | contextual-reveal | hover-focus      | open-close-state | none                |
+| Tooltip         | runtime-only  | overlay       | contextual-shell | contextual-reveal | hover-focus      | open-close-state | none                |
+| Sidebar         | runtime-only  | navigation    | panel-shell      | always-visible    | none             | open-close-state | none                |
+| Context Menu    | runtime-only  | action        | menu-shell       | contextual-reveal | right-click      | open-close-state | none                |
+| Navigation Menu | runtime-only  | navigation    | menu-shell       | overlay-reveal    | click-tap        | selection-state  | none                |
+| Data Table      | runtime-only  | display       | structured-block | always-visible    | none             | stateless        | none                |
+| Chart           | runtime-only  | display       | structured-block | always-visible    | none             | stateless        | none                |
+| Breadcrumb      | runtime-only  | navigation    | structured-block | always-visible    | none             | stateless        | none                |
+| Resizable       | runtime-only  | layout        | layout-helper    | always-visible    | drag-resize      | viewport-state   | none                |
+| Scroll Area     | runtime-only  | layout        | layout-helper    | always-visible    | scroll           | viewport-state   | none                |
+| Skeleton        | runtime-only  | feedback      | token            | always-visible    | none             | async-state      | runtime-behavior    |
+| Spinner         | runtime-only  | feedback      | token            | always-visible    | none             | async-state      | runtime-behavior    |
+| Command         | runtime-only  | action        | menu-shell       | overlay-reveal    | keyboard-command | open-close-state | runtime-behavior    |
+| Sonner          | runtime-only  | feedback      | contextual-shell | overlay-reveal    | none             | open-close-state | runtime-behavior    |
+| Toast           | runtime-only  | feedback      | contextual-shell | overlay-reveal    | none             | open-close-state | runtime-behavior    |
+| Carousel        | runtime-only  | navigation    | switcher         | toggle-reveal     | drag-resize      | selection-state  | runtime-behavior    |

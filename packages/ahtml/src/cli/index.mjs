@@ -20,12 +20,14 @@ import {
 } from "./cli-io.mjs"
 import { parseOptions } from "./cli-options.mjs"
 import {
-  commandMetadata,
+  createCommandDefinitions,
+  defaultActionMenuItems,
   formatCommandHelp,
   formatGlobalHelp,
   hasHelpFlag,
   isHelpCommand,
-} from "./commands.mjs"
+  resolveCommandFormat,
+} from "./command-contract.mjs"
 import { runDoctorCommand } from "./doctor-checks.mjs"
 import { formatPrompt, getCliSchemaOutput } from "./schema.mjs"
 import { getRuntimePaths } from "./runtime-paths.mjs"
@@ -73,12 +75,7 @@ const commandHandlers = {
   preview: previewCommand,
   doctor: doctorCommand,
 }
-const commandDefinitions = Object.fromEntries(
-  Object.entries(commandMetadata).map(([name, definition]) => [
-    name,
-    { ...definition, handler: commandHandlers[name] },
-  ]),
-)
+const commandDefinitions = createCommandDefinitions(commandHandlers)
 
 try {
   if (!command) {
@@ -170,11 +167,7 @@ async function promptCommand(commandArgs, definition) {
   if (positionals.length > 0) {
     fail(`Unexpected argument "${positionals[0]}".`)
   }
-  const format = options.format ?? "prompt"
-
-  if (format !== "prompt" && format !== "json") {
-    fail('prompt --format must be "prompt" or "json".')
-  }
+  const format = resolveCommandFormat("prompt", definition, options.format)
 
   const cliSchema = await getCliSchemaOutput()
   const output =
@@ -255,14 +248,10 @@ async function runSetup(options) {
 async function buildCommand(commandArgs, definition) {
   const { options, positionals } = parseOptions(commandArgs, definition)
   const inputPath = options.input ?? positionals[0] ?? cliDefaults.documentPath
-  const format = options.format ?? "text"
+  const format = resolveCommandFormat("build", definition, options.format)
 
   if (positionals.length > 1) {
     fail(`Unexpected argument "${positionals[1]}".`)
-  }
-
-  if (format !== "text" && format !== "json") {
-    fail('build --format must be "text" or "json".')
   }
 
   const result = await buildArtifact(inputPath, options.out, {
@@ -289,11 +278,7 @@ async function validateCommand(commandArgs, definition) {
     fail("validate requires --input <path>.")
   }
 
-  const format = options.format ?? "text"
-
-  if (format !== "text" && format !== "json") {
-    fail('validate --format must be "text" or "json".')
-  }
+  const format = resolveCommandFormat("validate", definition, options.format)
 
   const result = await validateDocument(options.input, {
     printDiagnostics: format !== "json",
@@ -342,11 +327,7 @@ async function inspectCommand(commandArgs, definition) {
     fail("inspect requires --input <path> or --dir <dir>.")
   }
 
-  const format = options.format ?? "summary"
-
-  if (format !== "summary" && format !== "json") {
-    fail('inspect --format must be "summary" or "json".')
-  }
+  const format = resolveCommandFormat("inspect", definition, options.format)
 
   let inspection
   try {
@@ -376,11 +357,18 @@ async function inspectCommand(commandArgs, definition) {
   process.stdout.write(output)
 }
 
-async function doctorCommand(commandArgs) {
+async function doctorCommand(commandArgs, definition) {
+  const { options, positionals } = parseOptions(commandArgs, definition)
+
+  if (positionals.length > 0) {
+    fail(`Unexpected argument "${positionals[0]}".`)
+  }
+
+  const format = resolveCommandFormat("doctor", definition, options.format)
   const report = await runDoctorCommand({
-    commandArgs,
     defaultOutputDir,
     ensureManagedRuntime,
+    format,
     packageRoot,
     readPackageVersion,
     runtimePaths,
@@ -399,33 +387,7 @@ function fail(message) {
 async function defaultActionCommand() {
   const choice = await select({
     message: "What do you want to do?",
-    options: [
-      {
-        value: "prompt",
-        label: "Print the writing prompt",
-        hint: "Show the agent-facing schema prompt",
-      },
-      {
-        value: "build",
-        label: `Build ${cliDefaults.documentPath}`,
-        hint: `Write static HTML to ${cliDefaults.outputDir}`,
-      },
-      {
-        value: "preview",
-        label: `Preview ${cliDefaults.documentPath}`,
-        hint: `Build and serve on port ${cliDefaults.previewPort}`,
-      },
-      {
-        value: "doctor",
-        label: "Run doctor",
-        hint: "Check runtime health and output paths",
-      },
-      {
-        value: "help",
-        label: "Show command help",
-        hint: "Print the compact command list",
-      },
-    ],
+    options: defaultActionMenuItems,
   })
 
   if (isCancel(choice)) {

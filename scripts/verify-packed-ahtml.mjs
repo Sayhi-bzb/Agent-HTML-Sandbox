@@ -5,6 +5,7 @@ import path from "node:path"
 import { pathToFileURL } from "node:url"
 import { promisify } from "node:util"
 
+import { assertPackBoundary } from "./package-boundaries.mjs"
 import { startShadcnTestServer } from "./shadcn-test-server.mjs"
 
 const execFileAsync = promisify(execFile)
@@ -26,7 +27,10 @@ try {
   await mkdir(packDir, { recursive: true })
   await mkdir(consumerDir, { recursive: true })
 
-  const coreDryRun = await runNpm(["pack", "--dry-run", "--json"], corePackageDir)
+  const coreDryRun = await runNpm(
+    ["pack", "--dry-run", "--json"],
+    corePackageDir,
+  )
   const ahtmlDryRun = await runNpm(
     ["pack", "--dry-run", "--json"],
     ahtmlPackageDir,
@@ -42,7 +46,10 @@ try {
     ["pack", "--json", "--pack-destination", packDir],
     ahtmlPackageDir,
   )
-  const coreTarball = path.join(packDir, JSON.parse(corePacked.stdout)[0].filename)
+  const coreTarball = path.join(
+    packDir,
+    JSON.parse(corePacked.stdout)[0].filename,
+  )
   const ahtmlTarball = path.join(
     packDir,
     JSON.parse(ahtmlPacked.stdout)[0].filename,
@@ -72,7 +79,7 @@ try {
     "ahtml",
     "src",
     "cli",
-    "commands.mjs",
+    "command-contract.mjs",
   )
   const { commandMetadata } = await import(
     pathToFileURL(commandMetadataPath).href
@@ -90,7 +97,9 @@ try {
     typeof coreModule.sanitizeAgentHtml !== "function" ||
     !Array.isArray(coreModule.VALIDATED_STANDARD_COMPONENT_SCHEMAS)
   ) {
-    throw new Error("Installed @agent-html/core package is missing public exports.")
+    throw new Error(
+      "Installed @agent-html/core package is missing public exports.",
+    )
   }
 
   await expectStdout(["prompt", "--format", "prompt"], "Write agent-html only.")
@@ -111,20 +120,14 @@ try {
   )
   await expectStdout(["doctor"], "ok runtime:manifest shadcn-runtime")
   await expectStdout(["doctor"], "ok runtime:base radix")
-  await expectStdout(
-    ["doctor"],
-    "ok runtime:shadcn-surface shadcn-init/vite",
-  )
+  await expectStdout(["doctor"], "ok runtime:shadcn-surface shadcn-init/vite")
   await expectStdout(
     ["doctor"],
     "ok runtime:shadcn-provenance shadcn-template-override/shadcn-cli/",
   )
   await expectStdout(["doctor"], "ok runtime:prompt-ui-manifest")
   await expectStdout(["doctor"], "ok runtime:shadcn-template-vite-config")
-  await expectStdout(
-    ["doctor"],
-    "skip artifact:built-css",
-  )
+  await expectStdout(["doctor"], "skip artifact:built-css")
   await expectFile(
     path.join(runtimeHome, "config", "runtime.json"),
     "ahtml-managed-runtime",
@@ -202,10 +205,7 @@ try {
     ["schema", "--input", documentPath],
     'Unknown command "schema"',
   )
-  await expectFailure(
-    ["validate", "--input", documentPath],
-    'Unknown command "validate"',
-  )
+  await expectStdout(["validate", "--input", documentPath], "card: 1")
 
   await expectFailure(
     [
@@ -246,103 +246,6 @@ function runAhtml(args) {
     env: getAhtmlEnv(),
     ...windowsShellOptions,
   })
-}
-
-function assertPackBoundary(packageName, files) {
-  const forbiddenSuffixes = [".test.ts", ".test.tsx"]
-  const packageChecks = {
-    core: {
-      forbiddenPrefixes: [
-        "blueprint/",
-        "spec/",
-        "tests/",
-        "dist/",
-        "build/",
-        "coverage/",
-      ],
-      forbiddenFiles: [
-        "artifact.agent.html",
-        "src/component-schema-prompt.txt",
-        "src/schema-overlays.ts",
-      ],
-      requiredFiles: [
-        "index.mjs",
-        "src/component-schema.ts",
-        "src/core.ts",
-        "src/generated/component-schema.generated.ts",
-        "src/parse/parse-agent-html.ts",
-        "src/render-config.ts",
-        "src/types.ts",
-        "package.json",
-      ],
-    },
-    ahtml: {
-      forbiddenPrefixes: [
-        "blueprint/",
-        "spec/",
-        "tests/",
-        "src/components/ui/",
-        "src/agent-html/renderer/",
-        "scripts/agent-html-cli",
-        ".gitnexus/",
-        "dist/",
-        "build/",
-        "coverage/",
-        "scripts/shadcn-test-fixtures/",
-      ],
-      forbiddenFiles: [
-        "agent-html.config.json",
-        "agent-html.project.json",
-        "artifact.agent.html",
-        "src/config/project.mjs",
-        "src/cli/scaffold.mjs",
-      ],
-      requiredFiles: [
-        "bin/ahtml.mjs",
-        "assets/ghost.svg",
-        "src/config/defaults.mjs",
-        "src/config/component-capabilities.mjs",
-        "src/cli/commands.mjs",
-        "src/cli/index.mjs",
-        "src/cli/runtime-paths.mjs",
-        "src/cli/runtime-setup.mjs",
-        "src/cli/runtime-status.mjs",
-        "src/cli/runtime-build.mjs",
-        "src/cli/runtime-template.mjs",
-        "src/cli/runtime-template/src/app.tsx",
-        "src/cli/schema.mjs",
-        "src/cli/shadcn-api.mjs",
-        "src/cli/validate.mjs",
-        "package.json",
-        "README.md",
-      ],
-    },
-  }
-  const check = packageChecks[packageName]
-
-  if (!check) {
-    throw new Error(`Unknown package boundary target: ${packageName}`)
-  }
-
-  for (const file of files) {
-    if (check.forbiddenPrefixes.some((prefix) => file.startsWith(prefix))) {
-      throw new Error(`Forbidden package file included: ${file}`)
-    }
-
-    if (check.forbiddenFiles.includes(file)) {
-      throw new Error(`Forbidden package file included: ${file}`)
-    }
-
-    if (forbiddenSuffixes.some((suffix) => file.endsWith(suffix))) {
-      throw new Error(`Test file included in package: ${file}`)
-    }
-  }
-
-  for (const requiredFile of check.requiredFiles) {
-    if (!files.includes(requiredFile)) {
-      throw new Error(`Required package file missing: ${requiredFile}`)
-    }
-  }
 }
 
 async function expectStdout(args, expected) {

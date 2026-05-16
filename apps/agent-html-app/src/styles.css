@@ -201,7 +201,12 @@ button:disabled {
 .message-list {
   display: grid;
   gap: 12px;
-  overflow: auto;
+}
+
+.session-list-scroll,
+.message-list-scroll {
+  flex: 1;
+  min-height: 0;
   padding: 16px 20px 0;
 }
 
@@ -266,78 +271,8 @@ button:disabled {
   margin-top: 14px;
 }
 
-.pill {
-  border-radius: 999px;
-  padding: 0.26rem 0.6rem;
-  background: #edf2fb;
-  color: #30415f;
-  font-size: 0.78rem;
-}
-
-.pill.accent {
-  background: #dbeafe;
-  color: #1d4ed8;
-}
-
-.status-dirty {
-  background: #fff4d8;
-  color: #8a5a00;
-}
-
-.status-ready {
-  background: #ddf8e8;
-  color: #116436;
-}
-
-.status-error {
-  background: #ffe2e2;
-  color: #a42323;
-}
-
-.status-building {
-  background: #e4ebff;
-  color: #2649a7;
-}
-
-.primary-button,
-.ghost-button,
-.tab,
-.mini-button {
-  border: 0;
-  border-radius: 14px;
-  padding: 10px 14px;
-}
-
-.primary-button {
-  background: #14213d;
-  color: white;
-}
-
-.ghost-button,
-.tab,
-.mini-button {
-  background: rgba(237, 242, 251, 0.85);
-  color: #22314d;
-}
-
-.mini-button {
-  border-radius: 999px;
-  font-size: 0.78rem;
-  padding: 7px 10px;
-}
-
-.danger-button {
-  background: rgba(255, 226, 226, 0.92);
-  color: #a42323;
-}
-
 .tab-strip {
   padding: 14px 20px 0;
-}
-
-.tab.active {
-  background: #14213d;
-  color: white;
 }
 
 .workbench-shell {
@@ -514,11 +449,6 @@ button:disabled {
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-}
-
-.inspect-review-target.active {
-  border-color: rgba(20, 33, 61, 0.16);
-  background: rgba(219, 234, 254, 0.92);
 }
 
 .inspect-review-target-label {
@@ -886,20 +816,10 @@ button:disabled {
   gap: 8px;
 }
 
-.compare-mode-button.active {
-  background: #8a5a00;
-  color: white;
-}
-
 .compare-focus-strip {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}
-
-.compare-focus-button.active {
-  background: #14213d;
-  color: white;
 }
 
 .draft-preview-footer {
@@ -1180,7 +1100,7 @@ button:disabled {
 
 @theme inline {
   --font-heading: var(--font-sans);
-  --font-sans: 'Geist Variable', sans-serif;
+  --font-sans: "Geist Variable", sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);

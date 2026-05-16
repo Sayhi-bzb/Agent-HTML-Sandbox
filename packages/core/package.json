@@ -16,7 +16,6 @@
     "src/",
     "!src/**/*.test.ts",
     "!src/examples/",
-    "!src/component-schema-prompt.txt",
     "!src/schema-overlays.ts"
   ],
   "scripts": {
@@ -27,5 +26,11 @@
     "typescript": "latest",
     "zod": "^4.4.3"
   },
-  "keywords": ["agent-html", "core", "schema", "sanitize", "html"]
+  "keywords": [
+    "agent-html",
+    "core",
+    "schema",
+    "sanitize",
+    "html"
+  ]
 }

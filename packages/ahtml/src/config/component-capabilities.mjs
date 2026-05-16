@@ -724,21 +724,6 @@ export const requiredShadcnRuntimeComponents = [
   ),
 ]
 
-export const nativeRenderableAgentComponents = Object.entries(
-  componentCapabilityDefinitions,
-)
-  .filter(([, definition]) => definition.source !== "shadcn")
-  .map(([name]) => name)
-
-export const renderableAgentComponents = Object.keys(
-  componentCapabilityDefinitions,
-)
-
-export const schemaRenderableComponents = [
-  ...renderableAgentComponents,
-  ...structuralAgentComponents,
-]
-
 export const requiredShadcnRuntimeExports = Object.fromEntries(
   requiredShadcnRuntimeComponents.map((registryItem) => [
     registryItem,

@@ -18,7 +18,6 @@ import {
   importSchemaModule,
   importShadcnApiModule,
   importValidateModule,
-  normalizeNewlines,
   parseJson,
   root,
   runCli,
@@ -45,15 +44,11 @@ function runCliWithServer(
 }
 
 describe("agent-html CLI contracts", () => {
-  it("keeps the checked-in schema prompt in sync with the CLI schema formatter", async () => {
+  it("formats a profile-first prompt without implementation tokens", async () => {
     const { formatPrompt, getCliSchemaOutput } = await importSchemaModule()
     const schema = await getCliSchemaOutput(root)
-    const prompt = await readFile(
-      path.join(root, "packages", "core", "src", "component-schema-prompt.txt"),
-      "utf8",
-    )
+    const prompt = `${formatPrompt(schema)}\n`
 
-    expect(normalizeNewlines(prompt)).toBe(`${formatPrompt(schema)}\n`)
     expect(prompt).toContain('<meta-agent profile="')
     expect(prompt).not.toContain('theme="')
     expect(prompt).not.toContain('density="')

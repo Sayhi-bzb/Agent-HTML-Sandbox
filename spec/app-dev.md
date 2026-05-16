@@ -43,6 +43,9 @@ Status: First pass.
 - 中栏固定视图：`Preview` / `Source` / `Inspect`
 - 顶部基础运行状态与 runtime check 入口
 - `Agent Shell` 消息列表、输入框、上下文卡片和 proposal 入口
+- `agent-html-app` 现在已有 app-local `shadcn/Radix` 基础设施，包括
+  `components.json`、`@/*` alias、tailwind v4 接入，以及首批
+  `Button / Badge / Tabs / ScrollArea / Input / Alert / Card` primitives
 
 当前缺口：
 
@@ -74,6 +77,10 @@ Status: First pass.
 - `build`、`inspect`、`doctor` 的 Tauri command 桥接
 - `stdout` / `stderr` / exit code / preview 入口的基本采集
 - 前端状态和 Rust 返回结构之间的共享类型面
+- `src-tauri` 现在已开始用成熟 Rust crates 收紧基础设施层：当前已接入
+  `thiserror`、`fs-err`、`tracing`、`tracing-subscriber` 和 `camino`，把大量
+  手写 `AppError` / `std::fs` / `PathBuf + display().to_string()` 样板收进内部错误层、
+  文件系统层、结构化观测层和 UTF-8 路径层
 
 当前缺口：
 
@@ -141,6 +148,20 @@ Status: Partial.
 - `Inspect` 与右栏 `Agent Shell` 的 source validation 现在也会列出前几条 issue，并支持逐条 `Open in Source`，不再只停在“首个问题”级别
 - source validation 现在会在 draft 变动后立即切到 `Validating`，而不是在 debounce 窗口里继续显示旧状态
 - `Source` 面板现在已把原生 `textarea` 替换为 `CodeMirror 6` editor adapter，并通过 `SourcePanel` chunk 按需加载，继续复用现有 source focus / diagnostic jump 协议
+- `Workbench` 顶部 view switch、`Source` 面板主要操作按钮、`Sessions` 列表滚动容器，以及 `Agent Shell` 消息流滚动容器现在已开始消费 app-local `shadcn/Radix` primitives
+- `Inspect` 面板的主 CTA、review focus 操作、summary actions 和大部分状态 badge 现在也已开始消费 app-local `shadcn/Radix` primitives，而不再只依赖 `primary-button / mini-button / pill`
+- `Agent Shell` 的 draft compare、proposal snapshot / readiness、proposal message card footer，以及 composer 输入框现在也已开始消费 app-local `shadcn/Radix` primitives，而不再只依赖 `primary-button / mini-button / pill / textarea`
+- `Agent Shell` 里 `Saved source / Proposal snapshot` compare mode 和 checklist-derived compare focus 现在也已切到 `ToggleGroup`，不再继续手搓 active-button 单选项集
+- `Inspect` 里的 review target 选择现在也已切到 `ToggleGroup`，不再继续手搓 active-button 单选项集
+- `Sessions` 侧的搜索输入与状态 badge、`Preview` 面板的 artifact alert / artifact card / status badge 现在也已开始消费 app-local `shadcn/Radix` primitives
+- `Sessions` 侧的 rename / delete 交互现在也已切到 app-local `Dialog / AlertDialog`，不再依赖浏览器原生 `window.prompt / window.confirm`
+- `Source / Preview` 的主 workbench 卡，以及 `Agent Shell` 的 session context / review timeline / draft compare / proposal 这几块大容器现在也已开始通过 `SurfaceCard` 落到 `Card` 体系，而不再全部直接手拼 `context-card / workbench-card`
+- `Sessions` 列表里的 `session-card` 与 `Agent Shell` 消息流里的 `message-card` 现在也已开始通过 `SurfaceCard` 落到 `Card` 体系，而不再只靠原生 `article/div + className` 壳层
+- `SessionsSidebar / Workbench / Agent Shell` 三栏最外层现在也已通过 `PanelShell` 落到 `Card` 体系，而不再直接依赖原生 `aside/main + className=\"panel\"`
+- `SessionsSidebar / Workbench / Agent Shell` 的 header 现在也已通过 `PanelShellHeader` 落到 `CardHeader` 体系，而不再继续手拼 `div.panel-header`
+- `Source` 里的 validation/source-focus 区，以及 `Inspect` 里的 summary/audit/source-focus 状态卡现在也已继续通过 `SurfaceCard` 落到 `Card` 体系，而不再主要依赖手拼 `validation-card / inspect-summary-card / inspect-audit-block`
+- `primary-button / ghost-button / mini-button / danger-button / pill / status-*` 这一批旧样式类现在已基本退出主路径，新的交互和状态展示默认改走 `Button / StatusBadge / ToggleGroup / SurfaceCard / PanelShell`
+- app 顶层的 `topbar / runtime-banner / error-banner` 现在也已开始通过 `SurfaceCard` 与 `Alert` 落到库侧壳层，而不再只依赖手拼 banner 容器
 - build 失败时可转向 inspect，而不是只停留在抽象错误提示
 
 当前缺口：

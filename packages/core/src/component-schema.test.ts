@@ -48,41 +48,42 @@ describe("standard component schema", () => {
   })
 
   it("keeps schema components aligned with runtime verification data", async () => {
-    const verification = (await import(
+    const runtimeContractModule = (await import(
       pathToFileURL(
         path.join(
           process.cwd(),
           "packages",
           "ahtml",
-          "src",
-          "config",
-          "render-capabilities.mjs",
+          "src/config/runtime-contract.mjs",
         ),
       ).href
     )) as {
-      readonly createRuntimeVerificationData: (
+      readonly createRuntimeContract: (
         components: typeof STANDARD_COMPONENT_SCHEMAS,
       ) => {
-        readonly components: readonly {
-          readonly name: string
-          readonly renderKind: string
-          readonly slots: readonly { readonly name: string }[]
-        }[]
+        readonly renderableAgentComponents: readonly string[]
+        readonly verificationData: {
+          readonly components: readonly {
+            readonly name: string
+            readonly renderKind: string
+            readonly slots: readonly { readonly name: string }[]
+          }[]
+        }
       }
-      readonly schemaRenderableComponents: readonly string[]
     }
+    const runtimeContract = runtimeContractModule.createRuntimeContract(
+      STANDARD_COMPONENT_SCHEMAS,
+    )
 
     expect([...STANDARD_COMPONENT_NAMES].sort()).toEqual(
-      [...verification.schemaRenderableComponents].sort(),
+      [...runtimeContract.renderableAgentComponents].sort(),
     )
     expect(
       Object.fromEntries(
-        verification
-          .createRuntimeVerificationData(STANDARD_COMPONENT_SCHEMAS)
-          .components.map((component) => [
-            component.name,
-            component.slots.map((slot) => slot.name),
-          ]),
+        runtimeContract.verificationData.components.map((component) => [
+          component.name,
+          component.slots.map((slot) => slot.name),
+        ]),
       ),
     ).toEqual({
       accordion: ["accordion-item"],
@@ -107,12 +108,10 @@ describe("standard component schema", () => {
     })
     expect(
       Object.fromEntries(
-        verification
-          .createRuntimeVerificationData(STANDARD_COMPONENT_SCHEMAS)
-          .components.map((component) => [
-            component.name,
-            component.renderKind,
-          ]),
+        runtimeContract.verificationData.components.map((component) => [
+          component.name,
+          component.renderKind,
+        ]),
       ),
     ).toEqual({
       accordion: "interactive-collection",

@@ -58,6 +58,14 @@ export const commandMetadata = {
       },
     ],
     example: "ahtml prompt",
+    formats: {
+      defaultValue: "prompt",
+      values: ["prompt", "json"],
+    },
+    interactiveAction: {
+      label: "Print the writing prompt",
+      hint: "Show the agent-facing schema prompt",
+    },
   },
   validate: {
     summary: "Validate a source document without building runtime output.",
@@ -73,6 +81,10 @@ export const commandMetadata = {
       },
     ],
     example: `ahtml validate --input ${cliDefaults.documentPath} --format json`,
+    formats: {
+      defaultValue: "text",
+      values: ["text", "json"],
+    },
     hidden: true,
   },
   build: {
@@ -98,6 +110,14 @@ export const commandMetadata = {
       },
     ],
     example: `ahtml build ${cliDefaults.documentPath}`,
+    formats: {
+      defaultValue: "text",
+      values: ["text", "json"],
+    },
+    interactiveAction: {
+      label: `Build ${cliDefaults.documentPath}`,
+      hint: `Write static HTML to ${cliDefaults.outputDir}`,
+    },
   },
   preview: {
     summary: "Build and preview a static HTML artifact.",
@@ -122,6 +142,10 @@ export const commandMetadata = {
       },
     ],
     example: `ahtml preview ${cliDefaults.documentPath}`,
+    interactiveAction: {
+      label: `Preview ${cliDefaults.documentPath}`,
+      hint: `Build and serve on port ${cliDefaults.previewPort}`,
+    },
   },
   doctor: {
     summary: "Check runtime health and output paths.",
@@ -136,6 +160,14 @@ export const commandMetadata = {
       },
     ],
     example: "ahtml doctor",
+    formats: {
+      defaultValue: "text",
+      values: ["text", "json"],
+    },
+    interactiveAction: {
+      label: "Run doctor",
+      hint: "Check runtime health and output paths",
+    },
   },
   inspect: {
     summary: "Summarize config and component usage.",
@@ -152,8 +184,59 @@ export const commandMetadata = {
       },
     ],
     example: `ahtml inspect --input ${cliDefaults.documentPath}`,
+    formats: {
+      defaultValue: "summary",
+      values: ["summary", "json"],
+    },
     hidden: true,
   },
+}
+
+export const defaultActionMenuItems = [
+  commandMetadata.prompt.interactiveAction
+    ? {
+        value: "prompt",
+        ...commandMetadata.prompt.interactiveAction,
+      }
+    : undefined,
+  commandMetadata.build.interactiveAction
+    ? {
+        value: "build",
+        ...commandMetadata.build.interactiveAction,
+      }
+    : undefined,
+  commandMetadata.preview.interactiveAction
+    ? {
+        value: "preview",
+        ...commandMetadata.preview.interactiveAction,
+      }
+    : undefined,
+  commandMetadata.doctor.interactiveAction
+    ? {
+        value: "doctor",
+        ...commandMetadata.doctor.interactiveAction,
+      }
+    : undefined,
+  {
+    value: "help",
+    label: "Show command help",
+    hint: "Print the compact command list",
+  },
+].filter(Boolean)
+
+export function createCommandDefinitions(handlers) {
+  return Object.fromEntries(
+    Object.entries(commandMetadata).map(([name, definition]) => [
+      name,
+      { ...definition, handler: handlers[name] },
+    ]),
+  )
+}
+
+export function getVisibleCommandEntries() {
+  return Object.entries(commandMetadata).filter(
+    ([, definition]) => !definition.hidden,
+  )
 }
 
 export function formatGlobalHelp() {
@@ -183,8 +266,7 @@ Run "ahtml <command> --help" for command details.
 }
 
 export function formatCliCommandUsageBlock() {
-  return Object.entries(commandMetadata)
-    .filter(([, definition]) => !definition.hidden)
+  return getVisibleCommandEntries()
     .map(([, definition]) => definition.usage.split("\n")[0])
     .join("\n")
 }
@@ -222,9 +304,38 @@ export function hasHelpFlag(commandArgs) {
   return commandArgs.includes("--help") || commandArgs.includes("-h")
 }
 
+export function resolveCommandFormat(commandName, definition, value) {
+  if (!definition.formats) {
+    return value
+  }
+
+  const format = value ?? definition.formats.defaultValue
+
+  if (definition.formats.values.includes(format)) {
+    return format
+  }
+
+  throw new Error(
+    `${commandName} --format must be ${formatAllowedValues(definition.formats.values)}.`,
+  )
+}
+
+function formatAllowedValues(values) {
+  const quotedValues = values.map((value) => `"${value}"`)
+
+  if (quotedValues.length === 1) {
+    return quotedValues[0]
+  }
+
+  if (quotedValues.length === 2) {
+    return `${quotedValues[0]} or ${quotedValues[1]}`
+  }
+
+  return `${quotedValues.slice(0, -1).join(", ")}, or ${quotedValues.at(-1)}`
+}
+
 function formatCommandList() {
-  return Object.entries(commandMetadata)
-    .filter(([, definition]) => !definition.hidden)
+  return getVisibleCommandEntries()
     .map(([name, definition]) => `  ${name.padEnd(10)} ${definition.summary}`)
     .join("\n")
 }

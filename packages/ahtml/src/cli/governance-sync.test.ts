@@ -47,7 +47,14 @@ describe("code governance sync blocks", () => {
   it("keeps managed runtime logic out of project-local scaffold mode", async () => {
     const commandModule = (await import(
       pathToFileURL(
-        path.join(process.cwd(), "packages", "ahtml", "src", "cli", "commands.mjs"),
+        path.join(
+          process.cwd(),
+          "packages",
+          "ahtml",
+          "src",
+          "cli",
+          "command-contract.mjs",
+        ),
       ).href
     )) as {
       readonly commandMetadata: Record<string, { readonly usage: string }>

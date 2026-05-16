@@ -30,7 +30,12 @@ export const STANDARD_COMPONENT_SCHEMAS = core.STANDARD_COMPONENT_SCHEMAS
 export const TEXT_CHILD = core.TEXT_CHILD
 export const VALIDATED_STANDARD_COMPONENT_SCHEMAS =
   core.VALIDATED_STANDARD_COMPONENT_SCHEMAS
+export const createPublicAgentContract = core.createPublicAgentContract
+export const createPublicRenderConfigContract =
+  core.createPublicRenderConfigContract
+export const createPublicSafetyPolicy = core.createPublicSafetyPolicy
 export const DEFAULT_RENDER_CONFIG = core.DEFAULT_RENDER_CONFIG
+export const formatForbiddenPolicy = core.formatForbiddenPolicy
 export const parseRenderConfig = core.parseRenderConfig
 export const PUBLIC_PROFILE_VALUES = core.PUBLIC_PROFILE_VALUES
 export const PUBLIC_RENDER_CONFIG_DEFAULTS = core.PUBLIC_RENDER_CONFIG_DEFAULTS

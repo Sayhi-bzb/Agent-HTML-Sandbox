@@ -39,9 +39,9 @@ type LoadedModules = {
   readonly requiredShadcnRuntimeExports: Record<string, readonly string[]>
   readonly supportedRuntimeBase: string
   readonly runDoctorCommand: (input: {
-    readonly commandArgs: readonly string[]
     readonly defaultOutputDir: string
     readonly ensureManagedRuntime: (packageVersion: string) => Promise<void>
+    readonly format?: string
     readonly packageRoot: string
     readonly readPackageVersion: () => Promise<string>
     readonly runtimePaths: RuntimePaths
@@ -54,10 +54,46 @@ type LoadedModules = {
     readonly setup: NativeRuntimeSetup
     readonly schema: CliSchemaOutput
   }) => unknown
+  readonly createManagedRuntimeManifest: (input: {
+    readonly componentSource: string
+    readonly components: readonly string[]
+    readonly installMode: string
+    readonly packageVersion: string
+    readonly paths: RuntimePaths
+    readonly preset: string
+    readonly renderer: string
+    readonly runtimeBase: string
+    readonly runtimeContract: {
+      readonly renderableAgentComponents: readonly string[]
+    }
+    readonly runtimeSurface: Record<string, unknown>
+    readonly uiLibrary: string
+    readonly version: number
+  }) => RuntimeManifest
   readonly createAhtmlGlueProof: (paths: RuntimePaths) => Promise<{
     readonly algorithm: string
     readonly files: Record<string, string>
   }>
+  readonly createRuntimeVerificationState: (input: {
+    readonly components: readonly string[]
+    readonly runtimeBase: string
+    readonly runtimeContract: {
+      readonly renderableAgentComponents: readonly string[]
+      readonly verificationData: unknown
+      readonly rendererMapping: unknown
+    }
+    readonly runtimeSurface: Record<string, unknown>
+    readonly version: number
+  }) => {
+    readonly kind: string
+    readonly version: number
+    readonly runtimeBase: string
+    readonly shadcnRuntimeSurface: Record<string, unknown>
+    readonly installedUiComponents: readonly string[]
+    readonly renderableAgentComponents: readonly string[]
+    readonly verificationData: unknown
+    readonly rendererMapping: unknown
+  }
   readonly nativeRuntimeSetup: NativeRuntimeSetup
   readonly assertBuiltArtifactCss: (outputDir: string) => Promise<string>
   readonly assertRuntimeSurface: (input: {
@@ -79,6 +115,13 @@ type LoadedModules = {
     readonly ready: boolean
     readonly runtimeDetail: string
   }>
+  readonly createRuntimeContract: (
+    components?: readonly { readonly name: string }[],
+  ) => {
+    readonly renderableAgentComponents: readonly string[]
+    readonly verificationData: unknown
+    readonly rendererMapping: unknown
+  }
   readonly getCliSchemaOutput: (root?: string) => Promise<CliSchemaOutput>
 }
 
@@ -105,6 +148,12 @@ type RuntimeManifest = {
   readonly installedUiComponents: readonly string[]
   readonly renderableAgentComponents: readonly string[]
   readonly paths: Record<string, string>
+}
+
+type RuntimeSurfaceWithGlueProof = Record<string, unknown> & {
+  readonly ahtmlGlueProof: {
+    readonly files: Record<string, string>
+  }
 }
 
 afterEach(async () => {
@@ -177,9 +226,9 @@ describe("runtime surface completeness", () => {
     const fixture = await createRuntimeFixture({ includeCssImports: false })
     const { output, result } = await captureStdout(async () =>
       runDoctorCommand({
-        commandArgs: [],
         defaultOutputDir: fixture.outputDir,
         ensureManagedRuntime: async () => {},
+        format: "text",
         packageRoot: process.cwd(),
         readPackageVersion: async () => "0.0.0",
         runtimePaths: fixture.runtimePaths,
@@ -216,14 +265,16 @@ describe("runtime surface completeness", () => {
   it("rejects ahtml glue proof drift between manifest and runtime files", async () => {
     const { assertRuntimeSurface } = await loadModules()
     const fixture = await createRuntimeFixture()
+    const runtimeSurface = fixture.manifest
+      .shadcnRuntimeSurface as RuntimeSurfaceWithGlueProof
     const manifest = {
       ...fixture.manifest,
       shadcnRuntimeSurface: {
-        ...fixture.manifest.shadcnRuntimeSurface,
+        ...runtimeSurface,
         ahtmlGlueProof: {
-          ...fixture.manifest.shadcnRuntimeSurface.ahtmlGlueProof,
+          ...runtimeSurface.ahtmlGlueProof,
           files: {
-            ...fixture.manifest.shadcnRuntimeSurface.ahtmlGlueProof.files,
+            ...runtimeSurface.ahtmlGlueProof.files,
             "src/app.tsx": "drifted-proof",
           },
         },
@@ -304,6 +355,9 @@ async function createRuntimeFixture({
 } = {}) {
   const {
     createShadcnBaseLayerExpectation,
+    createManagedRuntimeManifest,
+    createRuntimeContract,
+    createRuntimeVerificationState,
     requiredShadcnRuntimeExports,
     supportedRuntimeBase,
     createAhtmlGlueProof,
@@ -318,6 +372,7 @@ async function createRuntimeFixture({
   temporaryDirectories.push(runtimeRoot)
   const runtimePaths = getRuntimePaths({ AHTML_HOME: runtimeRoot })
   const schema = await getCliSchemaOutput(process.cwd())
+  const runtimeContract = createRuntimeContract(schema.components)
   const promptUiManifest = createPromptUiManifest({
     packageVersion: "0.0.0",
     setup: nativeRuntimeSetup,
@@ -481,39 +536,27 @@ async function createRuntimeFixture({
     ...baseRuntimeSurface,
     ahtmlGlueProof: await createAhtmlGlueProof(runtimePaths),
   }
-  const manifest = {
-    kind: "ahtml-managed-runtime",
-    version: runtimeVersion,
-    renderer: runtimeRenderer,
-    packageVersion: "0.0.0",
-    uiLibrary: nativeRuntimeSetup.uiLibrary,
+  const manifest = createManagedRuntimeManifest({
     componentSource: nativeRuntimeSetup.componentSource,
-    runtimeBase: supportedRuntimeBase,
-    shadcnRuntimeSurface,
-    installMode: nativeRuntimeSetup.installMode,
-    preset: nativeRuntimeSetup.preset,
     components: [...nativeRuntimeSetup.components],
-    installedUiComponents: [...nativeRuntimeSetup.components],
-    renderableAgentComponents: schema.components.map(
-      (component) => component.name,
-    ),
-    paths: {
-      runtime: runtimePaths.runtimeDir,
-      cache: runtimePaths.cacheDir,
-      logs: runtimePaths.logsDir,
-      config: runtimePaths.configDir,
-    },
-  }
-  const runtimeVerificationState = {
-    kind: "ahtml-runtime-render-verification",
-    version: 1,
+    installMode: nativeRuntimeSetup.installMode,
+    packageVersion: "0.0.0",
+    paths: runtimePaths,
+    preset: nativeRuntimeSetup.preset,
+    renderer: runtimeRenderer,
     runtimeBase: supportedRuntimeBase,
-    shadcnRuntimeSurface,
-    installedUiComponents: [...nativeRuntimeSetup.components],
-    renderableAgentComponents: [...manifest.renderableAgentComponents],
-    verificationData: schema.verificationData,
-    rendererMapping: schema.rendererMapping,
-  }
+    runtimeContract,
+    runtimeSurface: shadcnRuntimeSurface,
+    uiLibrary: nativeRuntimeSetup.uiLibrary,
+    version: runtimeVersion,
+  })
+  const runtimeVerificationState = createRuntimeVerificationState({
+    components: [...nativeRuntimeSetup.components],
+    runtimeBase: supportedRuntimeBase,
+    runtimeContract,
+    runtimeSurface: shadcnRuntimeSurface,
+    version: 1,
+  })
   await writeFile(
     runtimePaths.manifestPath,
     `${JSON.stringify(manifest, null, 2)}\n`,
@@ -642,6 +685,7 @@ async function loadModules(): Promise<LoadedModules> {
     renderCapabilitiesModule,
     doctorChecksModule,
     runtimePathsModule,
+    runtimeContractModule,
     runtimeSetupModule,
     runtimeSurfaceModule,
     runtimeStatusModule,
@@ -667,6 +711,18 @@ async function loadModules(): Promise<LoadedModules> {
     import(
       pathToFileURL(
         path.join(root, "packages", "ahtml", "src", "cli", "runtime-paths.mjs"),
+      ).href
+    ),
+    import(
+      pathToFileURL(
+        path.join(
+          root,
+          "packages",
+          "ahtml",
+          "src",
+          "config",
+          "runtime-contract.mjs",
+        ),
       ).href
     ),
     import(
@@ -716,10 +772,15 @@ async function loadModules(): Promise<LoadedModules> {
     runtimeRenderer: runtimePathsModule.runtimeRenderer,
     runtimeVersion: runtimePathsModule.runtimeVersion,
     createPromptUiManifest: runtimeSetupModule.createPromptUiManifest,
+    createManagedRuntimeManifest:
+      runtimeContractModule.createManagedRuntimeManifest,
     createAhtmlGlueProof: runtimeSurfaceModule.createAhtmlGlueProof,
+    createRuntimeVerificationState:
+      runtimeContractModule.createRuntimeVerificationState,
     nativeRuntimeSetup: runtimeSetupModule.nativeRuntimeSetup,
     assertBuiltArtifactCss: runtimeSurfaceModule.assertBuiltArtifactCss,
     assertRuntimeSurface: runtimeSurfaceModule.assertRuntimeSurface,
+    createRuntimeContract: runtimeContractModule.createRuntimeContract,
     getShadcnRuntimeProvenanceState:
       runtimeSurfaceModule.getShadcnRuntimeProvenanceState,
     getRuntimeStatus: runtimeStatusModule.getRuntimeStatus,

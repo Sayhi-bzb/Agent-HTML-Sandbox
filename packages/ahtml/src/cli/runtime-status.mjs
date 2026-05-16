@@ -9,6 +9,10 @@ import {
 import path from "node:path"
 
 import {
+  createManagedRuntimeManifest,
+  createRuntimeContractFromSchema,
+} from "../config/runtime-contract.mjs"
+import {
   getRuntimePaths,
   runtimeManifestName,
   runtimePackageRoot,
@@ -49,30 +53,21 @@ export async function bootstrapManagedRuntime({
     setup,
     schema,
   })
-
-  const manifest = {
-    kind: "ahtml-managed-runtime",
-    version: runtimeVersion,
-    renderer: runtimeRenderer,
-    packageVersion,
-    uiLibrary: setup.uiLibrary,
+  const runtimeContract = createRuntimeContractFromSchema(schema)
+  const manifest = createManagedRuntimeManifest({
     componentSource: setup.componentSource,
-    runtimeBase: supportedRuntimeBase,
-    shadcnRuntimeSurface,
-    installMode: setup.installMode,
-    preset: setup.preset,
     components: setup.components,
-    installedUiComponents: setup.components,
-    renderableAgentComponents: promptUiManifest.agentComponents.map(
-      (component) => component.name,
-    ),
-    paths: {
-      runtime: paths.runtimeDir,
-      cache: paths.cacheDir,
-      logs: paths.logsDir,
-      config: paths.configDir,
-    },
-  }
+    installMode: setup.installMode,
+    packageVersion,
+    paths,
+    preset: setup.preset,
+    renderer: runtimeRenderer,
+    runtimeBase: supportedRuntimeBase,
+    runtimeContract,
+    runtimeSurface: shadcnRuntimeSurface,
+    uiLibrary: setup.uiLibrary,
+    version: runtimeVersion,
+  })
 
   await writeJsonFile(paths.manifestPath, manifest)
   await writeJsonFile(paths.promptUiManifestPath, promptUiManifest)

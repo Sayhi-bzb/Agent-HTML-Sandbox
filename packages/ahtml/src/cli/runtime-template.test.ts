@@ -9,16 +9,12 @@ import { pathToFileURL } from "node:url"
 import { afterEach, describe, expect, it } from "vitest"
 
 const originalTemplateDir = process.env.AHTML_SHADCN_TEMPLATE_DIR
-const originalAllowOverride =
-  process.env.AHTML_ALLOW_SHADCN_TEMPLATE_OVERRIDE
+const originalAllowOverride = process.env.AHTML_ALLOW_SHADCN_TEMPLATE_OVERRIDE
 const originalRegistryUrl = process.env.REGISTRY_URL
 
 afterEach(() => {
   restoreEnv("AHTML_SHADCN_TEMPLATE_DIR", originalTemplateDir)
-  restoreEnv(
-    "AHTML_ALLOW_SHADCN_TEMPLATE_OVERRIDE",
-    originalAllowOverride,
-  )
+  restoreEnv("AHTML_ALLOW_SHADCN_TEMPLATE_OVERRIDE", originalAllowOverride)
   restoreEnv("REGISTRY_URL", originalRegistryUrl)
 })
 
@@ -90,7 +86,7 @@ describe("checked-in runtime templates", () => {
       const ahtmlConfig = await readFile(runtimeViteConfigPath, "utf8")
 
       expect(templateConfig).toContain(
-        'const rootDir = path.dirname(fileURLToPath(import.meta.url))',
+        "const rootDir = path.dirname(fileURLToPath(import.meta.url))",
       )
       expect(templateConfig).toContain('path.resolve(rootDir, "./src")')
       expect(templateConfig).not.toContain("__dirname")
@@ -106,41 +102,43 @@ describe("checked-in runtime templates", () => {
       await importRuntimeTemplateModule()
     const [
       { getCliSchemaOutput },
-      { createRuntimeElementRegistrySpec, createRuntimeRendererKindSpec },
+      { createRuntimeContract },
       { createRuntimeRendererKindSource },
-    ] =
-      await Promise.all([
-        import(
-          pathToFileURL(
-            path.join(root, "packages", "ahtml", "src", "cli", "schema.mjs"),
-          ).href,
-        ) as Promise<{
-          readonly getCliSchemaOutput: (root?: string) => Promise<{
-            readonly rendererMapping: unknown
-          }>
-        }>,
-        import(
-          pathToFileURL(
-            path.join(
-              root,
-              "packages",
-              "ahtml",
-              "src",
-              "config",
-              "render-capabilities.mjs",
-            ),
-          ).href,
-        ) as Promise<{
-          readonly createRuntimeElementRegistrySpec: (
-            rendererMapping: unknown,
-          ) => unknown
-          readonly createRuntimeRendererKindSpec: () => unknown
-        }>,
-        importRuntimeTemplateModule(),
-      ])
+    ] = await Promise.all([
+      import(
+        pathToFileURL(
+          path.join(root, "packages", "ahtml", "src", "cli", "schema.mjs"),
+        ).href
+      ) as Promise<{
+        readonly getCliSchemaOutput: (root?: string) => Promise<{
+          readonly components: readonly { readonly name: string }[]
+        }>
+      }>,
+      import(
+        pathToFileURL(
+          path.join(
+            root,
+            "packages",
+            "ahtml",
+            "src",
+            "config",
+            "runtime-contract.mjs",
+          ),
+        ).href
+      ) as Promise<{
+        readonly createRuntimeContract: (
+          components: readonly { readonly name: string }[],
+        ) => {
+          readonly elementRegistrySpec: unknown
+          readonly rendererKindSpec: unknown
+        }
+      }>,
+      importRuntimeTemplateModule(),
+    ])
     const schema = await getCliSchemaOutput(root)
+    const runtimeContract = createRuntimeContract(schema.components)
     const expected = createRuntimeElementRegistrySource(
-      createRuntimeElementRegistrySpec(schema.rendererMapping),
+      runtimeContract.elementRegistrySpec,
     )
     const checkedIn = await readFile(
       path.join(
@@ -162,7 +160,7 @@ describe("checked-in runtime templates", () => {
     )
 
     const expectedKinds = createRuntimeRendererKindSource(
-      createRuntimeRendererKindSpec(),
+      runtimeContract.rendererKindSpec,
     )
     const checkedInKinds = await readFile(
       path.join(
@@ -200,7 +198,14 @@ function normalizeNewlines(value: string) {
 
 async function importRuntimeTemplateModule() {
   const moduleUrl = pathToFileURL(
-    path.join(process.cwd(), "packages", "ahtml", "src", "cli", "runtime-template.mjs"),
+    path.join(
+      process.cwd(),
+      "packages",
+      "ahtml",
+      "src",
+      "cli",
+      "runtime-template.mjs",
+    ),
   ).href
 
   return import(moduleUrl) as Promise<{
