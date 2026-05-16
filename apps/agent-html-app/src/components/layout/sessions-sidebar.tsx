@@ -25,6 +25,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { SurfaceCard } from "../ui/surface-card"
 import type { SessionSummary } from "../../lib/types"
+import { getSessionPreviewStatusText } from "../../lib/preview-state"
 import { formatTimestampLabel } from "../../lib/time"
 
 type SessionsSidebarProps = {
@@ -145,9 +146,7 @@ export function SessionsSidebar({
                 <StatusBadge tone={statusTone(session.status)}>
                   {statusLabel[session.status]}
                 </StatusBadge>
-                <span>
-                  {session.hasPreview ? "Has preview" : "No build yet"}
-                </span>
+                <span>{getSessionPreviewStatusText(session)}</span>
               </div>
               <p className="session-updated-at">
                 Updated {formatTimestampLabel(session.updatedAt)}

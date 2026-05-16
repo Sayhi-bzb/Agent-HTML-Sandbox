@@ -333,11 +333,18 @@ describe("agent-html CLI contracts", () => {
       { AHTML_HOME: runtimeHome },
       tempDir,
     ).catch((error) => error)
+    const invalidStdout: string =
+      invalidResult &&
+      typeof invalidResult === "object" &&
+      "stdout" in invalidResult &&
+      typeof invalidResult.stdout === "string"
+        ? invalidResult.stdout
+        : ""
     const parsedInvalidResult = parseJson<{
       kind: string
       ok: boolean
       diagnostics?: Array<{ code: string; severity: string }>
-    }>(invalidResult.stdout)
+    }>(invalidStdout)
     expect(parsedInvalidResult.kind).toBe("agent-html-validation-result")
     expect(parsedInvalidResult.ok).toBe(false)
     expect(parsedInvalidResult.diagnostics).toEqual([

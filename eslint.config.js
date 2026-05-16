@@ -5,8 +5,8 @@ import tseslint from "typescript-eslint"
 export default tseslint.config(
   {
     ignores: [
-      "dist",
-      "build",
+      "**/dist/**",
+      "**/build/**",
       "node_modules",
       "coverage",
       ".gitnexus",
@@ -18,15 +18,29 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked.map((config) => ({
     ...config,
-    files: ["**/*.ts"],
+    files: ["**/*.ts", "**/*.tsx"],
   })),
   {
-    files: ["**/*.ts"],
+    files: ["**/*.ts", "**/*.tsx"],
     languageOptions: {
       ecmaVersion: 2022,
       globals: globals.node,
       parserOptions: {
         project: ["./tsconfig.node.json"],
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+  {
+    files: ["apps/**/*.ts", "apps/**/*.tsx"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+      },
+      parserOptions: {
+        project: ["./apps/*/tsconfig.json"],
         tsconfigRootDir: import.meta.dirname,
       },
     },

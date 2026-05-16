@@ -75,7 +75,14 @@ describe("artifact workflow inspection", () => {
 
 async function importArtifactWorkflowModule() {
   const moduleUrl = pathToFileURL(
-    path.join(process.cwd(), "packages", "ahtml", "src", "cli", "artifact-workflow.mjs"),
+    path.join(
+      process.cwd(),
+      "packages",
+      "ahtml",
+      "src",
+      "cli",
+      "artifact-workflow.mjs",
+    ),
   ).href
 
   return import(moduleUrl) as Promise<{
@@ -83,7 +90,10 @@ async function importArtifactWorkflowModule() {
     readonly formatInspectionSummary: (inspection: {
       readonly config?: Record<string, string>
       readonly resolvedProfileTokens?: Record<string, string>
-      readonly components?: readonly { readonly name: string; readonly count: number }[]
+      readonly components?: readonly {
+        readonly name: string
+        readonly count: number
+      }[]
     }) => string
   }>
 }

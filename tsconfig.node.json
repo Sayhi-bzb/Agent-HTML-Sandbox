@@ -10,7 +10,9 @@
   "include": [
     "vitest.config.ts",
     "vitest.heavy.config.ts",
-    "packages/**/*.ts"
+    "packages/**/*.ts",
+    "packages/**/*.tsx",
+    "scripts/**/*.test.ts"
   ],
   "exclude": ["scripts/shadcn-test-fixtures/template/**/*"]
 }

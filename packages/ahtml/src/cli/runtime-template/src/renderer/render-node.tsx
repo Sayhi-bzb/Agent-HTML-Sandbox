@@ -110,7 +110,9 @@ export function createRendererNode(
     const descriptionProp = rendererSpec.description
       ? requireRendererSpecField(rendererSpec, "descriptionProp")
       : undefined
-    const Item = rendererSpec.item ? resolveElement(rendererSpec.item) : undefined
+    const Item = rendererSpec.item
+      ? resolveElement(rendererSpec.item)
+      : undefined
     const label = node.props[labelProp]
     const description = descriptionProp
       ? node.props[descriptionProp]
@@ -129,7 +131,10 @@ export function createRendererNode(
       : undefined
     const items =
       itemSlot && Item ? getStructuredItemsForNode(node, itemSlot) : undefined
-    const controlProps = applyPropMappings(node.props, rendererSpec.propMappings)
+    const controlProps = applyPropMappings(
+      node.props,
+      rendererSpec.propMappings,
+    )
 
     return (
       <>
@@ -144,7 +149,10 @@ export function createRendererNode(
             <Control {...controlProps}>
               {items.map((item) => {
                 const itemValue = getStructuredItemValue(item, itemValueProp)
-                const itemHeading = getStructuredItemHeading(item, itemHeadingProp)
+                const itemHeading = getStructuredItemHeading(
+                  item,
+                  itemHeadingProp,
+                )
 
                 return (
                   <Root key={itemValue || itemHeading} orientation="horizontal">
@@ -154,7 +162,9 @@ export function createRendererNode(
                         {itemHeading}
                       </Label>
                       {item.children.length > 0 ? (
-                        <Description className={rendererSpec.descriptionClassName}>
+                        <Description
+                          className={rendererSpec.descriptionClassName}
+                        >
                           {renderInlineChildren(item)}
                         </Description>
                       ) : null}
@@ -210,7 +220,10 @@ export function createRendererNode(
       ? requireRendererSpecField(rendererSpec, "descriptionProp")
       : undefined
     const itemSlot = requireRendererSpecField(rendererSpec, "itemSlot")
-    const itemValueProp = requireRendererSpecField(rendererSpec, "itemValueProp")
+    const itemValueProp = requireRendererSpecField(
+      rendererSpec,
+      "itemValueProp",
+    )
     const itemHeadingProp = requireRendererSpecField(
       rendererSpec,
       "itemHeadingProp",
@@ -310,7 +323,7 @@ export function createRendererNode(
     const titleProp = Title
       ? requireRendererSpecField(rendererSpec, "titleProp")
       : undefined
-    const title = node.props[titleProp]
+    const title = titleProp ? node.props[titleProp] : undefined
 
     if (!title || !Title) {
       return null
@@ -447,7 +460,9 @@ export function createRendererNode(
               key={getStructuredItemValue(item, itemValueProp)}
               value={getStructuredItemValue(item, itemValueProp)}
             >
-              <Trigger>{getStructuredItemHeading(item, itemHeadingProp)}</Trigger>
+              <Trigger>
+                {getStructuredItemHeading(item, itemHeadingProp)}
+              </Trigger>
               <Content>{renderChildren(item)}</Content>
             </Item>
           ))}
@@ -572,9 +587,7 @@ export function createRendererNode(
                   {selected ? " (selected)" : ""}
                 </Label>
                 {item.children.length > 0 ? (
-                  <Description>
-                    {renderInlineChildren(item)}
-                  </Description>
+                  <Description>{renderInlineChildren(item)}</Description>
                 ) : null}
               </Field>
             )
@@ -602,7 +615,11 @@ export function createRendererNode(
 
     if (itemInDatalist) {
       return (
-        <Item key={itemValue || itemHeading} label={itemHeading} value={itemValue} />
+        <Item
+          key={itemValue || itemHeading}
+          label={itemHeading}
+          value={itemValue}
+        />
       )
     }
 
@@ -635,15 +652,11 @@ export function createRendererNode(
     return (
       <noscript>
         <Field>
-          {label ? (
-            <Label>{label}</Label>
-          ) : null}
+          {label ? <Label>{label}</Label> : null}
           {typeof value === "string" && value.length > 0 ? (
             <Description>{value}</Description>
           ) : null}
-          {description ? (
-            <Description>{description}</Description>
-          ) : null}
+          {description ? <Description>{description}</Description> : null}
         </Field>
       </noscript>
     )
@@ -675,7 +688,9 @@ export function createRendererNode(
     )
 
     if (ItemContainer) {
-      const containerProps = itemContainerId ? { id: itemContainerId } : undefined
+      const containerProps = itemContainerId
+        ? { id: itemContainerId }
+        : undefined
 
       return <ItemContainer {...containerProps}>{renderedItems}</ItemContainer>
     }
@@ -884,10 +899,7 @@ function resolveMappedProp(
   return map[value] ?? defaultValue
 }
 
-function getConfiguredPropValue(
-  node: AgentComponentNode,
-  propName: string,
-) {
+function getConfiguredPropValue(node: AgentComponentNode, propName: string) {
   return node.props[propName]
 }
 

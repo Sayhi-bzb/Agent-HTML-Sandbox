@@ -1,7 +1,4 @@
-import type {
-  RendererSpecComponent,
-  RuntimeVerificationState,
-} from "./types"
+import type { RendererSpecComponent, RuntimeVerificationState } from "./types"
 
 export function createRendererSpecMap(
   runtimeVerificationState: RuntimeVerificationState,

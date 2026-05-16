@@ -36,7 +36,12 @@ describe("createRuntimeElementRegistrySpec", () => {
           requiredRegistryModules: [
             {
               registryItem: "field",
-              exports: ["Field", "FieldContent", "FieldDescription", "FieldLabel"],
+              exports: [
+                "Field",
+                "FieldContent",
+                "FieldDescription",
+                "FieldLabel",
+              ],
             },
             {
               registryItem: "switch",
@@ -56,7 +61,12 @@ describe("createRuntimeElementRegistrySpec", () => {
           requiredRegistryModules: [
             {
               registryItem: "field",
-              exports: ["Field", "FieldContent", "FieldDescription", "FieldLabel"],
+              exports: [
+                "Field",
+                "FieldContent",
+                "FieldDescription",
+                "FieldLabel",
+              ],
             },
             {
               registryItem: "slider",
@@ -97,7 +107,12 @@ describe("createRuntimeElementRegistrySpec", () => {
           requiredRegistryModules: [
             {
               registryItem: "field",
-              exports: ["Field", "FieldContent", "FieldDescription", "FieldLabel"],
+              exports: [
+                "Field",
+                "FieldContent",
+                "FieldDescription",
+                "FieldLabel",
+              ],
             },
             {
               registryItem: "select",
@@ -136,7 +151,12 @@ describe("createRuntimeElementRegistrySpec", () => {
           requiredRegistryModules: [
             {
               registryItem: "field",
-              exports: ["Field", "FieldContent", "FieldDescription", "FieldLabel"],
+              exports: [
+                "Field",
+                "FieldContent",
+                "FieldDescription",
+                "FieldLabel",
+              ],
             },
             {
               registryItem: "combobox",
@@ -177,13 +197,7 @@ describe("createRuntimeElementRegistrySpec", () => {
 
     expect(registrySpec).toEqual({
       version: 1,
-      nativeElements: [
-        "article",
-        "h1",
-        "li",
-        "ol",
-        "ul",
-      ],
+      nativeElements: ["article", "h1", "li", "ol", "ul"],
       modules: [
         {
           registryItem: "card",

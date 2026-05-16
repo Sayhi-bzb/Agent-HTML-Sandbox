@@ -32,11 +32,11 @@ props schema / tokens 是 agent-facing 组件能力入口。
 
 组件能力变化必须同步 props schema / tokens 和 agent-facing 示例。
 
-## 6. presentation profiles own visual choice
+## 6. configuration layer owns visual choice
 
-视觉选择必须先收束为已注册 presentation profile。
+视觉选择必须先收束为已批准的 document style config reference，或在兼容期收束为映射到该配置层的 presentation profile alias。
 
-profile 可以在内部绑定 theme、density、card treatment、table treatment、badge treatment、emphasis 和 width 等受控 token，但 agent-facing 主接口默认只暴露命名 profile，而不是完整视觉参数集。
+独立配置层可以在内部绑定 theme、density、card treatment、table treatment、badge treatment、emphasis 和 width 等受控 token，并负责组件级视觉映射；agent-facing 主接口默认只暴露 style config reference 或兼容 alias，而不是完整视觉参数集。
 
 ## 7. implementation props stay internal
 
@@ -102,8 +102,8 @@ raw escape hatch 必须显式标记，并经过安全边界。
 
 自由 HTML 不应成为默认路径。
 
-## 16. render config selects approved profiles only
+## 16. render config selects approved visual configs only
 
-render config header 只能选择已注册 presentation profile，或携带与该 profile 绑定的极少量受控 profile token。
+render config header 只能选择已批准的 document style config reference，或在兼容期选择映射到该配置层的 presentation profile alias，或携带与该 alias 绑定的极少量受控 token。
 
 它不得成为 CSS、Tailwind class、shadcn props、script、style 或外部资源的逃逸口。

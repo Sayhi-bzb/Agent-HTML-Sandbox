@@ -307,7 +307,12 @@ export const COMPONENT_SCHEMA_OVERLAYS = [
     name: "select",
     description: "Single-select option picker.",
     expose: true,
-    sourceComponents: ["Select", "SelectTrigger", "SelectContent", "SelectItem"],
+    sourceComponents: [
+      "Select",
+      "SelectTrigger",
+      "SelectContent",
+      "SelectItem",
+    ],
     props: [
       {
         name: "label",
@@ -327,7 +332,14 @@ export const COMPONENT_SCHEMA_OVERLAYS = [
       },
     ],
     allowedChildren: ["option"],
-    hiddenProps: ["defaultValue", "open", "dir", "name", "disabled", "required"],
+    hiddenProps: [
+      "defaultValue",
+      "open",
+      "dir",
+      "name",
+      "disabled",
+      "required",
+    ],
   },
   {
     name: "combobox",
@@ -359,7 +371,13 @@ export const COMPONENT_SCHEMA_OVERLAYS = [
       },
     ],
     allowedChildren: ["option"],
-    hiddenProps: ["defaultValue", "disabled", "list", "placeholder", "required"],
+    hiddenProps: [
+      "defaultValue",
+      "disabled",
+      "list",
+      "placeholder",
+      "required",
+    ],
   },
   {
     name: "option",

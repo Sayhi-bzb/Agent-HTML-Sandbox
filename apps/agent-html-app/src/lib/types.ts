@@ -17,6 +17,7 @@ export type SessionDetail = {
   summary: SessionSummary
   sourcePath: string
   previewPath?: string
+  lastBuild?: BuildRunSummary
   logDirectory: string
   chatPath: string
   currentView: WorkbenchView

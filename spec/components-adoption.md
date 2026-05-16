@@ -40,6 +40,46 @@ Status:
 - `defer`
 - `do-not-expose`
 
+## Layer Separation Guidance
+
+当前 shipped compatibility surface 仍通过命名 `profile` 暴露公共视觉入口：
+
+- agent-facing render config 当前仍只有命名 `profile`。
+- `profile` 应被视为 approved `DocumentStyleConfigReference` 的兼容别名，
+  不是 theme token 集合，也不是 per-component variant 集合。
+- `theme`、`density`、`tone`、`width` 继续是 resolved internal tokens，不是
+  agent-facing config vocabulary。
+- 本节定义的是长期分层原则与内部 visual mapping guardrails，
+  不是当前 prompt / schema 已开放的自由参数面，也不意味着未来会开放组件级
+  public style 参数。
+
+推荐维持三层隔离：
+
+| Layer | Owns | Can decide | Must not decide |
+| --- | --- | --- | --- |
+| `usage layer` | agent-facing schema / `.agent.html` | 组件名、语义 props、slot / child 结构、稳定值 | theme、radius、spacing、variant、Tailwind class、shadcn props |
+| `configuration layer` | approved document style config reference | 文档级视觉入口，以及它触发的受控视觉策略集 | 组件语义、允许 children、trigger 结构、fallback 行为、per-component public knobs、任意 CSS 逃逸 |
+| `implementation layer` | renderer / managed runtime / shadcn | 具体 exports、variant 映射、Tailwind、Radix/Base UI 组合细节 | agent-facing contract 或文档写作协议 |
+
+参数归类规则：
+
+- 属于内容意义、结构意义、稳定 identity 或稳定选择状态的参数，进入
+  `usage layer`。
+- 只影响最终视觉实现，但不改变语义树和交互边界的参数，不进入 public
+  `usage layer`；当前应由 document-level config reference 经过内部 visual
+  mapping 间接决定。
+- 依赖 shadcn 组合方式、Radix / Base UI state wiring、`cva` variants、
+  Tailwind class 或内部 exports 的参数，留在 `implementation layer`。
+
+文档级配置层长期保持“外部引用”模型：
+
+- 文档只引用一个 approved `DocumentStyleConfigReference`；当前 compatibility
+  surface 可继续使用命名 `profile` 指向该引用。
+- 真实的 per-component 视觉规则属于内部 visual mapping，不进入正文积木协议，
+  也不形成单独的 public config key。
+- 同一语义组件在不同 document style reference 下可以换视觉实现，但不得换
+  语义、结构或 renderer kind。
+
 ## Supported Today
 
 | Component | Archetype | Note |
@@ -61,6 +101,46 @@ Status:
 | `table` | `table` | 结构化证据表格。 |
 | `tabs` | `tabs` | 多视图切换结构。 |
 | `accordion` | `interactive-collection` | 折叠分组结构。 |
+
+## Supported Component Parameter Split
+
+下表只覆盖当前 `supported` 组件。它回答三件事：
+
+- agent 在语义使用时能写什么。
+- document-level config 可通过哪些内部 visual mapping 间接影响最终外观。
+- 哪些参数必须继续锁在 shadcn / renderer 实现层。
+
+| Component(s) | Agent can use | Internal visual mapping examples | Keep internal |
+| --- | --- | --- | --- |
+| `alert` | `title`、`tone`、text children | `neutral/danger` 的视觉映射、container emphasis、icon / border / surface treatment | `variant`、class、destructive implementation |
+| `badge` | `tone`、text children | tone 到 badge treatment 的映射、shape、weight、fill / outline strategy | `variant`、class |
+| `progress` | `value` | track / fill style、height、radius、density spacing | 具体 class、animation / CSS wiring |
+| `card` | `title`、allowed children | surface、border、radius、padding、header/content spacing、title emphasis | `size`、内部 shell composition |
+| `separator` | none | divider thickness、tone、vertical rhythm policy | 具体 class、orientation wiring |
+| `input` / `textarea` | `label`、`value`、`description` | field chrome、padding、label/help text treatment、invalid / disabled visuals | `defaultValue`、`required`、implementation props |
+| `checkbox` / `switch` | `label`、`checked`、`description` | control chrome、track/thumb/check treatment、field spacing | controlled state wiring、implementation props |
+| `slider` | `label`、`value`、`description` | track / thumb treatment、field spacing、numeric emphasis | controlled state wiring、implementation props |
+| `radio-group` | `label`、`value`、`description`、`option.value`、`option.label` | option spacing、selected/unselected treatment、group shell chrome | group wiring、shadcn item composition |
+| `toggle-group` | `label`、`value`、`description`、`option.value`、`option.label` | option spacing、active/inactive treatment、group shell chrome | controlled selection wiring、group/item implementation |
+| `select` / `combobox` | `label`、`value`、`description`、`option.value`、`option.label` | trigger visual、panel visual、item hover/selected treatment、empty-state treatment | `defaultValue`、`placeholder`、list / trigger / content implementation、overlay / collection state wiring |
+| `table` | `row.kind`、`cell` text content | header/body treatment、row dividers、striping、cell padding、numeric/text emphasis | table export choice、DOM structure details |
+| `tabs` | `default`、`tab.value`、`tab.label`、tab children | tabs list treatment、active trigger treatment、content pane shell | `defaultValue`、`value`、trigger/content export wiring、fallback implementation |
+| `accordion` | `accordion-item.value`、`accordion-item.title`、item children | item shell、trigger emphasis、content spacing、divider treatment | `type`、`collapsible`、open-close wiring、trigger/content export wiring |
+
+补充约束：
+
+- `tone` 这类参数只在少量组件中保留，作为“语义带视觉暗示”的词；
+  它们不等于开放自由视觉调参。
+- `value`、`label`、`description`、`title`、`kind` 这类参数属于语义或结构输入，
+  即使它们会影响最终呈现，也不应下沉为纯样式配置。
+- `checked`、`value`、`default` 这类状态样参数记录的是 document-stable
+  snapshot，不是 runtime controlled API，也不意味着暴露 `defaultValue`、
+  `open`、`onValueChange` 之类 shadcn props。
+- broader public contract 中现存的 `list.variant` 只是语义 marker style 的历史
+  例外，不构成开放 shadcn-style `variant` 的先例；若该 vocabulary 重开，优先
+  迁移为 `kind`。
+- `variant`、`size`、`surface`、`radius`、`spacing`、`className`、
+  Tailwind class、Radix / Base UI props 不进入 agent-facing 使用层。
 
 ## Outside Current Contract
 
@@ -85,11 +165,46 @@ Status:
 | `menubar` | `do-not-expose` | `menu` | 应用壳菜单。 |
 | `navigation-menu` | `do-not-expose` | `navigation` | 应用壳导航。 |
 
+这些组件之所以仍在当前 contract 外，一部分深层原因正是隔离成本更高：
+
+- overlay / contextual reveal 组件依赖 trigger、portal、focus trap、open state
+  和 fallback 语义。
+- 若没有新的 archetype，很难同时做到“标准化使用层”与“受控配置层”。
+- 在隔离边界没证明之前，不应用“先安装到 runtime”替代“进入 public contract”。
+
+## Why Shadcn Works For This Separation
+
+基于 shadcn 的组件特点，实现“定制”和“使用”隔离的核心方式是：
+
+1. 把 shadcn 当作实现底座，不当作公开协议。
+   `Card`、`TabsList`、`TabsTrigger`、`SelectContent`、`AccordionTrigger`
+   这类 exports 属于实现层，不直接进入 agent-facing vocabulary。
+
+2. 用 archetype 吃掉组件差异，不用完整 props 直通。
+   当前 `compound`、`field-control`、`option-set`、`table`、`tabs`、
+   `interactive-collection` 已经在承担这件事。
+
+3. 用语义 prop 映射少量视觉含义，而不是开放 shadcn `variant`。
+   例如 `alert.tone -> Alert variant`、`badge.tone -> Badge variant`
+   可以存在，但映射规则应由 renderer / config 层维护。
+
+4. 把 document style reference、其 resolved tokens，以及 surface treatment
+   留给配置层或内部映射层。当前 compatibility `profile` 只是 document style
+   reference alias，不应被扩写成通用视觉参数面。
+
+5. 把组合结构和 state wiring 锁在实现层。
+   `tabs` 的 trigger/content、`select` 的 trigger/content/item、`accordion`
+   的 item/trigger/content 组合必须由 adapter 固定生成，而不是让 agent 或样式配置改写。
+
 ## Current State
 
 - `combobox`、`switch` 和 `slider` 这一批 grouped adoption 已关闭。
 - 当前 artifact-focused support surface 已稳定。
 - 当前 lane 不包含 overlay、menu、navigation 或 app-shell 语义。
+- 当前公开 render-config 仍是 `profile` 唯一入口；它是 document-level style
+  reference 的兼容入口，不是 theme / variant token surface。
+- 本文出现的组件级 visual mapping 仅是内部设计指导，不是当前 schema 已开放
+  能力，也不是 future public config 承诺。
 - 当前无 active shadcn debt；只有在未来升级导致本地 fixture drift 时再重开。
 
 

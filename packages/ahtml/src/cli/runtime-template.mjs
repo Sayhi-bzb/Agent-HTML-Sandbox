@@ -380,6 +380,7 @@ export function createRuntimeElementRegistrySource(registrySpec) {
   ]
 
   return [
+    "/* eslint-disable @typescript-eslint/no-unsafe-assignment */",
     'import React from "react"',
     ...imports,
     "",

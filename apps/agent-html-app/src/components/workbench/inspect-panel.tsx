@@ -24,6 +24,7 @@ import {
   type SourceFocusTarget,
 } from "../../lib/source-focus"
 import { getSourceFocusViewModel } from "../../lib/source-focus-view"
+import { getLogInsightViewModel } from "../../lib/log-insight"
 import { formatTimestampLabel } from "../../lib/time"
 import type {
   AgentShellMessage,
@@ -97,6 +98,10 @@ export function InspectPanel({
   const reviewFocus = deriveReviewFocus(inspect, logs)
   const inspectDiagnosticsView = getInspectDiagnosticsViewModel(inspect)
   const sourceValidationView = getSourceValidationViewModel(sourceValidation)
+  const logInsight = getLogInsightViewModel({
+    build: inspect.lastBuild ?? build,
+    logs,
+  })
   const reviewAudit = getInspectReviewSummary({
     build,
     draftComparison,
@@ -666,15 +671,16 @@ export function InspectPanel({
         <SurfaceCard variant="summary">
           <SurfaceCardHeader eyebrow="Captured outputs" />
           <SurfaceCardBody className="grid gap-3 px-[16px] pb-[16px]">
-            <h4>
-              {stdoutAvailable || stderrAvailable
-                ? "Logs ready for review"
-                : "No logs captured yet"}
-            </h4>
-            <p>
-              stdout {stdoutAvailable ? "available" : "missing"} · stderr{" "}
-              {stderrAvailable ? "available" : "missing"}
-            </p>
+            <h4>{logInsight.headline}</h4>
+            <p>{logInsight.summary}</p>
+            <div className="inspect-summary-issue-list">
+              {logInsight.items.map((item) => (
+                <div className="proposal-meta-row" key={item.id}>
+                  <StatusBadge tone={item.tone}>{item.label}</StatusBadge>
+                  <span className="inline-meta">{item.detail}</span>
+                </div>
+              ))}
+            </div>
           </SurfaceCardBody>
         </SurfaceCard>
       </div>
@@ -794,17 +800,30 @@ export function InspectPanel({
         <SurfaceCard variant="summary">
           <SurfaceCardHeader eyebrow="Logs" />
           <SurfaceCardBody className="px-[16px] pb-[16px]">
+            <div className="inspect-summary-issue-list">
+              {logInsight.streams.map((stream) => (
+                <div className="inspect-step-item" key={stream.id}>
+                  <div className="message-topline">
+                    <StatusBadge tone={stream.tone}>{stream.label}</StatusBadge>
+                    <span className="inline-meta">{stream.headline}</span>
+                  </div>
+                  <p className="inspect-summary-detail">{stream.detail}</p>
+                </div>
+              ))}
+            </div>
             <div className="log-grid">
               <div>
                 <p className="eyebrow">stdout</p>
                 <pre className="log-surface">
-                  {logs.stdout ?? "No stdout log yet."}
+                  {logInsight.streams.find((stream) => stream.id === "stdout")
+                    ?.preview ?? "No stdout log yet."}
                 </pre>
               </div>
               <div>
                 <p className="eyebrow">stderr</p>
                 <pre className="log-surface">
-                  {logs.stderr?.length ? logs.stderr : "No stderr log yet."}
+                  {logInsight.streams.find((stream) => stream.id === "stderr")
+                    ?.preview ?? "No stderr log yet."}
                 </pre>
               </div>
             </div>

@@ -1,3 +1,7 @@
+mod chat_store;
+mod inspect_payload;
+mod session_store;
+
 use camino::{Utf8Path, Utf8PathBuf};
 use fs_err as fs;
 use serde::{Deserialize, Serialize};
@@ -7,7 +11,22 @@ use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Manager};
 use thiserror::Error;
+use time::format_description::well_known::Rfc3339;
+use time::OffsetDateTime;
 use tracing::{info, info_span};
+use chat_store::{
+    append_chat_message_to_file, default_chat_messages, read_chat_messages,
+    write_chat_messages,
+};
+use inspect_payload::{
+    diagnostics_from_inspect_payload, diagnostics_from_validation_payload,
+    structure_summary_from_inspection_value,
+    structure_summary_from_validation_payload,
+};
+use session_store::{
+    load_session_detail_from_dir, read_session_record, update_session_view_record,
+    write_session_record,
+};
 
 const SOURCE_FILE_NAME: &str = "source.agent.html";
 const SESSION_FILE_NAME: &str = "session.json";
@@ -34,6 +53,7 @@ struct SessionDetail {
     summary: SessionSummary,
     source_path: String,
     preview_path: Option<String>,
+    last_build: Option<BuildRunSummary>,
     log_directory: String,
     chat_path: String,
     current_view: String,
@@ -162,6 +182,14 @@ struct SessionRecord {
     pinned: bool,
     updated_at: String,
     last_build_at: Option<String>,
+    #[serde(default)]
+    last_build_status: Option<String>,
+    #[serde(default)]
+    last_build_exit_code: Option<i32>,
+    #[serde(default)]
+    last_build_stdout_path: Option<String>,
+    #[serde(default)]
+    last_build_stderr_path: Option<String>,
     has_preview: bool,
     current_view: String,
 }
@@ -353,6 +381,10 @@ fn create_session(app: AppHandle, input: SessionCreateInput) -> Result<SessionDe
         pinned: false,
         updated_at: now_iso_stub(),
         last_build_at: None,
+        last_build_status: None,
+        last_build_exit_code: None,
+        last_build_stdout_path: None,
+        last_build_stderr_path: None,
         has_preview: false,
         current_view: "source".into(),
     };
@@ -780,6 +812,8 @@ fn run_build_internal(app: &AppHandle, session_id: &str) -> Result<BuildRunSumma
     let preview_path = preview_path(&session_dir)
         .filter(|path| path.exists())
         .map(path_to_string);
+    let stdout_path = path_to_string(execution.stdout_path.clone());
+    let stderr_path = path_to_string(execution.stderr_path.clone());
     let succeeded = execution
         .json
         .as_ref()
@@ -792,6 +826,10 @@ fn run_build_internal(app: &AppHandle, session_id: &str) -> Result<BuildRunSumma
     record.status = if succeeded { "ready" } else { "error" }.into();
     record.updated_at = now_iso_stub();
     record.last_build_at = Some(now_iso_stub());
+    record.last_build_status = Some(if succeeded { "succeeded" } else { "failed" }.into());
+    record.last_build_exit_code = execution.exit_code;
+    record.last_build_stdout_path = Some(stdout_path.clone());
+    record.last_build_stderr_path = Some(stderr_path.clone());
     record.has_preview = preview_path.is_some();
     record.current_view = if succeeded { "preview" } else { "inspect" }.into();
     write_session_record(&session_dir, &record)?;
@@ -807,8 +845,8 @@ fn run_build_internal(app: &AppHandle, session_id: &str) -> Result<BuildRunSumma
             "failed".into()
         },
         exit_code: execution.exit_code,
-        stdout_path: Some(path_to_string(execution.stdout_path)),
-        stderr_path: Some(path_to_string(execution.stderr_path)),
+        stdout_path: Some(stdout_path),
+        stderr_path: Some(stderr_path),
         preview_path,
     })
 }
@@ -954,156 +992,6 @@ fn session_dir(app: &AppHandle, session_id: &str) -> Result<Utf8PathBuf, AppErro
     Ok(path)
 }
 
-fn load_session_detail_from_dir(session_dir: &Utf8Path) -> Result<SessionDetail, AppError> {
-    let record = read_session_record(session_dir)?;
-    let source_path = session_dir.join(SOURCE_FILE_NAME);
-    let chat_path = session_dir.join(CHAT_FILE_NAME);
-    let log_directory = session_dir.join(LOGS_DIR_NAME);
-    let source = fs::read_to_string(&source_path).map_err(|error| {
-        AppError::from(BackendError::session_io(
-            "Unable to read source file.",
-            error,
-        ))
-        .with_session(record.id.clone())
-    })?;
-
-    Ok(SessionDetail {
-        summary: SessionSummary {
-            id: record.id.clone(),
-            name: record.name.clone(),
-            directory: path_to_string(session_dir.to_path_buf()),
-            status: record.status.clone(),
-            pinned: record.pinned,
-            updated_at: record.updated_at.clone(),
-            last_build_at: record.last_build_at.clone(),
-            has_preview: record.has_preview,
-        },
-        source_path: path_to_string(source_path),
-        preview_path: preview_path(session_dir).filter(|path| path.exists()).map(path_to_string),
-        log_directory: path_to_string(log_directory),
-        chat_path: path_to_string(chat_path),
-        current_view: record.current_view,
-        source,
-    })
-}
-
-fn read_session_record(session_dir: &Utf8Path) -> Result<SessionRecord, AppError> {
-    let record_path = session_dir.join(SESSION_FILE_NAME);
-    let raw = fs::read_to_string(&record_path).map_err(|error| {
-        AppError::from(BackendError::session_io(
-            "Unable to read session metadata.",
-            error,
-        ))
-    })?;
-
-    serde_json::from_str(&raw).map_err(|error| {
-        AppError::from(BackendError::json(
-            "session-io",
-            "Session metadata is invalid JSON.",
-            error,
-        ))
-    })
-}
-
-fn read_chat_messages(session_dir: &Utf8Path) -> Result<Vec<AgentShellMessage>, AppError> {
-    let chat_path = session_dir.join(CHAT_FILE_NAME);
-
-    if !chat_path.exists() {
-        let defaults = default_chat_messages();
-        write_chat_messages(session_dir, &defaults)?;
-        return Ok(defaults);
-    }
-
-    let source = fs::read_to_string(&chat_path).map_err(|error| {
-        AppError::from(BackendError::session_io(
-            "Unable to read chat log.",
-            error,
-        ))
-    })?;
-
-    if source.trim().is_empty() {
-        return Ok(Vec::new());
-    }
-
-    source
-        .lines()
-        .enumerate()
-        .filter(|(_, line)| !line.trim().is_empty())
-        .map(|(index, line)| {
-            serde_json::from_str::<AgentShellMessage>(line).map_err(|error| {
-                AppError::from(BackendError::json(
-                    "session-io",
-                    format!("Invalid chat log entry at line {}.", index + 1),
-                    error,
-                ))
-            })
-        })
-        .collect()
-}
-
-fn write_chat_messages(
-    session_dir: &Utf8Path,
-    messages: &[AgentShellMessage],
-) -> Result<(), AppError> {
-    let chat_path = session_dir.join(CHAT_FILE_NAME);
-    let content = if messages.is_empty() {
-        String::new()
-    } else {
-        format!(
-            "{}\n",
-            messages
-                .iter()
-                .map(|message| serde_json::to_string(message))
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|error| {
-                    AppError::from(BackendError::json(
-                        "session-io",
-                        "Unable to serialize chat messages.",
-                        error,
-                    ))
-                })?
-                .join("\n")
-        )
-    };
-
-    fs::write(chat_path, content).map_err(|error| {
-        AppError::from(BackendError::session_io(
-            "Unable to write chat log.",
-            error,
-        ))
-    })
-}
-
-fn append_chat_message_to_file(
-    session_dir: &Utf8Path,
-    message: &AgentShellMessage,
-) -> Result<(), AppError> {
-    let mut messages = read_chat_messages(session_dir)?;
-    messages.push(message.clone());
-    write_chat_messages(session_dir, &messages)
-}
-
-fn write_session_record(
-    session_dir: &Utf8Path,
-    record: &SessionRecord,
-) -> Result<(), AppError> {
-    let record_path = session_dir.join(SESSION_FILE_NAME);
-    let serialized = serde_json::to_string_pretty(record).map_err(|error| {
-        AppError::from(BackendError::json(
-            "session-io",
-            "Unable to serialize session metadata.",
-            error,
-        ))
-    })?;
-
-    fs::write(record_path, serialized).map_err(|error| {
-        AppError::from(BackendError::session_io(
-            "Unable to write session metadata.",
-            error,
-        ))
-    })
-}
-
 fn build_session_proposal_text(
     record: &SessionRecord,
     source: &str,
@@ -1186,6 +1074,22 @@ fn build_run_summary_from_record(
     record: &SessionRecord,
     session_dir: &Utf8Path,
 ) -> Option<BuildRunSummary> {
+    let status = record
+        .last_build_status
+        .as_deref()
+        .and_then(parse_build_status)
+        .or_else(|| {
+            if record.has_preview {
+                Some("succeeded")
+            } else if record.status == "error" {
+                Some("failed")
+            } else if record.status == "building" {
+                Some("running")
+            } else {
+                None
+            }
+        });
+
     let started_at = record
         .last_build_at
         .clone()
@@ -1194,7 +1098,7 @@ fn build_run_summary_from_record(
         .filter(|path| path.exists())
         .map(path_to_string);
 
-    if !record.has_preview && record.last_build_at.is_none() {
+    if preview_path.is_none() && record.last_build_at.is_none() && status.is_none() {
         return None;
     }
 
@@ -1203,41 +1107,24 @@ fn build_run_summary_from_record(
         session_id: record.id.clone(),
         started_at: started_at.clone(),
         finished_at: record.last_build_at.clone(),
-        status: if record.has_preview {
-            "succeeded".into()
-        } else if record.status == "error" {
-            "failed".into()
-        } else if record.status == "building" {
-            "running".into()
-        } else {
-            "idle".into()
-        },
-        exit_code: if record.has_preview { Some(0) } else { None },
-        stdout_path: None,
-        stderr_path: None,
+        status: status.unwrap_or("idle").into(),
+        exit_code: record
+            .last_build_exit_code
+            .or_else(|| if preview_path.is_some() { Some(0) } else { None }),
+        stdout_path: record.last_build_stdout_path.clone(),
+        stderr_path: record.last_build_stderr_path.clone(),
         preview_path,
     })
 }
 
-fn update_session_view_record(
-    session_dir: &Utf8Path,
-    view: &str,
-    session_id: Option<String>,
-) -> Result<(), AppError> {
-    if !matches!(view, "preview" | "source" | "inspect") {
-        let error = AppError::from(BackendError::ui_validation(
-            "Session view must be preview, source, or inspect.",
-        ));
-
-        return Err(match session_id {
-            Some(id) => error.with_session(id),
-            None => error,
-        });
+fn parse_build_status(status: &str) -> Option<&'static str> {
+    match status {
+        "idle" => Some("idle"),
+        "running" => Some("running"),
+        "failed" => Some("failed"),
+        "succeeded" => Some("succeeded"),
+        _ => None,
     }
-
-    let mut record = read_session_record(session_dir)?;
-    record.current_view = view.to_string();
-    write_session_record(session_dir, &record)
 }
 
 fn preview_path(session_dir: &Utf8Path) -> Option<Utf8PathBuf> {
@@ -1266,173 +1153,10 @@ fn read_latest_log(logs_dir: &Utf8Path, suffix: &str) -> Option<String> {
     fs::read_to_string(latest).ok()
 }
 
-fn diagnostics_from_inspect_payload(payload: &Value, exit_code: Option<i32>) -> Vec<DiagnosticItem> {
-    if payload.get("kind").and_then(Value::as_str) == Some("agent-html-inspection") {
-        return Vec::new();
-    }
-
-    if exit_code != Some(0) {
-        return vec![DiagnosticItem {
-            id: "inspect-failed".into(),
-            severity: "error".into(),
-            message: "Inspect failed before machine-readable diagnostics were available. Check the inspect logs.".into(),
-            source: "inspect".into(),
-            line: None,
-            column: None,
-            code: Some("inspect-failed".into()),
-        }];
-    }
-
-    Vec::new()
-}
-
-fn diagnostics_from_validation_payload(
-    payload: &Value,
-    exit_code: Option<i32>,
-) -> Vec<DiagnosticItem> {
-    let Some(kind) = payload.get("kind").and_then(Value::as_str) else {
-        return validation_fallback_diagnostics(exit_code);
-    };
-
-    if kind != "agent-html-validation-result" {
-        return validation_fallback_diagnostics(exit_code);
-    }
-
-    let diagnostics = payload
-        .get("diagnostics")
-        .and_then(Value::as_array)
-        .map(|items| {
-            items
-                .iter()
-                .enumerate()
-                .map(|(index, item)| DiagnosticItem {
-                    id: format!("validation-{index}"),
-                    severity: item
-                        .get("severity")
-                        .and_then(Value::as_str)
-                        .unwrap_or("error")
-                        .to_string(),
-                    message: item
-                        .get("message")
-                        .and_then(Value::as_str)
-                        .unwrap_or("Validation failed without a diagnostic message.")
-                        .to_string(),
-                    source: item
-                        .get("path")
-                        .and_then(Value::as_str)
-                        .unwrap_or("validation")
-                        .to_string(),
-                    line: None,
-                    column: None,
-                    code: item
-                        .get("code")
-                        .and_then(Value::as_str)
-                        .map(|code| code.to_string()),
-                })
-                .collect::<Vec<_>>()
-        })
-        .unwrap_or_default();
-
-    if diagnostics.is_empty() && exit_code != Some(0) {
-        return validation_fallback_diagnostics(exit_code);
-    }
-
-    diagnostics
-}
-
-fn structure_summary_from_inspection(inspection: &Value) -> String {
-    let Some(components) = inspection.get("components").and_then(Value::as_array) else {
-        return "Inspection data is missing component counts.".into();
-    };
-
-    if components.is_empty() {
-        return "No components found.".into();
-    }
-
-    components
-        .iter()
-        .map(|component| {
-            let name = component
-                .get("name")
-                .and_then(Value::as_str)
-                .unwrap_or("unknown");
-            let count = component
-                .get("count")
-                .and_then(Value::as_u64)
-                .unwrap_or(0);
-            format!("{name} x{count}")
-        })
-        .collect::<Vec<_>>()
-        .join(", ")
-}
-
-fn structure_summary_from_inspection_value(payload: &Value) -> String {
-    if payload.get("kind").and_then(Value::as_str) == Some("agent-html-inspection") {
-        return structure_summary_from_inspection(payload);
-    }
-
-    "No inspection summary available yet.".into()
-}
-
-fn structure_summary_from_validation_payload(payload: &Value) -> String {
-    if payload.get("kind").and_then(Value::as_str) != Some("agent-html-validation-result") {
-        return "Validation summary unavailable.".into();
-    }
-
-    if payload.get("ok").and_then(Value::as_bool) == Some(true) {
-        if let Some(inspection) = payload.get("inspection") {
-            return structure_summary_from_inspection(inspection);
-        }
-
-        return "Validation passed without an inspection summary.".into();
-    }
-
-    "Validation reported source issues.".into()
-}
-
-fn validation_fallback_diagnostics(exit_code: Option<i32>) -> Vec<DiagnosticItem> {
-    if exit_code == Some(0) {
-        return Vec::new();
-    }
-
-    vec![DiagnosticItem {
-        id: "validation-failed".into(),
-        severity: "error".into(),
-        message: "Validation failed before structured diagnostics were available. Check the validation logs.".into(),
-        source: "validation".into(),
-        line: None,
-        column: None,
-        code: Some("validation-failed".into()),
-    }]
-}
-
 fn default_source(name: &str) -> String {
     format!(
         "<meta-agent profile=\"report-default\" />\n\n<page title=\"{name}\">\n  <card title=\"Summary\">\n    Draft the first artifact content here.\n  </card>\n</page>\n"
     )
-}
-
-fn default_chat_messages() -> Vec<AgentShellMessage> {
-    let created_at = now_iso_stub();
-
-    vec![
-        AgentShellMessage {
-            id: format!("chat-{}", now_epoch_millis()),
-            role: "system".into(),
-            created_at: created_at.clone(),
-            text: "Agent shell is session-backed. Live provider integration is intentionally disabled in v1.".into(),
-            kind: "message".into(),
-            proposal_snapshot: None,
-        },
-        AgentShellMessage {
-            id: format!("chat-{}", now_epoch_millis() + 1),
-            role: "placeholder".into(),
-            created_at,
-            text: "Prompt drafts, placeholder replies, and future proposals are persisted in chat.jsonl.".into(),
-            kind: "proposal-placeholder".into(),
-            proposal_snapshot: None,
-        },
-    ]
 }
 
 fn slugify(input: &str) -> String {
@@ -1467,7 +1191,9 @@ fn now_epoch_millis() -> u128 {
 }
 
 fn now_iso_stub() -> String {
-    format!("epoch-{}", now_epoch_millis())
+    OffsetDateTime::now_utc()
+        .format(&Rfc3339)
+        .unwrap_or_else(|_| format!("epoch-{}", now_epoch_millis()))
 }
 
 fn path_to_string(path: Utf8PathBuf) -> String {
@@ -1516,8 +1242,9 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_session_proposal_text, read_session_record, update_session_view_record,
-        write_session_record, BuildRunSummary, LogSnapshot, SessionRecord,
+        build_run_summary_from_record, build_session_proposal_text, read_session_record,
+        update_session_view_record, write_session_record, BuildRunSummary, LogSnapshot,
+        SessionRecord,
     };
     use camino::Utf8PathBuf;
     use std::fs;
@@ -1537,6 +1264,10 @@ mod tests {
                 pinned: false,
                 updated_at: "epoch-1".into(),
                 last_build_at: None,
+                last_build_status: None,
+                last_build_exit_code: None,
+                last_build_stdout_path: None,
+                last_build_stderr_path: None,
                 has_preview: false,
                 current_view: "source".into(),
             },
@@ -1564,6 +1295,10 @@ mod tests {
                 pinned: false,
                 updated_at: "epoch-1".into(),
                 last_build_at: None,
+                last_build_status: None,
+                last_build_exit_code: None,
+                last_build_stdout_path: None,
+                last_build_stderr_path: None,
                 has_preview: false,
                 current_view: "source".into(),
             },
@@ -1588,6 +1323,10 @@ mod tests {
             pinned: false,
             updated_at: "epoch-1".into(),
             last_build_at: Some("epoch-2".into()),
+            last_build_status: None,
+            last_build_exit_code: None,
+            last_build_stdout_path: None,
+            last_build_stderr_path: None,
             has_preview: false,
             current_view: "inspect".into(),
         };
@@ -1615,6 +1354,50 @@ mod tests {
         assert!(text.contains("[inspect]"));
         assert!(text.contains("stderr log"));
         assert!(text.contains("[build] The latest build failed"));
+    }
+
+    #[test]
+    fn build_run_summary_from_record_keeps_failed_status_with_stale_preview() {
+        let session_dir = test_session_dir("restore-failed-build");
+        fs::create_dir_all(session_dir.join("build")).expect("create build dir");
+        fs::write(session_dir.join("build").join("index.html"), "<html />")
+            .expect("write preview");
+
+        let summary = build_run_summary_from_record(
+            &SessionRecord {
+                id: "session-test".into(),
+                name: "Session Test".into(),
+                status: "error".into(),
+                pinned: false,
+                updated_at: "epoch-1".into(),
+                last_build_at: Some("2026-05-16T09:00:00Z".into()),
+                last_build_status: Some("failed".into()),
+                last_build_exit_code: Some(1),
+                last_build_stdout_path: Some("D:/tmp/build.stdout.log".into()),
+                last_build_stderr_path: Some("D:/tmp/build.stderr.log".into()),
+                has_preview: true,
+                current_view: "inspect".into(),
+            },
+            &session_dir,
+        )
+        .expect("summary");
+
+        assert_eq!(summary.status, "failed");
+        assert_eq!(summary.exit_code, Some(1));
+        assert_eq!(
+            summary.stdout_path.as_deref(),
+            Some("D:/tmp/build.stdout.log")
+        );
+        assert_eq!(
+            summary.stderr_path.as_deref(),
+            Some("D:/tmp/build.stderr.log")
+        );
+        assert_eq!(
+            summary.preview_path,
+            Some(session_dir.join("build").join("index.html").into_string())
+        );
+
+        let _ = fs::remove_dir_all(&session_dir);
     }
 
     fn test_session_dir(suffix: &str) -> Utf8PathBuf {

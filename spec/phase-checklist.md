@@ -14,9 +14,18 @@ and reopen guide instead of a phase-by-phase execution log.
 
 ## Guardrails
 
-- README, docs, skill guidance, CLI help, and schema prompt keep semantic
-  component contract plus presentation profile vocabulary.
-- CLI schema keeps exposing `profile` as the only public render-config entry.
+- README、docs、skill guidance、CLI help 和 schema prompt 继续保持
+  semantic component contract 与受控视觉配置 vocabulary。当前兼容 surface
+  可继续暴露 `profile`，但目标架构不再把它视为唯一长期视觉入口。
+- Public agent-facing rules derive from the shared public agent contract;
+  runtime verification and renderer parity derive from the shared runtime
+  contract.
+- CLI schema 继续暴露受控文档级视觉配置入口；当前实现可继续通过
+  `profile` 兼容暴露该入口。
+- 组件级 visual mapping 说明仅作为内部设计与 renderer guardrail，不升级为
+  schema、prompt 或 `.agent.html` 的 public config key。
+- Public 状态样参数保持 semantic snapshot 语义，不回退成 shadcn
+  `defaultValue`、`open`、`onValueChange` 一类控制面。
 - Sanitize keeps rejecting legacy `<ui>` / `<slot>` input and old non-profile
   render-config input.
 - Future renderer work stays on the shared semantic-to-runtime path instead of

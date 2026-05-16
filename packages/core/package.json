@@ -1,6 +1,6 @@
 {
   "name": "@agent-html/core",
-  "version": "0.1.0",
+  "version": "0.2.0-alpha.1",
   "description": "Core contracts and sanitization for agent-html.",
   "license": "MIT",
   "type": "module",

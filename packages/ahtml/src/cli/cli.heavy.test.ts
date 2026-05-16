@@ -300,10 +300,7 @@ describe("agent-html CLI heavy runtime flows", () => {
       path.join(outputDir, "index.html"),
       '<noscript><section class="grid gap-3"><section class="grid gap-3"><h2 class="m-0 text-lg font-medium leading-7">Details</h2>',
     )
-    await expectFile(
-      path.join(outputDir, "index.html"),
-      "Today (selected)",
-    )
+    await expectFile(path.join(outputDir, "index.html"), "Today (selected)")
     await expectFileMissingText(path.join(outputDir, "index.html"), "<datalist")
     await expectFile(
       path.join(outputDir, "index.html"),
@@ -687,7 +684,9 @@ describe("agent-html CLI heavy runtime flows", () => {
     )
 
     if (!card) {
-      throw new Error("Expected card verification entry in runtime verification data.")
+      throw new Error(
+        "Expected card verification entry in runtime verification data.",
+      )
     }
 
     card.slots.push({ name: "actions", children: [] })

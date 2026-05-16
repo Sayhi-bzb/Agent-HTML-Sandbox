@@ -15,7 +15,10 @@ const compiled = new Set()
 const outRoot = path.join(
   os.tmpdir(),
   "ahtml-core-package",
-  createHash("sha256").update(packageRoot).digest("hex").slice(0, 16),
+  createHash("sha256")
+    .update(`${packageRoot}:${process.pid}`)
+    .digest("hex")
+    .slice(0, 16),
 )
 const core = await loadCoreModule()
 

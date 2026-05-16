@@ -73,12 +73,18 @@ Open the preview URL printed by `ahtml preview` to review the output.
 ```txt
 agent work
   -> semantic .agent.html
-  -> schema validation
+  -> public agent contract
+  -> runtime contract
   -> portable HTML artifact
 ```
 
 The schema is the public contract. Agents write content structure, not raw HTML, CSS, JavaScript, Tailwind classes, or renderer props.
 Public visual choice is limited to named `profile` ids such as `report-default` or `ops-compact`, not free-form `theme`, `density`, `tone`, or `width` inputs.
+
+The workspace publishes two package roles:
+
+- `@agent-html/core`: public agent contract, shared types, and sanitization
+- `@agent-html/ahtml`: CLI, managed runtime bootstrap, and runtime contract consumption
 
 ## More
 
@@ -101,10 +107,13 @@ Public visual choice is limited to named `profile` ids such as `report-default` 
 │
 ╰──────────────
 ```
+
 thanks:
+
 - [Linux DO](linux.do)
 
 ## Ref
+
 - [Quick Start](https://agent-html.pages.dev/docs)
 - [Best Practice](https://agent-html.pages.dev/docs/best-practice)
 - [Dev Docs](https://agent-html.pages.dev/docs/dev-docs)

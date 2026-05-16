@@ -6,7 +6,7 @@ import {
   SurfaceCardHeader,
 } from "@/components/ui/surface-card"
 import type { BuildRunSummary } from "../../lib/types"
-import { formatTimestampLabel } from "../../lib/time"
+import { getPreviewHeaderMeta } from "../../lib/preview-state"
 
 type PreviewPanelProps = {
   title: string
@@ -36,11 +36,7 @@ export function PreviewPanel({
   return (
     <SurfaceCard className="preview-panel" variant="workbench">
       <SurfaceCardHeader eyebrow="Preview" title={title}>
-        <span className="inline-meta">
-          {lastBuildAt
-            ? `Last build ${formatTimestampLabel(lastBuildAt)}`
-            : "No successful build yet"}
-        </span>
+        <span className="inline-meta">{getPreviewHeaderMeta(build, lastBuildAt)}</span>
       </SurfaceCardHeader>
 
       <SurfaceCardBody className="grid gap-[18px] px-[18px] pb-[18px]">

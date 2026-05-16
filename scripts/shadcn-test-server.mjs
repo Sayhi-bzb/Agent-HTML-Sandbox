@@ -125,10 +125,7 @@ async function loadFixtures() {
     Promise.all(
       componentNames.map(async (name) => [
         name,
-        await readFile(
-          path.join(componentsDir, `${name}.tsx`),
-          "utf8",
-        ),
+        await readFile(path.join(componentsDir, `${name}.tsx`), "utf8"),
       ]),
     ),
   ])
@@ -186,8 +183,7 @@ function createRegistryIndex(fixtures) {
 }
 
 function createComponentItem({ componentName, componentSource }) {
-  const registryDependencies =
-    collectUiRegistryDependencies(componentSource)
+  const registryDependencies = collectUiRegistryDependencies(componentSource)
 
   return {
     name: componentName,
@@ -218,7 +214,11 @@ function createStyleComponentIndex(fixtures) {
 function collectUiRegistryDependencies(componentSource) {
   return [
     ...new Set(
-      [...componentSource.matchAll(/from\s+["']@\/components\/ui\/([^"']+)["']/g)]
+      [
+        ...componentSource.matchAll(
+          /from\s+["']@\/components\/ui\/([^"']+)["']/g,
+        ),
+      ]
         .map((match) => match[1])
         .filter(Boolean),
     ),

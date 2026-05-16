@@ -6,6 +6,7 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 
+import prettier from "prettier"
 import { afterEach, describe, expect, it } from "vitest"
 
 const originalTemplateDir = process.env.AHTML_SHADCN_TEMPLATE_DIR
@@ -155,8 +156,12 @@ describe("checked-in runtime templates", () => {
       "utf8",
     )
 
+    const formattedExpected = await prettier.format(expected, {
+      parser: "typescript",
+      semi: false,
+    })
     expect(normalizeNewlines(checkedIn).trimEnd()).toBe(
-      normalizeNewlines(expected).trimEnd(),
+      normalizeNewlines(formattedExpected).trimEnd(),
     )
 
     const expectedKinds = createRuntimeRendererKindSource(
@@ -177,8 +182,12 @@ describe("checked-in runtime templates", () => {
       "utf8",
     )
 
+    const formattedExpectedKinds = await prettier.format(expectedKinds, {
+      parser: "typescript",
+      semi: false,
+    })
     expect(normalizeNewlines(checkedInKinds).trimEnd()).toBe(
-      normalizeNewlines(expectedKinds).trimEnd(),
+      normalizeNewlines(formattedExpectedKinds).trimEnd(),
     )
   })
 })

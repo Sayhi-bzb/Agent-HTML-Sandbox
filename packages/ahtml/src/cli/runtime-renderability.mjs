@@ -92,11 +92,16 @@ export function createRuntimeRenderDiagnostics({
   schema,
 }) {
   const diagnostics = []
-  const runtimeContract = createRuntimeContractFromSchema(schema)
+  const runtimeContract =
+    Array.isArray(schema?.components) && schema.components.length > 0
+      ? createRuntimeContractFromSchema(schema)
+      : undefined
   const runtimeVerificationData = runtimeVerificationState.verificationData
-  const schemaVerificationData = runtimeContract.verificationData
+  const schemaVerificationData =
+    runtimeContract?.verificationData ?? schema?.verificationData
   const runtimeRendererMapping = runtimeVerificationState.rendererMapping
-  const schemaRendererMapping = runtimeContract.rendererMapping
+  const schemaRendererMapping =
+    runtimeContract?.rendererMapping ?? schema?.rendererMapping
 
   pushRuntimeCheckDiagnostic({
     actual: runtimeVerificationData,

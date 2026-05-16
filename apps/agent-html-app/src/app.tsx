@@ -29,6 +29,32 @@ import {
   getLatestProposalComparisonSummary,
   getSourceComparisonSummary,
 } from "./lib/source-comparison"
+import { formatAppError } from "./lib/app-error"
+import { hydrateDiagnosticPositions } from "./lib/diagnostic-position"
+import {
+  createMockBuildArtifacts,
+  createMockInspectArtifacts,
+  createMockValidationSnapshot,
+} from "./lib/mock-runtime"
+import { sortSessionSummaries, upsertSessionSummary } from "./lib/session-summary"
+import {
+  buildEventMessage,
+  buildLocalProposalText,
+  buildProposalDecisionMessage,
+  buildSourceSavedEventMessage,
+  inspectEventMessage,
+} from "./lib/session-messages"
+import {
+  beginBuildRun,
+  applyBuildCommandFailure,
+  applyCommandFailureToSession,
+  applyBuildResultToSession,
+  applyInspectResultToSession,
+  applySourceSaveToSession,
+  deriveBuildSummaryFromSession,
+  deriveInspectSnapshotFromSession,
+  syncInspectSnapshotWithBuild,
+} from "./lib/session-build"
 import { mockAppState } from "./lib/mock-data"
 import {
   appendChatMessage,
@@ -59,7 +85,6 @@ import type {
   SourceValidationSnapshot,
   SourceValidationState,
   SessionDetail,
-  SessionStatus,
   SessionSummary,
   RuntimeReport,
   WorkbenchView,
@@ -210,7 +235,10 @@ export function App() {
           setCurrentSourceValidation({
             status: result.status,
             validatedAt: result.validatedAt,
-            diagnostics: result.diagnostics,
+            diagnostics: hydrateDiagnosticPositions(
+              result.diagnostics,
+              currentDraftSource,
+            ),
             structureSummary: result.structureSummary,
           })
         })
@@ -317,7 +345,10 @@ export function App() {
       startTransition(() => {
         setAppState((current) => ({
           ...current,
-          sessions: [nextState.session.summary, ...current.sessions],
+          sessions: sortSessionSummaries([
+            nextState.session.summary,
+            ...current.sessions,
+          ]),
           chat: nextState.chat,
           currentBuild: deriveBuildSummary(nextState.session),
           currentInspect: deriveInspectSnapshot(nextState.session),
@@ -520,25 +551,30 @@ export function App() {
     )
 
     if (!isTauriRuntime()) {
-      setAppState((current) => ({
-        ...current,
-        chat: [
-          ...current.chat,
-          createLocalChatMessage(
-            "system",
-            buildSourceSavedEventMessage(nextSource, comparison),
-            "context-card",
-          ),
-        ],
-        currentSession: {
-          ...current.currentSession,
-          summary: {
-            ...current.currentSession.summary,
-            status: "dirty",
-          },
-          source: nextSource,
-        },
-      }))
+      startTransition(() => {
+        setAppState((current) => {
+          const savedAt = new Date().toISOString()
+          const nextSession = applySourceSaveToSession(
+            current.currentSession,
+            nextSource,
+            savedAt,
+          )
+
+          return {
+            ...current,
+            chat: [
+              ...current.chat,
+              createLocalChatMessage(
+                "system",
+                buildSourceSavedEventMessage(nextSource, comparison),
+                "context-card",
+              ),
+            ],
+            currentSession: nextSession,
+            sessions: upsertSessionSummary(current.sessions, nextSession.summary),
+          }
+        })
+      })
       setSessionDrafts((current) => removeSessionDraft(current, sessionId))
       return
     }
@@ -597,10 +633,7 @@ export function App() {
     nextSource: string,
   ): Promise<SourceValidationSnapshot> {
     if (!isTauriRuntime()) {
-      return createMockValidationSnapshot(
-        appState.currentSession.summary.id,
-        nextSource,
-      )
+      return createMockValidationSnapshot(appState.currentSession.summary.id, nextSource)
     }
 
     return validateSource(appState.currentSession.summary.id, nextSource)
@@ -619,25 +652,30 @@ export function App() {
     )
 
     if (!isTauriRuntime()) {
-      setAppState((current) => ({
-        ...current,
-        chat: [
-          ...current.chat,
-          createLocalChatMessage(
-            "system",
-            buildSourceSavedEventMessage(currentDraftSource, comparison),
-            "context-card",
-          ),
-        ],
-        currentSession: {
-          ...current.currentSession,
-          summary: {
-            ...current.currentSession.summary,
-            status: "dirty",
-          },
-          source: currentDraftSource,
-        },
-      }))
+      startTransition(() => {
+        setAppState((current) => {
+          const savedAt = new Date().toISOString()
+          const nextSession = applySourceSaveToSession(
+            current.currentSession,
+            currentDraftSource,
+            savedAt,
+          )
+
+          return {
+            ...current,
+            chat: [
+              ...current.chat,
+              createLocalChatMessage(
+                "system",
+                buildSourceSavedEventMessage(currentDraftSource, comparison),
+                "context-card",
+              ),
+            ],
+            currentSession: nextSession,
+            sessions: upsertSessionSummary(current.sessions, nextSession.summary),
+          }
+        })
+      })
       setSessionDrafts((current) => removeSessionDraft(current, sessionId))
       return
     }
@@ -713,24 +751,46 @@ export function App() {
 
   async function handleBuild() {
     if (!isTauriRuntime()) {
+      const sourceForRun = currentDraftSource
       await persistCurrentDraftIfNeeded()
+      const { build, logs, previewHtml: nextPreviewHtml } =
+        createMockBuildArtifacts({
+          session: {
+            ...appState.currentSession,
+            source: sourceForRun,
+          },
+          source: sourceForRun,
+        })
+
       startTransition(() => {
-        setAppState((current) => ({
-          ...current,
-          chat: [
-            ...current.chat,
-            createLocalChatMessage(
-              "system",
-              [
-                "Build update",
-                "- Mock runtime switched Preview without a real artifact rebuild.",
-              ].join("\n"),
-              "context-card",
-            ),
-          ],
-        }))
+        setAppState((current) => {
+          const nextSession = applyBuildResultToSession(
+            {
+              ...current.currentSession,
+              source: sourceForRun,
+            },
+            build,
+          )
+
+          return {
+            ...current,
+            chat: [
+              ...current.chat,
+              createLocalChatMessage(
+                "system",
+                buildEventMessage(build),
+                "context-card",
+              ),
+            ],
+            currentBuild: build,
+            currentLogs: logs,
+            currentSession: nextSession,
+            sessions: upsertSessionSummary(current.sessions, nextSession.summary),
+          }
+        })
+        setPreviewHtml(build.status === "succeeded" ? nextPreviewHtml : previewHtml)
       })
-      setActiveView("preview")
+      setActiveView(build.status === "succeeded" ? "preview" : "inspect")
       return
     }
 
@@ -751,27 +811,24 @@ export function App() {
     }
     startTransition(() => {
       setAppState((current) => {
-        const nextSession = {
-          ...current.currentSession,
-          summary: {
-            ...current.currentSession.summary,
-            status: "building" as const,
-          },
-        }
+        const startedAt = new Date().toISOString()
+        const nextRun = beginBuildRun(
+          current.currentSession,
+          startedAt,
+          `build-pending-${Date.now()}`,
+        )
 
         return {
           ...current,
-          currentBuild: {
-            ...current.currentBuild,
-            status: "running",
-            startedAt: new Date().toISOString(),
-            finishedAt: undefined,
-            exitCode: undefined,
-          },
-          currentSession: nextSession,
-          sessions: replaceSessionSummary(
+          currentBuild: nextRun.build,
+          currentInspect: syncInspectSnapshotWithBuild(
+            current.currentInspect,
+            nextRun.build,
+          ),
+          currentSession: nextRun.session,
+          sessions: upsertSessionSummary(
             current.sessions,
-            nextSession.summary,
+            nextRun.session.summary,
           ),
         }
       })
@@ -797,63 +854,55 @@ export function App() {
       }
       startTransition(() => {
         setAppState((current) => {
-          const status: SessionStatus =
-            build.status === "succeeded" ? "ready" : "error"
-          const nextView: WorkbenchView =
-            build.status === "succeeded" ? "preview" : "inspect"
-          const nextSession = {
-            ...current.currentSession,
-            currentView: nextView,
-            previewPath:
-              build.previewPath ?? current.currentSession.previewPath,
-            summary: {
-              ...current.currentSession.summary,
-              status,
-              hasPreview: Boolean(build.previewPath),
-              lastBuildAt: build.finishedAt ?? build.startedAt,
-            },
-          }
+          const nextSession = applyBuildResultToSession(
+            current.currentSession,
+            build,
+          )
 
           return {
             ...current,
             chat: nextChat,
             currentBuild: build,
+            currentInspect: syncInspectSnapshotWithBuild(
+              current.currentInspect,
+              build,
+            ),
             currentLogs: nextLogs,
             currentSession: nextSession,
-            sessions: replaceSessionSummary(
-              current.sessions,
-              nextSession.summary,
-            ),
+            sessions: upsertSessionSummary(current.sessions, nextSession.summary),
           }
         })
         setPreviewHtml(nextPreviewHtml)
         setActiveView(build.status === "succeeded" ? "preview" : "inspect")
       })
     } catch (error) {
+      const failedAt = new Date().toISOString()
       startTransition(() => {
         setAppState((current) => {
-          const nextSession = {
-            ...current.currentSession,
-            summary: {
-              ...current.currentSession.summary,
-              status: "error" as const,
+          const nextBuild = applyBuildCommandFailure(
+            current.currentBuild,
+            failedAt,
+          )
+          const nextSession = applyCommandFailureToSession(
+            current.currentSession,
+            failedAt,
+            {
+              lastBuild: nextBuild,
             },
-          }
+          )
 
           return {
             ...current,
-            currentBuild: {
-              ...current.currentBuild,
-              status: "failed",
-              finishedAt: new Date().toISOString(),
-            },
-            currentSession: nextSession,
-            sessions: replaceSessionSummary(
-              current.sessions,
-              nextSession.summary,
+            currentBuild: nextBuild,
+            currentInspect: syncInspectSnapshotWithBuild(
+              current.currentInspect,
+              nextBuild,
             ),
+            currentSession: nextSession,
+            sessions: upsertSessionSummary(current.sessions, nextSession.summary),
           }
         })
+        setActiveView("inspect")
       })
       setCommandState((current) => ({
         ...current,
@@ -868,22 +917,44 @@ export function App() {
 
   async function handleInspect() {
     if (!isTauriRuntime()) {
+      const sourceForRun = currentDraftSource
       await persistCurrentDraftIfNeeded()
+      const { inspect, logs } = createMockInspectArtifacts({
+        build: appState.currentBuild,
+        session: {
+          ...appState.currentSession,
+          source: sourceForRun,
+        },
+        source: sourceForRun,
+      })
+
       startTransition(() => {
-        setAppState((current) => ({
-          ...current,
-          chat: [
-            ...current.chat,
-            createLocalChatMessage(
-              "system",
-              [
-                "Inspect update",
-                "- Mock runtime switched Inspect without a real CLI inspect run.",
-              ].join("\n"),
-              "context-card",
-            ),
-          ],
-        }))
+        setAppState((current) => {
+          const nextSession = applyInspectResultToSession(
+            {
+              ...current.currentSession,
+              source: sourceForRun,
+            },
+            inspect,
+            inspect.lastBuild ?? current.currentBuild,
+          )
+
+          return {
+            ...current,
+            chat: [
+              ...current.chat,
+              createLocalChatMessage(
+                "system",
+                inspectEventMessage(inspect),
+                "context-card",
+              ),
+            ],
+            currentInspect: inspect,
+            currentLogs: logs,
+            currentSession: nextSession,
+            sessions: upsertSessionSummary(current.sessions, nextSession.summary),
+          }
+        })
       })
       setActiveView("inspect")
       return
@@ -906,6 +977,13 @@ export function App() {
     }
     try {
       const inspect = await runInspect(appState.currentSession.summary.id)
+      const hydratedInspect = {
+        ...inspect,
+        diagnostics: hydrateDiagnosticPositions(
+          inspect.diagnostics,
+          appState.currentSession.source,
+        ),
+      }
       const nextPreviewHtml = await safeReadPreviewHtml(
         appState.currentSession.summary.id,
       )
@@ -914,7 +992,7 @@ export function App() {
       try {
         nextChat = await appendChatMessage(appState.currentSession.summary.id, {
           role: "system",
-          text: inspectEventMessage(inspect),
+          text: inspectEventMessage(hydratedInspect),
           kind: "context-card",
         })
       } catch (chatError) {
@@ -925,39 +1003,43 @@ export function App() {
       }
       startTransition(() => {
         setAppState((current) => {
-          const build = inspect.lastBuild ?? current.currentBuild
-          const status: SessionStatus =
-            build.status === "succeeded" ? "ready" : "error"
-          const nextSession = {
-            ...current.currentSession,
-            currentView: "inspect" as const,
-            previewPath:
-              build.previewPath ?? current.currentSession.previewPath,
-            summary: {
-              ...current.currentSession.summary,
-              status,
-              hasPreview: Boolean(build.previewPath),
-              lastBuildAt: build.finishedAt ?? build.startedAt,
-            },
-          }
+          const build = hydratedInspect.lastBuild ?? current.currentBuild
+          const nextSession = applyInspectResultToSession(
+            current.currentSession,
+            hydratedInspect,
+            build,
+          )
 
           return {
             ...current,
             chat: nextChat,
             currentBuild: build,
-            currentInspect: inspect,
+            currentInspect: hydratedInspect,
             currentLogs: nextLogs,
             currentSession: nextSession,
-            sessions: replaceSessionSummary(
-              current.sessions,
-              nextSession.summary,
-            ),
+            sessions: upsertSessionSummary(current.sessions, nextSession.summary),
           }
         })
         setPreviewHtml(nextPreviewHtml)
         setActiveView("inspect")
       })
     } catch (error) {
+      const failedAt = new Date().toISOString()
+      startTransition(() => {
+        setAppState((current) => {
+          const nextSession = applyCommandFailureToSession(
+            current.currentSession,
+            failedAt,
+          )
+
+          return {
+            ...current,
+            currentSession: nextSession,
+            sessions: upsertSessionSummary(current.sessions, nextSession.summary),
+          }
+        })
+        setActiveView("inspect")
+      })
       setCommandState((current) => ({
         ...current,
         runningInspect: false,
@@ -1303,7 +1385,7 @@ export function App() {
         ...current,
         ...(nextChat !== undefined ? { chat: nextChat } : {}),
         currentSession: session,
-        sessions: replaceSessionSummary(current.sessions, session.summary),
+        sessions: upsertSessionSummary(current.sessions, session.summary),
       }))
     })
   }
@@ -1495,94 +1577,16 @@ async function safeReadChat(sessionId: string) {
   }
 }
 
-function replaceSessionSummary(
-  summaries: SessionSummary[],
-  nextSummary: SessionSummary,
-) {
-  const withoutCurrent = summaries.filter(
-    (summary) => summary.id !== nextSummary.id,
-  )
-  return [nextSummary, ...withoutCurrent]
-}
-
 function formatError(error: unknown) {
-  if (typeof error === "string") {
-    return error
-  }
-
-  const value = error as Partial<AppError> & { message?: string }
-  if (typeof value.message === "string" && value.message.length > 0) {
-    return value.message
-  }
-
-  return "Unknown command failure."
+  return formatAppError(error)
 }
 
 function deriveBuildSummary(session: SessionDetail): BuildRunSummary {
-  return {
-    runId: session.summary.lastBuildAt
-      ? `${session.summary.id}-last-build`
-      : `${session.summary.id}-idle`,
-    sessionId: session.summary.id,
-    startedAt: session.summary.lastBuildAt ?? session.summary.updatedAt,
-    finishedAt: session.summary.lastBuildAt,
-    status: session.summary.hasPreview ? "succeeded" : "idle",
-    exitCode: session.summary.hasPreview ? 0 : undefined,
-    previewPath: session.previewPath,
-  }
+  return deriveBuildSummaryFromSession(session)
 }
 
 function deriveInspectSnapshot(session: SessionDetail): InspectSnapshot {
-  return {
-    sessionId: session.summary.id,
-    generatedAt: session.summary.updatedAt,
-    diagnostics: [],
-    structureSummary:
-      "Run Inspect to refresh the session analysis for this document.",
-    lastBuild: session.summary.hasPreview
-      ? deriveBuildSummary(session)
-      : undefined,
-  }
-}
-
-function createMockValidationSnapshot(
-  sessionId: string,
-  source: string,
-): SourceValidationSnapshot {
-  const diagnostics = []
-
-  if (!source.includes("<page")) {
-    diagnostics.push({
-      id: "mock-validation-page",
-      severity: "error" as const,
-      message: "The draft should include a <page> root component.",
-      source: "validation",
-      code: "missing-page",
-    })
-  }
-
-  if (source.includes("className=")) {
-    diagnostics.push({
-      id: "mock-validation-classname",
-      severity: "error" as const,
-      message: '"className" is not an allowed agent-facing attribute.',
-      source: "validation",
-      code: "unknown-attr",
-    })
-  }
-
-  const componentCount = (source.match(/<([a-z-]+)(\s|>)/g) ?? []).length
-
-  return {
-    sessionId,
-    validatedAt: new Date().toISOString(),
-    status: diagnostics.length > 0 ? "invalid" : "valid",
-    diagnostics,
-    structureSummary:
-      diagnostics.length > 0
-        ? "Mock validation found source issues."
-        : `${componentCount} component tag(s) detected in the current draft.`,
-  }
+  return deriveInspectSnapshotFromSession(session)
 }
 
 function removeSessionDraft(drafts: Record<string, string>, sessionId: string) {
@@ -1609,137 +1613,6 @@ function createLocalChatMessage(
     kind,
     proposalSnapshot,
   }
-}
-
-function buildLocalProposalText(
-  session: SessionDetail,
-  build: BuildRunSummary,
-  inspect: InspectSnapshot,
-  logs: AppState["currentLogs"],
-  draftSource: string,
-) {
-  const items: string[] = []
-
-  if (draftSource !== session.source) {
-    items.push(
-      "[save] Save the current source changes before trusting the next build or proposal review.",
-    )
-  }
-
-  if (!draftSource.includes("<page")) {
-    items.push(
-      "[build] Add a <page> root before the next build. The current draft is missing the required top-level structure.",
-    )
-  }
-
-  if (draftSource.includes("className=")) {
-    items.push(
-      '[inspect] Remove "className" from the draft. agent-html documents should stay schema-level and not carry raw UI props.',
-    )
-  }
-
-  if (inspect.diagnostics.length > 0) {
-    items.push(
-      `[inspect] Resolve ${inspect.diagnostics.length} inspect diagnostic(s) before sharing the next artifact.`,
-    )
-  }
-
-  if (build.status === "failed") {
-    items.push(
-      "[build] Read stderr first, then rebuild once the source issues or runtime failure are understood.",
-    )
-  } else if (!session.summary.hasPreview) {
-    items.push(
-      "[build] Run Build to generate the first preview artifact for this session.",
-    )
-  } else if (session.summary.status === "dirty") {
-    items.push(
-      "[build] Rebuild the session so Preview and Inspect reflect the latest saved source.",
-    )
-  } else {
-    items.push(
-      "[review] Compare the current preview artifact against the source intent and confirm the recommendation still holds.",
-    )
-  }
-
-  if (logs.stderr?.trim()) {
-    items.push(
-      "[inspect] Keep the latest stderr log open while editing. It contains the fastest explanation path for build or inspect failures.",
-    )
-  } else if (logs.stdout?.trim()) {
-    items.push(
-      "[review] Use the captured stdout summary as the artifact baseline, then return to Source only if the preview diverges from the expected structure.",
-    )
-  }
-
-  if (items.length === 0) {
-    items.push(
-      "[review] Keep the source, preview, and inspect summary aligned before making the next artifact decision.",
-    )
-  }
-
-  return [
-    `Proposal for ${session.summary.name}`,
-    ...items.map((item) => `- ${item}`),
-  ].join("\n")
-}
-
-function buildProposalDecisionMessage(
-  proposalText: string,
-  status: "approved" | "needs changes",
-) {
-  const [titleLine] = proposalText.split(/\r?\n/).filter(Boolean)
-  const proposalTitle =
-    titleLine?.replace(/^Proposal for\s+/, "").trim() || "Unknown proposal"
-
-  return [
-    "Proposal decision",
-    `- Proposal: ${proposalTitle}`,
-    `- Status: ${status}`,
-  ].join("\n")
-}
-
-function buildEventMessage(build: BuildRunSummary) {
-  const details: string[] = [`- Status: ${build.status}`]
-
-  if (build.previewPath) {
-    details.push(`- Preview: ${build.previewPath}`)
-  }
-
-  if (typeof build.exitCode === "number") {
-    details.push(`- Exit code: ${build.exitCode}`)
-  }
-
-  return ["Build update", ...details].join("\n")
-}
-
-function buildSourceSavedEventMessage(
-  source: string,
-  comparison?: ReturnType<typeof getSourceComparisonSummary>,
-) {
-  const details = [`- Lines: ${source.split(/\r?\n/).length}`]
-
-  if (comparison) {
-    details.push(`- Changed lines: ${comparison.changedLineCount}`)
-    if (comparison.firstChangedLine) {
-      details.push(`- First change: line ${comparison.firstChangedLine}`)
-    }
-  }
-
-  return ["Source saved", ...details].join("\n")
-}
-
-function inspectEventMessage(inspect: InspectSnapshot) {
-  const diagnosticsCount = inspect.diagnostics.length
-  const summary =
-    diagnosticsCount > 0
-      ? `${diagnosticsCount} diagnostic(s)`
-      : "no structured diagnostics"
-  return [
-    "Inspect update",
-    `- Diagnostics: ${summary}`,
-    `- Structure: ${inspect.structureSummary}`,
-  ].join("\n")
 }
 
 function RuntimeBanner({ report }: { report: RuntimeReport }) {

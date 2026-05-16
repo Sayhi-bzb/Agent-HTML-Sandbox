@@ -6,10 +6,10 @@ pass.
 
 ```txt
 semantic component contract
-  + presentation profile registry
+  + document style config reference
   -> agent writes semantic .agent.html
   -> parse / validate / sanitize
-  -> SanitizedAgentHtml + approved profile
+  -> SanitizedAgentHtml + approved visual config
   -> semantic-to-runtime mapping
   -> shadcn/native render
   -> portable HTML artifact
@@ -17,25 +17,33 @@ semantic component contract
 
 ## Stable Decisions
 
-- Public authoring stays semantic and profile-first.
+- Public authoring stays semantic-first; document-level visual choice belongs to
+  a separate configuration layer. The public visual config entry is a document
+  style reference, not a per-component styling surface.
 - Legacy `<ui>` / `<slot>` input and old non-profile render-config input stay
   out of the normal path.
+- Current compatibility may keep named `profile` entries, but the target visual
+  config surface is an approved document style config reference; `profile` is a
+  compatibility alias for that reference.
 - Schema and prompt expose only renderable semantic components and approved
-  profiles.
-- Internal `theme` / `density` / `tone` / `width` remain runtime-resolved
-  profile tokens, not public config vocabulary.
+  document-level visual config entries.
+- Internal `theme` / `density` / `tone` / `width` remain resolved configuration
+  tokens, not public config vocabulary.
 - ahtml uses its own managed runtime; shadcn template / init / registry remain
   the source of truth for the runtime UI surface.
 - Runtime verification data, generated introspection, renderer mapping, and
   slot metadata stay internal verification inputs, not the external product
   protocol.
+- Internal component-level visual mapping can change appearance mapping only; it
+  does not create a public per-component config surface and does not change
+  semantic structure, renderer kind, or fallback policy.
 
 ## Acceptance Bar
 
 - Final HTML contains real semantic or shadcn/native structure;
   `data-agent-html-component` markers alone are not enough.
 - `ahtml schema --format prompt` exposes only renderable semantic components
-  and approved presentation profiles.
+  and approved document-level visual config entries.
 - `ahtml build` produces representative artifact structure for the current
   supported semantic surface, including tabs, accordion, list, table, field
   controls, and option-set controls.
@@ -54,7 +62,12 @@ semantic component contract
 ## Current Pass
 
 - The current artifact-focused pass is complete.
-- Reopen `spec/` only when product semantics expand beyond the current lane.
+- Current shipped implementation still uses named `profile` as the compatibility
+  visual entry.
+- No component-level public style knobs are part of the current contract.
+- Reopen `spec/` when product semantics expand beyond the current lane, or when
+  document style config is promoted from target architecture to executable
+  contract.
 
 ## Open Debt
 

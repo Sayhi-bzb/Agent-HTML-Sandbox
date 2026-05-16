@@ -185,7 +185,7 @@ describe("createRendererNode", () => {
     expect(markup).toContain('value="alpha"')
     expect(markup).toContain(">Alpha</TabsTrigger>")
     expect(markup).toContain(
-      "<h2 class=\"m-0 text-lg font-medium leading-7\">Alpha</h2>",
+      '<h2 class="m-0 text-lg font-medium leading-7">Alpha</h2>',
     )
   })
 
@@ -263,7 +263,7 @@ describe("createRendererNode", () => {
     expect(markup).toContain('data-agent-html-component="textarea"')
     expect(markup).toContain("<label>Notes</label>")
     expect(markup).toContain(
-      "<textarea aria-label=\"Notes\">Ship after the guard lands.</textarea>",
+      '<textarea aria-label="Notes">Ship after the guard lands.</textarea>',
     )
     expect(markup).toContain('aria-label="Notes"')
     expect(markup).toContain("<p>Long-form field.</p>")
@@ -610,7 +610,9 @@ describe("createRendererNode", () => {
               type: "component",
               name: "option",
               props: { value: "today", label: "Today" },
-              children: [{ type: "text", value: "Ship in the current window." }],
+              children: [
+                { type: "text", value: "Ship in the current window." },
+              ],
             },
             {
               type: "component",
@@ -770,7 +772,7 @@ describe("createRendererNode", () => {
 
     expect(markup).toContain(">Details</AccordionTrigger>")
     expect(markup).toContain(
-      "<h2 class=\"m-0 text-lg font-medium leading-7\">Details</h2>",
+      '<h2 class="m-0 text-lg font-medium leading-7">Details</h2>',
     )
     expect(markup).toContain("<noscript>")
   })

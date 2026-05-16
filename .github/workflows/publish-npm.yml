@@ -42,25 +42,20 @@ jobs:
         if: ${{ github.event_name == 'push' }}
         shell: bash
         run: |
-          core_version="$(node -p "JSON.parse(require('fs').readFileSync('packages/core/package.json', 'utf8')).version")"
-          ahtml_version="$(node -p "JSON.parse(require('fs').readFileSync('packages/ahtml/package.json', 'utf8')).version")"
+          version="$(node scripts/release-metadata.mjs version)"
           tag_version="${GITHUB_REF_NAME#v}"
 
-          if [[ "$core_version" != "$ahtml_version" ]]; then
-            echo "Workspace package versions are out of sync: @agent-html/core=$core_version, @agent-html/ahtml=$ahtml_version." >&2
-            exit 1
-          fi
-
-          if [[ "$tag_version" != "$core_version" ]]; then
-            echo "Tag version '$tag_version' does not match workspace package version '$core_version'." >&2
+          if [[ "$tag_version" != "$version" ]]; then
+            echo "Tag version '$tag_version' does not match workspace package version '$version'." >&2
             exit 1
           fi
 
       - name: Dry-run publish
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
         run: |
-          npm publish --workspace @agent-html/core --access public --dry-run
-          npm publish --workspace @agent-html/ahtml --access public --tag latest --dry-run
+          dist_tag="$(node scripts/release-metadata.mjs distTag)"
+          npm publish --workspace @agent-html/core --access public --tag "$dist_tag" --dry-run
+          npm publish --workspace @agent-html/ahtml --access public --tag "$dist_tag" --dry-run
 
       - name: Reject manual publish
         if: ${{ github.event_name == 'workflow_dispatch' && !inputs.dry_run }}
@@ -71,5 +66,6 @@ jobs:
       - name: Publish packages
         if: ${{ github.event_name == 'push' }}
         run: |
-          npm publish --workspace @agent-html/core --access public
-          npm publish --workspace @agent-html/ahtml --access public --tag latest
+          dist_tag="$(node scripts/release-metadata.mjs distTag)"
+          npm publish --workspace @agent-html/core --access public --tag "$dist_tag"
+          npm publish --workspace @agent-html/ahtml --access public --tag "$dist_tag"

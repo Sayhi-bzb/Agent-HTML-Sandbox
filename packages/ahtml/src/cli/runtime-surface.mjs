@@ -256,7 +256,9 @@ export async function assertRuntimeTemplateViteConfig(paths) {
     !source.includes('path.resolve(__dirname, "./src")') &&
     !source.includes("path.resolve(__dirname, './src')")
   ) {
-    missing.push("path.resolve(rootDir, './src') or path.resolve(__dirname, './src')")
+    missing.push(
+      "path.resolve(rootDir, './src') or path.resolve(__dirname, './src')",
+    )
   }
 
   if (missing.length > 0) {
@@ -465,9 +467,7 @@ export function formatShadcnRuntimeProvenance(surface) {
     throw new Error("Runtime manifest does not record shadcn surface.")
   }
 
-  const proofCount = Object.keys(
-    surface.ahtmlGlueProof?.files ?? {},
-  ).length
+  const proofCount = Object.keys(surface.ahtmlGlueProof?.files ?? {}).length
 
   return `${String(surface.shellSource ?? "missing")}/${String(surface.initSource ?? "missing")}/${String(surface.tailwindVersion ?? "missing")} glue-files:${proofCount}`
 }

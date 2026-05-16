@@ -84,6 +84,15 @@ try {
   const { commandMetadata } = await import(
     pathToFileURL(commandMetadataPath).href
   )
+  const runtimeContractPath = path.join(
+    consumerDir,
+    "node_modules",
+    "@agent-html",
+    "ahtml",
+    "src",
+    "config",
+    "runtime-contract.mjs",
+  )
   const coreModulePath = path.join(
     consumerDir,
     "node_modules",
@@ -91,14 +100,27 @@ try {
     "core",
     "index.mjs",
   )
-  const coreModule = await import(pathToFileURL(coreModulePath).href)
+  const [coreModule, runtimeContractModule] = await Promise.all([
+    import(pathToFileURL(coreModulePath).href),
+    import(pathToFileURL(runtimeContractPath).href),
+  ])
 
   if (
     typeof coreModule.sanitizeAgentHtml !== "function" ||
-    !Array.isArray(coreModule.VALIDATED_STANDARD_COMPONENT_SCHEMAS)
+    !Array.isArray(coreModule.VALIDATED_STANDARD_COMPONENT_SCHEMAS) ||
+    typeof coreModule.createPublicAgentContract !== "function"
   ) {
     throw new Error(
       "Installed @agent-html/core package is missing public exports.",
+    )
+  }
+
+  if (
+    typeof runtimeContractModule.createRuntimeContract !== "function" ||
+    typeof runtimeContractModule.createRuntimeContractFromSchema !== "function"
+  ) {
+    throw new Error(
+      "Installed @agent-html/ahtml package is missing runtime contract exports.",
     )
   }
 

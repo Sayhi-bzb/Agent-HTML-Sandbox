@@ -23,8 +23,9 @@ export function App() {
   const shellClassName = getShellClassName(agentDocument)
 
   React.useEffect(() => {
-    if (title && typeof window !== "undefined") {
-      window.document.title = title
+    if (title && typeof document !== "undefined") {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      document.title = title
     }
   }, [title])
 

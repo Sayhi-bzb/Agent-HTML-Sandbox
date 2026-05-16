@@ -95,7 +95,7 @@ npm view @agent-html/ahtml dist-tags versions --json
 npm install -g @agent-html/ahtml
 ```
 
-The published packages are `@agent-html/core` and `@agent-html/ahtml`; the CLI bin remains `ahtml` through `@agent-html/ahtml`. Publish only to npmjs.com. pnpm, yarn, and bun consume the same npm registry packages and do not need separate package releases.
+The release workflow targets two npm packages: `@agent-html/core` and `@agent-html/ahtml`; the CLI bin remains `ahtml` through `@agent-html/ahtml`. Verify actual registry state with `npm view` before assuming both packages are already available on npmjs.com. pnpm, yarn, and bun consume the same npm registry packages and do not need separate package releases.
 
 ## Publish npm package [#publish-npm-package]
 
@@ -118,6 +118,13 @@ npm version patch --workspace @agent-html/core --workspace @agent-html/ahtml --n
 # or: npm version major --workspace @agent-html/core --workspace @agent-html/ahtml --no-git-tag-version
 ```
 
+The release version source is the pair of workspace package manifests:
+
+- `packages/core/package.json`
+- `packages/ahtml/package.json`
+
+These two versions must stay identical. The root workspace version is not the release source of truth.
+
 Validate and publish the selected version:
 
 ```bash
@@ -128,9 +135,39 @@ npm run release:tag
 git push origin main --tags
 ```
 
-Stable releases publish only to npm `latest`. Prerelease channels are not maintained. The publish workflow fails if the Git tag does not match both workspace package versions.
+The publish workflow fails if the Git tag does not match both workspace package versions.
 
-`release:check` is the local package release gate. It runs the package CI checks, `knip`, `verify:pack`, and the npm dry-run publish for both workspace packages. The GitHub Actions publish workflow runs the same package release gate again before tag-driven publish.
+Supported release channels:
+
+- Stable: `0.2.0` -> Git tag `v0.2.0` -> npm dist-tag `latest`
+- Alpha: `0.2.0-alpha.1` -> Git tag `v0.2.0-alpha.1` -> npm dist-tag `alpha`
+
+Release a prerelease version:
+
+```bash
+npm version prerelease --preid alpha --workspace @agent-html/core --workspace @agent-html/ahtml --no-git-tag-version
+```
+
+Validate by channel:
+
+```bash
+npm run release:check:stable
+npm run release:check:alpha
+```
+
+Install the latest stable release:
+
+```bash
+npm install -g @agent-html/ahtml
+```
+
+Install the current alpha release:
+
+```bash
+npm install -g @agent-html/ahtml@alpha
+```
+
+`release:check` is the generic local package release gate. It runs the package CI checks, `knip`, `verify:pack`, and the npm dry-run publish for both workspace packages using the dist-tag derived from the current workspace version. The GitHub Actions publish workflow uses the same version-derived dist-tag before tag-driven publish.
 
 ## Distribute the ahtml skill [#distribute-the-ahtml-skill]
 

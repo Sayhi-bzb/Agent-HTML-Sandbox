@@ -10,12 +10,17 @@ import {
 
 describe("package boundaries", () => {
   it("defines package boundary checks for publishable packages", () => {
-    expect(Object.keys(packageBoundaryChecks).sort()).toEqual(["ahtml", "core"])
-    expect(packageBoundaryChecks.core.requiredFiles).toEqual([
+    const checks = packageBoundaryChecks as {
+      core: { requiredFiles: string[] }
+      ahtml: { requiredFiles: string[] }
+    }
+
+    expect(Object.keys(checks).sort()).toEqual(["ahtml", "core"])
+    expect(checks.core.requiredFiles).toEqual([
       "index.mjs",
       "package.json",
     ])
-    expect(packageBoundaryChecks.ahtml.requiredFiles).toEqual([
+    expect(checks.ahtml.requiredFiles).toEqual([
       "bin/ahtml.mjs",
       "src/cli/command-contract.mjs",
       "package.json",
