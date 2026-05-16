@@ -95,6 +95,19 @@ Status: Partial.
 - shared review focus 现在也会保留精确的 diff group target，而不只是 compare 模式和标签
 - `Inspect` 现在也可直接 clear / switch review focus target，不必回到右栏内部先解除再重选
 - 当最新 proposal 带 checklist focus 线索时，`Inspect` 现在也会优先露出 checklist-derived review targets，而不是只回退到通用 drift 标签
+- checklist-derived review targets 现在也会携带稳定 target identity 和行范围标签，便于跨面板保持同一审查对象
+- `Inspect` 在当前 active review target 下也会直接展示小范围 focused diff preview，减少每次都必须切去右栏 compare 才能看见对象
+- focused diff preview 现在也可直接跳到 `Source` 里的对应行范围，并在编辑器中选中该段 source
+- 右栏 `Agent Shell` 的 draft compare 与 checklist diff 现在也可直接 `Open in Source`，不再只有 `Inspect` 能发起源码聚焦
+- `Source focus` 现在也会保留来源 review target，并可直接反向 reveal 到右栏对应的 compare target
+- `Source` 侧现在会在 focus banner 中显示来源 review target 的类型和范围，并提供 `Reveal review target` 回跳入口
+- `Source` 侧现在也会反馈当前选中的 source focus 是否仍与来源 review target 对齐，并在 review segment 移位时提供 `Refresh focus`
+- `Inspect` 里的 linked review 区现在也会回流当前 source focus 的 `Aligned / Moved / Missing` 状态，并可直接打开或刷新 source focus
+- 右栏 `Agent Shell` 现在也会显示当前 source focus 的状态与回跳动作，三栏对同一 review target 已有基本一致的 drift 反馈
+- `Agent Shell` 现在也把 source focus 状态压进 proposal 顶部摘要区，不再依赖单独的中继卡才能看见这条信号
+- source focus drift 现在也会进入 `Proposal readiness` 的 warnings，避免顶部摘要与实际 review object 漂移状态脱节
+- proposal snapshot 中的 `Source` chip 现在也会根据 `Aligned / Moved / Missing` 自动切换到打开源码、刷新焦点或回显 review target 的主动作，并避免在 readiness 列表里重复同一条 source-focus warning
+- `Inspect` 的 diagnostics 列表现在也可在带行号时直接 `Open in Source`，把异常定位直接落到源码行段
 - build 失败时可转向 inspect，而不是只停留在抽象错误提示
 
 当前缺口：

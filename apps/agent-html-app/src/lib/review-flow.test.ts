@@ -110,6 +110,42 @@ describe("review flow helpers", () => {
     })
   })
 
+  it("adds source-focus drift as a readiness warning without turning it into a blocker", () => {
+    const movedReadiness = getProposalReadiness({
+      build: succeededBuild,
+      inspect: cleanInspect,
+      session: baseSession,
+      latestProposalExists: true,
+      latestProposalIsStale: false,
+      hasUnsavedSourceChanges: false,
+      sourceFocusReviewStatus: {
+        kind: "moved",
+        summary: "The review segment moved.",
+      },
+    })
+    const missingReadiness = getProposalReadiness({
+      build: succeededBuild,
+      inspect: cleanInspect,
+      session: baseSession,
+      latestProposalExists: true,
+      latestProposalIsStale: false,
+      hasUnsavedSourceChanges: false,
+      sourceFocusReviewStatus: {
+        kind: "missing",
+        summary: "The review segment is missing.",
+      },
+    })
+
+    expect(movedReadiness.label).toBe("Needs review")
+    expect(movedReadiness.items).toContain(
+      "The current source focus moved away from its originating review target.",
+    )
+    expect(missingReadiness.label).toBe("Needs review")
+    expect(missingReadiness.items).toContain(
+      "The current source focus no longer maps to an available review target.",
+    )
+  })
+
   it("summarizes the latest proposal drift in the review timeline", () => {
     const proposal: AgentShellMessage = {
       id: "proposal-1",

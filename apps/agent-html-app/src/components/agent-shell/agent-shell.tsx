@@ -19,10 +19,20 @@ import {
   parseProposalChecklist,
   parseStructuredMessageCard,
 } from "../../lib/review-flow"
-import type {
-  ReviewFocusIntent,
-  ReviewFocusTarget,
+import {
+  createReviewFocusTargetFromGroups,
+  type ReviewFocusIntent,
+  type ReviewFocusTarget,
 } from "../../lib/review-focus"
+import {
+  createSourceFocusTargetFromGroup,
+  getSourceFocusLineLabel,
+  getSourceFocusPrimaryAction,
+  getSourceFocusReadinessWarning,
+  getSourceFocusStatusPill,
+  type SourceFocusReviewStatus,
+  type SourceFocusTarget,
+} from "../../lib/source-focus"
 import { formatTimestampLabel } from "../../lib/time"
 import {
   getPreviewGroupKey,
@@ -46,6 +56,8 @@ type AgentShellProps = {
   hasUnsavedSourceChanges: boolean
   draftComparison?: SourceComparisonSummary
   proposalComparison?: SourceComparisonSummary
+  activeSourceFocus?: SourceFocusTarget
+  activeSourceFocusReviewStatus?: SourceFocusReviewStatus
   isSavingSource: boolean
   isRunningBuild: boolean
   isRunningInspect: boolean
@@ -61,6 +73,9 @@ type AgentShellProps = {
   ) => Promise<void> | void
   onDraftProposal: () => Promise<void> | void
   onOpenView: (view: WorkbenchView) => Promise<void> | void
+  onOpenSourceFocus: (target: SourceFocusTarget) => Promise<void> | void
+  onRefreshSourceFocus: () => Promise<void> | void
+  onRevealSourceReviewTarget: () => Promise<void> | void
   onBuild: () => Promise<void> | void
   onInspect: () => Promise<void> | void
   onSaveDraft: () => Promise<void> | void
@@ -69,6 +84,7 @@ type AgentShellProps = {
 type ComparisonMode = "saved" | "proposal"
 type FocusedComparison = {
   mode: ComparisonMode
+  targetId: string
   keys: string[]
   label: string
 }
@@ -82,6 +98,8 @@ export function AgentShell({
   hasUnsavedSourceChanges,
   draftComparison,
   proposalComparison,
+  activeSourceFocus,
+  activeSourceFocusReviewStatus,
   isSavingSource,
   isRunningBuild,
   isRunningInspect,
@@ -94,6 +112,9 @@ export function AgentShell({
   onDecision,
   onDraftProposal,
   onOpenView,
+  onOpenSourceFocus,
+  onRefreshSourceFocus,
+  onRevealSourceReviewTarget,
   onBuild,
   onInspect,
   onSaveDraft,
@@ -168,11 +189,15 @@ export function AgentShell({
     draftComparison,
     proposalComparison,
     proposalProgress,
+    sourceFocusReviewStatus: activeSourceFocusReviewStatus,
   })
+  const sourceFocusReadinessWarning = getSourceFocusReadinessWarning(
+    activeSourceFocusReviewStatus,
+  )
   const secondaryReadinessItems = getSecondaryReadinessItems(
     currentReviewStage,
     proposalReadiness.items,
-  )
+  ).filter((item) => item !== sourceFocusReadinessWarning)
   const activeComparison =
     comparisonMode === "proposal" && proposalComparison
       ? proposalComparison
@@ -186,6 +211,12 @@ export function AgentShell({
     draftComparison,
     proposalComparison,
   })
+  const sourceFocusStatusPill = getSourceFocusStatusPill(
+    activeSourceFocusReviewStatus,
+  )
+  const sourceFocusPrimaryAction = getSourceFocusPrimaryAction(
+    activeSourceFocusReviewStatus,
+  )
   const currentStageAction = getReviewTimelineActionConfig({
     stage: currentReviewStage,
     activeView,
@@ -279,16 +310,18 @@ export function AgentShell({
       return
     }
 
-    onReviewFocusChange({
-      mode: focusedComparison.mode,
-      label: focusedComparison.label,
-      groupCount: focusedPreviewGroups?.length ?? focusedComparison.keys.length,
-      groupKeys: focusedComparison.keys,
-    })
+    onReviewFocusChange(
+      createReviewFocusTargetFromGroups({
+        targetId: focusedComparison.targetId,
+        mode: focusedComparison.mode,
+        label: focusedComparison.label,
+        groups: focusedPreviewGroups,
+      }),
+    )
   }, [
     comparisonMode,
     focusedComparison,
-    focusedPreviewGroups?.length,
+    focusedPreviewGroups,
     onReviewFocusChange,
   ])
 
@@ -302,7 +335,12 @@ export function AgentShell({
         ? getPreviewGroupsByKeys(proposalComparison, reviewIntent.groupKeys)
         : getPreviewGroupsByKeys(draftComparison, reviewIntent.groupKeys)
 
-    focusComparisonGroups(reviewIntent.mode, reviewIntent.label, groups)
+    focusComparisonGroups(
+      reviewIntent.mode,
+      reviewIntent.targetId,
+      reviewIntent.label,
+      groups,
+    )
   }, [
     reviewIntent,
     draftComparison?.changedLineCount,
@@ -319,28 +357,51 @@ export function AgentShell({
     setDraft("")
   }
 
+  function getFocusedReviewTarget(
+    groups?: SourceComparisonSummary["previewGroups"],
+  ) {
+    if (!focusedComparison || focusedComparison.mode !== comparisonMode) {
+      return undefined
+    }
+
+    return createReviewFocusTargetFromGroups({
+      targetId: focusedComparison.targetId,
+      mode: focusedComparison.mode,
+      label: focusedComparison.label,
+      groups,
+    })
+  }
+
   function getDefaultProposalFocusOption() {
     return proposalFocusOptions[0]
   }
 
   function focusChecklistOption(option?: {
+    id?: string
     label: string
     groups: SourceComparisonSummary["previewGroups"]
   }) {
     if (!option) {
       focusComparisonGroups(
         "proposal",
+        "proposal-drift",
         "Current proposal drift",
         proposalComparison?.previewGroups,
       )
       return
     }
 
-    focusComparisonGroups("proposal", option.label, option.groups)
+    focusComparisonGroups(
+      "proposal",
+      option.id ?? `proposal-${option.label}`,
+      option.label,
+      option.groups,
+    )
   }
 
   function focusComparisonGroups(
     mode: ComparisonMode,
+    targetId: string,
     label: string,
     groups?: SourceComparisonSummary["previewGroups"],
   ) {
@@ -349,6 +410,7 @@ export function AgentShell({
       groups && groups.length > 0
         ? {
             mode,
+            targetId,
             keys: groups.map((group) => getPreviewGroupKey(group)),
             label,
           }
@@ -529,7 +591,7 @@ export function AgentShell({
               {proposalFocusOptions.map((option) => (
                 <button
                   className={
-                    focusedComparison?.label === option.label
+                    focusedComparison?.targetId === option.id
                       ? "mini-button compare-focus-button active"
                       : "mini-button compare-focus-button"
                   }
@@ -537,6 +599,7 @@ export function AgentShell({
                   onClick={() =>
                     setFocusedComparison({
                       mode: comparisonMode,
+                      targetId: option.id,
                       keys: option.groups.map((group) =>
                         getPreviewGroupKey(group),
                       ),
@@ -577,6 +640,25 @@ export function AgentShell({
                         ? `Line ${group.startLine}`
                         : `Lines ${group.startLine}-${group.endLine}`}
                     </span>
+                    <button
+                      className="mini-button"
+                      disabled={isProposalActionBusy}
+                      onClick={() =>
+                        void onOpenSourceFocus(
+                          createSourceFocusTargetFromGroup({
+                            label:
+                              focusedComparison?.label ??
+                              comparisonLabels.cardTitle,
+                            group,
+                            reviewTarget:
+                              getFocusedReviewTarget(focusedPreviewGroups),
+                          }),
+                        )
+                      }
+                      type="button"
+                    >
+                      Open in Source
+                    </button>
                   </div>
                   <div className="draft-preview-code">
                     <p className="draft-preview-label">Saved</p>
@@ -739,6 +821,28 @@ export function AgentShell({
               {proposalProgress.totalTaggedItems}
             </span>
           ) : null}
+          {activeSourceFocus && sourceFocusStatusPill ? (
+            <button
+              className={`proposal-snapshot-chip pill ${sourceFocusStatusPill.className}`}
+              disabled={isProposalActionBusy}
+              onClick={() => {
+                switch (sourceFocusPrimaryAction) {
+                  case "refresh-source-focus":
+                    void onRefreshSourceFocus()
+                    break
+                  case "reveal-review-target":
+                    void onRevealSourceReviewTarget()
+                    break
+                  default:
+                    void onOpenSourceFocus(activeSourceFocus)
+                    break
+                }
+              }}
+              type="button"
+            >
+              Source {sourceFocusStatusPill.label}
+            </button>
+          ) : null}
           <button
             className={`proposal-snapshot-chip pill ${inspect.diagnostics.length > 0 ? "status-dirty" : "status-ready"}`}
             disabled={isProposalActionBusy}
@@ -809,6 +913,64 @@ export function AgentShell({
             </>
           ) : null}
         </div>
+        {activeSourceFocus && activeSourceFocusReviewStatus ? (
+          <div className="proposal-source-focus-panel">
+            <div className="message-topline">
+              <div>
+                <p className="eyebrow">Source focus</p>
+                <h4>{activeSourceFocus.label}</h4>
+              </div>
+              {sourceFocusStatusPill ? (
+                <span className={`pill ${sourceFocusStatusPill.className}`}>
+                  {sourceFocusStatusPill.label}
+                </span>
+              ) : null}
+            </div>
+            <p className="proposal-starter-copy">
+              {activeSourceFocusReviewStatus.summary}
+            </p>
+            <div className="proposal-meta-row">
+              <span className="pill">
+                {getSourceFocusLineLabel(activeSourceFocus)}
+              </span>
+              {activeSourceFocus.reviewOrigin ? (
+                <span className="inline-meta">
+                  From {activeSourceFocus.reviewOrigin.label}
+                </span>
+              ) : null}
+            </div>
+            <div className="proposal-actions">
+              <button
+                className="mini-button"
+                disabled={isProposalActionBusy}
+                onClick={() => void onOpenSourceFocus(activeSourceFocus)}
+                type="button"
+              >
+                Open Source focus
+              </button>
+              {activeSourceFocusReviewStatus.currentReviewTarget ? (
+                <button
+                  className="mini-button"
+                  disabled={isProposalActionBusy}
+                  onClick={() => void onRevealSourceReviewTarget()}
+                  type="button"
+                >
+                  Reveal review target
+                </button>
+              ) : null}
+              {activeSourceFocusReviewStatus.kind === "moved" ? (
+                <button
+                  className="mini-button"
+                  disabled={isProposalActionBusy}
+                  onClick={() => void onRefreshSourceFocus()}
+                  type="button"
+                >
+                  Refresh focus
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
         <div className="proposal-readiness">
           <div className="message-topline">
             <p className="eyebrow">Proposal readiness</p>
@@ -914,6 +1076,7 @@ export function AgentShell({
             onFocusCompare={focusComparisonGroups}
             onInspect={onInspect}
             onOpenView={onOpenView}
+            onOpenSourceFocus={onOpenSourceFocus}
             onSaveDraft={onSaveDraft}
             draftComparison={draftComparison}
             proposalComparison={
@@ -970,10 +1133,12 @@ type AgentShellMessageCardProps = {
   ) => Promise<void> | void
   onFocusCompare: (
     mode: ComparisonMode,
+    targetId: string,
     label: string,
     groups: SourceComparisonSummary["previewGroups"],
   ) => void
   onInspect: () => Promise<void> | void
+  onOpenSourceFocus: (target: SourceFocusTarget) => Promise<void> | void
   onSaveDraft: () => Promise<void> | void
   onReviewDraftDiff: () => void
 }
@@ -999,6 +1164,7 @@ function AgentShellMessageCard({
   onDecision,
   onFocusCompare,
   onInspect,
+  onOpenSourceFocus,
   onSaveDraft,
   onReviewDraftDiff,
 }: AgentShellMessageCardProps) {
@@ -1125,12 +1291,42 @@ function AgentShellMessageCard({
                                     className="proposal-checklist-diff"
                                     key={`${previewGroup.startLine}-${previewGroup.endLine}-${previewGroup.savedText}-${previewGroup.draftText}`}
                                   >
-                                    <span className="pill">
-                                      {previewGroup.startLine ===
-                                      previewGroup.endLine
-                                        ? `Line ${previewGroup.startLine}`
-                                        : `Lines ${previewGroup.startLine}-${previewGroup.endLine}`}
-                                    </span>
+                                    <div className="message-topline">
+                                      <span className="pill">
+                                        {previewGroup.startLine ===
+                                        previewGroup.endLine
+                                          ? `Line ${previewGroup.startLine}`
+                                          : `Lines ${previewGroup.startLine}-${previewGroup.endLine}`}
+                                      </span>
+                                      <button
+                                        className="mini-button"
+                                        disabled={isProposalActionBusy}
+                                        onClick={() =>
+                                          void onOpenSourceFocus(
+                                            createSourceFocusTargetFromGroup({
+                                              label: item.text,
+                                              group: previewGroup,
+                                              reviewTarget:
+                                                createReviewFocusTargetFromGroups(
+                                                  {
+                                                    targetId: `${item.action ?? "free"}-${item.text}`,
+                                                    mode:
+                                                      item.action === "review"
+                                                        ? "proposal"
+                                                        : "saved",
+                                                    label: item.text,
+                                                    groups:
+                                                      checklistContext.previewGroups,
+                                                  },
+                                                ),
+                                            }),
+                                          )
+                                        }
+                                        type="button"
+                                      >
+                                        Open in Source
+                                      </button>
+                                    </div>
                                     <pre>
                                       {previewGroup.savedText || "(empty)"}
                                       {"\n"}
@@ -1160,6 +1356,7 @@ function AgentShellMessageCard({
                           onClick={() =>
                             onFocusCompare(
                               item.action === "review" ? "proposal" : "saved",
+                              `${item.action ?? "free"}-${item.text}`,
                               item.text,
                               checklistContext.previewGroups!,
                             )

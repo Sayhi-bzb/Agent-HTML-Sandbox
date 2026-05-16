@@ -58,5 +58,4 @@ semantic component contract
 
 ## Open Debt
 
-- Local shadcn fixture snapshots and test registry responses can drift from
-  upstream registry and docs behavior.
+- No active debt is currently tracked for the completed artifact-focused pass.

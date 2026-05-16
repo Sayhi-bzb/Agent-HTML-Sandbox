@@ -318,6 +318,29 @@ button:disabled {
   padding: 16px;
 }
 
+.source-focus-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid rgba(20, 33, 61, 0.08);
+  border-radius: 16px;
+  background: rgba(240, 246, 255, 0.82);
+  padding: 14px 16px;
+}
+
+.source-focus-banner h4,
+.source-focus-banner p {
+  margin: 0;
+}
+
+.source-focus-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .workbench-card-header {
   display: flex;
   justify-content: space-between;
@@ -387,12 +410,60 @@ button:disabled {
   color: #5d6b84;
 }
 
+.inspect-source-focus-status {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(20, 33, 61, 0.08);
+  border-radius: 14px;
+  background: rgba(247, 249, 252, 0.88);
+  padding: 12px;
+}
+
+.inspect-source-focus-status h5,
+.inspect-source-focus-status p {
+  margin: 0;
+}
+
 .inspect-linked-review-actions,
 .inspect-review-targets {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.inspect-focus-preview-list {
+  display: grid;
+  gap: 8px;
+}
+
+.inspect-focus-preview-item {
+  border: 1px solid rgba(31, 41, 55, 0.08);
+  border-radius: 14px;
+  background: rgba(247, 249, 252, 0.88);
+  padding: 12px;
+}
+
+.inspect-focus-preview-code {
+  display: grid;
+  gap: 4px;
+}
+
+.inspect-focus-preview-code pre {
+  margin: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #172033;
+  font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+  font-size: 0.8rem;
+  overflow: auto;
+  padding: 8px 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.inspect-focus-preview-code-next pre {
+  background: rgba(255, 247, 219, 0.96);
 }
 
 .inspect-review-target {
@@ -834,6 +905,15 @@ button:disabled {
 }
 
 .proposal-readiness {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(31, 41, 55, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: 12px;
+}
+
+.proposal-source-focus-panel {
   display: grid;
   gap: 8px;
   border: 1px solid rgba(31, 41, 55, 0.08);

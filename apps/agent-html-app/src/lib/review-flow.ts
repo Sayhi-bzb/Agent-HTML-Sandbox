@@ -5,6 +5,7 @@ import type {
   SessionDetail,
 } from "./types"
 import type { SourceComparisonSummary } from "./source-comparison"
+import type { SourceFocusReviewStatus } from "./source-focus"
 import { getTimestampMillis } from "./time"
 
 export type ProposalReadinessSummary = {
@@ -591,6 +592,7 @@ export function getProposalReadiness({
   draftComparison,
   proposalComparison,
   proposalProgress,
+  sourceFocusReviewStatus,
 }: {
   build: BuildRunSummary
   inspect: InspectSnapshot
@@ -602,6 +604,7 @@ export function getProposalReadiness({
   draftComparison?: SourceComparisonSummary
   proposalComparison?: SourceComparisonSummary
   proposalProgress?: ProposalChecklistProgress
+  sourceFocusReviewStatus?: SourceFocusReviewStatus
 }): ProposalReadinessSummary {
   const blockers: string[] = []
   const warnings: string[] = []
@@ -659,6 +662,16 @@ export function getProposalReadiness({
   if (proposalProgress?.reviewCount) {
     warnings.push(
       `${proposalProgress.reviewCount} checklist item(s) still require review.`,
+    )
+  }
+
+  if (sourceFocusReviewStatus?.kind === "moved") {
+    warnings.push(
+      "The current source focus moved away from its originating review target.",
+    )
+  } else if (sourceFocusReviewStatus?.kind === "missing") {
+    warnings.push(
+      "The current source focus no longer maps to an available review target.",
     )
   }
 

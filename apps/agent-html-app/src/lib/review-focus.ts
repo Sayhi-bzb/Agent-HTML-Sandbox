@@ -1,5 +1,6 @@
 import {
   getPreviewGroupKey,
+  getPreviewGroupsByKeys,
   type SourceComparisonPreviewGroup,
   type SourceComparisonSummary,
 } from "./source-comparison"
@@ -19,6 +20,12 @@ export type ReviewFocusTarget = {
 
 export type ReviewFocusIntent = ReviewFocusTarget & {
   requestKey: string
+}
+
+export type ReviewFocusPreview = {
+  mode: ReviewFocusMode
+  lineLabel: string
+  groups: SourceComparisonPreviewGroup[]
 }
 
 export function createReviewFocusTargetFromGroups({
@@ -204,6 +211,45 @@ export function isSameReviewFocusTarget(
     left.groupKeys.length === right.groupKeys.length &&
     left.groupKeys.every((key, index) => key === right.groupKeys[index])
   )
+}
+
+export function findReviewFocusTargetById(
+  targets: ReviewFocusTarget[],
+  targetId?: string,
+) {
+  if (!targetId) {
+    return undefined
+  }
+
+  return targets.find((target) => target.targetId === targetId)
+}
+
+export function getReviewFocusPreview({
+  target,
+  draftComparison,
+  proposalComparison,
+}: {
+  target?: ReviewFocusTarget
+  draftComparison?: SourceComparisonSummary
+  proposalComparison?: SourceComparisonSummary
+}) {
+  if (!target) {
+    return undefined
+  }
+
+  const comparison =
+    target.mode === "proposal" ? proposalComparison : draftComparison
+  const groups = getPreviewGroupsByKeys(comparison, target.groupKeys)
+
+  if (!groups?.length) {
+    return undefined
+  }
+
+  return {
+    mode: target.mode,
+    lineLabel: target.lineLabel,
+    groups,
+  } satisfies ReviewFocusPreview
 }
 
 function formatReviewFocusLineLabel(groups: SourceComparisonPreviewGroup[]) {

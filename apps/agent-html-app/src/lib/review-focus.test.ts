@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest"
 import {
   createReviewFocusTarget,
   createReviewFocusTargetFromGroups,
+  findReviewFocusTargetById,
   getAvailableReviewFocusTargets,
+  getReviewFocusPreview,
   isSameReviewFocusTarget,
 } from "./review-focus"
 import type { BuildRunSummary, InspectSnapshot } from "./types"
@@ -49,21 +51,25 @@ describe("review focus helpers", () => {
     )
 
     const target = createReviewFocusTarget({
+      targetId: "saved-drift",
       mode: "saved",
       label: "Unsaved source drift",
       comparison,
     })
 
     expect(target).toEqual({
+      targetId: "saved-drift",
       mode: "saved",
       label: "Unsaved source drift",
       groupKeys: ["2:3", "5:5"],
       groupCount: 2,
+      lineLabel: "Lines 2-3, 5",
     })
   })
 
   it("creates a precise target directly from a focused group subset", () => {
     const target = createReviewFocusTargetFromGroups({
+      targetId: "review-0",
       mode: "proposal",
       label: "Compare the recommendation card.",
       groups: [
@@ -77,10 +83,12 @@ describe("review focus helpers", () => {
     })
 
     expect(target).toEqual({
+      targetId: "review-0",
       mode: "proposal",
       label: "Compare the recommendation card.",
       groupKeys: ["2:3"],
       groupCount: 1,
+      lineLabel: "Lines 2-3",
     })
   })
 
@@ -109,16 +117,20 @@ describe("review focus helpers", () => {
 
     expect(targets).toEqual([
       {
+        targetId: "review-0",
         mode: "proposal",
         label: "Compare the recommendation card.",
         groupKeys: ["2:2"],
         groupCount: 1,
+        lineLabel: "Line 2",
       },
       {
+        targetId: "save-1",
         mode: "saved",
         label: "Save the latest draft.",
         groupKeys: ["2:2"],
         groupCount: 1,
+        lineLabel: "Line 2",
       },
     ])
   })
@@ -143,16 +155,20 @@ describe("review focus helpers", () => {
 
     expect(targets).toEqual([
       {
+        targetId: "proposal-drift",
         mode: "proposal",
         label: "Proposal drift",
         groupKeys: ["2:2"],
         groupCount: 1,
+        lineLabel: "Line 2",
       },
       {
+        targetId: "saved-drift",
         mode: "saved",
         label: "Unsaved source drift",
         groupKeys: ["2:2"],
         groupCount: 1,
+        lineLabel: "Line 2",
       },
     ])
   })
@@ -177,29 +193,104 @@ describe("review focus helpers", () => {
 
     expect(targets).toEqual([
       {
+        targetId: "review-0",
         mode: "proposal",
         label: "Compare the recommendation card.",
         groupKeys: ["2:2"],
         groupCount: 1,
+        lineLabel: "Line 2",
       },
     ])
   })
 
   it("compares review targets by exact mode, label, and group keys", () => {
     const left = {
+      targetId: "review-0",
       mode: "proposal" as const,
       label: "Proposal drift",
       groupKeys: ["2:3", "5:5"],
       groupCount: 2,
+      lineLabel: "Lines 2-3, 5",
     }
 
     expect(isSameReviewFocusTarget(left, { ...left })).toBe(true)
     expect(
       isSameReviewFocusTarget(left, {
         ...left,
+        targetId: "review-1",
         groupKeys: ["2:3"],
         groupCount: 1,
+        lineLabel: "Lines 2-3",
       }),
     ).toBe(false)
+  })
+
+  it("resolves the active review target back to the current focused preview groups", () => {
+    const draftComparison = getSourceComparisonSummary(
+      [
+        "<page>",
+        "  <card>Saved</card>",
+        "  <list>Old</list>",
+        "  <note>Stable</note>",
+        "  <footer>Before</footer>",
+        "</page>",
+      ].join("\n"),
+      [
+        "<page>",
+        "  <card>Draft</card>",
+        "  <list>New</list>",
+        "  <note>Stable</note>",
+        "  <footer>After</footer>",
+        "</page>",
+      ].join("\n"),
+    )
+    const target = createReviewFocusTargetFromGroups({
+      targetId: "save-1",
+      mode: "saved",
+      label: "Save the latest draft.",
+      groups: draftComparison?.previewGroups.slice(0, 1),
+    })
+
+    const preview = getReviewFocusPreview({
+      target,
+      draftComparison,
+    })
+
+    expect(preview).toEqual({
+      mode: "saved",
+      lineLabel: "Lines 2-3",
+      groups: [
+        {
+          startLine: 2,
+          endLine: 3,
+          savedText: "<card>Saved</card>\n<list>Old</list>",
+          draftText: "<card>Draft</card>\n<list>New</list>",
+        },
+      ],
+    })
+  })
+
+  it("finds a review focus target by its stable target id", () => {
+    const targets = [
+      {
+        targetId: "review-0",
+        mode: "proposal" as const,
+        label: "Compare the recommendation card.",
+        groupKeys: ["2:3"],
+        groupCount: 1,
+        lineLabel: "Lines 2-3",
+      },
+      {
+        targetId: "save-1",
+        mode: "saved" as const,
+        label: "Save the latest draft.",
+        groupKeys: ["5:5"],
+        groupCount: 1,
+        lineLabel: "Line 5",
+      },
+    ]
+
+    expect(findReviewFocusTargetById(targets, "save-1")).toEqual(targets[1])
+    expect(findReviewFocusTargetById(targets, "missing")).toBeUndefined()
   })
 })

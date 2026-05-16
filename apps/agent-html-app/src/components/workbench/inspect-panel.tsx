@@ -1,10 +1,19 @@
 import { getInspectReviewSummary } from "../../lib/inspect-review"
 import {
+  getReviewFocusPreview,
   isSameReviewFocusTarget,
   type ReviewFocusTarget,
 } from "../../lib/review-focus"
 import type { ReviewTimelineActionConfig } from "../../lib/review-flow"
 import type { SourceComparisonSummary } from "../../lib/source-comparison"
+import {
+  createSourceFocusTargetFromDiagnostic,
+  createSourceFocusTargetFromGroup,
+  getSourceFocusLineLabel,
+  getSourceFocusStatusPill,
+  type SourceFocusReviewStatus,
+  type SourceFocusTarget,
+} from "../../lib/source-focus"
 import { formatTimestampLabel } from "../../lib/time"
 import type {
   AgentShellMessage,
@@ -16,6 +25,8 @@ import type {
 
 type InspectPanelProps = {
   activeReviewFocus?: ReviewFocusTarget
+  activeSourceFocus?: SourceFocusTarget
+  activeSourceFocusReviewStatus?: SourceFocusReviewStatus
   availableReviewFocusTargets: ReviewFocusTarget[]
   build: BuildRunSummary
   session: SessionDetail
@@ -27,6 +38,8 @@ type InspectPanelProps = {
   draftComparison?: SourceComparisonSummary
   proposalComparison?: SourceComparisonSummary
   onClearReviewFocus: () => void
+  onOpenSourceFocus: (target: SourceFocusTarget) => void
+  onRefreshSourceFocus: () => void
   onSelectReviewFocus: (target: ReviewFocusTarget) => void
   onRevisitReviewFocus: () => void
   onRunReviewAction: (
@@ -36,6 +49,8 @@ type InspectPanelProps = {
 
 export function InspectPanel({
   activeReviewFocus,
+  activeSourceFocus,
+  activeSourceFocusReviewStatus,
   availableReviewFocusTargets,
   build,
   session,
@@ -47,6 +62,8 @@ export function InspectPanel({
   draftComparison,
   proposalComparison,
   onClearReviewFocus,
+  onOpenSourceFocus,
+  onRefreshSourceFocus,
   onSelectReviewFocus,
   onRevisitReviewFocus,
   onRunReviewAction,
@@ -67,6 +84,14 @@ export function InspectPanel({
     proposalComparison,
     session,
   })
+  const activeReviewFocusPreview = getReviewFocusPreview({
+    target: activeReviewFocus,
+    draftComparison,
+    proposalComparison,
+  })
+  const sourceFocusStatusPill = getSourceFocusStatusPill(
+    activeSourceFocusReviewStatus,
+  )
 
   return (
     <section className="workbench-card">
@@ -168,9 +193,106 @@ export function InspectPanel({
                     ? "Proposal compare"
                     : "Saved compare"}
                 </span>
+                <span className="pill">{activeReviewFocus.lineLabel}</span>
                 <span className="inline-meta">
                   {activeReviewFocus.groupCount} focused group(s)
                 </span>
+              </div>
+            ) : null}
+            {activeReviewFocusPreview?.groups.length ? (
+              <div className="inspect-focus-preview-list">
+                {activeReviewFocusPreview.groups.slice(0, 2).map((group) => (
+                  <article
+                    className="inspect-focus-preview-item"
+                    key={`${group.startLine}-${group.endLine}-${group.savedText}-${group.draftText}`}
+                  >
+                    <div className="message-topline">
+                      <span className="pill">
+                        {group.startLine === group.endLine
+                          ? `Line ${group.startLine}`
+                          : `Lines ${group.startLine}-${group.endLine}`}
+                      </span>
+                      <button
+                        className="mini-button"
+                        disabled={isActionBusy}
+                        onClick={() =>
+                          onOpenSourceFocus(
+                            createSourceFocusTargetFromGroup({
+                              label: activeReviewFocus?.label ?? "Review focus",
+                              group,
+                              reviewTarget: activeReviewFocus,
+                            }),
+                          )
+                        }
+                        type="button"
+                      >
+                        Open in Source
+                      </button>
+                    </div>
+                    <div className="inspect-focus-preview-code">
+                      <p className="draft-preview-label">Before</p>
+                      <pre>{group.savedText || "(empty)"}</pre>
+                    </div>
+                    <div className="inspect-focus-preview-code inspect-focus-preview-code-next">
+                      <p className="draft-preview-label">After</p>
+                      <pre>{group.draftText || "(empty)"}</pre>
+                    </div>
+                  </article>
+                ))}
+                {activeReviewFocusPreview.groups.length > 2 ? (
+                  <span className="inline-meta">
+                    Showing 2 of {activeReviewFocusPreview.groups.length}{" "}
+                    focused group(s) for this review target.
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+            {activeSourceFocus && activeSourceFocusReviewStatus ? (
+              <div className="inspect-source-focus-status">
+                <div className="message-topline">
+                  <div>
+                    <p className="eyebrow">Source focus</p>
+                    <h5>{activeSourceFocus.label}</h5>
+                  </div>
+                  {sourceFocusStatusPill ? (
+                    <span className={`pill ${sourceFocusStatusPill.className}`}>
+                      {sourceFocusStatusPill.label}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="inspect-linked-review-summary">
+                  {activeSourceFocusReviewStatus.summary}
+                </p>
+                <div className="proposal-meta-row">
+                  <span className="pill">
+                    {getSourceFocusLineLabel(activeSourceFocus)}
+                  </span>
+                  {activeSourceFocus.reviewOrigin ? (
+                    <span className="inline-meta">
+                      From {activeSourceFocus.reviewOrigin.label}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="inspect-linked-review-actions">
+                  <button
+                    className="mini-button"
+                    disabled={isActionBusy}
+                    onClick={() => onOpenSourceFocus(activeSourceFocus)}
+                    type="button"
+                  >
+                    Open Source focus
+                  </button>
+                  {activeSourceFocusReviewStatus.kind === "moved" ? (
+                    <button
+                      className="mini-button"
+                      disabled={isActionBusy}
+                      onClick={onRefreshSourceFocus}
+                      type="button"
+                    >
+                      Refresh focus
+                    </button>
+                  ) : null}
+                </div>
               </div>
             ) : null}
             {availableReviewFocusTargets.length > 0 ? (
@@ -189,13 +311,14 @@ export function InspectPanel({
                           : "inspect-review-target"
                       }
                       disabled={isActionBusy || isActive}
-                      key={`${target.mode}-${target.label}-${target.groupKeys.join(",")}`}
+                      key={target.targetId}
                       onClick={() => onSelectReviewFocus(target)}
                       type="button"
                     >
                       <span className="inspect-review-target-label">
                         {target.label}
                       </span>
+                      <span className="pill">{target.lineLabel}</span>
                       <span className="inline-meta">
                         {target.groupCount} group(s)
                       </span>
@@ -335,11 +458,42 @@ export function InspectPanel({
                   className={`diagnostic-item severity-${diagnostic.severity}`}
                   key={diagnostic.id}
                 >
-                  <strong>{diagnostic.severity.toUpperCase()}</strong>
+                  <div className="message-topline">
+                    <strong>{diagnostic.severity.toUpperCase()}</strong>
+                    {typeof diagnostic.line === "number" ? (
+                      <button
+                        className="mini-button"
+                        disabled={isActionBusy}
+                        onClick={() => {
+                          const target = createSourceFocusTargetFromDiagnostic({
+                            diagnostic,
+                          })
+                          if (target) {
+                            onOpenSourceFocus(target)
+                          }
+                        }}
+                        type="button"
+                      >
+                        Open in Source
+                      </button>
+                    ) : null}
+                  </div>
                   <span>{diagnostic.message}</span>
-                  {diagnostic.code || diagnostic.source ? (
+                  {diagnostic.code ||
+                  diagnostic.source ||
+                  typeof diagnostic.line === "number" ? (
                     <span className="inline-meta">
-                      {[diagnostic.code, diagnostic.source]
+                      {[
+                        typeof diagnostic.line === "number"
+                          ? `line ${diagnostic.line}${
+                              typeof diagnostic.column === "number"
+                                ? `:${diagnostic.column}`
+                                : ""
+                            }`
+                          : undefined,
+                        diagnostic.code,
+                        diagnostic.source,
+                      ]
                         .filter(Boolean)
                         .join(" · ")}
                     </span>

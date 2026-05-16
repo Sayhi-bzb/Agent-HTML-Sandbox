@@ -4,12 +4,18 @@ import { AgentShell } from "./components/agent-shell/agent-shell"
 import { SessionsSidebar } from "./components/layout/sessions-sidebar"
 import { Workbench } from "./components/workbench/workbench"
 import {
+  findReviewFocusTargetById,
   getAvailableReviewFocusTargets,
   isSameReviewFocusTarget,
   type ReviewFocusIntent,
   type ReviewFocusTarget,
 } from "./lib/review-focus"
 import type { ReviewTimelineActionConfig } from "./lib/review-flow"
+import {
+  createSourceFocusTargetFromGroup,
+  getSourceFocusReviewStatus,
+  type SourceFocusTarget,
+} from "./lib/source-focus"
 import {
   getLatestProposalComparisonSummary,
   getSourceComparisonSummary,
@@ -88,6 +94,8 @@ export function App() {
     useState<string>()
   const [agentShellReviewFocus, setAgentShellReviewFocus] =
     useState<ReviewFocusTarget>()
+  const [activeSourceFocus, setActiveSourceFocus] =
+    useState<SourceFocusTarget>()
   const [activeView, setActiveView] = useState<WorkbenchView>(
     mockAppState.currentSession.currentView,
   )
@@ -118,6 +126,16 @@ export function App() {
     draftComparison,
     proposalComparison,
   })
+  const sourceFocusReviewTarget = findReviewFocusTargetById(
+    availableReviewFocusTargets,
+    activeSourceFocus?.reviewOrigin?.targetId,
+  )
+  const sourceFocusReviewStatus = getSourceFocusReviewStatus({
+    sourceFocus: activeSourceFocus,
+    availableReviewFocusTargets,
+    draftComparison,
+    proposalComparison,
+  })
   const isWorkbenchActionBusy =
     commandState.savingSource ||
     commandState.runningBuild ||
@@ -141,6 +159,7 @@ export function App() {
     setAgentShellReviewIntent(undefined)
     setAgentShellClearReviewFocusKey(undefined)
     setAgentShellReviewFocus(undefined)
+    setActiveSourceFocus(undefined)
   }, [appState.currentSession.summary.id])
 
   async function bootstrap() {
@@ -1135,6 +1154,38 @@ export function App() {
     setAgentShellReviewFocus(undefined)
   }
 
+  function handleOpenSourceFocus(target: SourceFocusTarget) {
+    setActiveSourceFocus(target)
+    void handleViewChange("source")
+  }
+
+  function handleClearSourceFocus() {
+    setActiveSourceFocus(undefined)
+  }
+
+  function handleRevealSourceReviewTarget() {
+    if (sourceFocusReviewTarget) {
+      queueAgentShellReviewIntent(sourceFocusReviewTarget)
+    }
+  }
+
+  function handleRefreshSourceFocus() {
+    if (
+      !sourceFocusReviewStatus?.currentGroup ||
+      !sourceFocusReviewStatus.currentReviewTarget
+    ) {
+      return
+    }
+
+    setActiveSourceFocus(
+      createSourceFocusTargetFromGroup({
+        label: sourceFocusReviewStatus.currentReviewTarget.label,
+        group: sourceFocusReviewStatus.currentGroup,
+        reviewTarget: sourceFocusReviewStatus.currentReviewTarget,
+      }),
+    )
+  }
+
   function handleReviewFocusChange(focus?: ReviewFocusTarget) {
     setAgentShellReviewFocus((current) => {
       if (!current && !focus) {
@@ -1209,6 +1260,8 @@ export function App() {
         <Workbench
           activeView={activeView}
           activeReviewFocus={agentShellReviewFocus}
+          activeSourceFocus={activeSourceFocus}
+          activeSourceFocusReviewStatus={sourceFocusReviewStatus}
           availableReviewFocusTargets={availableReviewFocusTargets}
           build={appState.currentBuild}
           draftComparison={draftComparison}
@@ -1223,8 +1276,12 @@ export function App() {
           messages={appState.chat}
           onBuild={handleBuild}
           onClearReviewFocus={handleClearReviewFocus}
+          onClearSourceFocus={handleClearSourceFocus}
           onDraftSourceChange={handleDraftSourceChange}
           onInspect={handleInspect}
+          onOpenSourceFocus={handleOpenSourceFocus}
+          onRefreshSourceFocus={handleRefreshSourceFocus}
+          onRevealSourceReviewTarget={handleRevealSourceReviewTarget}
           onRevisitReviewFocus={handleRevisitReviewFocus}
           onRunReviewAction={handleRunReviewAction}
           onSelectReviewFocus={handleSelectReviewFocus}
@@ -1237,6 +1294,8 @@ export function App() {
         />
         <AgentShell
           activeView={activeView}
+          activeSourceFocus={activeSourceFocus}
+          activeSourceFocusReviewStatus={sourceFocusReviewStatus}
           build={appState.currentBuild}
           draftComparison={draftComparison}
           hasUnsavedSourceChanges={hasUnsavedSourceChanges}
@@ -1248,6 +1307,9 @@ export function App() {
           onDecision={handleRecordProposalDecision}
           onInspect={handleInspect}
           onOpenView={handleViewChange}
+          onOpenSourceFocus={handleOpenSourceFocus}
+          onRefreshSourceFocus={handleRefreshSourceFocus}
+          onRevealSourceReviewTarget={handleRevealSourceReviewTarget}
           onSaveDraft={handleSaveDraftForWorkflow}
           isDraftingProposal={commandState.draftingProposal}
           isSending={commandState.sendingMessage}

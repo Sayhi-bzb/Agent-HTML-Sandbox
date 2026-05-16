@@ -1,0 +1,93 @@
+<meta-agent profile="ops-compact" />
+
+<page title="Agent HTML First Look">
+  <card title="Summary">
+    This artifact exercises the current semantic surface in one compact page.
+  </card>
+
+  <card title="Controls">
+    <switch
+      label="Live Sync"
+      checked="true"
+      description="Immediate preference toggle."
+    />
+    <slider
+      label="Review Strictness"
+      value="70"
+      description="Read-only numeric preference."
+    />
+    <radio-group
+      label="Decision"
+      value="ship"
+      description="Single-select field."
+    >
+      <option value="ship" label="Ship">Proceed in the current window.</option>
+      <option value="hold" label="Hold">Wait for one more review pass.</option>
+    </radio-group>
+    <toggle-group
+      label="Rollout Mode"
+      value="fast"
+      description="Inline option set."
+    >
+      <option value="fast" label="Fast">Prefer speed.</option>
+      <option value="safe" label="Safe">Prefer guardrails.</option>
+    </toggle-group>
+    <select
+      label="Deployment Window"
+      value="today"
+      description="Choose a release window."
+    >
+      <option value="today" label="Today">Ship in the current window.</option>
+      <option value="tomorrow" label="Tomorrow">Wait for the next slot.</option>
+    </select>
+    <combobox
+      label="Owner"
+      value="Ops reviewer"
+      description="Searchable single-select field."
+    >
+      <option value="Ops reviewer" label="Ops reviewer">
+        Current reviewer.
+      </option>
+      <option value="Security reviewer" label="Security reviewer">
+        Escalation reviewer.
+      </option>
+    </combobox>
+  </card>
+
+  <tabs default="overview">
+    <tab value="overview" label="Overview">
+      <card title="Checklist">
+        <list variant="unordered">
+          <item>Semantic authoring only.</item>
+          <item>Managed runtime renders the final artifact.</item>
+          <item>No project scaffold is written into this repo.</item>
+        </list>
+      </card>
+    </tab>
+    <tab value="details" label="Details">
+      <accordion>
+        <accordion-item value="status" title="Status">
+          <alert title="State" tone="neutral">
+            Ready for a local build and preview.
+          </alert>
+        </accordion-item>
+        <accordion-item value="evidence" title="Evidence">
+          <table>
+            <row kind="header">
+              <cell>Area</cell>
+              <cell>State</cell>
+            </row>
+            <row kind="body">
+              <cell>Renderer</cell>
+              <cell>Aligned</cell>
+            </row>
+            <row kind="body">
+              <cell>Runtime</cell>
+              <cell>Managed</cell>
+            </row>
+          </table>
+        </accordion-item>
+      </accordion>
+    </tab>
+  </tabs>
+</page>
