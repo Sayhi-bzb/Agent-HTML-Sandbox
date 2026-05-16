@@ -38,10 +38,6 @@ CLI schema output
 agent-facing authoring contract
 ```
 
-Current compatibility may still serialize the approved visual choice through
-`profile`, but that spelling is an alias layer, not a separate long-term public
-config model.
-
 ## Runtime Verification Chain
 
 ```txt

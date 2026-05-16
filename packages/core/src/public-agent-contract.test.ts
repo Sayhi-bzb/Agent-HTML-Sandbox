@@ -17,7 +17,7 @@ describe("public agent contract", () => {
 
     expect(contract.components).toBe(VALIDATED_STANDARD_COMPONENT_SCHEMAS)
     expect(contract.forbidden).toBe(contract.safetyPolicy.forbidden)
-    expect(contract.renderConfig.keys).toEqual(["profile"])
+    expect(contract.renderConfig.keys).toEqual(["style-ref"])
     expect(contract.renderConfig.defaults).toEqual({
       "style-ref": "report-default",
     })

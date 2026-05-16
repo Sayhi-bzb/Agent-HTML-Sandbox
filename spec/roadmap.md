@@ -25,9 +25,8 @@ semantic component contract
 
 - Phases 1 through 7 of the current artifact-focused pass are complete.
 - The grouped adoption lane for `combobox`, `switch`, and `slider` is closed.
-- Current implementation still exposes compatibility `profile` entries rather
-  than document style config references as the main visual configuration entry;
-  these entries are compatibility aliases, not reusable component style packs.
+- Current implementation exposes approved document style config references
+  through `style-ref` as the main visual configuration entry.
 - Overlay, menu, navigation, and app-shell semantics remain outside the current
   product lane.
 
@@ -48,8 +47,5 @@ Reopen roadmap work only if one of these changes:
 
 - If local fixture or registry snapshots become costly to maintain across
   shadcn upgrades, reopen fixture and registry maintenance work.
-- For the document-level config cleanup itself, use
-  `spec/document-style-config-migration.md` as the execution spec.
-- Establish the migration path from compatibility `profile` entries to
-  document-level style config references when the configuration lane reopens,
-  without adding component-level public styling knobs.
+- If public visual syntax needs to change again, start a new execution spec
+  rather than reintroducing compatibility aliases into the active contract.

@@ -228,7 +228,7 @@ describe("agent-html CLI heavy runtime flows", () => {
     await writeFile(
       inputPath,
       [
-        '<meta-agent profile="ops-compact" />',
+        '<meta-agent style-ref="ops-compact" />',
         [
           '<page title="Managed Runtime">',
           '<card title="Overview">',
@@ -337,7 +337,7 @@ describe("agent-html CLI heavy runtime flows", () => {
     await writeFile(
       inputPath,
       [
-        '<meta-agent profile="report-default" />',
+        '<meta-agent style-ref="report-default" />',
         [
           '<page title="Generic Artifact">',
           '<tabs default="summary">',
@@ -477,7 +477,7 @@ describe("agent-html CLI heavy runtime flows", () => {
     await writeFile(
       documentPath,
       [
-        '<meta-agent profile="ops-compact" />',
+        '<meta-agent style-ref="ops-compact" />',
         '<page title="CLI Artifact"><card title="Overview">Written as agent-html.</card></page>',
       ].join("\n"),
     )
@@ -500,18 +500,13 @@ describe("agent-html CLI heavy runtime flows", () => {
       { AHTML_HOME: runtimeHome },
       tempDir,
     )
-    expect(documentInspection.stdout).toContain('"profile": "ops-compact"')
     expect(documentInspection.stdout).toContain(
       '"documentStyleConfigReference": "ops-compact"',
     )
     expect(documentInspection.stdout).toContain(
       '"configModel": "document-style-config-reference"',
     )
-    expect(documentInspection.stdout).toContain(
-      '"configSource": "profile-alias"',
-    )
     expect(documentInspection.stdout).toContain('"resolvedDocumentStyleTokens"')
-    expect(documentInspection.stdout).toContain('"resolvedProfileTokens"')
     expect(documentInspection.stdout).toContain('"density": "compact"')
     expect(documentInspection.stdout).not.toContain('"resolvedConfig"')
     expect(documentInspection.stdout).toContain('"name": "card"')
@@ -524,11 +519,9 @@ describe("agent-html CLI heavy runtime flows", () => {
     expect(artifactInspection.stdout).toContain(
       "config model: document-style-config-reference",
     )
-    expect(artifactInspection.stdout).toContain("config source: profile-alias")
     expect(artifactInspection.stdout).toContain(
       "documentStyleConfigReference: ops-compact",
     )
-    expect(artifactInspection.stdout).toContain("profile alias: ops-compact")
     expect(artifactInspection.stdout).toContain(
       "resolved document style tokens:",
     )
@@ -548,7 +541,7 @@ describe("agent-html CLI heavy runtime flows", () => {
     await writeFile(
       documentPath,
       [
-        '<meta-agent profile="ops-compact" />',
+        '<meta-agent style-ref="ops-compact" />',
         '<page title="CLI Artifact"><card title="Overview">Written as agent-html.</card></page>',
       ].join("\n"),
     )
@@ -565,10 +558,8 @@ describe("agent-html CLI heavy runtime flows", () => {
       inspectionPath: string
       inspection: {
         configModel: string
-        configSource: string
-        config: { documentStyleConfigReference: string; profile: string }
+        config: { documentStyleConfigReference: string }
         resolvedDocumentStyleTokens: { density: string }
-        resolvedProfileTokens: { density: string }
         components: { name: string; count: number }[]
       }
     }>(stdout)
@@ -583,15 +574,12 @@ describe("agent-html CLI heavy runtime flows", () => {
     expect(result.inspection.configModel).toBe(
       "document-style-config-reference",
     )
-    expect(result.inspection.configSource).toBe("profile-alias")
     expect(result.inspection.config.documentStyleConfigReference).toBe(
       "ops-compact",
     )
-    expect(result.inspection.config.profile).toBe("ops-compact")
     expect(result.inspection.resolvedDocumentStyleTokens.density).toBe(
       "compact",
     )
-    expect(result.inspection.resolvedProfileTokens.density).toBe("compact")
     expect(result.inspection.components).toEqual([
       { name: "card", count: 1 },
       { name: "page", count: 1 },

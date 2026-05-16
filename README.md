@@ -50,7 +50,7 @@ ahtml prompt
 ```
 
 ```html
-<meta-agent profile="report-default" />
+<meta-agent style-ref="report-default" />
 
 <page title="Review">
   <card title="Summary">
@@ -79,7 +79,7 @@ agent work
 ```
 
 The schema is the public contract. Agents write content structure, not raw HTML, CSS, JavaScript, Tailwind classes, or renderer props.
-Public visual choice is limited to approved document style config choices. Current compatibility syntax serializes those choices as named `profile` ids such as `report-default` or `ops-compact`, not free-form `theme`, `density`, `tone`, or `width` inputs.
+Public visual choice is limited to approved document style config choices, selected through `style-ref` values such as `report-default` or `ops-compact`, not free-form `theme`, `density`, `tone`, or `width` inputs.
 
 The workspace publishes two package roles:
 

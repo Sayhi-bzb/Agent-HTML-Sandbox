@@ -36,13 +36,8 @@ export function formatPrompt(schema) {
 }
 
 function formatRenderConfigGuidance(renderConfig) {
-  const compatibilitySyntax = renderConfig.compatibilitySyntax
-
-  if (
-    renderConfig.model === "document-style-config-reference" &&
-    compatibilitySyntax?.key === "profile"
-  ) {
-    return 'Use an approved document style config reference. Current compatibility syntax serializes that choice with profile="...".'
+  if (renderConfig.model === "document-style-config-reference") {
+    return 'Use an approved document style config reference via style-ref="...".'
   }
 
   return "Use an approved render config choice."

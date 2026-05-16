@@ -42,10 +42,10 @@ Status:
 
 ## Layer Separation Guidance
 
-当前 shipped compatibility surface 仍通过命名 `profile` 暴露公共视觉入口：
+当前 shipped public surface 通过 `style-ref` 暴露公共视觉入口：
 
-- agent-facing render config 当前仍只有命名 `profile`。
-- `profile` 应被视为 approved `DocumentStyleConfigReference` 的兼容别名，
+- agent-facing render config 当前仍只有 document-level `style-ref`。
+- `style-ref` 指向 approved `DocumentStyleConfigReference`，
   不是 theme token 集合，也不是 per-component variant 集合。
 - `theme`、`density`、`tone`、`width` 继续是 resolved internal tokens，不是
   agent-facing config vocabulary。
@@ -73,8 +73,8 @@ Status:
 
 文档级配置层长期保持“外部引用”模型：
 
-- 文档只引用一个 approved `DocumentStyleConfigReference`；当前 compatibility
-  surface 可继续使用命名 `profile` 指向该引用。
+- 文档只引用一个 approved `DocumentStyleConfigReference`，并通过
+  `style-ref` 选择该引用。
 - 真实的 per-component 视觉规则属于内部 visual mapping，不进入正文积木协议，
   也不形成单独的 public config key。
 - 同一语义组件在不同 document style reference 下可以换视觉实现，但不得换
@@ -189,8 +189,8 @@ Status:
    可以存在，但映射规则应由 renderer / config 层维护。
 
 4. 把 document style reference、其 resolved tokens，以及 surface treatment
-   留给配置层或内部映射层。当前 compatibility `profile` 只是 document style
-   reference alias，不应被扩写成通用视觉参数面。
+   留给配置层或内部映射层。公开 surface 只暴露 `style-ref`，不应被扩写成
+   通用视觉参数面。
 
 5. 把组合结构和 state wiring 锁在实现层。
    `tabs` 的 trigger/content、`select` 的 trigger/content/item、`accordion`
@@ -201,8 +201,8 @@ Status:
 - `combobox`、`switch` 和 `slider` 这一批 grouped adoption 已关闭。
 - 当前 artifact-focused support surface 已稳定。
 - 当前 lane 不包含 overlay、menu、navigation 或 app-shell 语义。
-- 当前公开 render-config 仍是 `profile` 唯一入口；它是 document-level style
-  reference 的兼容入口，不是 theme / variant token surface。
+- 当前公开 render-config 只通过 `style-ref` 暴露 document-level style
+  reference，不是 theme / variant token surface。
 - 本文出现的组件级 visual mapping 仅是内部设计指导，不是当前 schema 已开放
   能力，也不是 future public config 承诺。
 - 当前无 active shadcn debt；只有在未来升级导致本地 fixture drift 时再重开。

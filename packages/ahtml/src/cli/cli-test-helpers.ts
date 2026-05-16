@@ -23,7 +23,7 @@ export const shadcnTemplateFixtureDir = path.join(
 export const validAgentHtmlFixtures = [
   '<page title="Fixture"><card title="Summary">Valid text.</card></page>',
   [
-    '<meta-agent profile="ops-compact" />',
+    '<meta-agent style-ref="ops-compact" />',
     '<page title="Dashboard"><card title="Queue">Ready.</card></page>',
   ].join("\n"),
   [
@@ -84,10 +84,6 @@ export type CliSchemaOutput = {
     readonly keys: readonly string[]
     readonly values: Readonly<Record<string, readonly string[]>>
     readonly model: string
-    readonly compatibilitySyntax: {
-      readonly key: string
-      readonly kind: string
-    }
   }
 }
 

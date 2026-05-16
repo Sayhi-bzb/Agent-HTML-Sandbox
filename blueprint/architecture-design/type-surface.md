@@ -31,7 +31,7 @@ Consumers: contract mapper, parse / sanitize, renderer
 
 Change rule: overlay 变化必须同步示例、contract 和 tests。
 
-Note: overlay 决定组件是否 expose、语义 prop 命名、允许 values、slot 合法结构、children 边界、隐藏 props、profile 兼容性和 shadcn internal mapping。
+Note: overlay 决定组件是否 expose、语义 prop 命名、允许 values、slot 合法结构、children 边界、隐藏 props、style config 兼容性和 shadcn internal mapping。
 
 ## 3. ComponentSchema
 
@@ -43,7 +43,7 @@ Consumers: agent, parse / sanitize, renderer
 
 Change rule: 新增、删除或重命名 ComponentSchema 必须同步示例、contract 和 renderer 注册。
 
-Note: ComponentSchema 由显式语义声明收束，并经过 GeneratedShadcnIntrospection 校验。它描述组件用途、固定结构、允许语义 props、允许 slots、profile 兼容性和使用禁忌。它不等于 shadcn/ui props，也不暴露 Tailwind class 或内部 React 实现。shadcn-backed ComponentSchema 应能归一到 UiComponentSchema / UiSlotSchema。
+Note: ComponentSchema 由显式语义声明收束，并经过 GeneratedShadcnIntrospection 校验。它描述组件用途、固定结构、允许语义 props、允许 slots、style config 兼容性和使用禁忌。它不等于 shadcn/ui props，也不暴露 Tailwind class 或内部 React 实现。shadcn-backed ComponentSchema 应能归一到 UiComponentSchema / UiSlotSchema。
 
 ## 3.1. UiComponentSchema
 
@@ -91,29 +91,29 @@ Consumers: agent
 
 Change rule: ComponentToken 应表达组件语义、内容角色和组合边界，不应表达内部样式实现。
 
-## 6. PresentationProfile
+## 6. Legacy Profile Syntax (Removed)
 
-Ownership: presentation contract / renderer adapter
+Ownership: migration record
 
-Purpose: 表示兼容期或简化入口下的命名视觉档位，例如 `ops-compact`。
+Purpose: 记录已移除的 `<meta-agent profile="...">` 兼容语法。
 
-Consumers: agent, parse / sanitize, renderer adapter, CLI
+Consumers: none in the active public contract
 
-Change rule: 新增、删除或重命名 PresentationProfile 必须同步 schema、sanitize schema、renderer adapter profile 注册和 tests。
+Change rule: 不得在没有新的产品决策的情况下恢复该兼容语法。
 
-Note: 在目标架构里，PresentationProfile 可以保留为兼容 alias 或简化 preset，但不再是长期唯一文档级视觉入口。当前兼容期仍可继续用 `<meta-agent profile="...">` 序列化这一 alias，但这种 serialized spelling 不改变它的兼容层角色。它可以在内部绑定 theme、density、card treatment、table treatment、badge treatment、emphasis 和 width 等受控 token，但这些 token 默认不直接暴露为 agent-facing 自由 props。
+Note: 公开文档级视觉入口现在只通过 `<meta-agent style-ref="...">` 暴露。旧 `profile` syntax 只应出现在迁移测试或历史记录中。
 
-## 7. PresentationProfileRegistry
+## 7. Legacy Profile Registry (Removed)
 
-Ownership: presentation contract / CLI
+Ownership: migration record
 
-Purpose: 表示兼容期或简化入口下公开给 agent 或用户选择的有限 profile 集合。
+Purpose: 记录已移除的 profile registry compatibility surface。
 
-Consumers: CLI schema output, parse / sanitize, renderer adapter
+Consumers: none in the active public contract
 
-Change rule: registry 变化必须同步 `component-schema-to-agent-html` contract、CLI schema 输出和 tests。
+Change rule: 不得在 active public schema 中恢复该 registry surface。
 
-Note: PresentationProfileRegistry 是兼容选择面，不是 renderer 内部 theme object、Tailwind config 或 shadcn variant 列表，也不应继续被视为长期唯一视觉配置 catalog。
+Note: 当前公开 visual config catalog 只由 DocumentStyleConfigReference 组成。
 
 ## 7.1. DocumentStyleConfigReference
 
@@ -125,7 +125,7 @@ Consumers: agent, parse / sanitize, CLI schema output
 
 Change rule: 引用 identity、允许值或解析规则变化必须同步 schema、sanitize schema、配置解析和 tests。
 
-Note: 在目标架构里，DocumentStyleConfigReference 是长期首选的文档级视觉配置入口。当前重构期可以先在 contract/type 层把它作为主语，而继续保留 `profile` 作为 serialized compatibility alias。它只选择已批准配置，不内联具体组件样式规则，不等于 CSS、Tailwind class 或 shadcn props。
+Note: 在目标架构里，DocumentStyleConfigReference 是文档级视觉配置入口。它通过 `style-ref` 被 agent-facing syntax 选择，只选择已批准配置，不内联具体组件样式规则，不等于 CSS、Tailwind class 或 shadcn props。
 
 ## 7.2. DocumentStyleConfig
 
@@ -173,7 +173,7 @@ Consumers: agent, parse / sanitize, renderer adapter
 
 Change rule: RenderConfig key / value 变化必须同步 schema、sanitize schema、renderer adapter 配置解析和 tests。
 
-Note: 在目标架构里，RenderConfig 默认应优先从 DocumentStyleConfigReference 解析得到；兼容期可以接受 `profile` alias 或极少量与 alias 绑定的受控 token。core 应负责把当前 serialized `profile` input 归一到同一 checked RenderConfig，再交给 renderer。它不是 CSS、style、className、Tailwind class、shadcn props、script 或外部资源入口。
+Note: 在目标架构里，RenderConfig 默认应优先从 DocumentStyleConfigReference 解析得到。core 负责把 `style-ref` 选择解析为 checked RenderConfig，再交给 renderer。它不是 CSS、style、className、Tailwind class、shadcn props、script 或外部资源入口。
 
 ## 11. AhtmlRuntimeConfig
 
@@ -233,7 +233,7 @@ Consumers: RendererAdapter
 
 Change rule: GenericRendererResolver 变化必须同步 `agent-html-to-renderer`、`engine-to-renderer-adapter`、runtime checks 和 build artifact tests。
 
-Note: GenericRendererResolver 不应包含 `if tabs then Tabs` 这类逐组件主路径。组件差异应来自 UiRegistry、UiSlotSchema、safe prop mapping、PresentationProfile 和 overlay。
+Note: GenericRendererResolver 不应包含 `if tabs then Tabs` 这类逐组件主路径。组件差异应来自 UiRegistry、UiSlotSchema、safe prop mapping、DocumentStyleConfig 与 overlay。
 
 ## 15. RendererCapability
 
@@ -245,7 +245,7 @@ Consumers: renderer adapter, CLI status / doctor, tests
 
 Change rule: ComponentSchema 新增、删除或修改时，必须同步 RendererCapability。没有 RendererCapability 的默认组件不得进入 agent-facing schema。
 
-Note: RendererCapability 应至少表达 component name、render kind（`shadcn`、`native`、`composite` 或 unsupported）、required shadcn registry items、required runtime surface、ui / slot coverage、safe prop mapping coverage、profile support 和 diagnostics policy。它不暴露 Tailwind class、完整 shadcn props 或 Radix props 给 agent，也不表示必须存在逐组件手写 adapter。
+Note: RendererCapability 应至少表达 component name、render kind（`shadcn`、`native`、`composite` 或 unsupported）、required shadcn registry items、required runtime surface、ui / slot coverage、safe prop mapping coverage、style config support 和 diagnostics policy。它不暴露 Tailwind class、完整 shadcn props 或 Radix props 给 agent，也不表示必须存在逐组件手写 adapter。
 
 ## 16. SanitizedAgentHtml
 
@@ -279,18 +279,18 @@ Purpose: 表示 `schema` 命令输出的脱水 agent-facing contract。
 
 Consumers: agent
 
-Change rule: CliSchemaOutput 必须来自 ComponentSchema 和 DocumentStyleConfigReference / PresentationProfileRegistry / RenderConfig，不得暴露 renderer props、Tailwind class、shadcn props 或源码结构。
+Change rule: CliSchemaOutput 必须来自 ComponentSchema、DocumentStyleConfigReference 和 RenderConfig，不得暴露 renderer props、Tailwind class、shadcn props 或源码结构。
 
-Note: 在兼容期，如果具体示例语法仍使用 `<meta-agent profile="...">`，CliSchemaOutput 必须把它解释为 approved visual config alias，而不是独立长期 profile 系统。
+Note: CliSchemaOutput 中的公开 visual config syntax 必须使用 `style-ref`，不得恢复 `profile` 兼容字段。
 
 ## 19. CliConfigView
 
 Ownership: CLI / presentation contract
 
-Purpose: 表示 CLI 从 DocumentStyleConfigReference、兼容 PresentationProfileRegistry 和 RenderConfig 派生的只读配置视图。
+Purpose: 表示 CLI 从 DocumentStyleConfigReference 和 RenderConfig 派生的只读配置视图。
 
 Consumers: agent, developer
 
 Change rule: CliConfigView 不得成为独立配置状态源，不得映射为任意 CSS、Tailwind class、inline style、script、HTML attribute passthrough 或外部资源。
 
-Note: CliConfigView 应优先表达 document-level style config model；若展示 compatibility `profile`，应把它标记为 alias 或 compatibility wording，而不是主配置对象。
+Note: CliConfigView 应只表达 document-level style config model，不得保留 compatibility `profile` wording。

@@ -79,14 +79,14 @@ npx skills add Sayhi-bzb/Agent-HTML --skill ahtml
 ahtml prompt
 ```
 
-Use the schema output as the source of truth for registered components, allowed props, allowed children, and approved document style config choices. Current compatibility syntax serializes those choices as named `profile` values.
+Use the schema output as the source of truth for registered components, allowed props, allowed children, and approved document style config choices.
 
 ## 4. Write a document [#write-a-document]
 
 A valid document needs a `<page>` root.
 
 ```html title="artifact.agent.html"
-<meta-agent profile="report-default" />
+<meta-agent style-ref="report-default" />
 
 <page title="Review">
   <card title="Summary">

@@ -4,11 +4,11 @@ import { pathToFileURL } from "node:url"
 import { describe, expect, it } from "vitest"
 
 describe("artifact workflow inspection", () => {
-  it("reports the profile alias separately from resolved document style tokens", async () => {
+  it("reports the checked document style config reference separately from resolved document style tokens", async () => {
     const { createInspection } = await importArtifactWorkflowModule()
     const inspection = createInspection({
       meta: {
-        profile: "ops-compact",
+        documentStyleConfigReference: "ops-compact",
         theme: "neutral",
         density: "compact",
         tone: "dashboard",
@@ -36,18 +36,10 @@ describe("artifact workflow inspection", () => {
     expect(inspection).toEqual({
       kind: "agent-html-inspection",
       configModel: "document-style-config-reference",
-      configSource: "profile-alias",
       config: {
         documentStyleConfigReference: "ops-compact",
-        profile: "ops-compact",
       },
       resolvedDocumentStyleTokens: {
-        theme: "neutral",
-        density: "compact",
-        tone: "dashboard",
-        width: "dashboard",
-      },
-      resolvedProfileTokens: {
         theme: "neutral",
         density: "compact",
         tone: "dashboard",
@@ -64,10 +56,8 @@ describe("artifact workflow inspection", () => {
     const { formatInspectionSummary } = await importArtifactWorkflowModule()
     const summary = formatInspectionSummary({
       configModel: "document-style-config-reference",
-      configSource: "profile-alias",
       config: {
         documentStyleConfigReference: "ops-compact",
-        profile: "ops-compact",
       },
       resolvedDocumentStyleTokens: {
         density: "compact",
@@ -77,11 +67,7 @@ describe("artifact workflow inspection", () => {
     })
 
     expect(summary).toContain("config model: document-style-config-reference")
-    expect(summary).toContain("config source: profile-alias")
-    expect(summary).toContain(
-      "documentStyleConfigReference: ops-compact",
-    )
-    expect(summary).toContain("profile alias: ops-compact")
+    expect(summary).toContain("documentStyleConfigReference: ops-compact")
     expect(summary).toContain("resolved document style tokens:")
     expect(summary).not.toContain("resolved config")
     expect(summary).toContain("- density: compact")
@@ -106,10 +92,8 @@ async function importArtifactWorkflowModule() {
     readonly createInspection: (document: unknown) => unknown
     readonly formatInspectionSummary: (inspection: {
       readonly configModel?: string
-      readonly configSource?: string
       readonly config?: Record<string, string>
       readonly resolvedDocumentStyleTokens?: Record<string, string>
-      readonly resolvedProfileTokens?: Record<string, string>
       readonly components?: readonly {
         readonly name: string
         readonly count: number

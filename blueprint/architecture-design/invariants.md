@@ -34,9 +34,9 @@ props schema / tokens 是 agent-facing 组件能力入口。
 
 ## 6. configuration layer owns visual choice
 
-视觉选择必须先收束为已批准的 document style config reference，或在兼容期收束为映射到该配置层的 presentation profile alias。
+视觉选择必须先收束为已批准的 document style config reference。
 
-独立配置层可以在内部绑定 theme、density、card treatment、table treatment、badge treatment、emphasis 和 width 等受控 token，并负责组件级视觉映射；agent-facing 主接口默认只暴露 style config reference 或兼容 alias，而不是完整视觉参数集。
+独立配置层可以在内部绑定 theme、density、card treatment、table treatment、badge treatment、emphasis 和 width 等受控 token，并负责组件级视觉映射；agent-facing 主接口默认只暴露 style config reference，而不是完整视觉参数集。
 
 ## 7. implementation props stay internal
 
@@ -74,7 +74,7 @@ Vite、React、Tailwind、shadcn/ui、renderer adapter 和 generated runtime fil
 
 dev preview 不得成为独立渲染路径。
 
-dev preview 和 final artifact 必须共用 renderer adapter、ComponentSchema、PresentationProfile、RenderConfig 和样式系统。
+dev preview 和 final artifact 必须共用 renderer adapter、ComponentSchema、RenderConfig 和样式系统。
 
 两者视觉目标应保持一致。差异只应来自 dev tooling、资源路径、字体 / 网络策略、viewport / container 条件和显式 export mode。
 
@@ -104,6 +104,6 @@ raw escape hatch 必须显式标记，并经过安全边界。
 
 ## 16. render config selects approved visual configs only
 
-render config header 只能选择已批准的 document style config reference，或在兼容期选择映射到该配置层的 presentation profile alias，或携带与该 alias 绑定的极少量受控 token。
+render config header 只能选择已批准的 document style config reference。
 
 它不得成为 CSS、Tailwind class、shadcn props、script、style 或外部资源的逃逸口。

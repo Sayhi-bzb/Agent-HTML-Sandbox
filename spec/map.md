@@ -20,11 +20,10 @@ semantic component contract
 - Public authoring stays semantic-first; document-level visual choice belongs to
   a separate configuration layer. The public visual config entry is a document
   style reference, not a per-component styling surface.
-- Legacy `<ui>` / `<slot>` input and old non-profile render-config input stay
+- Legacy `<ui>` / `<slot>` input and old pre-`style-ref` render-config input stay
   out of the normal path.
-- Current compatibility may keep named `profile` entries, but the target visual
-  config surface is an approved document style config reference; `profile` is a
-  compatibility alias for that reference.
+- The active visual config surface is an approved document style config
+  reference, serialized through `style-ref`.
 - Schema and prompt expose only renderable semantic components and approved
   document-level visual config entries.
 - Internal `theme` / `density` / `tone` / `width` remain resolved configuration
@@ -62,12 +61,11 @@ semantic component contract
 ## Current Pass
 
 - The current artifact-focused pass is complete.
-- Current shipped implementation still uses named `profile` as the compatibility
-  visual entry.
+- Current shipped implementation uses `style-ref` as the document-level visual
+  entry.
 - No component-level public style knobs are part of the current contract.
 - Reopen `spec/` when product semantics expand beyond the current lane, or when
-  document style config is promoted from target architecture to executable
-  contract.
+  public visual syntax or visual config semantics need another contract change.
 
 ## Open Debt
 

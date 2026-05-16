@@ -22,7 +22,7 @@
 定位：
 
 - shadcn/ui 是标准组件的实现底座，位于 managed runtime、renderer adapter 或 template 边界。
-- shadcn-backed theme / density / layout preset 可作为 render config profile 来源。
+- shadcn-backed theme / density / layout preset 可作为 document style config reference 的内部实现来源。
 - Tailwind 可作为组件内部样式工具，不作为 agent-facing 主接口。
 - Radix UI 可承担可访问交互 primitive。
 - variant 和 class 合并逻辑应封装在组件内部。
@@ -41,7 +41,7 @@
 定位：
 
 - standardized component schema 是 agent-facing 组件能力来源。
-- render config schema 可作为 presentation profile 信息来源。
+- render config schema 可作为 document style config reference 信息来源。
 - `.d.ts` 和 TSDoc 可作为 schema 维护辅助材料。
 - schema 只暴露用途、props、slots、组合关系和使用禁忌。
 - Storybook 可作为人类组件工作台，暂不作为 v1 主 schema 来源。

@@ -1,7 +1,7 @@
 import { benchmarkCopy } from "./benchmark-copy"
 
 export const agentHtmlSource = [
-  '<meta-agent profile="review-dense" />',
+  '<meta-agent style-ref="review-dense" />',
   "",
   `<page title="${benchmarkCopy.title}">`,
   `  <alert title="Status" tone="neutral">${benchmarkCopy.summaryStatus}</alert>`,

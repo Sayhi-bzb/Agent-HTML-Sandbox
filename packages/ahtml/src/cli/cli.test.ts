@@ -50,7 +50,7 @@ describe("agent-html CLI contracts", () => {
     const prompt = `${formatPrompt(schema)}\n`
 
     expect(prompt).toContain("document style config reference")
-    expect(prompt).toContain('<meta-agent profile="')
+    expect(prompt).toContain('<meta-agent style-ref="')
     expect(prompt).not.toContain('theme="')
     expect(prompt).not.toContain('density="')
     expect(prompt).not.toContain('tone="')
@@ -122,24 +122,20 @@ describe("agent-html CLI contracts", () => {
       expect.arrayContaining(["card", "accordion"]),
     )
     expect(schema.renderConfig.defaults).toEqual({
-      profile: "report-default",
+      "style-ref": "report-default",
     })
     expect(schema.renderConfig.model).toBe("document-style-config-reference")
-    expect(schema.renderConfig.compatibilitySyntax).toEqual({
-      key: "profile",
-      kind: "presentation-profile-alias",
-    })
-    expect(schema.renderConfig.keys).toEqual(["profile"])
+    expect(schema.renderConfig.keys).toEqual(["style-ref"])
     expect(schema.renderConfig.keys).not.toContain("theme")
     expect(schema.renderConfig.keys).not.toContain("density")
     expect(schema.renderConfig.keys).not.toContain("tone")
     expect(schema.renderConfig.keys).not.toContain("width")
-    expect(Object.keys(schema.renderConfig.values)).toEqual(["profile"])
+    expect(Object.keys(schema.renderConfig.values)).toEqual(["style-ref"])
     expect(Object.keys(schema.renderConfig.values)).not.toContain("theme")
     expect(Object.keys(schema.renderConfig.values)).not.toContain("density")
     expect(Object.keys(schema.renderConfig.values)).not.toContain("tone")
     expect(Object.keys(schema.renderConfig.values)).not.toContain("width")
-    expect(schema.renderConfig.values.profile).toEqual(
+    expect(schema.renderConfig.values["style-ref"]).toEqual(
       expect.arrayContaining(["report-default", "ops-compact"]),
     )
     expect(serializedComponents).not.toContain('"className"')

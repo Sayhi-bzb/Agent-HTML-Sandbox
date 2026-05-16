@@ -20,7 +20,7 @@ Runtime files live under `~/.ahtml` or `%USERPROFILE%\.ahtml` by default. Set `A
 ## Read schema first [#read-schema-first]
 
 Start every generation task with `ahtml prompt`. The schema prompt is the only public contract for components and config.
-Use the approved document style config choices from the schema as the only public visual choice. Current compatibility syntax serializes those choices as named `profile` values. Do not try to author free-form `theme`, `density`, `tone`, or `width` values in agent-facing input.
+Use the approved document style config choices from the schema as the only public visual choice. Author them through `style-ref` values, not free-form `theme`, `density`, `tone`, or `width` values in agent-facing input.
 
 ## Use semantic components [#use-semantic-components]
 
@@ -85,7 +85,7 @@ If validation fails, fix the document instead of bypassing the error.
 - Unknown component: use a registered standard component.
 - Unknown attr: remove the prop or use the schema name.
 - Invalid child: move the component into an allowed parent.
-- Invalid render config: use only listed document style config choices. Current compatibility syntax uses approved `profile` ids plus allowed semantic props.
+- Invalid render config: use only listed document style config choices and allowed semantic props.
 - Missing root: wrap content in `<page title="...">`.
 
 ## Debug setup before editing artifacts [#debug-setup-before-editing-artifacts]

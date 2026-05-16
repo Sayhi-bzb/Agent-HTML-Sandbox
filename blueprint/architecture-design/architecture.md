@@ -16,7 +16,7 @@ document style config reference
 stable shareable HTML artifact
 ```
 
-agent-html 用 HTML artifact 替代冗长 Markdown agent 输出。agent-facing 层只让 agent 表达信息结构、关系、决策和反馈入口；视觉风格由独立配置层决定。兼容期可以保留命名 profile 作为 style config alias，但长期目标是不把 profile 当作唯一公开视觉入口；最终产物应让人更容易阅读、比较、分享、归档，并把反馈带回 agent 工作流。
+agent-html 用 HTML artifact 替代冗长 Markdown agent 输出。agent-facing 层只让 agent 表达信息结构、关系、决策和反馈入口；视觉风格由独立配置层决定，并通过 `style-ref` 选择已批准的 document style config reference；最终产物应让人更容易阅读、比较、分享、归档，并把反馈带回 agent 工作流。
 
 应把“用什么积木表达内容”和“这些积木最终呈现成什么视觉风格”视为两层不同问题：前者属于 agent-facing 使用层，后者属于受控配置层或 presentation 层。
 
@@ -28,7 +28,7 @@ ahtml CLI + core engine + managed runtime + portable artifact output
 
 CLI 负责 schema、validate、build、preview、inspect、doctor、runtime 编排，以及向 agent 暴露有限的语义组件和受控视觉配置入口。
 
-engine 负责 agent-html 文档边界、安全边界、ComponentSchema、DocumentStyleConfigReference、compatibility PresentationProfile、diagnostics 和 `SanitizedAgentHtml`。
+engine 负责 agent-html 文档边界、安全边界、ComponentSchema、DocumentStyleConfigReference、RenderConfig、diagnostics 和 `SanitizedAgentHtml`。
 
 managed runtime 负责隔离承载 renderer adapter、Vite、React、Tailwind 和 shadcn/ui 实现。默认位置是用户级 `.ahtml` 目录，不是当前工作目录。managed runtime 的 UI surface 必须来自 shadcn template / init / registry，而不是 ahtml 维护的平行 shadcn scaffold。
 
@@ -44,8 +44,6 @@ CLI、engine、sanitize、managed runtime 和 shadcn/ui 都是支撑产品形态
 user installs ahtml globally
         ↓
 user chooses or accepts a document style config reference
-        ↓
-(compatibility profile aliases may survive during migration)
         ↓
 agent writes semantic agent-html document
         ↓
@@ -125,7 +123,7 @@ managed runtime build
 static artifact directory
 ```
 
-agent-html 使用固定结构的标准组件语法。组件风格、布局、间距和组合规则由独立配置层、兼容 profile alias 和 runtime 内部实现共同决定，agent 只填写语义 props 和 slots。标准语法可以保留 `<card>`、`<tabs>` 等便捷形式，但 sanitize 后必须能归一到同一套语义 component model。
+agent-html 使用固定结构的标准组件语法。组件风格、布局、间距和组合规则由独立配置层和 runtime 内部实现共同决定，agent 只填写语义 props 和 slots。标准语法可以保留 `<card>`、`<tabs>` 等便捷形式，但 sanitize 后必须能归一到同一套语义 component model。
 
 示意：
 
@@ -149,7 +147,7 @@ renderer adapter 通过通用 registry / resolver 将标准语义节点映射为
 
 core engine 负责把 agent-html 转成可检查、可验证、可渲染的结构。
 
-core 可以定义 ComponentSchema、DocumentStyleConfigReference、compatibility PresentationProfile、RenderConfig、diagnostics 和 `SanitizedAgentHtml`，但不得依赖 Vite、React、shadcn/ui、Tailwind、renderer adapter 或 managed runtime 构建配置。
+core 可以定义 ComponentSchema、DocumentStyleConfigReference、RenderConfig、diagnostics 和 `SanitizedAgentHtml`，但不得依赖 Vite、React、shadcn/ui、Tailwind、renderer adapter 或 managed runtime 构建配置。
 
 ## 2. shadcn/ui is the internal implementation base
 
@@ -183,7 +181,7 @@ agent-facing 组件是标准化语义组件，不是自由拼装的 UI primitive
 
 ## 4. configuration layer owns visual choice
 
-视觉选择必须先收束为已批准的 document style config reference，再进入 renderer。兼容期可以保留命名 presentation profile 作为 alias 或简化 preset，但它不应继续作为长期唯一公开视觉入口。
+视觉选择必须先收束为已批准的 document style config reference，再进入 renderer。
 
 使用层与配置层必须分离。使用层面，agent 只消费标准组件和标准模板；配置层面，用户或调用方可以通过独立配置决定这些标准积木的视觉实现。
 
@@ -191,9 +189,7 @@ agent-facing 组件是标准化语义组件，不是自由拼装的 UI primitive
 
 独立配置层可以在内部绑定 theme、density、card treatment、table treatment、badge treatment、emphasis 和 width 等受控 token，也可以进一步控制标准积木的组件级视觉映射；这些实现细节不应默认平铺成 agent-facing prop bag。
 
-PresentationProfile 若继续存在，应只作为兼容 alias 或简化视觉档位，不直接等于长期配置模型本身。
-
-用户或调用方负责选择 document style config reference，或在兼容期选择 profile alias；agent 只在 schema 明确允许时写入受控视觉配置入口。RenderConfig 的默认职责是解析已批准的视觉配置选择，而不是直接拼装视觉参数。
+用户或调用方负责选择 document style config reference；agent 只在 schema 明确允许时写入受控视觉配置入口。RenderConfig 的默认职责是解析已批准的视觉配置选择，而不是直接拼装视觉参数。
 
 ## 5. runtime verification facts assist maintenance, not define the contract
 
@@ -217,9 +213,9 @@ contract verification + renderer registry inputs
 
 agent 通过 ComponentSchema、ComponentPropSchema、ComponentToken 和已批准的文档级视觉配置入口理解能力。
 
-schema 描述组件用途、可填语义 props、slot 结构、组合边界和 profile / style config 兼容性。schema 不描述内部 class、布局实现或完整 shadcn props。
+schema 描述组件用途、可填语义 props、slot 结构、组合边界和 style config 兼容性。schema 不描述内部 class、布局实现或完整 shadcn props。
 
-最终开放面必须由显式声明收束。实现可以自动生成审查草稿，但最终对 agent 开放什么、如何命名、允许哪些 values、哪些视觉差异应该折叠进兼容 profile 或独立 style config layer，都必须由项目显式决定。
+最终开放面必须由显式声明收束。实现可以自动生成审查草稿，但最终对 agent 开放什么、如何命名、允许哪些 values、哪些视觉差异应该折叠进独立 style config layer，都必须由项目显式决定。
 
 style 参数必须锁在 renderer adapter / StandardComponent 内部。agent-facing schema 不暴露 `className`、`style`、Tailwind class、Radix props、DOM event handlers、`asChild` 或完整 shadcn props。
 
@@ -251,7 +247,7 @@ agent-html 和 render config header 进入 renderer adapter 前必须经过 pars
 
 实现应先把 agent-html 转为可检查结构，再生成可交给 renderer adapter 的 sanitized structure。renderer adapter 不应接收 cleaned HTML string 作为主输入。
 
-render config header 或等价文档级配置入口只能选择已批准的 document style config reference，或在兼容期选择映射到该配置层的 profile alias。未知 key / value 不得成为样式逃逸口。
+render config header 或等价文档级配置入口只能选择已批准的 document style config reference。未知 key / value 不得成为样式逃逸口。
 
 ## 9. renderer adapter maps semantic contract to internal UI
 
@@ -285,7 +281,7 @@ artifact/
 
 开发阶段可以使用 dev preview。dev preview 是同一 renderer adapter 的开发检查形态，不是另一套渲染结果。
 
-dev preview 和 final artifact 必须共用 ComponentSchema、PresentationProfile、RenderConfig、renderer adapter、shadcn/ui 实现和 Tailwind 样式系统。视觉目标应保持一致。
+dev preview 和 final artifact 必须共用 ComponentSchema、RenderConfig、renderer adapter、shadcn/ui 实现和 Tailwind 样式系统。视觉目标应保持一致。
 
 允许差异只来自 dev tooling、资源路径、字体 / 网络策略、viewport / container 条件和显式 export mode。
 
@@ -295,7 +291,7 @@ dev preview 和 final artifact 必须共用 ComponentSchema、PresentationProfil
 
 CLI 是 agent-html engine 的主入口。
 
-CLI 只编排 ComponentSchema、PresentationProfile、RenderConfig、parse / sanitize、managed runtime、renderer adapter 和 portable output。CLI 不定义平行协议，不绕过 sanitize，不暴露 shadcn props、Tailwind class、style、script 或外部资源逃逸口。
+CLI 只编排 ComponentSchema、DocumentStyleConfigReference、RenderConfig、parse / sanitize、managed runtime、renderer adapter 和 portable output。CLI 不定义平行协议，不绕过 sanitize，不暴露 shadcn props、Tailwind class、style、script 或外部资源逃逸口。
 
 `ahtml setup` 默认初始化或检查 shadcn-native managed runtime。首次 `status`、`doctor`、`build` 或 `preview` 可以用默认 shadcn preset 自动修复 runtime，但修复必须走 shadcn template / init / registry 的完整 UI surface。CLI 不提供写入当前工作目录的 project scaffold 模式，也不得把项目样式提升为 agent-facing 协议。
 

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import { sanitizeAgentHtml } from "./sanitize-agent-html"
 
 const semanticReportSource = `
-  <meta-agent profile="report-default" />
+  <meta-agent style-ref="report-default" />
   <page title="Semantic Report">
     <alert title="Thesis">HTML artifacts can stay readable without exposing implementation details.</alert>
     <card title="Executive Summary">
@@ -27,7 +27,7 @@ const semanticReportSource = `
 `
 
 const collaborationWorkbenchSource = `
-  <meta-agent profile="ops-compact" />
+  <meta-agent style-ref="ops-compact" />
   <page title="Human Agent Collaboration Workbench">
     <tabs default="decide">
       <tab value="explore" label="Explore">
@@ -59,7 +59,7 @@ const collaborationWorkbenchSource = `
 describe("sanitizeAgentHtml", () => {
   it("produces SanitizedAgentHtml for valid MVP agent-html", () => {
     const result = sanitizeAgentHtml(`
-      <meta-agent profile="report-default" />
+      <meta-agent style-ref="report-default" />
       <page title="Payment Review">
         <card title="High Risk">
           <badge tone="danger">Missing finance role check</badge>
@@ -86,7 +86,6 @@ describe("sanitizeAgentHtml", () => {
     expect(result.document).toEqual({
       meta: {
         documentStyleConfigReference: "report-default",
-        profile: "report-default",
         theme: "neutral",
         density: "comfortable",
         tone: "report",
@@ -225,7 +224,6 @@ describe("sanitizeAgentHtml", () => {
     expect(result.diagnostics).toEqual([])
     expect(result.document?.meta).toEqual({
       documentStyleConfigReference: "report-default",
-      profile: "report-default",
       theme: "neutral",
       density: "comfortable",
       tone: "report",
@@ -235,7 +233,7 @@ describe("sanitizeAgentHtml", () => {
 
   it("keeps the page root after a self-closing meta-agent header", () => {
     const result = sanitizeAgentHtml(`
-      <meta-agent profile="ops-compact" />
+      <meta-agent style-ref="ops-compact" />
       <page title="Payment Review" />
     `)
 
@@ -341,7 +339,19 @@ describe("sanitizeAgentHtml", () => {
     )
   })
 
-  it("rejects legacy non-profile render config header values", () => {
+  it("rejects removed profile render config header values", () => {
+    const result = sanitizeAgentHtml(`
+      <meta-agent profile="report-default" />
+      <page title="Payment Review" />
+    `)
+
+    expect(result.document).toBeUndefined()
+    expect(result.diagnostics.map((diagnostic) => diagnostic.code)).toContain(
+      "invalid-render-config",
+    )
+  })
+
+  it("rejects legacy free-form render config header values", () => {
     const result = sanitizeAgentHtml(`
       <meta-agent theme="neutral" density="compact" tone="color:red" width="article" />
       <page title="Payment Review" />
