@@ -19,4 +19,5 @@
 
 架构理解：读取 `../constitution.md` -> `architecture.md`。
 
-依赖评估：读取 `tool-candidates.md` -> `../tool-ref/index.md`。
+依赖评估：读取 `tool-candidates.md` -> `architecture.md` -> `invariants.md`
+-> 对应 contracts。

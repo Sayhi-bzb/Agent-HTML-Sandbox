@@ -1875,6 +1875,13 @@ body {
   justify-content: space-between;
 }
 
+.preview-toolbar-actions,
+.source-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .source-focus-banner-body {
   gap: 12px;
 }
@@ -1992,6 +1999,11 @@ body {
   border-radius: 12px;
   padding: 10px 12px 10px 10px;
   background: var(--background);
+}
+
+.diagnostic-item:hover .panel-card-more,
+.diagnostic-item:focus-within .panel-card-more {
+  opacity: 1;
 }
 
 .severity-error {
