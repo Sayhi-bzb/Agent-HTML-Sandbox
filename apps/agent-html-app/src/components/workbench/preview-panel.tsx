@@ -1,4 +1,3 @@
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { StatusBadge } from "@/components/ui/status-badge"
 import {
   SurfaceCard,
@@ -27,56 +26,34 @@ export function PreviewPanel({
     build.status === "failed" && Boolean(previewHtml)
   const previewStatusLabel = previewHtml
     ? isShowingStalePreview
-      ? "Stale preview"
+      ? "Stale"
       : build.status === "succeeded"
-        ? "Latest build ready"
-        : "Preview loaded"
-    : "Preview unavailable"
+        ? "Ready"
+        : "Loaded"
+    : "Empty"
 
   return (
     <SurfaceCard className="preview-panel" variant="workbench">
-      <SurfaceCardHeader eyebrow="Preview" title={title}>
-        <span className="inline-meta">{getPreviewHeaderMeta(build, lastBuildAt)}</span>
+      <SurfaceCardHeader title="Preview">
+        <span className="inline-meta">
+          {getPreviewHeaderMeta(build, lastBuildAt)}
+        </span>
       </SurfaceCardHeader>
 
-      <SurfaceCardBody className="grid gap-[18px] px-[18px] pb-[18px]">
+      <SurfaceCardBody className="preview-panel-body">
         <div className="preview-surface">
           {previewHtml ? (
-            <>
-              {isShowingStalePreview ? (
-                <Alert className="artifact-alert">
-                  <AlertTitle>Latest build failed</AlertTitle>
-                  <AlertDescription>
-                    This panel is still showing the last successful artifact.
-                  </AlertDescription>
-                </Alert>
-              ) : null}
-              <iframe
-                className="preview-frame"
-                srcDoc={previewHtml}
-                title={`${title} preview`}
-              />
-            </>
+            <iframe
+              className="preview-frame"
+              srcDoc={previewHtml}
+              title={`${title} preview`}
+            />
           ) : (
-            <div className="artifact-sheet">
-              <Alert className="artifact-alert">
-                <AlertTitle>Preview unavailable</AlertTitle>
-                <AlertDescription>
-                  {lastBuildAt
-                    ? "Preview metadata exists, but the rendered HTML is unavailable. Rebuild this session to refresh the artifact."
-                    : "Build this session to generate a live artifact preview."}
-                </AlertDescription>
-              </Alert>
-              <SurfaceCard variant="artifact">
-                <SurfaceCardHeader title="Preview surface" />
-                <SurfaceCardBody className="px-4 pb-4">
-                  <p>
-                    {lastBuildAt
-                      ? "The session has build history, but the preview payload could not be loaded into the workbench."
-                      : "The workbench is ready. Once a build succeeds, this panel will render the generated HTML artifact."}
-                  </p>
-                </SurfaceCardBody>
-              </SurfaceCard>
+            <div className="artifact-sheet preview-empty-state">
+              <StatusBadge>No preview</StatusBadge>
+              {lastBuildAt ? (
+                <span className="inline-meta">Build output missing</span>
+              ) : null}
             </div>
           )}
         </div>
@@ -87,9 +64,7 @@ export function PreviewPanel({
           >
             {previewStatusLabel}
           </StatusBadge>
-          <span className="inline-meta">
-            {previewPath ?? "Preview path unavailable"}
-          </span>
+          <span className="inline-meta">{previewPath ?? "No artifact"}</span>
         </div>
       </SurfaceCardBody>
     </SurfaceCard>

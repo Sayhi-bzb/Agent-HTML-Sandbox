@@ -1,15 +1,14 @@
 /// <reference types="node" />
 // @vitest-environment node
 
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import { mkdtemp, readFile, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 
-import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { describe, expect, it } from "vitest"
 
 import {
   type CliSchemaOutput,
-  type ShadcnTestServer,
   expectCliFailure,
   expectPathMissing,
   importCommandMetadata,
@@ -19,29 +18,13 @@ import {
   importShadcnApiModule,
   importValidateModule,
   parseJson,
+  removeTempDir,
   root,
-  runCli,
-  startShadcnTestServer,
+  useShadcnCliHarness,
   validAgentHtmlFixtures,
 } from "./cli-test-helpers"
 
-let shadcnTestServer: ShadcnTestServer | undefined
-
-beforeAll(async () => {
-  shadcnTestServer = await startShadcnTestServer()
-})
-
-afterAll(async () => {
-  await shadcnTestServer?.close()
-})
-
-function runCliWithServer(
-  args: readonly string[],
-  env: NodeJS.ProcessEnv = {},
-  cwd = root,
-) {
-  return runCli(args, env, cwd, shadcnTestServer?.registryUrl)
-}
+const { runCliWithServer } = useShadcnCliHarness()
 
 describe("agent-html CLI contracts", () => {
   it("formats a document-style-config prompt without implementation tokens", async () => {
@@ -162,7 +145,7 @@ describe("agent-html CLI contracts", () => {
     )
     await expectPathMissing(path.join(tempDir, "agent-html.project.json"))
     await expectPathMissing(path.join(tempDir, "src"))
-    await rm(tempDir, { force: true, recursive: true })
+    await removeTempDir(tempDir)
   })
 
   it("prints first-run guidance without bootstrapping in non-interactive help", async () => {
@@ -179,7 +162,7 @@ describe("agent-html CLI contracts", () => {
     expect(help.stdout).toContain("Run ahtml setup to prepare the runtime.")
     await expectPathMissing(path.join(runtimeHome, "config", "runtime.json"))
     await expectPathMissing(path.join(tempDir, "src"))
-    await rm(tempDir, { force: true, recursive: true })
+    await removeTempDir(tempDir)
   })
 
   it("uses shadcn API for runtime setup catalogs and keeps required runtime components renderable", async () => {
@@ -294,7 +277,7 @@ describe("agent-html CLI contracts", () => {
       runCliWithServer(["validate"], {}, tempDir),
       "validate requires --input <path>.",
     )
-    await rm(tempDir, { force: true, recursive: true })
+    await removeTempDir(tempDir)
   })
 
   it("returns structured validation results without bootstrapping the runtime", async () => {
@@ -356,7 +339,7 @@ describe("agent-html CLI contracts", () => {
       }),
     ])
     await expectPathMissing(path.join(runtimeHome, "config", "runtime.json"))
-    await rm(tempDir, { force: true, recursive: true })
+    await removeTempDir(tempDir)
   })
 
   it("fails inspect with validation diagnostics before runtime inspection", async () => {
@@ -386,7 +369,7 @@ describe("agent-html CLI contracts", () => {
       "unknown-attr",
     )
     await expectPathMissing(path.join(runtimeHome, "config", "runtime.json"))
-    await rm(tempDir, { force: true, recursive: true })
+    await removeTempDir(tempDir)
   })
 
   it("accepts representative agent-html fixtures", async () => {

@@ -43,6 +43,18 @@ and reopen guide instead of a phase-by-phase execution log.
 - If spec reopens, re-establish proof at the smallest useful layer first:
   schema, sanitize, renderer mapping, runtime surface, then heavy CLI flows.
 
+## Current Test Lanes
+
+- Contract and schema lane:
+  `npm run test:run -- packages/core/src packages/ahtml/src/config packages/ahtml/src/cli/artifact-workflow.test.ts packages/ahtml/src/cli/command-contract.test.ts packages/ahtml/src/cli/governance-sync.test.ts scripts`
+- Runtime surface and renderer lane:
+  `npm run test:run -- packages/ahtml/src/cli/runtime-build.test.ts packages/ahtml/src/cli/runtime-renderability.test.ts packages/ahtml/src/cli/runtime-surface.test.ts packages/ahtml/src/cli/runtime-template.test.ts packages/ahtml/src/cli/runtime-template/src/renderer/render-node.test.ts`
+- CLI light contract lane:
+  `npm run test:run -- packages/ahtml/src/cli/cli.test.ts`
+- Heavy CLI artifact lane: `npm run test:run:cli-heavy`
+- Package CI lane excludes `apps/*` tests and runs
+  `npm run test:run -- packages/core/src packages/ahtml/src scripts`; app verification stays on app-specific gates.
+
 ## If Shadcn Debt Reopens
 
 - Inspect upstream shadcn docs and examples before changing runtime behavior.

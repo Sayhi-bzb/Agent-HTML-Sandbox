@@ -4,7 +4,6 @@ import {
   findLatestProposalDecision,
   findRecentProposalDecisions,
   getProposalDecisionTrend,
-  getCurrentReviewStageGuidance,
   getCurrentReviewStage,
   getSecondaryReadinessItems,
   getProposalChecklistFocusOptions,
@@ -232,15 +231,6 @@ export function AgentShell({
     draftComparison,
     proposalComparison,
   })
-  const currentStageGuidance = getCurrentReviewStageGuidance({
-    stage: currentReviewStage,
-    latestProposalExists: Boolean(latestProposal),
-    latestProposalDecision,
-    proposalDecisionTrend,
-    latestProposalIsStale,
-    proposalComparison,
-    sourceValidationStatus: sourceValidation.status,
-  })
   const stageActions = Object.fromEntries(
     reviewTimeline.map((item) => [
       item.id,
@@ -268,6 +258,7 @@ export function AgentShell({
   const currentStageItem =
     reviewTimeline.find((item) => item.id === currentReviewStage) ??
     reviewTimeline[0]
+  const currentStageGuidance = ""
   const proposalReadinessView = getProposalReadinessView({
     proposalReadiness,
     currentStage: currentReviewStage,
@@ -284,20 +275,14 @@ export function AgentShell({
   const comparisonLabels =
     comparisonMode === "proposal"
       ? {
-          cardTitle: "Proposal snapshot delta",
-          baseLabel: "Proposal snapshot",
-          currentLabel: hasUnsavedSourceChanges
-            ? "Current draft"
-            : "Current source",
-          helper:
-            "This compare is anchored to the latest proposal snapshot, so you can review how far the current draft/source has drifted.",
+          cardTitle: "Proposal delta",
+          baseLabel: "Proposal",
+          currentLabel: hasUnsavedSourceChanges ? "Draft" : "Source",
         }
       : {
-          cardTitle: "Unsaved source delta",
-          baseLabel: "Saved source",
-          currentLabel: "Current draft",
-          helper:
-            "Proposal, build, and inspect actions will be more reliable after this draft is saved into session truth.",
+          cardTitle: "Draft delta",
+          baseLabel: "Saved",
+          currentLabel: "Draft",
         }
   const focusedPreviewGroups =
     activeComparison && focusedComparison?.mode === comparisonMode
@@ -474,12 +459,10 @@ export function AgentShell({
 
   return (
     <PanelShell as="aside" variant="agent-shell">
-      <PanelShellHeader eyebrow="Agent" title="Proposal desk">
-        <StatusBadge tone="accent">Secondary lane</StatusBadge>
-      </PanelShellHeader>
+      <PanelShellHeader title="Shell" />
 
       <SurfaceCard className="proposal-starter-card" variant="context">
-        <SurfaceCardHeader eyebrow="Proposal" title="Next review step">
+        <SurfaceCardHeader title="Proposal">
           <Button
             disabled={isProposalActionBusy}
             onClick={() => void onDraftProposal()}
@@ -488,25 +471,18 @@ export function AgentShell({
             {isDraftingProposal
               ? "Drafting..."
               : hasUnsavedSourceChanges
-                ? "Save + draft proposal"
-                : "Draft proposal"}
+                ? "Save + draft"
+                : "Draft"}
           </Button>
         </SurfaceCardHeader>
-        <SurfaceCardBody className="grid gap-4 px-[18px] pb-[18px]">
-          <p className="proposal-starter-copy">
-            {hasUnsavedSourceChanges
-              ? "The current source draft will be saved first so the proposal reflects the latest session truth."
-              : "Generate a proposal from the current source, latest build state, preview availability, and captured logs."}
-          </p>
+        <SurfaceCardBody className="grid gap-4">
           <div className="proposal-meta-row">
             {latestProposal ? (
               <p className="inline-meta">
                 Latest proposal {formatTimestampLabel(latestProposal.createdAt)}
               </p>
             ) : (
-              <p className="inline-meta">
-                No proposal drafted for this session yet.
-              </p>
+              <p className="inline-meta">No proposal</p>
             )}
             {latestProposalIsStale ? (
               <StatusBadge tone="dirty">Stale context</StatusBadge>
@@ -525,79 +501,70 @@ export function AgentShell({
             </StatusBadge>
           </div>
 
-          <div className="proposal-entry-panel">
-            <div className="message-topline">
-              <div>
-                <p className="eyebrow">Current gate</p>
-                <h4>{currentStageItem?.label ?? "Proposal readiness"}</h4>
+          <SurfaceCard className="proposal-entry-panel" variant="inset">
+            <SurfaceCardBody className="grid gap-3" padding="compact">
+              <div className="message-topline">
+                <div>
+                  <h4>{currentStageItem?.label ?? "Proposal readiness"}</h4>
+                </div>
+                {currentStageAction ? (
+                  <Button
+                    disabled={isProposalActionBusy}
+                    onClick={() =>
+                      runWorkflowAction(currentStageAction.handler)
+                    }
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    {currentStageAction.label}
+                  </Button>
+                ) : null}
               </div>
-              {currentStageAction ? (
+            </SurfaceCardBody>
+          </SurfaceCard>
+
+          {proposalReadinessView.items.length > 0 ? (
+            <SurfaceCard className="proposal-readiness" variant="inset">
+              <SurfaceCardBody className="grid gap-3" padding="compact">
+                <div className="message-topline">
+                  <h4>Open</h4>
+                </div>
+                <ul className="proposal-list proposal-readiness-list">
+                  {proposalReadinessView.items.slice(0, 3).map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </SurfaceCardBody>
+            </SurfaceCard>
+          ) : null}
+
+          {latestProposalHasDraftDelta && proposalComparison ? (
+            <SurfaceCard className="proposal-compare-panel" variant="inset">
+              <SurfaceCardBody className="grid gap-3" padding="compact">
+                <div className="message-topline">
+                  <h4>Drift</h4>
+                  <StatusBadge
+                    tone={
+                      proposalComparison.changedLineCount ? "dirty" : "ready"
+                    }
+                  >
+                    {proposalComparison.changedLineCount} changed line(s)
+                  </StatusBadge>
+                </div>
                 <Button
                   disabled={isProposalActionBusy}
-                  onClick={() => runWorkflowAction(currentStageAction.handler)}
+                  onClick={() =>
+                    focusChecklistOption(getDefaultProposalFocusOption())
+                  }
                   size="sm"
                   type="button"
                   variant="outline"
                 >
-                  {currentStageAction.label}
+                  Review diff
                 </Button>
-              ) : null}
-            </div>
-            <p className="proposal-starter-copy">{currentStageGuidance}</p>
-            {currentStageAction ? (
-              <span className="inline-meta">
-                {currentStageAction.description}
-              </span>
-            ) : null}
-          </div>
-
-          {proposalReadinessView.items.length > 0 ? (
-            <div className="proposal-readiness">
-              <div className="message-topline">
-                <p className="eyebrow">Open checks</p>
-                <span className="inline-meta">
-                  {proposalReadinessView.items.length} item(s)
-                </span>
-              </div>
-              <ul className="proposal-list proposal-readiness-list">
-                {proposalReadinessView.items.slice(0, 3).map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-              {proposalReadinessView.items.length > 3 ? (
-                <p className="inline-meta">
-                  More checks remain in the session history below.
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-
-          {latestProposalHasDraftDelta && proposalComparison ? (
-            <div className="proposal-compare-panel">
-              <div className="message-topline">
-                <p className="eyebrow">Proposal drift</p>
-                <StatusBadge
-                  tone={proposalComparison.changedLineCount ? "dirty" : "ready"}
-                >
-                  {proposalComparison.changedLineCount} changed line(s)
-                </StatusBadge>
-              </div>
-              <p className="proposal-compare-summary">
-                The current source differs from the latest proposal snapshot by{" "}
-                {proposalComparison.changedLineCount} line(s).
-              </p>
-              <Button
-                disabled={isProposalActionBusy}
-                onClick={() =>
-                  focusChecklistOption(getDefaultProposalFocusOption())
-                }
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                Review diff
-              </Button>
-            </div>
+              </SurfaceCardBody>
+            </SurfaceCard>
           ) : null}
         </SurfaceCardBody>
       </SurfaceCard>
@@ -642,7 +609,7 @@ export function AgentShell({
               ) : null}
             </div>
           </SurfaceCardHeader>
-          <SurfaceCardBody className="grid gap-4 px-[18px] pb-[18px]">
+          <SurfaceCardBody className="grid gap-4">
             {showComparisonModeSwitch ? (
               <ToggleGroup
                 aria-label="Compare base"
@@ -711,20 +678,15 @@ export function AgentShell({
                       Clear diff focus
                     </Button>
                     <span className="inline-meta">
-                      Focused on{" "}
                       {focusedComparison?.label ?? "selected compare target"}{" "}
                       with {focusedPreviewGroups.length} group(s).
                     </span>
                   </>
                 ) : (
-                  <span className="inline-meta">
-                    Review the diff in Source instead of reading inline snippets
-                    here.
-                  </span>
+                  <span className="inline-meta">No focus</span>
                 )}
               </div>
             ) : null}
-            <p className="proposal-starter-copy">{comparisonLabels.helper}</p>
           </SurfaceCardBody>
         </SurfaceCard>
       ) : null}
@@ -780,15 +742,17 @@ export function AgentShell({
           void handleSubmit(event)
         }}
       >
-        <label htmlFor="agent-input">Future prompt</label>
+        <label className="sr-only" htmlFor="agent-input">
+          Future prompt
+        </label>
         <Textarea
           id="agent-input"
           onChange={(event) => setDraft(event.target.value)}
-          placeholder="Store a prompt draft or note in this session."
+          placeholder="Note"
           value={draft}
         />
         <Button disabled={isSending || !draft.trim()} type="submit">
-          {isSending ? "Saving..." : "Store draft"}
+          {isSending ? "Saving..." : "Store"}
         </Button>
       </form>
     </PanelShell>
@@ -932,34 +896,36 @@ function AgentShellMessageCard({
             <p className="proposal-stale-note">{proposalView.staleNote}</p>
           ) : null}
           {proposalView.compare ? (
-            <div className="proposal-compare-panel">
-              <div className="message-topline">
-                <p className="eyebrow">Proposal Compare</p>
-                <StatusBadge
-                  tone={statusToneForClassName(
-                    proposalView.compare.pillClassName,
-                  )}
+            <SurfaceCard className="proposal-compare-panel" variant="inset">
+              <SurfaceCardBody className="grid gap-3" padding="compact">
+                <div className="message-topline">
+                  <p className="eyebrow">Proposal Compare</p>
+                  <StatusBadge
+                    tone={statusToneForClassName(
+                      proposalView.compare.pillClassName,
+                    )}
+                  >
+                    {proposalView.compare.changedLineCount} changed line(s)
+                  </StatusBadge>
+                </div>
+                <p className="proposal-compare-summary">
+                  {proposalView.compare.summary}
+                </p>
+                <Button
+                  disabled={
+                    isProposalActionBusy || proposalView.compare.action.disabled
+                  }
+                  onClick={() =>
+                    runProposalMessageAction(proposalView.compare!.action)
+                  }
+                  size="sm"
+                  type="button"
+                  variant="outline"
                 >
-                  {proposalView.compare.changedLineCount} changed line(s)
-                </StatusBadge>
-              </div>
-              <p className="proposal-compare-summary">
-                {proposalView.compare.summary}
-              </p>
-              <Button
-                disabled={
-                  isProposalActionBusy || proposalView.compare.action.disabled
-                }
-                onClick={() =>
-                  runProposalMessageAction(proposalView.compare!.action)
-                }
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                {proposalView.compare.action.label}
-              </Button>
-            </div>
+                  {proposalView.compare.action.label}
+                </Button>
+              </SurfaceCardBody>
+            </SurfaceCard>
           ) : null}
           {proposalView.checklistItems.length > 0 ? (
             <ul className="proposal-list">
@@ -973,53 +939,62 @@ function AgentShellMessageCard({
                         {item.context.previewGroups.length > 0 ? (
                           <div className="proposal-checklist-diff-list">
                             {item.context.previewGroups.map((previewGroup) => (
-                              <div
+                              <SurfaceCard
                                 className="proposal-checklist-diff"
                                 key={previewGroup.key}
+                                variant="inset"
                               >
-                                <div className="message-topline">
-                                  <StatusBadge>
-                                    {previewGroup.lineLabel}
-                                  </StatusBadge>
-                                  <Button
-                                    disabled={isProposalActionBusy}
-                                    onClick={() =>
-                                      void onOpenSourceFocus(
-                                        createSourceFocusTargetFromGroup({
-                                          label: item.text,
-                                          group: previewGroup.group,
-                                          compareMode:
-                                            item.focusCompare?.mode ?? "saved",
-                                          reviewTarget: item.focusCompare
-                                            ? createReviewFocusTargetFromGroups(
-                                                {
-                                                  targetId:
-                                                    item.focusCompare.targetId,
-                                                  mode: item.focusCompare.mode,
-                                                  label:
-                                                    item.focusCompare.label,
-                                                  groups:
-                                                    item.focusCompare.groups,
-                                                },
-                                              )
-                                            : undefined,
-                                        }),
-                                      )
-                                    }
-                                    size="sm"
-                                    type="button"
-                                    variant="outline"
-                                  >
-                                    Open in Source
-                                  </Button>
-                                </div>
-                                <pre>
-                                  {previewGroup.group.savedText || "(empty)"}
-                                  {"\n"}
-                                  {"->"}{" "}
-                                  {previewGroup.group.draftText || "(empty)"}
-                                </pre>
-                              </div>
+                                <SurfaceCardBody
+                                  className="grid gap-2"
+                                  padding="tight"
+                                >
+                                  <div className="message-topline">
+                                    <StatusBadge>
+                                      {previewGroup.lineLabel}
+                                    </StatusBadge>
+                                    <Button
+                                      disabled={isProposalActionBusy}
+                                      onClick={() =>
+                                        void onOpenSourceFocus(
+                                          createSourceFocusTargetFromGroup({
+                                            label: item.text,
+                                            group: previewGroup.group,
+                                            compareMode:
+                                              item.focusCompare?.mode ??
+                                              "saved",
+                                            reviewTarget: item.focusCompare
+                                              ? createReviewFocusTargetFromGroups(
+                                                  {
+                                                    targetId:
+                                                      item.focusCompare
+                                                        .targetId,
+                                                    mode: item.focusCompare
+                                                      .mode,
+                                                    label:
+                                                      item.focusCompare.label,
+                                                    groups:
+                                                      item.focusCompare.groups,
+                                                  },
+                                                )
+                                              : undefined,
+                                          }),
+                                        )
+                                      }
+                                      size="sm"
+                                      type="button"
+                                      variant="outline"
+                                    >
+                                      Open in Source
+                                    </Button>
+                                  </div>
+                                  <pre>
+                                    {previewGroup.group.savedText || "(empty)"}
+                                    {"\n"}
+                                    {"->"}{" "}
+                                    {previewGroup.group.draftText || "(empty)"}
+                                  </pre>
+                                </SurfaceCardBody>
+                              </SurfaceCard>
                             ))}
                           </div>
                         ) : null}

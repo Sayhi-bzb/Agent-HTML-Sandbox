@@ -18,12 +18,13 @@ type StatusBadgeProps = {
 }
 
 const toneClassName: Record<StatusBadgeTone, string> = {
-  default: "bg-[#edf2fb] text-[#30415f] hover:bg-[#edf2fb]",
-  accent: "bg-[#dbeafe] text-[#1d4ed8] hover:bg-[#dbeafe]",
-  ready: "bg-[#ddf8e8] text-[#116436] hover:bg-[#ddf8e8]",
-  dirty: "bg-[#fff4d8] text-[#8a5a00] hover:bg-[#fff4d8]",
-  error: "bg-[#ffe2e2] text-[#a42323] hover:bg-[#ffe2e2]",
-  building: "bg-[#e4ebff] text-[#2649a7] hover:bg-[#e4ebff]",
+  default: "border-border bg-secondary text-foreground hover:bg-secondary",
+  accent: "border-border bg-secondary text-foreground hover:bg-secondary",
+  ready: "border-border bg-secondary text-foreground hover:bg-secondary",
+  dirty: "border-border bg-secondary text-foreground hover:bg-secondary",
+  error:
+    "border-destructive bg-destructive/10 text-destructive hover:bg-destructive/10",
+  building: "border-border bg-secondary text-foreground hover:bg-secondary",
 }
 
 export function StatusBadge({
@@ -34,7 +35,7 @@ export function StatusBadge({
   return (
     <Badge
       className={cn(
-        "rounded-full border-transparent px-2.5 py-1 text-[0.78rem] font-medium",
+        "rounded-full px-2.5 py-1 text-[0.78rem] font-medium",
         toneClassName[tone],
         className,
       )}

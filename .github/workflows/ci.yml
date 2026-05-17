@@ -12,18 +12,20 @@ concurrency:
 
 jobs:
   changes:
-    name: Detect docs changes
+    name: Detect targeted changes
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: read
     outputs:
       docs: ${{ steps.filter.outputs.docs }}
+      package_verify: ${{ steps.filter.outputs.package_verify }}
+      cli_runtime_heavy: ${{ steps.filter.outputs.cli_runtime_heavy }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Detect docs-related changes
+      - name: Detect docs and CLI/runtime changes
         id: filter
         uses: dorny/paths-filter@v3
         with:
@@ -37,10 +39,37 @@ jobs:
               - "docs-web/**"
               - "package-lock.json"
               - "package.json"
+            package_verify:
+              - ".github/actions/setup-node-npm/**"
+              - ".github/workflows/ci.yml"
+              - "apps/**"
+              - "bin/**"
+              - "eslint.config.js"
+              - "knip.json"
+              - "package-lock.json"
+              - "package.json"
+              - "packages/**"
+              - "scripts/**"
+              - "tsconfig*.json"
+              - "vitest*.ts"
+            cli_runtime_heavy:
+              - ".github/actions/setup-node-npm/**"
+              - ".github/workflows/ci.yml"
+              - "bin/ahtml.mjs"
+              - "package-lock.json"
+              - "package.json"
+              - "packages/ahtml/src/cli/**"
+              - "packages/ahtml/src/config/**"
+              - "packages/core/**"
+              - "scripts/shadcn-test-fixtures/**"
+              - "scripts/shadcn-test-server.mjs"
+              - "vitest.heavy.config.ts"
 
   package-verify:
     name: Verify package
     runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.package_verify == 'true' }}
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -51,8 +80,45 @@ jobs:
       - name: Setup Node and dependencies
         uses: ./.github/actions/setup-node-npm
 
-      - name: Run package checks
-        run: npm run ci:check
+      - name: Run package formatting check
+        run: npm run format:check:source
+
+      - name: Run package lint
+        run: npm run lint:package
+
+      - name: Run non-app package tests
+        run: npm run test:run -- packages/core/src packages/ahtml/src scripts
+
+      - name: Run package build
+        run: npm run build
+
+  cli-heavy-verify:
+    name: Verify CLI heavy runtime flows
+    runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.cli_runtime_heavy == 'true' }}
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: runtime
+            command: npm run test:run:cli-heavy:runtime
+          - name: build
+            command: npm run test:run:cli-heavy:build
+          - name: preview
+            command: npm run test:run:cli-heavy:preview
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node and dependencies
+        uses: ./.github/actions/setup-node-npm
+
+      - name: Run CLI heavy checks (${{ matrix.name }})
+        run: ${{ matrix.command }}
 
   docs-verify:
     name: Verify docs

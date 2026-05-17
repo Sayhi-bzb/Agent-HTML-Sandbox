@@ -1,13 +1,15 @@
 import { execFile } from "node:child_process"
 import type { ChildProcessByStdio } from "node:child_process"
-import { readFile, stat } from "node:fs/promises"
+import { mkdtemp, readFile, rm, stat } from "node:fs/promises"
 import { createServer } from "node:http"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import type { Readable } from "node:stream"
+import { setTimeout as delay } from "node:timers/promises"
 import { pathToFileURL } from "node:url"
 import { promisify } from "node:util"
 
-import { expect } from "vitest"
+import { afterAll, afterEach, beforeAll, expect } from "vitest"
 
 const execFileAsync = promisify(execFile)
 
@@ -145,12 +147,10 @@ export type ShadcnTestServer = {
   readonly close: () => Promise<void>
 }
 
-export function runCli(
-  args: readonly string[],
+export function createCliEnv(
   env: NodeJS.ProcessEnv = {},
-  cwd = root,
   registryUrl?: string,
-) {
+): NodeJS.ProcessEnv {
   const testRuntimeTemplateEnv = registryUrl
     ? {
         AHTML_ALLOW_SHADCN_TEMPLATE_OVERRIDE: "1",
@@ -159,14 +159,23 @@ export function runCli(
       }
     : {}
 
+  return {
+    ...process.env,
+    AHTML_NO_UPDATE_CHECK: "1",
+    ...testRuntimeTemplateEnv,
+    ...env,
+  }
+}
+
+export function runCli(
+  args: readonly string[],
+  env: NodeJS.ProcessEnv = {},
+  cwd = root,
+  registryUrl?: string,
+) {
   return execFileAsync(process.execPath, [cliPath, ...args], {
     cwd,
-    env: {
-      ...process.env,
-      AHTML_NO_UPDATE_CHECK: "1",
-      ...testRuntimeTemplateEnv,
-      ...env,
-    },
+    env: createCliEnv(env, registryUrl),
   })
 }
 
@@ -233,6 +242,55 @@ export async function startShadcnTestServer(): Promise<ShadcnTestServer> {
   return startServer()
 }
 
+export function useShadcnCliHarness() {
+  let shadcnTestServer: ShadcnTestServer | undefined
+
+  beforeAll(async () => {
+    shadcnTestServer = await startShadcnTestServer()
+  })
+
+  afterAll(async () => {
+    await shadcnTestServer?.close()
+  })
+
+  return {
+    runCliWithServer: (
+      args: readonly string[],
+      env: NodeJS.ProcessEnv = {},
+      cwd = root,
+    ) => {
+      return runCli(args, env, cwd, shadcnTestServer?.registryUrl)
+    },
+    getRegistryUrl: () => {
+      return shadcnTestServer?.registryUrl
+    },
+  }
+}
+
+export function useTemporaryDirectories() {
+  const temporaryDirectories: string[] = []
+
+  afterEach(async () => {
+    await Promise.all(
+      temporaryDirectories
+        .splice(0)
+        .map((directory) => removeTempDir(directory)),
+    )
+  })
+
+  return {
+    track: (directory: string) => {
+      temporaryDirectories.push(directory)
+      return directory
+    },
+    create: async (prefix: string) => {
+      const directory = await mkdtemp(path.join(tmpdir(), prefix))
+      temporaryDirectories.push(directory)
+      return directory
+    },
+  }
+}
+
 export async function startPackageVersionServer(
   version: string,
   statusCode = 200,
@@ -294,6 +352,27 @@ export async function expectPathMissing(filePath: string) {
   await expect(stat(filePath)).rejects.toMatchObject({ code: "ENOENT" })
 }
 
+export async function removeTempDir(directory: string) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    try {
+      await rm(directory, { force: true, recursive: true })
+      return
+    } catch (error) {
+      if (
+        error &&
+        typeof error === "object" &&
+        "code" in error &&
+        (error.code === "EBUSY" || error.code === "ENOTEMPTY")
+      ) {
+        await delay(250 * (attempt + 1))
+        continue
+      }
+
+      throw error
+    }
+  }
+}
+
 export async function expectCliFailure(
   promise: Promise<unknown>,
   expectedOutput: string,
@@ -310,7 +389,10 @@ export async function expectCliFailure(
 
 type PreviewProcess = ChildProcessByStdio<null, Readable, Readable>
 
-export async function waitForPreviewUrl(child: PreviewProcess) {
+export async function waitForPreviewUrl(
+  child: PreviewProcess,
+  timeoutMs = 120000,
+) {
   return new Promise<string>((resolve, reject) => {
     if (!child.stdout || !child.stderr) {
       reject(new Error("Preview process was started without stdout/stderr."))
@@ -321,7 +403,7 @@ export async function waitForPreviewUrl(child: PreviewProcess) {
     let stderr = ""
     const timeout = setTimeout(() => {
       reject(new Error(`Timed out waiting for preview URL. ${stderr}`))
-    }, 60000)
+    }, timeoutMs)
 
     child.stdout.setEncoding("utf8")
     child.stderr.setEncoding("utf8")

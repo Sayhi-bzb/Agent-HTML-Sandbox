@@ -2,6 +2,11 @@ import { Suspense, lazy } from "react"
 
 import { Button } from "@/components/ui/button"
 import { PanelShell, PanelShellHeader } from "../ui/panel-shell"
+import {
+  SurfaceCard,
+  SurfaceCardBody,
+  SurfaceCardHeader,
+} from "../ui/surface-card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { ReviewFocusTarget } from "../../lib/review-focus"
 import type {
@@ -109,7 +114,6 @@ export function Workbench({
     <PanelShell as="main" variant="workbench">
       <PanelShellHeader
         className="workbench-header"
-        eyebrow="Workbench"
         title={session.summary.name}
       >
         <div className="header-actions">
@@ -149,7 +153,7 @@ export function Workbench({
             </TabsTrigger>
           ))}
         </TabsList>
-        <TabsContent value="preview">
+        <TabsContent className="workbench-tab-panel" value="preview">
           <PreviewPanel
             build={build}
             title={session.summary.name}
@@ -158,20 +162,15 @@ export function Workbench({
             previewHtml={previewHtml}
           />
         </TabsContent>
-        <TabsContent value="source">
+        <TabsContent className="workbench-tab-panel" value="source">
           <Suspense
             fallback={
-              <section className="workbench-card">
-                <div className="workbench-card-header">
-                  <div>
-                    <p className="eyebrow">Source</p>
-                    <h3>Loading editor</h3>
-                  </div>
-                </div>
-                <p className="validation-empty">
-                  Preparing the CodeMirror editor for this session.
-                </p>
-              </section>
+              <SurfaceCard
+                className="workbench-loading-card"
+                variant="workbench"
+              >
+                <SurfaceCardHeader title="Loading…" />
+              </SurfaceCard>
             }
           >
             <SourcePanel
@@ -192,7 +191,7 @@ export function Workbench({
             />
           </Suspense>
         </TabsContent>
-        <TabsContent value="inspect">
+        <TabsContent className="workbench-tab-panel" value="inspect">
           <InspectPanel
             activeReviewFocus={activeReviewFocus}
             availableReviewFocusTargets={availableReviewFocusTargets}

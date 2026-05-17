@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 import {
   AlertDialog,
@@ -32,6 +32,7 @@ type SessionsSidebarProps = {
   sessions: SessionSummary[]
   activeSessionId: string
   isBusy: boolean
+  focusSearchKey?: string
   onCreateSession: () => void
   onOpenSession: (sessionId: string) => void
   onRenameSession: (sessionId: string, name: string) => void
@@ -51,6 +52,7 @@ export function SessionsSidebar({
   sessions,
   activeSessionId,
   isBusy,
+  focusSearchKey,
   onCreateSession,
   onOpenSession,
   onRenameSession,
@@ -63,6 +65,7 @@ export function SessionsSidebar({
   const [renameDraft, setRenameDraft] = useState("")
   const [deleteSessionTarget, setDeleteSessionTarget] =
     useState<SessionSummary>()
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const normalizedQuery = query.trim().toLowerCase()
   const filteredSessions = sessions.filter((session) => {
     if (!normalizedQuery) {
@@ -74,6 +77,37 @@ export function SessionsSidebar({
       session.directory.toLowerCase().includes(normalizedQuery)
     )
   })
+  const groupedSessions = useMemo(() => {
+    const current = filteredSessions.filter(
+      (session) => session.id === activeSessionId,
+    )
+    const remaining = filteredSessions.filter(
+      (session) => session.id !== activeSessionId,
+    )
+    const pinned = remaining.filter((session) => session.pinned)
+    const active = remaining.filter((session) =>
+      ["dirty", "building", "error"].includes(session.status),
+    )
+    const recent = remaining.filter(
+      (session) => !session.pinned && !["dirty", "building", "error"].includes(session.status),
+    )
+
+    return [
+      { id: "current", label: "Current", items: current },
+      { id: "pinned", label: "Pinned", items: pinned },
+      { id: "active", label: "Needs attention", items: active },
+      { id: "recent", label: "Recent", items: recent },
+    ].filter((group) => group.items.length > 0)
+  }, [activeSessionId, filteredSessions])
+
+  useEffect(() => {
+    if (!focusSearchKey) {
+      return
+    }
+
+    searchInputRef.current?.focus()
+    searchInputRef.current?.select()
+  }, [focusSearchKey])
 
   function handleRenameSession(session: SessionSummary) {
     setRenameSessionTarget(session)
@@ -101,7 +135,7 @@ export function SessionsSidebar({
 
   return (
     <PanelShell as="aside" variant="sidebar">
-      <PanelShellHeader eyebrow="Workspace" title="Sessions">
+      <PanelShellHeader title="Sessions">
         <Button
           disabled={isBusy}
           onClick={onCreateSession}
@@ -114,89 +148,100 @@ export function SessionsSidebar({
       </PanelShellHeader>
 
       <label className="search-shell">
-        <span>Search</span>
+        <span className="sr-only">Search sessions</span>
         <Input
+          ref={searchInputRef}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Find sessions"
+          placeholder="Search"
           value={query}
         />
       </label>
 
       <ScrollArea className="session-list-scroll">
-        <div className="session-list">
-          {filteredSessions.map((session) => (
-            <SurfaceCard
-              className={
-                session.id === activeSessionId
-                  ? "session-card active"
-                  : "session-card"
-              }
-              key={session.id}
-              onClick={() => onOpenSession(session.id)}
-              variant="session"
-            >
-              <div className="session-card-topline">
-                <h3>{session.name}</h3>
-                {session.pinned ? (
-                  <StatusBadge tone="accent">Pinned</StatusBadge>
-                ) : null}
+        <div className="session-groups">
+          {groupedSessions.map((group) => (
+            <section className="session-group" key={group.id}>
+              <div className="session-group-header">
+                <span>{group.label}</span>
+                <span className="inline-meta">{group.items.length}</span>
               </div>
-              <p className="session-path">{session.directory}</p>
-              <div className="session-meta-row">
-                <StatusBadge tone={statusTone(session.status)}>
-                  {statusLabel[session.status]}
-                </StatusBadge>
-                <span>{getSessionPreviewStatusText(session)}</span>
+              <div className="session-list">
+                {group.items.map((session) => (
+                  <SurfaceCard
+                    className={
+                      session.id === activeSessionId
+                        ? "session-card active"
+                        : "session-card"
+                    }
+                    key={session.id}
+                    onClick={() => onOpenSession(session.id)}
+                    variant="session"
+                  >
+                    <div className="session-card-topline">
+                      <h3>{session.name}</h3>
+                      {session.pinned ? (
+                        <StatusBadge tone="accent">Pinned</StatusBadge>
+                      ) : null}
+                    </div>
+                    <p className="session-path">{session.directory}</p>
+                    <div className="session-meta-row">
+                      <StatusBadge tone={statusTone(session.status)}>
+                        {statusLabel[session.status]}
+                      </StatusBadge>
+                      <span>{getSessionPreviewStatusText(session)}</span>
+                    </div>
+                    <p className="session-updated-at">
+                      {formatTimestampLabel(session.updatedAt)}
+                    </p>
+                    <div className="session-actions">
+                      <Button
+                        disabled={isBusy}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          onTogglePinSession(session.id, !session.pinned)
+                        }}
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        {session.pinned ? "Unpin" : "Pin"}
+                      </Button>
+                      <Button
+                        disabled={isBusy}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          handleRenameSession(session)
+                        }}
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        Rename
+                      </Button>
+                      <Button
+                        disabled={isBusy}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          handleDeleteSession(session)
+                        }}
+                        size="sm"
+                        type="button"
+                        variant="destructive"
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </SurfaceCard>
+                ))}
               </div>
-              <p className="session-updated-at">
-                Updated {formatTimestampLabel(session.updatedAt)}
-              </p>
-              <div className="session-actions">
-                <Button
-                  disabled={isBusy}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    onTogglePinSession(session.id, !session.pinned)
-                  }}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  {session.pinned ? "Unpin" : "Pin"}
-                </Button>
-                <Button
-                  disabled={isBusy}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    handleRenameSession(session)
-                  }}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  Rename
-                </Button>
-                <Button
-                  disabled={isBusy}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    handleDeleteSession(session)
-                  }}
-                  size="sm"
-                  type="button"
-                  variant="destructive"
-                >
-                  Delete
-                </Button>
-              </div>
-            </SurfaceCard>
+            </section>
           ))}
           {filteredSessions.length === 0 ? (
             <SurfaceCard
               className="session-card session-empty"
               variant="session"
             >
-              <p>No sessions match the current filter.</p>
+              <p>No matches</p>
             </SurfaceCard>
           ) : null}
         </div>
@@ -213,9 +258,6 @@ export function SessionsSidebar({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Rename session</DialogTitle>
-            <DialogDescription>
-              Update the local session name shown in the workspace rail.
-            </DialogDescription>
           </DialogHeader>
           <Input
             autoFocus
@@ -256,7 +298,7 @@ export function SessionsSidebar({
             <AlertDialogTitle>Delete session</AlertDialogTitle>
             <AlertDialogDescription>
               {deleteSessionTarget
-                ? `Delete session "${deleteSessionTarget.name}"? This removes the local folder.`
+                ? `Delete "${deleteSessionTarget.name}"?`
                 : "Delete this session?"}
             </AlertDialogDescription>
           </AlertDialogHeader>

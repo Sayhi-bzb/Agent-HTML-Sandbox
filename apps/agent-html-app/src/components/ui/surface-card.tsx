@@ -9,6 +9,7 @@ type SurfaceCardVariant =
   | "validation"
   | "summary"
   | "artifact"
+  | "inset"
   | "session"
   | "message"
   | "banner"
@@ -20,17 +21,36 @@ type SurfaceCardProps = ComponentProps<typeof Card> & {
 type SurfaceCardHeaderProps = ComponentProps<"div"> & {
   title?: string
   eyebrow?: string
+  padding?: "comfortable" | "compact" | "tight"
+}
+
+type SurfaceCardBodyProps = ComponentProps<typeof CardContent> & {
+  padding?: "comfortable" | "compact" | "tight" | "none"
 }
 
 const cardClassNameByVariant: Record<SurfaceCardVariant, string> = {
-  workbench: "workbench-card gap-4 py-0",
-  context: "context-card gap-4 py-0",
-  validation: "validation-card gap-3 py-0",
-  summary: "inspect-summary-card gap-3 py-0",
-  artifact: "artifact-card gap-3 py-0",
-  session: "session-card gap-3 px-[14px] py-[14px]",
-  message: "message-card gap-3 px-[14px] py-[14px]",
-  banner: "gap-3 py-0",
+  workbench: "workbench-card",
+  context: "context-card",
+  validation: "validation-card",
+  summary: "inspect-summary-card",
+  artifact: "artifact-card",
+  inset: "inset-card",
+  session: "session-card",
+  message: "message-card",
+  banner: "banner-card",
+}
+
+const headerPaddingClassName = {
+  comfortable: "px-5",
+  compact: "px-4",
+  tight: "px-3.5",
+}
+
+const bodyPaddingClassName = {
+  comfortable: "px-5 pb-5",
+  compact: "px-4 pb-4",
+  tight: "px-3.5 pb-3.5",
+  none: "px-0 pb-0",
 }
 
 export function SurfaceCard({
@@ -51,13 +71,21 @@ export function SurfaceCardHeader({
   children,
   className,
   eyebrow,
+  padding = "comfortable",
   title,
   ...props
 }: SurfaceCardHeaderProps) {
   return (
-    <CardHeader className={cn("workbench-card-header", className)} {...props}>
+    <CardHeader
+      className={cn(
+        "surface-card-header",
+        headerPaddingClassName[padding],
+        className,
+      )}
+      {...props}
+    >
       {eyebrow || title ? (
-        <div>
+        <div className="surface-card-header-copy">
           {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
           {title ? <CardTitle>{title}</CardTitle> : null}
         </div>
@@ -69,7 +97,13 @@ export function SurfaceCardHeader({
 
 export function SurfaceCardBody({
   className,
+  padding = "comfortable",
   ...props
-}: ComponentProps<typeof CardContent>) {
-  return <CardContent className={cn("px-0", className)} {...props} />
+}: SurfaceCardBodyProps) {
+  return (
+    <CardContent
+      className={cn(bodyPaddingClassName[padding], className)}
+      {...props}
+    />
+  )
 }

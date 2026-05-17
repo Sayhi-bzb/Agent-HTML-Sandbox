@@ -3,6 +3,11 @@ import { startTransition, useEffect, useRef, useState } from "react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable"
+import {
   SurfaceCard,
   SurfaceCardBody,
   SurfaceCardHeader,
@@ -198,6 +203,20 @@ export function App() {
 
   useEffect(() => {
     void bootstrap()
+  }, [])
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+    const syncTheme = () => {
+      document.documentElement.classList.toggle("dark", mediaQuery.matches)
+    }
+
+    syncTheme()
+    mediaQuery.addEventListener("change", syncTheme)
+
+    return () => {
+      mediaQuery.removeEventListener("change", syncTheme)
+    }
   }, [])
 
   useEffect(() => {
@@ -1370,36 +1389,32 @@ export function App() {
 
   return (
     <div className="app-root">
-      <SurfaceCard className="topbar" variant="banner">
-        <SurfaceCardHeader
-          eyebrow="agent-html app"
-          title="Local-first workbench"
-        >
-          <div className="topbar-meta">
-            <Button
-              disabled={commandState.runningDoctor}
-              onClick={() => {
-                void handleDoctor()
-              }}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              {commandState.runningDoctor ? "Checking runtime..." : "Doctor"}
-            </Button>
-            <StatusBadge>
-              {isTauriRuntime() ? "Tauri runtime" : "Mock runtime"}
-            </StatusBadge>
-            {commandState.error ? (
-              <StatusBadge tone="error">Needs attention</StatusBadge>
-            ) : null}
-          </div>
-        </SurfaceCardHeader>
-      </SurfaceCard>
+      <header className="topbar">
+        <div className="topbar-brand">
+          <strong>agent-html</strong>
+        </div>
+        <div className="topbar-meta">
+          <Button
+            disabled={commandState.runningDoctor}
+            onClick={() => {
+              void handleDoctor()
+            }}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            {commandState.runningDoctor ? "Checking..." : "Doctor"}
+          </Button>
+          <StatusBadge>{isTauriRuntime() ? "Tauri" : "Mock"}</StatusBadge>
+          {commandState.error ? (
+            <StatusBadge tone="error">Error</StatusBadge>
+          ) : null}
+        </div>
+      </header>
 
       {commandState.error ? (
         <SurfaceCard className="error-banner" variant="banner">
-          <SurfaceCardBody className="px-[16px] py-[14px]">
+          <SurfaceCardBody className="py-4" padding="compact">
             <Alert
               className="border-none bg-transparent p-0 shadow-none"
               variant="destructive"
@@ -1414,93 +1429,101 @@ export function App() {
         <RuntimeBanner report={appState.runtimeReport} />
       ) : null}
 
-      <div className="app-shell">
-        <SessionsSidebar
-          activeSessionId={appState.currentSession.summary.id}
-          isBusy={isSidebarBusy}
-          onCreateSession={() => {
-            void handleCreateSession()
-          }}
-          onDeleteSession={(sessionId) => {
-            void handleDeleteSession(sessionId)
-          }}
-          onOpenSession={(sessionId) => {
-            void handleOpenSession(sessionId)
-          }}
-          onRenameSession={(sessionId, name) => {
-            void handleRenameSession(sessionId, name)
-          }}
-          onTogglePinSession={(sessionId, pinned) => {
-            void handleToggleSessionPin(sessionId, pinned)
-          }}
-          sessions={appState.sessions}
-        />
-        <Workbench
-          activeView={activeView}
-          activeReviewFocus={agentShellReviewFocus}
-          activeSourceFocus={activeSourceFocus}
-          activeSourceFocusReviewStatus={sourceFocusReviewStatus}
-          availableReviewFocusTargets={availableReviewFocusTargets}
-          build={appState.currentBuild}
-          draftComparison={draftComparison}
-          draftSource={currentDraftSource}
-          hasUnsavedSourceChanges={hasUnsavedSourceChanges}
-          inspect={appState.currentInspect}
-          isActionBusy={isWorkbenchActionBusy}
-          isRunningBuild={commandState.runningBuild}
-          isRunningInspect={commandState.runningInspect}
-          isSavingSource={commandState.savingSource}
-          logs={appState.currentLogs}
-          messages={appState.chat}
-          sourceValidation={currentSourceValidation}
-          onBuild={handleBuild}
-          canRevealSourceOrigin={canRevealSourceOrigin}
-          onClearReviewFocus={handleClearReviewFocus}
-          onClearSourceFocus={handleClearSourceFocus}
-          onDraftSourceChange={handleDraftSourceChange}
-          onInspect={handleInspect}
-          onOpenSourceFocus={handleOpenSourceFocus}
-          onRefreshSourceFocus={handleRefreshSourceFocus}
-          onRevealSourceReviewTarget={handleRevealSourceReviewTarget}
-          onRevisitReviewFocus={handleRevisitReviewFocus}
-          onRunReviewAction={handleRunReviewAction}
-          onSelectReviewFocus={handleSelectReviewFocus}
-          onSaveSource={handleSaveSource}
-          onViewChange={(view) => {
-            void handleViewChange(view)
-          }}
-          previewHtml={previewHtml}
-          proposalComparison={proposalComparison}
-          session={appState.currentSession}
-        />
-        <AgentShell
-          activeView={activeView}
-          activeSourceFocusReviewStatus={sourceFocusReviewStatus}
-          build={appState.currentBuild}
-          sourceValidation={currentSourceValidation}
-          draftComparison={draftComparison}
-          hasUnsavedSourceChanges={hasUnsavedSourceChanges}
-          inspect={appState.currentInspect}
-          isRunningBuild={commandState.runningBuild}
-          isRunningInspect={commandState.runningInspect}
-          isSavingSource={commandState.savingSource}
-          onBuild={handleBuild}
-          onInspect={handleInspect}
-          onOpenView={handleViewChange}
-          onOpenSourceFocus={handleOpenSourceFocus}
-          onSaveDraft={handleSaveDraftForWorkflow}
-          isDraftingProposal={commandState.draftingProposal}
-          isSending={commandState.sendingMessage}
-          messages={appState.chat}
-          onDraftProposal={handleDraftProposal}
-          clearReviewFocusKey={agentShellClearReviewFocusKey}
-          proposalComparison={proposalComparison}
-          onReviewFocusChange={handleReviewFocusChange}
-          reviewIntent={agentShellReviewIntent}
-          onSend={handleSendMessage}
-          session={appState.currentSession}
-        />
-      </div>
+      <ResizablePanelGroup className="app-shell" orientation="horizontal">
+        <ResizablePanel className="app-pane" defaultSize={18} minSize={14}>
+          <SessionsSidebar
+            activeSessionId={appState.currentSession.summary.id}
+            isBusy={isSidebarBusy}
+            onCreateSession={() => {
+              void handleCreateSession()
+            }}
+            onDeleteSession={(sessionId) => {
+              void handleDeleteSession(sessionId)
+            }}
+            onOpenSession={(sessionId) => {
+              void handleOpenSession(sessionId)
+            }}
+            onRenameSession={(sessionId, name) => {
+              void handleRenameSession(sessionId, name)
+            }}
+            onTogglePinSession={(sessionId, pinned) => {
+              void handleToggleSessionPin(sessionId, pinned)
+            }}
+            sessions={appState.sessions}
+          />
+        </ResizablePanel>
+        <ResizableHandle className="app-shell-handle" withHandle />
+        <ResizablePanel className="app-pane" defaultSize={52} minSize={34}>
+          <Workbench
+            activeView={activeView}
+            activeReviewFocus={agentShellReviewFocus}
+            activeSourceFocus={activeSourceFocus}
+            activeSourceFocusReviewStatus={sourceFocusReviewStatus}
+            availableReviewFocusTargets={availableReviewFocusTargets}
+            build={appState.currentBuild}
+            draftComparison={draftComparison}
+            draftSource={currentDraftSource}
+            hasUnsavedSourceChanges={hasUnsavedSourceChanges}
+            inspect={appState.currentInspect}
+            isActionBusy={isWorkbenchActionBusy}
+            isRunningBuild={commandState.runningBuild}
+            isRunningInspect={commandState.runningInspect}
+            isSavingSource={commandState.savingSource}
+            logs={appState.currentLogs}
+            messages={appState.chat}
+            sourceValidation={currentSourceValidation}
+            onBuild={handleBuild}
+            canRevealSourceOrigin={canRevealSourceOrigin}
+            onClearReviewFocus={handleClearReviewFocus}
+            onClearSourceFocus={handleClearSourceFocus}
+            onDraftSourceChange={handleDraftSourceChange}
+            onInspect={handleInspect}
+            onOpenSourceFocus={handleOpenSourceFocus}
+            onRefreshSourceFocus={handleRefreshSourceFocus}
+            onRevealSourceReviewTarget={handleRevealSourceReviewTarget}
+            onRevisitReviewFocus={handleRevisitReviewFocus}
+            onRunReviewAction={handleRunReviewAction}
+            onSelectReviewFocus={handleSelectReviewFocus}
+            onSaveSource={handleSaveSource}
+            onViewChange={(view) => {
+              void handleViewChange(view)
+            }}
+            previewHtml={previewHtml}
+            proposalComparison={proposalComparison}
+            session={appState.currentSession}
+          />
+        </ResizablePanel>
+        <ResizableHandle className="app-shell-handle" withHandle />
+        <ResizablePanel className="app-pane" defaultSize={30} minSize={20}>
+          <AgentShell
+            activeView={activeView}
+            activeSourceFocusReviewStatus={sourceFocusReviewStatus}
+            build={appState.currentBuild}
+            sourceValidation={currentSourceValidation}
+            draftComparison={draftComparison}
+            hasUnsavedSourceChanges={hasUnsavedSourceChanges}
+            inspect={appState.currentInspect}
+            isRunningBuild={commandState.runningBuild}
+            isRunningInspect={commandState.runningInspect}
+            isSavingSource={commandState.savingSource}
+            onBuild={handleBuild}
+            onInspect={handleInspect}
+            onOpenView={handleViewChange}
+            onOpenSourceFocus={handleOpenSourceFocus}
+            onSaveDraft={handleSaveDraftForWorkflow}
+            isDraftingProposal={commandState.draftingProposal}
+            isSending={commandState.sendingMessage}
+            messages={appState.chat}
+            onDraftProposal={handleDraftProposal}
+            clearReviewFocusKey={agentShellClearReviewFocusKey}
+            proposalComparison={proposalComparison}
+            onReviewFocusChange={handleReviewFocusChange}
+            reviewIntent={agentShellReviewIntent}
+            onSend={handleSendMessage}
+            session={appState.currentSession}
+          />
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   )
 }
@@ -1605,21 +1628,14 @@ function createLocalChatMessage(
 function RuntimeBanner({ report }: { report: RuntimeReport }) {
   return (
     <SurfaceCard className="runtime-banner" variant="banner">
-      <SurfaceCardHeader
-        eyebrow="Runtime health"
-        title={
-          report.status === "ok"
-            ? "Managed runtime ready"
-            : "Managed runtime has failures"
-        }
-      >
+      <SurfaceCardHeader title="Runtime">
         <div className="runtime-banner-meta">
           <StatusBadge>ok {report.counts.ok}</StatusBadge>
           <StatusBadge tone="dirty">warn {report.counts.warn}</StatusBadge>
           <StatusBadge tone="error">fail {report.counts.fail}</StatusBadge>
         </div>
       </SurfaceCardHeader>
-      <SurfaceCardBody className="sr-only">
+      <SurfaceCardBody className="sr-only" padding="none">
         Runtime health summary
       </SurfaceCardBody>
     </SurfaceCard>

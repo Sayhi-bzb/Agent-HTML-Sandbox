@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@codemirror/lang-html": "^6.4.11",
-    "@fontsource-variable/geist": "^5.2.8",
+    "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource/jetbrains-mono": "^5.2.8",
     "@tailwindcss/vite": "^4.3.0",
     "@tauri-apps/api": "^2.8.0",
     "class-variance-authority": "^0.7.1",
@@ -21,6 +22,7 @@
     "radix-ui": "^1.4.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-resizable-panels": "^4.11.1",
     "shadcn": "^4.7.0",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.0",

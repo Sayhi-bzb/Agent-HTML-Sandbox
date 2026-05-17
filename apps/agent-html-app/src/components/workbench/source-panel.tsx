@@ -3,7 +3,6 @@ import type {
   SourceFocusTarget,
 } from "../../lib/source-focus"
 import { Button } from "../ui/button"
-import { Badge } from "../ui/badge"
 import {
   SurfaceCard,
   SurfaceCardBody,
@@ -69,11 +68,11 @@ export function SourcePanel({
     : undefined
 
   return (
-    <SurfaceCard variant="workbench">
+    <SurfaceCard className="source-panel" variant="workbench">
       <SurfaceCardHeader eyebrow="Source" title="source.agent.html">
         <div className="header-actions">
           {hasUnsavedChanges ? (
-            <Badge variant="destructive">Unsaved changes</Badge>
+            <StatusBadge tone="dirty">Unsaved</StatusBadge>
           ) : null}
           <span className="inline-meta">{sourcePath}</span>
           <Button
@@ -86,11 +85,12 @@ export function SourcePanel({
           </Button>
         </div>
       </SurfaceCardHeader>
-      <SurfaceCardBody className="grid gap-4 px-[18px] pb-[18px]">
+      <SurfaceCardBody className="source-panel-body">
         <SurfaceCard variant="validation">
           <SurfaceCardHeader
             className="validation-topline"
             eyebrow="Validation"
+            padding="compact"
             title={sourceValidationView.headline}
           >
             <div className="validation-topline-actions">
@@ -121,8 +121,7 @@ export function SourcePanel({
               ) : null}
             </div>
           </SurfaceCardHeader>
-          <SurfaceCardBody className="grid gap-3 px-[16px] pb-[16px]">
-            <p className="validation-summary">{sourceValidationView.summary}</p>
+          <SurfaceCardBody className="grid gap-3" padding="compact">
             <div className="validation-meta">
               <span className="inline-meta">
                 {sourceValidationView.validatedAt
@@ -157,7 +156,7 @@ export function SourcePanel({
                           type="button"
                           variant="outline"
                         >
-                          Open in Source
+                          Focus
                         </Button>
                       ) : null}
                     </div>
@@ -185,85 +184,87 @@ export function SourcePanel({
                 ))}
               </ul>
             ) : (
-              <p className="validation-empty">No validation diagnostics.</p>
+              <p className="validation-empty">Clear</p>
             )}
           </SurfaceCardBody>
         </SurfaceCard>
         {activeSourceFocus ? (
-          <SurfaceCard className="source-focus-banner" variant="summary">
-            <div>
-              <p className="eyebrow">Source focus</p>
-              <h4>{sourceFocusView?.label ?? activeSourceFocus.label}</h4>
-              <p className="validation-empty">
-                {sourceFocusView?.selectionLabel ?? "Current selection"} is
-                selected in the current draft.
-              </p>
-              {sourceFocusView?.originLabel ||
-              sourceFocusView?.reviewOriginLabel ? (
-                <div className="proposal-meta-row">
-                  {sourceFocusView?.originLabel ? (
-                    <StatusBadge tone="accent">
-                      {sourceFocusView.originLabel}
-                    </StatusBadge>
-                  ) : null}
-                  <StatusBadge>{sourceFocusView?.selectionLabel}</StatusBadge>
-                  {sourceFocusView?.reviewOriginLabel ? (
+          <SurfaceCard className="source-focus-banner" variant="inset">
+            <SurfaceCardBody
+              className="source-focus-banner-body"
+              padding="compact"
+            >
+              <div>
+                <h4>{sourceFocusView?.label ?? activeSourceFocus.label}</h4>
+                {sourceFocusView?.originLabel ||
+                sourceFocusView?.reviewOriginLabel ? (
+                  <div className="proposal-meta-row">
+                    {sourceFocusView?.originLabel ? (
+                      <StatusBadge tone="accent">
+                        {sourceFocusView.originLabel}
+                      </StatusBadge>
+                    ) : null}
+                    <StatusBadge>{sourceFocusView?.selectionLabel}</StatusBadge>
+                    {sourceFocusView?.reviewOriginLabel ? (
+                      <span className="inline-meta">
+                        From {sourceFocusView.reviewOriginLabel}
+                      </span>
+                    ) : null}
+                    {sourceFocusView?.originReference ? (
+                      <span className="inline-meta">
+                        {sourceFocusView.originReference}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
+                {sourceFocusView?.summary ? (
+                  <div className="proposal-meta-row">
+                    {sourceFocusView.statusPill ? (
+                      <StatusBadge
+                        tone={statusToneForClassName(
+                          sourceFocusView.statusPill.className,
+                        )}
+                      >
+                        {sourceFocusView.statusPill.label}
+                      </StatusBadge>
+                    ) : null}
                     <span className="inline-meta">
-                      From {sourceFocusView.reviewOriginLabel}
+                      {sourceFocusView.summary}
                     </span>
-                  ) : null}
-                  {sourceFocusView?.originReference ? (
-                    <span className="inline-meta">
-                      {sourceFocusView.originReference}
-                    </span>
-                  ) : null}
-                </div>
-              ) : null}
-              {sourceFocusView?.summary ? (
-                <div className="proposal-meta-row">
-                  {sourceFocusView.statusPill ? (
-                    <StatusBadge
-                      tone={statusToneForClassName(
-                        sourceFocusView.statusPill.className,
-                      )}
-                    >
-                      {sourceFocusView.statusPill.label}
-                    </StatusBadge>
-                  ) : null}
-                  <span className="inline-meta">{sourceFocusView.summary}</span>
-                </div>
-              ) : null}
-            </div>
-            <div className="source-focus-actions">
-              {sourceFocusView?.actions.canRevealSourceOrigin ? (
+                  </div>
+                ) : null}
+              </div>
+              <div className="source-focus-actions">
+                {sourceFocusView?.actions.canRevealSourceOrigin ? (
+                  <Button
+                    onClick={onRevealReviewTarget}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    Origin
+                  </Button>
+                ) : null}
+                {sourceFocusView?.actions.canRefreshFocus ? (
+                  <Button
+                    onClick={onRefreshSourceFocus}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    Refresh
+                  </Button>
+                ) : null}
                 <Button
-                  onClick={onRevealReviewTarget}
+                  onClick={onClearSourceFocus}
                   size="sm"
                   type="button"
                   variant="outline"
                 >
-                  Reveal source origin
+                  Clear
                 </Button>
-              ) : null}
-              {sourceFocusView?.actions.canRefreshFocus ? (
-                <Button
-                  onClick={onRefreshSourceFocus}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  Refresh focus
-                </Button>
-              ) : null}
-              <Button
-                onClick={onClearSourceFocus}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                Clear focus
-              </Button>
-            </div>
+              </div>
+            </SurfaceCardBody>
           </SurfaceCard>
         ) : null}
         <SourceEditor

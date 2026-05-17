@@ -1,13 +1,15 @@
 /// <reference types="node" />
 // @vitest-environment node
 
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import { mkdtemp, readFile, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 
 import prettier from "prettier"
 import { afterEach, describe, expect, it } from "vitest"
+
+import { removeTempDir } from "./cli-test-helpers"
 
 const originalTemplateDir = process.env.AHTML_SHADCN_TEMPLATE_DIR
 const originalAllowOverride = process.env.AHTML_ALLOW_SHADCN_TEMPLATE_OVERRIDE
@@ -93,7 +95,7 @@ describe("checked-in runtime templates", () => {
       expect(templateConfig).not.toContain("__dirname")
       expect(ahtmlConfig).toContain("rewriteTemplateRoot")
     } finally {
-      await rm(runtimeDir, { force: true, recursive: true })
+      await removeTempDir(runtimeDir)
     }
   })
 

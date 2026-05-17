@@ -1,14 +1,15 @@
 /// <reference types="node" />
 // @vitest-environment node
 
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises"
-import { tmpdir } from "node:os"
+import { mkdir, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
-const temporaryDirectories: string[] = []
+import { useTemporaryDirectories } from "./cli-test-helpers"
+
+const temporaryDirectories = useTemporaryDirectories()
 
 type CliSchemaOutput = {
   readonly components: readonly { readonly name: string }[]
@@ -155,14 +156,6 @@ type RuntimeSurfaceWithGlueProof = Record<string, unknown> & {
     readonly files: Record<string, string>
   }
 }
-
-afterEach(async () => {
-  await Promise.all(
-    temporaryDirectories
-      .splice(0)
-      .map((directory) => rm(directory, { force: true, recursive: true })),
-  )
-})
 
 describe("runtime surface completeness", () => {
   it("marks runtime status incomplete when shadcn css imports are missing", async () => {
@@ -368,8 +361,7 @@ async function createRuntimeFixture({
     runtimeRenderer,
     runtimeVersion,
   } = await loadModules()
-  const runtimeRoot = await mkdtemp(path.join(tmpdir(), "ahtml-runtime-"))
-  temporaryDirectories.push(runtimeRoot)
+  const runtimeRoot = await temporaryDirectories.create("ahtml-runtime-")
   const runtimePaths = getRuntimePaths({ AHTML_HOME: runtimeRoot })
   const schema = await getCliSchemaOutput(process.cwd())
   const runtimeContract = createRuntimeContract(schema.components)

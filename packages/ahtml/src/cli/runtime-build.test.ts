@@ -1,32 +1,24 @@
 /// <reference types="node" />
 // @vitest-environment node
 
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
-import { tmpdir } from "node:os"
+import { mkdir, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 
-import { afterEach, describe, expect, it } from "vitest"
+import { describe, expect, it } from "vitest"
 
-const temporaryDirectories: string[] = []
+import { useTemporaryDirectories } from "./cli-test-helpers"
 
-afterEach(async () => {
-  await Promise.all(
-    temporaryDirectories
-      .splice(0)
-      .map((directory) => rm(directory, { force: true, recursive: true })),
-  )
-})
+const temporaryDirectories = useTemporaryDirectories()
 
 describe("runtime build html patching", () => {
   it("replaces the root html, title, and icon link using structured html updates", async () => {
-    const tempDir = await mkdtemp(
-      path.join(tmpdir(), "agent-html-runtime-build-"),
+    const tempDir = await temporaryDirectories.create(
+      "agent-html-runtime-build-",
     )
     const outputDir = path.join(tempDir, "artifact")
     const indexPath = path.join(outputDir, "index.html")
 
-    temporaryDirectories.push(tempDir)
     await mkdir(outputDir, { recursive: true })
     await writeFile(
       indexPath,
@@ -64,13 +56,12 @@ describe("runtime build html patching", () => {
   })
 
   it("falls back to the default artifact title when the SSR html has no h1", async () => {
-    const tempDir = await mkdtemp(
-      path.join(tmpdir(), "agent-html-runtime-build-"),
+    const tempDir = await temporaryDirectories.create(
+      "agent-html-runtime-build-",
     )
     const outputDir = path.join(tempDir, "artifact")
     const indexPath = path.join(outputDir, "index.html")
 
-    temporaryDirectories.push(tempDir)
     await mkdir(outputDir, { recursive: true })
     await writeFile(
       indexPath,

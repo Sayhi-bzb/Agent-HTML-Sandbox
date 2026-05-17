@@ -51,7 +51,7 @@ export function PanelShellHeader({
 }: PanelShellHeaderProps) {
   return (
     <CardHeader className={cn("panel-header", className)}>
-      <div>
+      <div className="panel-header-copy">
         {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
         <CardTitle>{title}</CardTitle>
       </div>
