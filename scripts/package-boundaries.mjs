@@ -1,18 +1,6 @@
 export const forbiddenPackFileSuffixes = [".test.ts", ".test.tsx"]
 
 export const packageBoundaryChecks = {
-  core: {
-    forbiddenPrefixes: [
-      "blueprint/",
-      "spec/",
-      "tests/",
-      "dist/",
-      "build/",
-      "coverage/",
-    ],
-    forbiddenFiles: ["artifact.agent.html", "src/schema-overlays.ts"],
-    requiredFiles: ["index.mjs", "package.json"],
-  },
   ahtml: {
     forbiddenPrefixes: [
       "blueprint/",
@@ -37,6 +25,7 @@ export const packageBoundaryChecks = {
     requiredFiles: [
       "bin/ahtml.mjs",
       "src/cli/command-contract.mjs",
+      "src/config/internal-core-bridge.mjs",
       "package.json",
       "README.md",
     ],

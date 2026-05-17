@@ -5,10 +5,6 @@ import { pathToFileURL } from "node:url"
 const root = process.cwd()
 const workspacePackages = [
   {
-    name: "@agent-html/core",
-    manifestPath: path.join(root, "packages", "core", "package.json"),
-  },
-  {
     name: "@agent-html/ahtml",
     manifestPath: path.join(root, "packages", "ahtml", "package.json"),
   },
@@ -37,7 +33,7 @@ export function getSharedWorkspaceVersion(versions) {
   for (const entry of versions) {
     if (entry.version !== first.version) {
       throw new Error(
-        `Workspace package versions are out of sync: ${versions
+        `Release package versions are out of sync: ${versions
           .map(({ name, version }) => `${name}@${version}`)
           .join(", ")}.`,
       )

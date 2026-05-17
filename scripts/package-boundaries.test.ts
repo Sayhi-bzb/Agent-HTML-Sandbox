@@ -9,20 +9,16 @@ import {
 } from "./package-boundaries.mjs"
 
 describe("package boundaries", () => {
-  it("defines package boundary checks for publishable packages", () => {
+  it("defines package boundary checks for the publishable package", () => {
     const checks = packageBoundaryChecks as {
-      core: { requiredFiles: string[] }
       ahtml: { requiredFiles: string[] }
     }
 
-    expect(Object.keys(checks).sort()).toEqual(["ahtml", "core"])
-    expect(checks.core.requiredFiles).toEqual([
-      "index.mjs",
-      "package.json",
-    ])
+    expect(Object.keys(checks).sort()).toEqual(["ahtml"])
     expect(checks.ahtml.requiredFiles).toEqual([
       "bin/ahtml.mjs",
       "src/cli/command-contract.mjs",
+      "src/config/internal-core-bridge.mjs",
       "package.json",
       "README.md",
     ])
@@ -33,13 +29,14 @@ describe("package boundaries", () => {
       assertPackBoundary("ahtml", [
         "bin/ahtml.mjs",
         "src/cli/command-contract.mjs",
+        "src/config/internal-core-bridge.mjs",
         "package.json",
         "README.md",
       ]),
     ).not.toThrow()
 
     expect(() =>
-      assertPackBoundary("core", ["index.mjs", "src/schema-overlays.ts"]),
-    ).toThrow("Forbidden package file included")
+      assertPackBoundary("ahtml", ["src/cli/command-contract.mjs"]),
+    ).toThrow("Required package file missing")
   })
 })

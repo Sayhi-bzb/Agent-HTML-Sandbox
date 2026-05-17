@@ -1,4 +1,5 @@
-import { type FormEvent, useEffect, useState } from "react"
+import { type FormEvent, useEffect, useRef, useState } from "react"
+import { MoreHorizontalIcon } from "lucide-react"
 
 import {
   findLatestProposalDecision,
@@ -21,8 +22,16 @@ import {
   type ProposalMessageActionConfig,
 } from "../../lib/proposal-message-view"
 import { Button } from "@/components/ui/button"
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuGroup,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
 import { Textarea } from "@/components/ui/textarea"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { PanelShell, PanelShellHeader } from "../ui/panel-shell"
 import { getProposalReadinessView } from "../../lib/agent-shell-review-entry-view"
 import { ScrollArea } from "../ui/scroll-area"
@@ -57,6 +66,7 @@ import type {
   SourceValidationState,
   WorkbenchView,
 } from "../../lib/types"
+import { copyText } from "../../lib/utils"
 
 type AgentShellProps = {
   session: SessionDetail
@@ -286,6 +296,7 @@ export function AgentShell({
     draftComparison && proposalComparison,
   )
   const showCompareCard = Boolean(activeComparison)
+  const compactReadinessItems = proposalReadinessView.items.slice(0, 2)
   const comparisonLabels =
     comparisonMode === "proposal"
       ? {
@@ -473,10 +484,27 @@ export function AgentShell({
 
   return (
     <PanelShell as="aside" variant="agent-shell">
-      <PanelShellHeader title="Shell" />
-
-      <SurfaceCard className="proposal-starter-card" variant="context">
-        <SurfaceCardHeader title="Proposal">
+      <PanelShellHeader className="panel-header-compact">
+        <div className="shell-header-row">
+          <div className="proposal-meta-row">
+            {latestProposal ? (
+              <span className="inline-meta">
+                {formatTimestampLabel(latestProposal.createdAt)}
+              </span>
+            ) : (
+              <span className="inline-meta">No proposal</span>
+            )}
+            {latestProposalIsStale ? (
+              <StatusBadge tone="dirty">Stale</StatusBadge>
+            ) : null}
+            {currentStageItem ? (
+              <StatusBadge
+                tone={statusToneForClassName(currentStageItem.pillClassName)}
+              >
+                {currentStageItem.statusLabel}
+              </StatusBadge>
+            ) : null}
+          </div>
           <Button
             disabled={isProposalActionBusy}
             onClick={() => void onDraftProposal()}
@@ -488,26 +516,12 @@ export function AgentShell({
                 ? "Save + draft"
                 : "Draft"}
           </Button>
-        </SurfaceCardHeader>
+        </div>
+      </PanelShellHeader>
+
+      <SurfaceCard className="proposal-starter-card" variant="context">
         <SurfaceCardBody className="grid gap-4">
           <div className="proposal-meta-row">
-            {latestProposal ? (
-              <p className="inline-meta">
-                Latest proposal {formatTimestampLabel(latestProposal.createdAt)}
-              </p>
-            ) : (
-              <p className="inline-meta">No proposal</p>
-            )}
-            {latestProposalIsStale ? (
-              <StatusBadge tone="dirty">Stale context</StatusBadge>
-            ) : null}
-            {currentStageItem ? (
-              <StatusBadge
-                tone={statusToneForClassName(currentStageItem.pillClassName)}
-              >
-                {currentStageItem.statusLabel}
-              </StatusBadge>
-            ) : null}
             <StatusBadge
               tone={statusToneForClassName(proposalReadinessView.pillClassName)}
             >
@@ -538,17 +552,15 @@ export function AgentShell({
             </SurfaceCardBody>
           </SurfaceCard>
 
-          {proposalReadinessView.items.length > 0 ? (
+          {compactReadinessItems.length > 0 ? (
             <SurfaceCard className="proposal-readiness" variant="inset">
               <SurfaceCardBody className="grid gap-3" padding="compact">
                 <div className="message-topline">
                   <h4>Open</h4>
                 </div>
-                <ul className="proposal-list proposal-readiness-list">
-                  {proposalReadinessView.items.slice(0, 3).map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
+                <p className="proposal-readiness-summary">
+                  {compactReadinessItems.join(" ")}
+                </p>
               </SurfaceCardBody>
             </SurfaceCard>
           ) : null}
@@ -584,13 +596,91 @@ export function AgentShell({
       </SurfaceCard>
 
       {showCompareCard && activeComparison ? (
-        <SurfaceCard className="draft-compare-card" variant="context">
-          <SurfaceCardHeader
-            eyebrow="Draft compare"
-            title={comparisonLabels.cardTitle}
-          >
-            <div className="proposal-actions">
-              <Button
+        <ContextMenu>
+          <ContextMenuTrigger asChild>
+            <div className="panel-menu-shell">
+              <SurfaceCard className="draft-compare-card" variant="context">
+                <SurfaceCardHeader
+                  eyebrow="Draft compare"
+                  title={comparisonLabels.cardTitle}
+                >
+                  <Button
+                    aria-label={`${comparisonLabels.cardTitle} actions`}
+                    className="panel-card-more"
+                    onClick={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      openContextMenuAtElement(
+                        event.currentTarget.closest(
+                          ".panel-menu-shell",
+                        ) as HTMLElement | null,
+                      )
+                    }}
+                    size="icon-xs"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <MoreHorizontalIcon />
+                  </Button>
+                </SurfaceCardHeader>
+                <SurfaceCardBody className="grid gap-4">
+                  <dl className="key-value-grid compact">
+                    <dt>Changed lines</dt>
+                    <dd>{activeComparison.changedLineCount}</dd>
+                    <dt>{comparisonLabels.baseLabel}</dt>
+                    <dd>{activeComparison.savedLineCount} lines</dd>
+                    <dt>{comparisonLabels.currentLabel}</dt>
+                    <dd>{activeComparison.draftLineCount} lines</dd>
+                    <dt>First change</dt>
+                    <dd>
+                      {activeComparison.firstChangedLine
+                        ? `Line ${activeComparison.firstChangedLine}`
+                        : "n/a"}
+                    </dd>
+                  </dl>
+                  {activeComparison.previewGroups.length > 0 ? (
+                    <div className="draft-preview-footer">
+                      <Button
+                        disabled={isProposalActionBusy}
+                        onClick={() => {
+                          focusChecklistOption(getDefaultProposalFocusOption())
+                          void onOpenView("source")
+                        }}
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        Review in Source
+                      </Button>
+                      <span className="inline-meta">
+                        {focusedPreviewGroups?.length
+                          ? `${focusedComparison?.label ?? "Compare focus"} · ${focusedPreviewGroups.length} group(s)`
+                          : "No focus"}
+                      </span>
+                    </div>
+                  ) : null}
+                </SurfaceCardBody>
+              </SurfaceCard>
+            </div>
+          </ContextMenuTrigger>
+          <ContextMenuContent className="session-context-menu" sideOffset={10}>
+            <ContextMenuGroup>
+              {showComparisonModeSwitch ? (
+                <>
+                  <ContextMenuLabel>Compare base</ContextMenuLabel>
+                  <ContextMenuItem onSelect={() => setComparisonMode("saved")}>
+                    Saved source
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    disabled={!proposalComparison}
+                    onSelect={() => setComparisonMode("proposal")}
+                  >
+                    Proposal snapshot
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                </>
+              ) : null}
+              <ContextMenuItem
                 disabled={
                   activeView === "source" ||
                   isSavingSource ||
@@ -598,111 +688,32 @@ export function AgentShell({
                   isRunningInspect ||
                   isDraftingProposal
                 }
-                onClick={() => void onOpenView("source")}
-                size="sm"
-                type="button"
-                variant="outline"
+                onSelect={() => void onOpenView("source")}
               >
                 Open Source
-              </Button>
+              </ContextMenuItem>
               {hasUnsavedSourceChanges ? (
-                <Button
+                <ContextMenuItem
                   disabled={
                     isSavingSource ||
                     isRunningBuild ||
                     isRunningInspect ||
                     isDraftingProposal
                   }
-                  onClick={() => void onSaveDraft()}
-                  size="sm"
-                  type="button"
-                  variant="outline"
+                  onSelect={() => void onSaveDraft()}
                 >
                   {isSavingSource ? "Saving..." : "Save now"}
-                </Button>
+                </ContextMenuItem>
               ) : null}
-            </div>
-          </SurfaceCardHeader>
-          <SurfaceCardBody className="grid gap-4">
-            {showComparisonModeSwitch ? (
-              <ToggleGroup
-                aria-label="Compare base"
-                className="compare-mode-toggle"
-                onValueChange={(value) => {
-                  if (value === "saved" || value === "proposal") {
-                    setComparisonMode(value)
-                  }
-                }}
-                type="single"
-                value={comparisonMode}
-                variant="outline"
+              <ContextMenuItem
+                disabled={!focusedComparison}
+                onSelect={() => setFocusedComparison(undefined)}
               >
-                <ToggleGroupItem
-                  className="compare-mode-button"
-                  size="sm"
-                  value="saved"
-                >
-                  Saved source
-                </ToggleGroupItem>
-                <ToggleGroupItem
-                  className="compare-mode-button"
-                  size="sm"
-                  value="proposal"
-                >
-                  Proposal snapshot
-                </ToggleGroupItem>
-              </ToggleGroup>
-            ) : null}
-            <dl className="key-value-grid compact">
-              <dt>Changed lines</dt>
-              <dd>{activeComparison.changedLineCount}</dd>
-              <dt>{comparisonLabels.baseLabel}</dt>
-              <dd>{activeComparison.savedLineCount} lines</dd>
-              <dt>{comparisonLabels.currentLabel}</dt>
-              <dd>{activeComparison.draftLineCount} lines</dd>
-              <dt>First change</dt>
-              <dd>
-                {activeComparison.firstChangedLine
-                  ? `Line ${activeComparison.firstChangedLine}`
-                  : "n/a"}
-              </dd>
-            </dl>
-            {activeComparison.previewGroups.length > 0 ? (
-              <div className="draft-preview-footer">
-                <Button
-                  disabled={isProposalActionBusy}
-                  onClick={() => {
-                    focusChecklistOption(getDefaultProposalFocusOption())
-                    void onOpenView("source")
-                  }}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  Review in Source
-                </Button>
-                {focusedPreviewGroups && focusedPreviewGroups.length > 0 ? (
-                  <>
-                    <Button
-                      onClick={() => setFocusedComparison(undefined)}
-                      size="sm"
-                      type="button"
-                      variant="outline"
-                    >
-                      Clear diff focus
-                    </Button>
-                    <span className="inline-meta">
-                      {focusedComparison?.label ?? "selected compare target"}{" "}
-                      with {focusedPreviewGroups.length} group(s).
-                    </span>
-                  </>
-                ) : (
-                  <span className="inline-meta">No focus</span>
-                )}
-              </div>
-            ) : null}
-          </SurfaceCardBody>
-        </SurfaceCard>
+                Clear diff focus
+              </ContextMenuItem>
+            </ContextMenuGroup>
+          </ContextMenuContent>
+        </ContextMenu>
       ) : null}
 
       {latestStoredNote ? (
@@ -838,6 +849,7 @@ function AgentShellMessageCard({
   onSaveDraft,
   onReviewDraftDiff,
 }: AgentShellMessageCardProps) {
+  const triggerRef = useRef<HTMLDivElement>(null)
   const isProposal = message.kind === "proposal-placeholder"
   const isContextCard = message.kind === "context-card"
   const proposalView = isProposal
@@ -884,226 +896,364 @@ function AgentShellMessageCard({
     }
   }
 
+  const primaryCardAction =
+    proposalView && !proposalView.compare
+      ? proposalView.footerActions[0]
+      : undefined
+  const secondaryCardActions =
+    proposalView && !proposalView.compare
+      ? proposalView.footerActions.slice(1)
+      : (proposalView?.footerActions ?? [])
+
   return (
-    <SurfaceCard
-      className={
-        isProposal
-          ? "message-card proposal-card"
-          : isContextCard
-            ? "message-card context-message-card"
-            : "message-card"
-      }
-      variant="message"
-    >
-      <div className="message-topline">
-        <StatusBadge tone={isProposal || isContextCard ? "accent" : "default"}>
-          {isProposal ? "proposal" : isContextCard ? "context" : message.role}
-        </StatusBadge>
-        <span className="inline-meta">
-          {formatTimestampLabel(message.createdAt)}
-        </span>
-      </div>
-      {proposalView ? (
-        <div className="proposal-body">
-          <h4>{proposalView.title}</h4>
-          {proposalView.decision ? (
-            <div className="proposal-decision-row">
-              <StatusBadge tone="accent">Decision</StatusBadge>
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div className="panel-menu-shell" ref={triggerRef}>
+          <SurfaceCard
+            className={
+              isProposal
+                ? "message-card proposal-card"
+                : isContextCard
+                  ? "message-card context-message-card"
+                  : "message-card"
+            }
+            variant="message"
+          >
+            <div className="message-topline">
               <StatusBadge
-                tone={statusToneForClassName(
-                  proposalView.decision.pillClassName,
-                )}
+                tone={isProposal || isContextCard ? "accent" : "default"}
               >
-                {proposalView.decision.label}
+                {isProposal
+                  ? "proposal"
+                  : isContextCard
+                    ? "context"
+                    : message.role}
               </StatusBadge>
-            </div>
-          ) : null}
-          {proposalView.staleNote ? (
-            <p className="proposal-stale-note">{proposalView.staleNote}</p>
-          ) : null}
-          {proposalView.compare ? (
-            <SurfaceCard className="proposal-compare-panel" variant="inset">
-              <SurfaceCardBody className="grid gap-3" padding="compact">
-                <div className="message-topline">
-                  <p className="eyebrow">Proposal Compare</p>
-                  <StatusBadge
-                    tone={statusToneForClassName(
-                      proposalView.compare.pillClassName,
-                    )}
+              <div className="panel-card-meta">
+                <span className="inline-meta">
+                  {formatTimestampLabel(message.createdAt)}
+                </span>
+                {proposalView || parsedContextCard ? (
+                  <Button
+                    aria-label="Message actions"
+                    className="panel-card-more"
+                    onClick={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      openContextMenuAtElement(triggerRef.current)
+                    }}
+                    size="icon-xs"
+                    type="button"
+                    variant="ghost"
                   >
-                    {proposalView.compare.changedLineCount} changed line(s)
-                  </StatusBadge>
-                </div>
-                <p className="proposal-compare-summary">
-                  {proposalView.compare.summary}
-                </p>
-                <Button
-                  disabled={
-                    isProposalActionBusy || proposalView.compare.action.disabled
-                  }
-                  onClick={() =>
-                    runProposalMessageAction(proposalView.compare!.action)
-                  }
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  {proposalView.compare.action.label}
-                </Button>
-              </SurfaceCardBody>
-            </SurfaceCard>
-          ) : null}
-          {proposalView.checklistItems.length > 0 ? (
-            <ul className="proposal-list">
-              {proposalView.checklistItems.map((item) => (
-                <li key={item.id} className="proposal-checklist-item">
-                  <div className="proposal-checklist-main">
-                    <span>{item.text}</span>
-                    {item.context ? (
-                      <div className="proposal-checklist-context">
-                        <p className="inline-meta">{item.context.summary}</p>
-                        {item.context.previewGroups.length > 0 ? (
-                          <div className="proposal-checklist-diff-list">
-                            {item.context.previewGroups.map((previewGroup) => (
-                              <SurfaceCard
-                                className="proposal-checklist-diff"
-                                key={previewGroup.key}
-                                variant="inset"
-                              >
-                                <SurfaceCardBody
-                                  className="grid gap-2"
-                                  padding="tight"
-                                >
-                                  <div className="message-topline">
-                                    <StatusBadge>
-                                      {previewGroup.lineLabel}
-                                    </StatusBadge>
-                                    <Button
-                                      disabled={isProposalActionBusy}
-                                      onClick={() =>
-                                        void onOpenSourceFocus(
-                                          createSourceFocusTargetFromGroup({
-                                            label: item.text,
-                                            group: previewGroup.group,
-                                            compareMode:
-                                              item.focusCompare?.mode ??
-                                              "saved",
-                                            reviewTarget: item.focusCompare
-                                              ? createReviewFocusTargetFromGroups(
-                                                  {
-                                                    targetId:
-                                                      item.focusCompare
-                                                        .targetId,
-                                                    mode: item.focusCompare
-                                                      .mode,
-                                                    label:
-                                                      item.focusCompare.label,
-                                                    groups:
-                                                      item.focusCompare.groups,
-                                                  },
-                                                )
-                                              : undefined,
-                                          }),
-                                        )
-                                      }
-                                      size="sm"
-                                      type="button"
-                                      variant="outline"
-                                    >
-                                      Open in Source
-                                    </Button>
-                                  </div>
-                                  <pre>
-                                    {previewGroup.group.savedText || "(empty)"}
-                                    {"\n"}
-                                    {"->"}{" "}
-                                    {previewGroup.group.draftText || "(empty)"}
-                                  </pre>
-                                </SurfaceCardBody>
-                              </SurfaceCard>
-                            ))}
-                          </div>
-                        ) : null}
-                      </div>
-                    ) : null}
+                    <MoreHorizontalIcon />
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+            {proposalView ? (
+              <div className="proposal-body">
+                <h4>{proposalView.title}</h4>
+                {proposalView.decision ? (
+                  <div className="proposal-decision-row">
+                    <StatusBadge tone="accent">Decision</StatusBadge>
+                    <StatusBadge
+                      tone={statusToneForClassName(
+                        proposalView.decision.pillClassName,
+                      )}
+                    >
+                      {proposalView.decision.label}
+                    </StatusBadge>
                   </div>
-                  <span className="proposal-checklist-actions">
-                    {item.status ? (
-                      <StatusBadge
-                        tone={statusToneForClassName(item.status.pillClassName)}
-                      >
-                        {item.status.label}
-                      </StatusBadge>
-                    ) : null}
-                    {item.focusCompare ? (
+                ) : null}
+                {proposalView.staleNote ? (
+                  <p className="proposal-stale-note">
+                    {proposalView.staleNote}
+                  </p>
+                ) : null}
+                {proposalView.compare ? (
+                  <SurfaceCard
+                    className="proposal-compare-panel"
+                    variant="inset"
+                  >
+                    <SurfaceCardBody className="grid gap-3" padding="compact">
+                      <div className="message-topline">
+                        <p className="eyebrow">Proposal Compare</p>
+                        <StatusBadge
+                          tone={statusToneForClassName(
+                            proposalView.compare.pillClassName,
+                          )}
+                        >
+                          {proposalView.compare.changedLineCount} changed
+                          line(s)
+                        </StatusBadge>
+                      </div>
+                      <p className="proposal-compare-summary">
+                        {proposalView.compare.summary}
+                      </p>
                       <Button
-                        disabled={isProposalActionBusy}
+                        disabled={
+                          isProposalActionBusy ||
+                          proposalView.compare.action.disabled
+                        }
                         onClick={() =>
-                          onFocusCompare(
-                            item.focusCompare!.mode,
-                            item.focusCompare!.targetId,
-                            item.focusCompare!.label,
-                            item.focusCompare!.groups,
-                          )
+                          runProposalMessageAction(proposalView.compare!.action)
                         }
                         size="sm"
                         type="button"
                         variant="outline"
                       >
-                        Focus diff
+                        {proposalView.compare.action.label}
                       </Button>
-                    ) : null}
-                    {item.action ? (
-                      <Button
-                        disabled={isProposalActionBusy || item.action.disabled}
-                        onClick={() => runProposalMessageAction(item.action!)}
-                        size="sm"
-                        type="button"
-                        variant="outline"
-                      >
-                        {item.action.label}
-                      </Button>
-                    ) : null}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>{proposalView.fallbackBody}</p>
-          )}
+                    </SurfaceCardBody>
+                  </SurfaceCard>
+                ) : null}
+                {proposalView.checklistItems.length > 0 ? (
+                  <ul className="proposal-list proposal-list-compact">
+                    {proposalView.checklistItems.map((item) => (
+                      <ProposalChecklistItemRow
+                        isBusy={isProposalActionBusy}
+                        item={item}
+                        key={item.id}
+                        onFocusCompare={onFocusCompare}
+                        onOpenSourceFocus={onOpenSourceFocus}
+                        onRunAction={runProposalMessageAction}
+                      />
+                    ))}
+                  </ul>
+                ) : (
+                  <p>{proposalView.fallbackBody}</p>
+                )}
+              </div>
+            ) : parsedContextCard ? (
+              <div className="proposal-body">
+                <h4>{parsedContextCard.title}</h4>
+                {parsedContextCard.items.length > 0 ? (
+                  <ul className="proposal-list">
+                    {parsedContextCard.items.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>{parsedContextCard.fallbackBody}</p>
+                )}
+              </div>
+            ) : (
+              <p>{message.text}</p>
+            )}
+            {isProposal && primaryCardAction ? (
+              <div className="proposal-actions">
+                <Button
+                  disabled={isProposalActionBusy || primaryCardAction.disabled}
+                  onClick={() => runProposalMessageAction(primaryCardAction)}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  {primaryCardAction.label}
+                </Button>
+              </div>
+            ) : null}
+          </SurfaceCard>
         </div>
-      ) : parsedContextCard ? (
-        <div className="proposal-body">
-          <h4>{parsedContextCard.title}</h4>
-          {parsedContextCard.items.length > 0 ? (
-            <ul className="proposal-list">
-              {parsedContextCard.items.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          ) : (
-            <p>{parsedContextCard.fallbackBody}</p>
-          )}
-        </div>
-      ) : (
-        <p>{message.text}</p>
-      )}
-      {isProposal ? (
-        <div className="proposal-actions">
-          {proposalView?.footerActions.map((action) => (
-            <Button
-              disabled={isProposalActionBusy || action.disabled}
-              key={action.label}
-              onClick={() => runProposalMessageAction(action)}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              {action.label}
-            </Button>
-          ))}
-        </div>
+      </ContextMenuTrigger>
+      {proposalView || parsedContextCard ? (
+        <ContextMenuContent className="session-context-menu" sideOffset={10}>
+          <ContextMenuGroup>
+            {proposalView?.compare ? (
+              <ContextMenuItem
+                disabled={
+                  isProposalActionBusy || proposalView.compare.action.disabled
+                }
+                onSelect={() =>
+                  runProposalMessageAction(proposalView.compare!.action)
+                }
+              >
+                {proposalView.compare.action.label}
+              </ContextMenuItem>
+            ) : null}
+            {secondaryCardActions.map((action) => (
+              <ContextMenuItem
+                disabled={isProposalActionBusy || action.disabled}
+                key={action.label}
+                onSelect={() => runProposalMessageAction(action)}
+              >
+                {action.label}
+              </ContextMenuItem>
+            ))}
+            {proposalView && primaryCardAction ? (
+              <ContextMenuItem
+                disabled={isProposalActionBusy || primaryCardAction.disabled}
+                onSelect={() => runProposalMessageAction(primaryCardAction)}
+              >
+                {primaryCardAction.label}
+              </ContextMenuItem>
+            ) : null}
+            {parsedContextCard ? (
+              <>
+                <ContextMenuSeparator />
+                <ContextMenuItem
+                  onSelect={() => {
+                    void copyText(message.text)
+                  }}
+                >
+                  Copy note
+                </ContextMenuItem>
+              </>
+            ) : null}
+          </ContextMenuGroup>
+        </ContextMenuContent>
       ) : null}
-    </SurfaceCard>
+    </ContextMenu>
+  )
+}
+
+type ProposalChecklistItemRowProps = {
+  item: NonNullable<
+    ReturnType<typeof getProposalMessageView>
+  >["checklistItems"][number]
+  isBusy: boolean
+  onRunAction: (action: ProposalMessageActionConfig) => void
+  onFocusCompare: (
+    mode: ComparisonMode,
+    targetId: string,
+    label: string,
+    groups: SourceComparisonSummary["previewGroups"],
+  ) => void
+  onOpenSourceFocus: (target: SourceFocusTarget) => Promise<void> | void
+}
+
+function ProposalChecklistItemRow({
+  item,
+  isBusy,
+  onRunAction,
+  onFocusCompare,
+  onOpenSourceFocus,
+}: ProposalChecklistItemRowProps) {
+  const triggerRef = useRef<HTMLLIElement>(null)
+  const sourceTarget = createChecklistSourceFocusTarget(item)
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <li
+          className="proposal-checklist-item proposal-checklist-item-compact"
+          ref={triggerRef}
+        >
+          <div className="proposal-checklist-main">
+            <span>{item.text}</span>
+            {item.context ? (
+              <p className="inline-meta">{item.context.summary}</p>
+            ) : null}
+          </div>
+          <span className="proposal-checklist-actions proposal-checklist-actions-compact">
+            {item.status ? (
+              <StatusBadge
+                tone={statusToneForClassName(item.status.pillClassName)}
+              >
+                {item.status.label}
+              </StatusBadge>
+            ) : null}
+            {item.focusCompare || item.action || sourceTarget ? (
+              <Button
+                aria-label={`${item.text} actions`}
+                className="panel-card-more"
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  openContextMenuAtElement(triggerRef.current)
+                }}
+                size="icon-xs"
+                type="button"
+                variant="ghost"
+              >
+                <MoreHorizontalIcon />
+              </Button>
+            ) : null}
+          </span>
+        </li>
+      </ContextMenuTrigger>
+      {item.focusCompare || item.action || sourceTarget ? (
+        <ContextMenuContent className="session-context-menu" sideOffset={10}>
+          <ContextMenuGroup>
+            {item.focusCompare ? (
+              <ContextMenuItem
+                disabled={isBusy}
+                onSelect={() =>
+                  onFocusCompare(
+                    item.focusCompare!.mode,
+                    item.focusCompare!.targetId,
+                    item.focusCompare!.label,
+                    item.focusCompare!.groups,
+                  )
+                }
+              >
+                Focus diff
+              </ContextMenuItem>
+            ) : null}
+            {sourceTarget ? (
+              <ContextMenuItem
+                disabled={isBusy}
+                onSelect={() => {
+                  void onOpenSourceFocus(sourceTarget)
+                }}
+              >
+                Open in Source
+              </ContextMenuItem>
+            ) : null}
+            {item.action ? (
+              <ContextMenuItem
+                disabled={isBusy || item.action.disabled}
+                onSelect={() => onRunAction(item.action!)}
+              >
+                {item.action.label}
+              </ContextMenuItem>
+            ) : null}
+          </ContextMenuGroup>
+        </ContextMenuContent>
+      ) : null}
+    </ContextMenu>
+  )
+}
+
+function createChecklistSourceFocusTarget(
+  item: NonNullable<
+    ReturnType<typeof getProposalMessageView>
+  >["checklistItems"][number],
+) {
+  const firstPreviewGroup = item.context?.previewGroups[0]
+  if (!firstPreviewGroup) {
+    return undefined
+  }
+
+  return createSourceFocusTargetFromGroup({
+    label: item.text,
+    group: firstPreviewGroup.group,
+    compareMode: item.focusCompare?.mode ?? "saved",
+    reviewTarget: item.focusCompare
+      ? createReviewFocusTargetFromGroups({
+          targetId: item.focusCompare.targetId,
+          mode: item.focusCompare.mode,
+          label: item.focusCompare.label,
+          groups: item.focusCompare.groups,
+        })
+      : undefined,
+  })
+}
+
+function openContextMenuAtElement(element: HTMLElement | null) {
+  if (!element) {
+    return
+  }
+
+  const rect = element.getBoundingClientRect()
+  element.dispatchEvent(
+    new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      clientX: rect.right - 12,
+      clientY: rect.top + 12,
+      view: window,
+    }),
   )
 }

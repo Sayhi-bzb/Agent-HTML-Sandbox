@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
+import { MoreHorizontalIcon, PinIcon } from "lucide-react"
 
 import {
   AlertDialog,
@@ -20,6 +21,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
 import { PanelShell, PanelShellHeader } from "../ui/panel-shell"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { StatusBadge } from "@/components/ui/status-badge"
@@ -38,6 +47,16 @@ type SessionsSidebarProps = {
   onRenameSession: (sessionId: string, name: string) => void
   onTogglePinSession: (sessionId: string, pinned: boolean) => void
   onDeleteSession: (sessionId: string) => void
+}
+
+type SessionSidebarItemProps = {
+  session: SessionSummary
+  active: boolean
+  isBusy: boolean
+  onOpenSession: (sessionId: string) => void
+  onRequestRename: (session: SessionSummary) => void
+  onTogglePinSession: (sessionId: string, pinned: boolean) => void
+  onRequestDelete: (session: SessionSummary) => void
 }
 
 const statusLabel: Record<SessionSummary["status"], string> = {
@@ -137,27 +156,28 @@ export function SessionsSidebar({
 
   return (
     <PanelShell as="aside" variant="sidebar">
-      <PanelShellHeader title="Sessions">
-        <Button
-          disabled={isBusy}
-          onClick={onCreateSession}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          New
-        </Button>
+      <PanelShellHeader className="panel-header-compact">
+        <div className="session-toolbar session-toolbar-inline">
+          <label className="search-shell session-search session-search-inline">
+            <span className="sr-only">Search sessions</span>
+            <Input
+              ref={searchInputRef}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search"
+              value={query}
+            />
+          </label>
+          <Button
+            disabled={isBusy}
+            onClick={onCreateSession}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            New
+          </Button>
+        </div>
       </PanelShellHeader>
-
-      <label className="search-shell">
-        <span className="sr-only">Search sessions</span>
-        <Input
-          ref={searchInputRef}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search"
-          value={query}
-        />
-      </label>
 
       <ScrollArea className="session-list-scroll">
         <div className="session-groups">
@@ -169,71 +189,16 @@ export function SessionsSidebar({
               </div>
               <div className="session-list">
                 {group.items.map((session) => (
-                  <SurfaceCard
-                    className={
-                      session.id === activeSessionId
-                        ? "session-card active"
-                        : "session-card"
-                    }
+                  <SessionSidebarItem
+                    active={session.id === activeSessionId}
+                    isBusy={isBusy}
                     key={session.id}
-                    onClick={() => onOpenSession(session.id)}
-                    variant="session"
-                  >
-                    <div className="session-card-topline">
-                      <h3>{session.name}</h3>
-                      {session.pinned ? (
-                        <StatusBadge tone="accent">Pinned</StatusBadge>
-                      ) : null}
-                    </div>
-                    <p className="session-path">{session.directory}</p>
-                    <div className="session-meta-row">
-                      <StatusBadge tone={statusTone(session.status)}>
-                        {statusLabel[session.status]}
-                      </StatusBadge>
-                      <span>{getSessionPreviewStatusText(session)}</span>
-                    </div>
-                    <p className="session-updated-at">
-                      {formatTimestampLabel(session.updatedAt)}
-                    </p>
-                    <div className="session-actions">
-                      <Button
-                        disabled={isBusy}
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          onTogglePinSession(session.id, !session.pinned)
-                        }}
-                        size="sm"
-                        type="button"
-                        variant="outline"
-                      >
-                        {session.pinned ? "Unpin" : "Pin"}
-                      </Button>
-                      <Button
-                        disabled={isBusy}
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          handleRenameSession(session)
-                        }}
-                        size="sm"
-                        type="button"
-                        variant="outline"
-                      >
-                        Rename
-                      </Button>
-                      <Button
-                        disabled={isBusy}
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          handleDeleteSession(session)
-                        }}
-                        size="sm"
-                        type="button"
-                        variant="destructive"
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  </SurfaceCard>
+                    onOpenSession={onOpenSession}
+                    onRequestDelete={handleDeleteSession}
+                    onRequestRename={handleRenameSession}
+                    onTogglePinSession={onTogglePinSession}
+                    session={session}
+                  />
                 ))}
               </div>
             </section>
@@ -346,4 +311,140 @@ function statusTone(
     default:
       return "default"
   }
+}
+
+function SessionSidebarItem({
+  session,
+  active,
+  isBusy,
+  onOpenSession,
+  onRequestRename,
+  onTogglePinSession,
+  onRequestDelete,
+}: SessionSidebarItemProps) {
+  const triggerRef = useRef<HTMLDivElement>(null)
+
+  function openContextMenuAtButton() {
+    const trigger = triggerRef.current
+    if (!trigger) {
+      return
+    }
+
+    const rect = trigger.getBoundingClientRect()
+    trigger.dispatchEvent(
+      new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        clientX: rect.right - 12,
+        clientY: rect.top + 12,
+        view: window,
+      }),
+    )
+  }
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div
+          aria-current={active ? "true" : undefined}
+          className="session-card-shell"
+          onClick={() => onOpenSession(session.id)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault()
+              onOpenSession(session.id)
+            }
+          }}
+          ref={triggerRef}
+          role="button"
+          tabIndex={0}
+        >
+          <SurfaceCard
+            className={
+              active
+                ? "session-card active session-card-compact"
+                : "session-card session-card-compact"
+            }
+            variant="session"
+          >
+            <div className="session-card-topline session-card-topline-compact">
+              <div className="session-card-title-row">
+                <h3>{session.name}</h3>
+                {session.pinned ? (
+                  <span
+                    aria-label="Pinned session"
+                    className="session-pin-indicator"
+                    title="Pinned"
+                  >
+                    <PinIcon />
+                  </span>
+                ) : null}
+              </div>
+              <Button
+                aria-label={`More actions for ${session.name}`}
+                className="session-card-more"
+                disabled={isBusy}
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  openContextMenuAtButton()
+                }}
+                size="icon-xs"
+                type="button"
+                variant="ghost"
+              >
+                <MoreHorizontalIcon />
+              </Button>
+            </div>
+            <div className="session-meta-row session-meta-row-compact">
+              <StatusBadge tone={statusTone(session.status)}>
+                {statusLabel[session.status]}
+              </StatusBadge>
+              <span className="session-preview-meta">
+                {getSessionPreviewStatusText(session)}
+              </span>
+            </div>
+          </SurfaceCard>
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent className="session-context-menu" sideOffset={10}>
+        <ContextMenuItem onSelect={() => onOpenSession(session.id)}>
+          Open
+        </ContextMenuItem>
+        <ContextMenuItem
+          disabled={isBusy}
+          onSelect={() => onTogglePinSession(session.id, !session.pinned)}
+        >
+          {session.pinned ? "Unpin" : "Pin"}
+        </ContextMenuItem>
+        <ContextMenuItem
+          disabled={isBusy}
+          onSelect={() => onRequestRename(session)}
+        >
+          Rename
+        </ContextMenuItem>
+        <ContextMenuItem
+          className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+          disabled={isBusy}
+          onSelect={() => onRequestDelete(session)}
+        >
+          Delete
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuLabel>Details</ContextMenuLabel>
+        <ContextMenuItem className="session-context-detail" disabled>
+          <span className="session-context-detail-label">Path</span>
+          <span className="session-context-detail-value">
+            {session.directory}
+          </span>
+        </ContextMenuItem>
+        <ContextMenuItem className="session-context-detail" disabled>
+          <span className="session-context-detail-label">Updated</span>
+          <span className="session-context-detail-value">
+            {formatTimestampLabel(session.updatedAt)}
+          </span>
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
+  )
 }

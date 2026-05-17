@@ -1577,9 +1577,6 @@ export function App() {
             >
               {currentStageItem?.statusLabel ?? "Current"}
             </StatusBadge>
-            <span className="inline-meta">
-              {appState.currentSession.summary.name}
-            </span>
             <span className="inline-meta">View {activeView}</span>
           </div>
         </SurfaceCardHeader>

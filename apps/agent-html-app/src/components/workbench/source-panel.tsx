@@ -69,12 +69,17 @@ export function SourcePanel({
 
   return (
     <SurfaceCard className="source-panel" variant="workbench">
-      <SurfaceCardHeader eyebrow="Source" title="source.agent.html">
-        <div className="header-actions">
-          {hasUnsavedChanges ? (
-            <StatusBadge tone="dirty">Unsaved</StatusBadge>
-          ) : null}
-          <span className="inline-meta">{sourcePath}</span>
+      <SurfaceCardBody className="source-panel-body">
+        <div className="source-toolbar">
+          <div className="header-actions">
+            {hasUnsavedChanges ? (
+              <StatusBadge tone="dirty">Unsaved</StatusBadge>
+            ) : (
+              <StatusBadge>Saved</StatusBadge>
+            )}
+            <span className="inline-meta">source.agent.html</span>
+            <span className="inline-meta">{sourcePath}</span>
+          </div>
           <Button
             disabled={isSaving || draftSource === source}
             onClick={() => onSave(draftSource)}
@@ -84,8 +89,6 @@ export function SourcePanel({
             {isSaving ? "Saving..." : "Save"}
           </Button>
         </div>
-      </SurfaceCardHeader>
-      <SurfaceCardBody className="source-panel-body">
         <SurfaceCard variant="validation">
           <SurfaceCardHeader
             className="validation-topline"

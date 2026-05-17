@@ -81,10 +81,9 @@ agent work
 The schema is the public contract. Agents write content structure, not raw HTML, CSS, JavaScript, Tailwind classes, or renderer props.
 Public visual choice is limited to approved document style config choices, selected through `style-ref` values such as `report-default` or `ops-compact`, not free-form `theme`, `density`, `tone`, or `width` inputs.
 
-The workspace publishes two package roles:
+Published npm package: `@agent-html/ahtml`
 
-- `@agent-html/core`: public agent contract, shared types, and sanitization
-- `@agent-html/ahtml`: CLI, managed runtime bootstrap, and runtime contract consumption
+Shared schema, sanitization, and contract code still live in `packages/core` inside this repository, and the published CLI carries the internal runtime pieces it needs.
 
 ## More
 

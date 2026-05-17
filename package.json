@@ -20,7 +20,7 @@
     "lint:cache": "eslint . --cache --cache-location .cache/eslint",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "format:check:source": "prettier package.json tsconfig.json tsconfig.base.json tsconfig.node.json eslint.config.js vitest.config.ts vitest.heavy.config.ts knip.json README.md \".github/workflows/*.yml\" \".github/actions/**/*.yml\" \"packages/**/*.{ts,mjs,tsx}\" \"!packages/core/src/generated/**\" \"scripts/**/*.mjs\" \"docs-web/content/**/*.mdx\" --check",
+    "format:check:source": "prettier package.json tsconfig.json tsconfig.base.json tsconfig.node.json eslint.config.js vitest.config.ts vitest.heavy.config.ts knip.json README.md \".github/workflows/*.yml\" \".github/actions/**/*.yml\" \"packages/**/*.{ts,mjs,tsx}\" \"!packages/core/src/generated/**\" \"!packages/ahtml/src/config/internal-core/generated/**\" \"scripts/**/*.mjs\" \"docs-web/content/**/*.mdx\" --check",
     "knip": "knip",
     "test": "vitest",
     "test:run": "vitest run",

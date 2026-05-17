@@ -13,7 +13,7 @@ type PanelShellProps<T extends ElementType> = {
 }
 
 type PanelShellHeaderProps = {
-  title: string
+  title?: string
   eyebrow?: string
   children?: ReactNode
   className?: string
@@ -51,10 +51,12 @@ export function PanelShellHeader({
 }: PanelShellHeaderProps) {
   return (
     <CardHeader className={cn("panel-header", className)}>
-      <div className="panel-header-copy">
-        {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
-        <CardTitle>{title}</CardTitle>
-      </div>
+      {eyebrow || title ? (
+        <div className="panel-header-copy">
+          {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
+          {title ? <CardTitle>{title}</CardTitle> : null}
+        </div>
+      ) : null}
       {children}
     </CardHeader>
   )

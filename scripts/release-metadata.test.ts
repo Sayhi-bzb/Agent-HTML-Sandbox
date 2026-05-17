@@ -49,19 +49,20 @@ describe("release metadata", () => {
     )
   })
 
-  it("requires synced workspace versions", () => {
+  it("accepts the single publishable package version", () => {
     expect(
       getSharedWorkspaceVersion([
-        { name: "@agent-html/core", version: "0.2.0" },
         { name: "@agent-html/ahtml", version: "0.2.0" },
       ]),
     ).toBe("0.2.0")
+  })
 
+  it("still rejects mismatched manual version sets", () => {
     expect(() =>
       getSharedWorkspaceVersion([
         { name: "@agent-html/core", version: "0.2.0" },
         { name: "@agent-html/ahtml", version: "0.2.0-alpha.1" },
       ]),
-    ).toThrow("Workspace package versions are out of sync")
+    ).toThrow("Release package versions are out of sync")
   })
 })

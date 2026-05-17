@@ -1,4 +1,4 @@
-import { sanitizeAgentHtml } from "@agent-html/core"
+import { sanitizeAgentHtml } from "../config/internal-core-bridge.mjs"
 
 export async function validateAgentHtmlSource(source) {
   const result = sanitizeAgentHtml(source)

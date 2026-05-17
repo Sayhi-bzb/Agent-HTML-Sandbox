@@ -112,47 +112,45 @@ export function Workbench({
 }: WorkbenchProps) {
   return (
     <PanelShell as="main" variant="workbench">
-      <PanelShellHeader
-        className="workbench-header"
-        title={session.summary.name}
-      >
-        <div className="header-actions">
-          <Button
-            disabled={isRunningBuild}
-            onClick={() => {
-              void onBuild()
-            }}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            {isRunningBuild ? "Building..." : "Build"}
-          </Button>
-          <Button
-            disabled={isRunningInspect}
-            onClick={() => {
-              void onInspect()
-            }}
-            size="sm"
-            type="button"
-          >
-            {isRunningInspect ? "Inspecting..." : "Inspect"}
-          </Button>
-        </div>
-      </PanelShellHeader>
-
       <Tabs
         className="workbench-tabs"
         onValueChange={(value) => onViewChange(value as WorkbenchView)}
         value={activeView}
       >
-        <TabsList className="tab-strip" variant="line">
-          {views.map((view) => (
-            <TabsTrigger key={view} value={view}>
-              {view}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        <PanelShellHeader className="panel-header-compact">
+          <div className="workbench-toolbar">
+            <TabsList className="tab-strip workbench-tab-strip" variant="line">
+              {views.map((view) => (
+                <TabsTrigger key={view} value={view}>
+                  {view}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            <div className="header-actions workbench-toolbar-actions">
+              <Button
+                disabled={isRunningBuild}
+                onClick={() => {
+                  void onBuild()
+                }}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                {isRunningBuild ? "Building..." : "Build"}
+              </Button>
+              <Button
+                disabled={isRunningInspect}
+                onClick={() => {
+                  void onInspect()
+                }}
+                size="sm"
+                type="button"
+              >
+                {isRunningInspect ? "Inspecting..." : "Inspect"}
+              </Button>
+            </div>
+          </div>
+        </PanelShellHeader>
         <TabsContent className="workbench-tab-panel" value="preview">
           <PreviewPanel
             build={build}

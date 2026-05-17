@@ -10,7 +10,6 @@ import { startShadcnTestServer } from "./shadcn-test-server.mjs"
 
 const execFileAsync = promisify(execFile)
 const root = process.cwd()
-const corePackageDir = path.join(root, "packages", "core")
 const ahtmlPackageDir = path.join(root, "packages", "ahtml")
 const npmCommand = "npm"
 const windowsShellOptions =
@@ -27,28 +26,15 @@ try {
   await mkdir(packDir, { recursive: true })
   await mkdir(consumerDir, { recursive: true })
 
-  const coreDryRun = await runNpm(
-    ["pack", "--dry-run", "--json"],
-    corePackageDir,
-  )
   const ahtmlDryRun = await runNpm(
     ["pack", "--dry-run", "--json"],
     ahtmlPackageDir,
   )
-  assertPackBoundary("core", parsePackFiles(coreDryRun.stdout))
   assertPackBoundary("ahtml", parsePackFiles(ahtmlDryRun.stdout))
 
-  const corePacked = await runNpm(
-    ["pack", "--json", "--pack-destination", packDir],
-    corePackageDir,
-  )
   const ahtmlPacked = await runNpm(
     ["pack", "--json", "--pack-destination", packDir],
     ahtmlPackageDir,
-  )
-  const coreTarball = path.join(
-    packDir,
-    JSON.parse(corePacked.stdout)[0].filename,
   )
   const ahtmlTarball = path.join(
     packDir,
@@ -56,7 +42,7 @@ try {
   )
 
   await runNpm(["init", "-y"], consumerDir)
-  await runNpm(["install", coreTarball, ahtmlTarball], consumerDir)
+  await runNpm(["install", ahtmlTarball], consumerDir)
 
   ahtmlCommand = path.join(
     consumerDir,
@@ -93,15 +79,23 @@ try {
     "config",
     "runtime-contract.mjs",
   )
-  const coreModulePath = path.join(
+  const internalCoreBridgePath = path.join(
+    consumerDir,
+    "node_modules",
+    "@agent-html",
+    "ahtml",
+    "src",
+    "config",
+    "internal-core-bridge.mjs",
+  )
+  const installedCorePackagePath = path.join(
     consumerDir,
     "node_modules",
     "@agent-html",
     "core",
-    "index.mjs",
   )
   const [coreModule, runtimeContractModule] = await Promise.all([
-    import(pathToFileURL(coreModulePath).href),
+    import(pathToFileURL(internalCoreBridgePath).href),
     import(pathToFileURL(runtimeContractPath).href),
   ])
 
@@ -111,7 +105,7 @@ try {
     typeof coreModule.createPublicAgentContract !== "function"
   ) {
     throw new Error(
-      "Installed @agent-html/core package is missing public exports.",
+      "Installed @agent-html/ahtml package is missing internal core exports.",
     )
   }
 
@@ -123,6 +117,8 @@ try {
       "Installed @agent-html/ahtml package is missing runtime contract exports.",
     )
   }
+
+  await expectPathMissing(installedCorePackagePath)
 
   await expectStdout(["prompt", "--format", "prompt"], "Write agent-html only.")
   await expectStdout(["--help"], "Main workflow:")

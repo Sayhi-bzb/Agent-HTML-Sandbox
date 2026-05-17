@@ -16,19 +16,6 @@ await runNpm(
   [
     "publish",
     "--workspace",
-    "@agent-html/core",
-    "--access",
-    "public",
-    "--tag",
-    metadata.distTag,
-    "--dry-run",
-  ],
-  root,
-)
-await runNpm(
-  [
-    "publish",
-    "--workspace",
     "@agent-html/ahtml",
     "--access",
     "public",

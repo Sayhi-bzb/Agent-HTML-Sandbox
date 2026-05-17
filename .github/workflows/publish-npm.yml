@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   publish:
-    name: Publish packages
+    name: Publish package
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -38,7 +38,7 @@ jobs:
       - name: Run package release checks
         run: npm run release:check:ci
 
-      - name: Verify tag matches workspace package versions
+      - name: Verify tag matches ahtml package version
         if: ${{ github.event_name == 'push' }}
         shell: bash
         run: |
@@ -46,7 +46,7 @@ jobs:
           tag_version="${GITHUB_REF_NAME#v}"
 
           if [[ "$tag_version" != "$version" ]]; then
-            echo "Tag version '$tag_version' does not match workspace package version '$version'." >&2
+            echo "Tag version '$tag_version' does not match @agent-html/ahtml package version '$version'." >&2
             exit 1
           fi
 
@@ -54,7 +54,6 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
         run: |
           dist_tag="$(node scripts/release-metadata.mjs distTag)"
-          npm publish --workspace @agent-html/core --access public --tag "$dist_tag" --dry-run
           npm publish --workspace @agent-html/ahtml --access public --tag "$dist_tag" --dry-run
 
       - name: Reject manual publish
@@ -63,9 +62,8 @@ jobs:
           echo "Manual publishing is disabled. Push a matching v* tag to publish." >&2
           exit 1
 
-      - name: Publish packages
+      - name: Publish package
         if: ${{ github.event_name == 'push' }}
         run: |
           dist_tag="$(node scripts/release-metadata.mjs distTag)"
-          npm publish --workspace @agent-html/core --access public --tag "$dist_tag"
           npm publish --workspace @agent-html/ahtml --access public --tag "$dist_tag"

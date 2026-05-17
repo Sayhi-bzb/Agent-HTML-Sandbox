@@ -76,7 +76,8 @@ For architecture principles, design rationale, and stage decisions, start at [`b
 ## Package Boundary
 
 - Keep this repo as a private npm workspace rooted at `package.json`.
-- Keep publishable package source focused on `packages/core` and `packages/ahtml`.
+- Keep the public npm publish surface focused on `packages/ahtml`.
+- Keep `packages/core` as an internal workspace layer for parsing, validation, sanitization, render config, and shared contracts, even when parts of it are vendored into `packages/ahtml` for publishing.
 - Keep product apps under `apps/*`, separate from publishable packages.
 - Keep parser, validation, sanitization, render config, and shared contract code in `packages/core/src`.
 - Keep CLI defaults, managed runtime orchestration, and local runtime IO in `packages/ahtml/src/config` and `packages/ahtml/src/cli`.

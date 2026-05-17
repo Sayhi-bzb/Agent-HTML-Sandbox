@@ -1,14 +1,23 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
+import { MoreHorizontalIcon } from "lucide-react"
 
 import { getInspectReviewSummary } from "../../lib/inspect-review"
 import { Button } from "../ui/button"
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuGroup,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "../ui/context-menu"
 import {
   SurfaceCard,
   SurfaceCardBody,
   SurfaceCardHeader,
 } from "../ui/surface-card"
 import { StatusBadge } from "../ui/status-badge"
-import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group"
 import { getInspectDiagnosticsViewModel } from "../../lib/inspect-diagnostics-view"
 import { type ReviewFocusTarget } from "../../lib/review-focus"
 import type { ReviewTimelineActionConfig } from "../../lib/review-flow"
@@ -72,9 +81,9 @@ export function InspectPanel({
   onRunReviewAction,
 }: InspectPanelProps) {
   const [copiedKey, setCopiedKey] = useState<string>()
+  const linkedReviewRef = useRef<HTMLDivElement>(null)
+  const sessionFilesRef = useRef<HTMLDivElement>(null)
   const diagnosticCounts = countDiagnosticsBySeverity(inspect)
-  const inspectBuildStatus = inspect.lastBuild?.status ?? "idle"
-  const buildStatusClassName = statusClassNameForBuild(inspectBuildStatus)
   const inspectDiagnosticsView = getInspectDiagnosticsViewModel(inspect)
   const sourceValidationView = getSourceValidationViewModel(sourceValidation)
   const logInsight = getLogInsightViewModel({
@@ -95,17 +104,6 @@ export function InspectPanel({
 
   return (
     <SurfaceCard className="inspect-panel" variant="workbench">
-      <SurfaceCardHeader title="Inspect">
-        <div className="inspect-header-meta">
-          <StatusBadge tone={statusToneForClassName(buildStatusClassName)}>
-            {buildStatusLabel(inspectBuildStatus)}
-          </StatusBadge>
-          <span className="inline-meta">
-            Generated {formatTimestampLabel(inspect.generatedAt)}
-          </span>
-        </div>
-      </SurfaceCardHeader>
-
       <SurfaceCardBody className="inspect-panel-body">
         <SurfaceCard className="inspect-audit-card" variant="context">
           <SurfaceCardBody className="grid gap-4">
@@ -114,6 +112,9 @@ export function InspectPanel({
                 <h4>{reviewAudit.stageLabel}</h4>
               </div>
               <div className="inspect-audit-meta">
+                <span className="inline-meta">
+                  Generated {formatTimestampLabel(inspect.generatedAt)}
+                </span>
                 <StatusBadge
                   tone={statusToneForClassName(reviewAudit.stagePillClassName)}
                 >
@@ -143,90 +144,114 @@ export function InspectPanel({
               </div>
             ) : null}
             {activeReviewFocus || availableReviewFocusTargets.length > 0 ? (
-              <SurfaceCard className="inspect-linked-review" variant="inset">
-                <SurfaceCardBody className="grid gap-3" padding="compact">
-                  <div className="message-topline">
-                    <div>
-                      <h5>
-                        {activeReviewFocus
-                          ? activeReviewFocus.label
-                          : "No compare pinned yet"}
-                      </h5>
-                    </div>
-                    <div className="inspect-linked-review-actions">
-                      {activeReviewFocus ? (
-                        <>
-                          <Button
-                            disabled={isActionBusy}
-                            onClick={onRevisitReviewFocus}
-                            size="sm"
-                            type="button"
-                            variant="outline"
-                          >
-                            Revisit compare
-                          </Button>
-                          <Button
-                            disabled={isActionBusy}
-                            onClick={onClearReviewFocus}
-                            size="sm"
-                            type="button"
-                            variant="outline"
-                          >
-                            Clear
-                          </Button>
-                        </>
-                      ) : null}
-                    </div>
-                  </div>
-                  {activeReviewFocus ? (
-                    <div className="proposal-meta-row">
-                      <StatusBadge tone="accent">
-                        {activeReviewFocus.mode === "proposal"
-                          ? "Proposal compare"
-                          : "Saved compare"}
-                      </StatusBadge>
-                      <StatusBadge>{activeReviewFocus.lineLabel}</StatusBadge>
-                      <span className="inline-meta">
-                        {activeReviewFocus.groupCount} focused group(s)
-                      </span>
-                    </div>
-                  ) : null}
-                  {availableReviewFocusTargets.length > 0 ? (
-                    <ToggleGroup
-                      className="inspect-review-targets"
-                      onValueChange={(value) => {
-                        const target = availableReviewFocusTargets.find(
-                          (candidate) => candidate.targetId === value,
-                        )
-                        if (target) {
-                          onSelectReviewFocus(target)
-                        }
-                      }}
-                      type="single"
-                      value={activeReviewFocus?.targetId}
-                      variant="outline"
+              <ContextMenu>
+                <ContextMenuTrigger asChild>
+                  <div className="panel-menu-shell" ref={linkedReviewRef}>
+                    <SurfaceCard
+                      className="inspect-linked-review"
+                      variant="inset"
                     >
-                      {availableReviewFocusTargets.map((target) => (
-                        <ToggleGroupItem
-                          className="inspect-review-target"
-                          disabled={isActionBusy}
-                          key={target.targetId}
-                          size="sm"
-                          value={target.targetId}
-                        >
-                          <span className="inspect-review-target-label">
-                            {target.label}
-                          </span>
-                          <StatusBadge>{target.lineLabel}</StatusBadge>
+                      <SurfaceCardBody className="grid gap-3" padding="compact">
+                        <div className="message-topline">
+                          <div>
+                            <h5>
+                              {activeReviewFocus
+                                ? activeReviewFocus.label
+                                : "No compare pinned yet"}
+                            </h5>
+                          </div>
+                          <div className="inspect-linked-review-actions">
+                            {activeReviewFocus ? (
+                              <Button
+                                disabled={isActionBusy}
+                                onClick={onRevisitReviewFocus}
+                                size="sm"
+                                type="button"
+                                variant="outline"
+                              >
+                                Revisit compare
+                              </Button>
+                            ) : null}
+                            <Button
+                              aria-label="Review focus actions"
+                              className="panel-card-more"
+                              onClick={(event) => {
+                                event.preventDefault()
+                                event.stopPropagation()
+                                openInspectContextMenu(linkedReviewRef.current)
+                              }}
+                              size="icon-xs"
+                              type="button"
+                              variant="ghost"
+                            >
+                              <MoreHorizontalIcon />
+                            </Button>
+                          </div>
+                        </div>
+                        {activeReviewFocus ? (
+                          <div className="proposal-meta-row">
+                            <StatusBadge tone="accent">
+                              {activeReviewFocus.mode === "proposal"
+                                ? "Proposal compare"
+                                : "Saved compare"}
+                            </StatusBadge>
+                            <StatusBadge>
+                              {activeReviewFocus.lineLabel}
+                            </StatusBadge>
+                            <span className="inline-meta">
+                              {activeReviewFocus.groupCount} focused group(s)
+                            </span>
+                          </div>
+                        ) : null}
+                        {availableReviewFocusTargets.length > 0 ? (
                           <span className="inline-meta">
-                            {target.groupCount} group(s)
+                            {availableReviewFocusTargets.length} compare
+                            target(s)
                           </span>
-                        </ToggleGroupItem>
-                      ))}
-                    </ToggleGroup>
+                        ) : null}
+                      </SurfaceCardBody>
+                    </SurfaceCard>
+                  </div>
+                </ContextMenuTrigger>
+                <ContextMenuContent
+                  className="session-context-menu"
+                  sideOffset={10}
+                >
+                  <ContextMenuGroup>
+                    {activeReviewFocus ? (
+                      <ContextMenuItem
+                        disabled={isActionBusy}
+                        onSelect={onRevisitReviewFocus}
+                      >
+                        Revisit compare
+                      </ContextMenuItem>
+                    ) : null}
+                    <ContextMenuItem
+                      disabled={!activeReviewFocus || isActionBusy}
+                      onSelect={onClearReviewFocus}
+                    >
+                      Clear
+                    </ContextMenuItem>
+                  </ContextMenuGroup>
+                  {availableReviewFocusTargets.length > 0 ? (
+                    <>
+                      <ContextMenuSeparator />
+                      <ContextMenuLabel>Compare targets</ContextMenuLabel>
+                      <ContextMenuGroup>
+                        {availableReviewFocusTargets.map((target) => (
+                          <ContextMenuItem
+                            disabled={isActionBusy}
+                            key={target.targetId}
+                            onSelect={() => onSelectReviewFocus(target)}
+                          >
+                            {target.label}
+                          </ContextMenuItem>
+                        ))}
+                      </ContextMenuGroup>
+                    </>
                   ) : null}
-                </SurfaceCardBody>
-              </SurfaceCard>
+                </ContextMenuContent>
+              </ContextMenu>
             ) : null}
             <div className="inspect-audit-grid">
               <SurfaceCard className="inspect-audit-block" variant="inset">
@@ -422,53 +447,12 @@ export function InspectPanel({
               {inspect.diagnostics.length > 0 ? (
                 <ul className="diagnostic-list">
                   {inspect.diagnostics.map((diagnostic) => (
-                    <li
-                      className={`diagnostic-item severity-${diagnostic.severity}`}
+                    <InspectDiagnosticRow
+                      diagnostic={diagnostic}
+                      isActionBusy={isActionBusy}
                       key={diagnostic.id}
-                    >
-                      <div className="message-topline">
-                        <strong>{diagnostic.severity.toUpperCase()}</strong>
-                        {typeof diagnostic.line === "number" ? (
-                          <Button
-                            disabled={isActionBusy}
-                            onClick={() => {
-                              const target =
-                                createSourceFocusTargetFromDiagnostic({
-                                  diagnostic,
-                                })
-                              if (target) {
-                                onOpenSourceFocus(target)
-                              }
-                            }}
-                            size="sm"
-                            type="button"
-                            variant="outline"
-                          >
-                            Focus
-                          </Button>
-                        ) : null}
-                      </div>
-                      <span>{diagnostic.message}</span>
-                      {diagnostic.code ||
-                      diagnostic.source ||
-                      typeof diagnostic.line === "number" ? (
-                        <span className="inline-meta">
-                          {[
-                            typeof diagnostic.line === "number"
-                              ? `line ${diagnostic.line}${
-                                  typeof diagnostic.column === "number"
-                                    ? `:${diagnostic.column}`
-                                    : ""
-                                }`
-                              : undefined,
-                            diagnostic.code,
-                            diagnostic.source,
-                          ]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </span>
-                      ) : null}
-                    </li>
+                      onOpenSourceFocus={onOpenSourceFocus}
+                    />
                   ))}
                 </ul>
               ) : (
@@ -512,54 +496,105 @@ export function InspectPanel({
             </SurfaceCardBody>
           </SurfaceCard>
 
-          <SurfaceCard variant="summary">
-            <SurfaceCardHeader eyebrow="Session files" padding="compact" />
-            <SurfaceCardBody className="grid gap-3" padding="compact">
-              <dl className="key-value-grid compact">
-                <dt>Source</dt>
-                <dd>{session.sourcePath}</dd>
-                <dt>Artifact</dt>
-                <dd>{session.previewPath ?? "missing"}</dd>
-                <dt>Logs</dt>
-                <dd>{session.logDirectory}</dd>
-                <dt>Chat</dt>
-                <dd>{session.chatPath}</dd>
-              </dl>
-              <div className="inspect-summary-actions">
-                <Button
-                  onClick={() => {
+          <ContextMenu>
+            <ContextMenuTrigger asChild>
+              <div className="panel-menu-shell" ref={sessionFilesRef}>
+                <SurfaceCard variant="summary">
+                  <SurfaceCardHeader eyebrow="Session files" padding="compact">
+                    <Button
+                      aria-label="Session file actions"
+                      className="panel-card-more"
+                      onClick={(event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        openInspectContextMenu(sessionFilesRef.current)
+                      }}
+                      size="icon-xs"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <MoreHorizontalIcon />
+                    </Button>
+                  </SurfaceCardHeader>
+                  <SurfaceCardBody className="grid gap-3" padding="compact">
+                    <h4>{session.previewPath ? "Tracked" : "Partial"}</h4>
+                    <p className="inspect-summary-detail">
+                      Source, logs, and chat paths are available.
+                      {session.previewPath
+                        ? " Artifact path is ready."
+                        : " Artifact path is still missing."}
+                    </p>
+                    <div className="inspect-summary-meta">
+                      <span className="inline-meta">4 file roots</span>
+                      <span className="inline-meta">
+                        {session.previewPath ? "Artifact ready" : "No artifact"}
+                      </span>
+                    </div>
+                  </SurfaceCardBody>
+                </SurfaceCard>
+              </div>
+            </ContextMenuTrigger>
+            <ContextMenuContent
+              className="session-context-menu"
+              sideOffset={10}
+            >
+              <ContextMenuGroup>
+                <ContextMenuItem
+                  onSelect={() => {
                     void copyText(session.sourcePath).then((copied) => {
                       if (copied) {
                         setCopiedKey("source-path")
                       }
                     })
                   }}
-                  size="sm"
-                  type="button"
-                  variant="outline"
                 >
-                  {copiedKey === "source-path" ? "Copied" : "Copy source path"}
-                </Button>
-                <Button
+                  {copiedKey === "source-path"
+                    ? "Copied source path"
+                    : "Copy source path"}
+                </ContextMenuItem>
+                <ContextMenuItem
                   disabled={!session.previewPath}
-                  onClick={() => {
+                  onSelect={() => {
                     void copyText(session.previewPath).then((copied) => {
                       if (copied) {
                         setCopiedKey("artifact-path")
                       }
                     })
                   }}
-                  size="sm"
-                  type="button"
-                  variant="outline"
                 >
                   {copiedKey === "artifact-path"
-                    ? "Copied"
+                    ? "Copied artifact path"
                     : "Copy artifact path"}
-                </Button>
-              </div>
-            </SurfaceCardBody>
-          </SurfaceCard>
+                </ContextMenuItem>
+              </ContextMenuGroup>
+              <ContextMenuSeparator />
+              <ContextMenuLabel>Details</ContextMenuLabel>
+              <ContextMenuItem className="session-context-detail" disabled>
+                <span className="session-context-detail-label">Source</span>
+                <span className="session-context-detail-value">
+                  {session.sourcePath}
+                </span>
+              </ContextMenuItem>
+              <ContextMenuItem className="session-context-detail" disabled>
+                <span className="session-context-detail-label">Artifact</span>
+                <span className="session-context-detail-value">
+                  {session.previewPath ?? "missing"}
+                </span>
+              </ContextMenuItem>
+              <ContextMenuItem className="session-context-detail" disabled>
+                <span className="session-context-detail-label">Logs</span>
+                <span className="session-context-detail-value">
+                  {session.logDirectory}
+                </span>
+              </ContextMenuItem>
+              <ContextMenuItem className="session-context-detail" disabled>
+                <span className="session-context-detail-label">Chat</span>
+                <span className="session-context-detail-value">
+                  {session.chatPath}
+                </span>
+              </ContextMenuItem>
+            </ContextMenuContent>
+          </ContextMenu>
         </div>
       </SurfaceCardBody>
     </SurfaceCard>
@@ -574,32 +609,6 @@ function countDiagnosticsBySeverity(inspect: InspectSnapshot) {
     },
     { error: 0, warning: 0, info: 0 },
   )
-}
-
-function buildStatusLabel(status: BuildRunSummary["status"]) {
-  switch (status) {
-    case "running":
-      return "Building"
-    case "failed":
-      return "Failed"
-    case "succeeded":
-      return "Ready"
-    default:
-      return "Idle"
-  }
-}
-
-function statusClassNameForBuild(status: BuildRunSummary["status"]) {
-  switch (status) {
-    case "running":
-      return "status-building"
-    case "failed":
-      return "status-error"
-    case "succeeded":
-      return "status-ready"
-    default:
-      return ""
-  }
 }
 
 function statusToneForClassName(
@@ -634,4 +643,97 @@ function artifactHeadline(inspect: InspectSnapshot) {
   }
 
   return "Empty"
+}
+
+function InspectDiagnosticRow({
+  diagnostic,
+  isActionBusy,
+  onOpenSourceFocus,
+}: {
+  diagnostic: InspectSnapshot["diagnostics"][number]
+  isActionBusy: boolean
+  onOpenSourceFocus: (target: SourceFocusTarget) => void
+}) {
+  const triggerRef = useRef<HTMLLIElement>(null)
+  const sourceTarget = createSourceFocusTargetFromDiagnostic({ diagnostic })
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <li
+          className={`diagnostic-item diagnostic-item-compact severity-${diagnostic.severity}`}
+          ref={triggerRef}
+        >
+          <div className="message-topline">
+            <strong>{diagnostic.severity.toUpperCase()}</strong>
+            {sourceTarget ? (
+              <Button
+                aria-label={`${diagnostic.severity} diagnostic actions`}
+                className="panel-card-more"
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  openInspectContextMenu(triggerRef.current)
+                }}
+                size="icon-xs"
+                type="button"
+                variant="ghost"
+              >
+                <MoreHorizontalIcon />
+              </Button>
+            ) : null}
+          </div>
+          <span>{diagnostic.message}</span>
+          {diagnostic.code ||
+          diagnostic.source ||
+          typeof diagnostic.line === "number" ? (
+            <span className="inline-meta">
+              {[
+                typeof diagnostic.line === "number"
+                  ? `line ${diagnostic.line}${
+                      typeof diagnostic.column === "number"
+                        ? `:${diagnostic.column}`
+                        : ""
+                    }`
+                  : undefined,
+                diagnostic.code,
+                diagnostic.source,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+          ) : null}
+        </li>
+      </ContextMenuTrigger>
+      {sourceTarget ? (
+        <ContextMenuContent className="session-context-menu" sideOffset={10}>
+          <ContextMenuGroup>
+            <ContextMenuItem
+              disabled={isActionBusy}
+              onSelect={() => onOpenSourceFocus(sourceTarget)}
+            >
+              Focus in Source
+            </ContextMenuItem>
+          </ContextMenuGroup>
+        </ContextMenuContent>
+      ) : null}
+    </ContextMenu>
+  )
+}
+
+function openInspectContextMenu(element: HTMLElement | null) {
+  if (!element) {
+    return
+  }
+
+  const rect = element.getBoundingClientRect()
+  element.dispatchEvent(
+    new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      clientX: rect.right - 12,
+      clientY: rect.top + 12,
+      view: window,
+    }),
+  )
 }

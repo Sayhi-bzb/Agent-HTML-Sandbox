@@ -43,8 +43,8 @@ export function PreviewPanel({
 
   return (
     <SurfaceCard className="preview-panel" variant="workbench">
-      <SurfaceCardHeader title="Preview">
-        <div className="preview-header-actions">
+      <SurfaceCardBody className="preview-panel-body">
+        <div className="preview-header-actions preview-toolbar">
           <span className="inline-meta">
             {getPreviewHeaderMeta(build, lastBuildAt)}
           </span>
@@ -75,9 +75,6 @@ export function PreviewPanel({
             </ToggleGroupItem>
           </ToggleGroup>
         </div>
-      </SurfaceCardHeader>
-
-      <SurfaceCardBody className="preview-panel-body">
         <div className="preview-surface">
           {previewHtml ? (
             <div
@@ -98,7 +95,6 @@ export function PreviewPanel({
             </div>
           )}
         </div>
-
         <div className="preview-footer">
           <StatusBadge
             tone={previewStatusTone(build.status, Boolean(previewHtml))}

@@ -102,7 +102,14 @@ async function importRuntimeContract() {
     ),
   ).href
   const coreModuleUrl = pathToFileURL(
-    path.join(process.cwd(), "packages", "core", "index.mjs"),
+    path.join(
+      process.cwd(),
+      "packages",
+      "ahtml",
+      "src",
+      "config",
+      "internal-core-bridge.mjs",
+    ),
   ).href
   const [runtimeContractModule, coreModule] = await Promise.all([
     import(runtimeContractUrl),

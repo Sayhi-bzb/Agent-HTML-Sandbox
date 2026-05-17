@@ -1,4 +1,4 @@
-import { createPublicAgentContract } from "@agent-html/core"
+import { createPublicAgentContract } from "../config/internal-core-bridge.mjs"
 
 import { createRuntimeContract } from "../config/runtime-contract.mjs"
 

@@ -55,8 +55,8 @@ If you build a product app around `ahtml`, keep the app in a separate repository
 Recommended integration order:
 
 1. Consume the published npm package `@agent-html/ahtml`.
-2. Import `@agent-html/core` only when you explicitly need the shared schema or sanitization library surface.
-3. For local development, use `npm pack` or `npm link --workspace @agent-html/ahtml`.
+2. For local development, use `npm pack` or `npm link --workspace @agent-html/ahtml`.
+3. Treat `packages/core` as an internal repo layer, not as a cross-repo package boundary.
 4. Do not import `packages/ahtml/src/*` or `packages/core/src/*` across repositories.
 
 Prefer stable CLI boundaries over cross-repo source imports:
@@ -73,11 +73,10 @@ Use the CLI exit code as the success signal. In JSON mode, `build`, `inspect`, `
 ## Verify package boundary [#verify-package-boundary]
 
 ```bash
-npm pack --dry-run --workspace @agent-html/core
 npm pack --dry-run --workspace @agent-html/ahtml
 ```
 
-The workspace publishes two packages: `@agent-html/core` and `@agent-html/ahtml`. `@agent-html/core` should include only shared contract and sanitization code. `@agent-html/ahtml` should include only the CLI, runtime config, bin entry, managed runtime template logic, and README. Neither package should include docs web files, examples, specs, blueprints, or tests.
+The public npm publish surface is `@agent-html/ahtml`. It should include the CLI, runtime config, internal core bridge and vendored runtime source, bin entry, managed runtime template logic, and README. It should not include docs web files, examples, specs, blueprints, or tests.
 
 ## Verify installed CLI behavior [#verify-installed-cli-behavior]
 
@@ -90,18 +89,17 @@ This packs the project, installs it into a temporary consumer directory, sets `A
 ## Verify published package [#verify-published-package]
 
 ```bash
-npm view @agent-html/core dist-tags versions --json
 npm view @agent-html/ahtml dist-tags versions --json
 npm install -g @agent-html/ahtml
 ```
 
-The release workflow targets two npm packages: `@agent-html/core` and `@agent-html/ahtml`; the CLI bin remains `ahtml` through `@agent-html/ahtml`. Verify actual registry state with `npm view` before assuming both packages are already available on npmjs.com. pnpm, yarn, and bun consume the same npm registry packages and do not need separate package releases.
+The release workflow publishes `@agent-html/ahtml`, and the CLI bin remains `ahtml`. Verify actual registry state with `npm view` before assuming a tag or version is already available on npmjs.com. pnpm, yarn, and bun consume the same npm registry package and do not need separate package releases.
 
 ## Publish npm package [#publish-npm-package]
 
 Publishing is tag-driven through GitHub Actions and npm Trusted Publishing. Do not use a long-lived `NPM_TOKEN` for releases.
 
-Configure the npm trusted publisher for both `@agent-html/core` and `@agent-html/ahtml`:
+Configure the npm trusted publisher for `@agent-html/ahtml`:
 
 ```txt
 Provider: GitHub Actions
@@ -113,17 +111,16 @@ Workflow filename: publish-npm.yml
 Release a package version:
 
 ```bash
-npm version patch --workspace @agent-html/core --workspace @agent-html/ahtml --no-git-tag-version
-# or: npm version minor --workspace @agent-html/core --workspace @agent-html/ahtml --no-git-tag-version
-# or: npm version major --workspace @agent-html/core --workspace @agent-html/ahtml --no-git-tag-version
+npm version patch --workspace @agent-html/ahtml --no-git-tag-version
+# or: npm version minor --workspace @agent-html/ahtml --no-git-tag-version
+# or: npm version major --workspace @agent-html/ahtml --no-git-tag-version
 ```
 
-The release version source is the pair of workspace package manifests:
+The release version source is:
 
-- `packages/core/package.json`
 - `packages/ahtml/package.json`
 
-These two versions must stay identical. The root workspace version is not the release source of truth.
+The root workspace version is not the release source of truth.
 
 Validate and publish the selected version:
 
@@ -135,7 +132,7 @@ npm run release:tag
 git push origin main --tags
 ```
 
-The publish workflow fails if the Git tag does not match both workspace package versions.
+The publish workflow fails if the Git tag does not match the `@agent-html/ahtml` package version.
 
 Supported release channels:
 
@@ -145,7 +142,7 @@ Supported release channels:
 Release a prerelease version:
 
 ```bash
-npm version prerelease --preid alpha --workspace @agent-html/core --workspace @agent-html/ahtml --no-git-tag-version
+npm version prerelease --preid alpha --workspace @agent-html/ahtml --no-git-tag-version
 ```
 
 Validate by channel:
@@ -167,7 +164,7 @@ Install the current alpha release:
 npm install -g @agent-html/ahtml@alpha
 ```
 
-`release:check` is the generic local package release gate. It runs the package CI checks, `verify:pack`, and the npm dry-run publish for both workspace packages using the dist-tag derived from the current workspace version. The GitHub Actions publish workflow uses the same version-derived dist-tag before tag-driven publish.
+`release:check` is the generic local package release gate. It runs the package CI checks, `verify:pack`, and the npm dry-run publish for `@agent-html/ahtml` using the dist-tag derived from the current release version. The GitHub Actions publish workflow uses the same version-derived dist-tag before tag-driven publish.
 
 ## Distribute the ahtml skill [#distribute-the-ahtml-skill]
 
@@ -195,7 +192,7 @@ npx skills add . --skill ahtml -a codex --copy -y
 
 ```txt
 installed ahtml package
-  -> depends on @agent-html/core
+  -> includes vendored internal core runtime source
   -> CLI + runtime config
   -> shadcn-backed managed runtime under ~/.ahtml or AHTML_HOME
   -> static artifact directory
