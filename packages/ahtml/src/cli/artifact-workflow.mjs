@@ -231,8 +231,12 @@ function createValidationResult({
 export function formatInspectionSummary(inspection) {
   const lines = [
     "agent-html inspection",
-    ...(inspection.configModel ? [`config model: ${inspection.configModel}`] : []),
-    ...Object.entries(inspection.config).map(([key, value]) => `${key}: ${value}`),
+    ...(inspection.configModel
+      ? [`config model: ${inspection.configModel}`]
+      : []),
+    ...Object.entries(inspection.config).map(
+      ([key, value]) => `${key}: ${value}`,
+    ),
     ...(inspection.resolvedDocumentStyleTokens
       ? [
           "resolved document style tokens:",

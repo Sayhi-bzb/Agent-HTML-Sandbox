@@ -1,9 +1,6 @@
 import { z } from "zod"
 
-import type {
-  DocumentStyleConfigReference,
-  RenderConfig,
-} from "./types"
+import type { DocumentStyleConfigReference, RenderConfig } from "./types"
 
 export const PUBLIC_RENDER_CONFIG_MODEL = "document-style-config-reference"
 

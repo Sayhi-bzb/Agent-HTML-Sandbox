@@ -207,7 +207,6 @@ Status:
   能力，也不是 future public config 承诺。
 - 当前无 active shadcn debt；只有在未来升级导致本地 fixture drift 时再重开。
 
-
 ## components list
 
 | Components      | surface_level | semantic_role | component_form   | visibility_model  | trigger_modality | state_dependency | resource_dependency |

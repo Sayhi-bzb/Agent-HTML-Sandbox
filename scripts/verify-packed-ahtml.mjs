@@ -167,7 +167,7 @@ try {
   await writeFile(
     documentPath,
     [
-      '<meta-agent profile="ops-compact" />',
+      '<meta-agent style-ref="ops-compact" />',
       '<page title="Packed CLI"><card title="Overview">Built from an installed package.</card></page>',
     ].join("\n"),
   )
