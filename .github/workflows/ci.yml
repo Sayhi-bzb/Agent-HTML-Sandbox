@@ -36,9 +36,11 @@ jobs:
               - ".github/workflows/ci.yml"
               - ".github/workflows/deploy-docs.yml"
               - "README.md"
+              - "blueprint/**"
               - "docs-web/**"
               - "package-lock.json"
               - "package.json"
+              - "spec/**"
             package_verify:
               - ".github/actions/setup-node-npm/**"
               - ".github/workflows/ci.yml"

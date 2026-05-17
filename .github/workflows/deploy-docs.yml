@@ -9,9 +9,11 @@ on:
       - ".github/actions/setup-node-npm/**"
       - ".github/workflows/deploy-docs.yml"
       - "README.md"
+      - "blueprint/**"
       - "docs-web/**"
       - "package-lock.json"
       - "package.json"
+      - "spec/**"
   workflow_dispatch:
 
 concurrency:
