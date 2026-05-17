@@ -89,7 +89,9 @@ export function SessionsSidebar({
       ["dirty", "building", "error"].includes(session.status),
     )
     const recent = remaining.filter(
-      (session) => !session.pinned && !["dirty", "building", "error"].includes(session.status),
+      (session) =>
+        !session.pinned &&
+        !["dirty", "building", "error"].includes(session.status),
     )
 
     return [

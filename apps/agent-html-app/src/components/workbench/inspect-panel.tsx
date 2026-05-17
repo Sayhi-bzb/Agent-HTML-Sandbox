@@ -1,3 +1,5 @@
+import { useState } from "react"
+
 import { getInspectReviewSummary } from "../../lib/inspect-review"
 import { Button } from "../ui/button"
 import {
@@ -26,6 +28,7 @@ import type {
   SourceValidationState,
 } from "../../lib/types"
 import { getSourceValidationViewModel } from "../../lib/source-validation-view"
+import { copyText } from "../../lib/utils"
 
 type InspectPanelProps = {
   activeReviewFocus?: ReviewFocusTarget
@@ -68,6 +71,7 @@ export function InspectPanel({
   onRevisitReviewFocus,
   onRunReviewAction,
 }: InspectPanelProps) {
+  const [copiedKey, setCopiedKey] = useState<string>()
   const diagnosticCounts = countDiagnosticsBySeverity(inspect)
   const inspectBuildStatus = inspect.lastBuild?.status ?? "idle"
   const buildStatusClassName = statusClassNameForBuild(inspectBuildStatus)
@@ -253,7 +257,7 @@ export function InspectPanel({
                   </ol>
                   {reviewAudit.readiness.items.length > 0 ? (
                     <div className="inspect-open-checks">
-                      <p className="eyebrow">Open checks</p>
+                      <p className="eyebrow">Blockers</p>
                       <ul className="inspect-focus-list">
                         {reviewAudit.readiness.items.map((item) => (
                           <li key={item}>{item}</li>
@@ -344,6 +348,15 @@ export function InspectPanel({
             <SurfaceCardHeader eyebrow="Artifact" padding="compact" />
             <SurfaceCardBody className="grid gap-3" padding="compact">
               <h4>{artifactHeadline(inspect)}</h4>
+              <p className="inspect-summary-detail">
+                {build.status === "failed"
+                  ? "Return to Source or rerun Build before approving the artifact."
+                  : build.status === "running"
+                    ? "Wait for the current build before trusting preview review."
+                    : session.summary.hasPreview
+                      ? "The latest artifact is ready for review."
+                      : "Build once to produce a stable artifact review surface."}
+              </p>
             </SurfaceCardBody>
           </SurfaceCard>
 
@@ -495,6 +508,55 @@ export function InspectPanel({
                       ?.preview ?? "No stderr log yet."}
                   </pre>
                 </div>
+              </div>
+            </SurfaceCardBody>
+          </SurfaceCard>
+
+          <SurfaceCard variant="summary">
+            <SurfaceCardHeader eyebrow="Session files" padding="compact" />
+            <SurfaceCardBody className="grid gap-3" padding="compact">
+              <dl className="key-value-grid compact">
+                <dt>Source</dt>
+                <dd>{session.sourcePath}</dd>
+                <dt>Artifact</dt>
+                <dd>{session.previewPath ?? "missing"}</dd>
+                <dt>Logs</dt>
+                <dd>{session.logDirectory}</dd>
+                <dt>Chat</dt>
+                <dd>{session.chatPath}</dd>
+              </dl>
+              <div className="inspect-summary-actions">
+                <Button
+                  onClick={() => {
+                    void copyText(session.sourcePath).then((copied) => {
+                      if (copied) {
+                        setCopiedKey("source-path")
+                      }
+                    })
+                  }}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  {copiedKey === "source-path" ? "Copied" : "Copy source path"}
+                </Button>
+                <Button
+                  disabled={!session.previewPath}
+                  onClick={() => {
+                    void copyText(session.previewPath).then((copied) => {
+                      if (copied) {
+                        setCopiedKey("artifact-path")
+                      }
+                    })
+                  }}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  {copiedKey === "artifact-path"
+                    ? "Copied"
+                    : "Copy artifact path"}
+                </Button>
               </div>
             </SurfaceCardBody>
           </SurfaceCard>

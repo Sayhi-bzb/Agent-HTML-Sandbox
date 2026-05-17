@@ -12,6 +12,7 @@ import {
   getReviewTimelineActionConfig,
   getReviewTimeline,
   isProposalStale,
+  parseProposalDecision,
   parseProposalChecklist,
   parseStructuredMessageCard,
 } from "../../lib/review-flow"
@@ -149,6 +150,19 @@ export function AgentShell({
     .find((message) => message.kind === "proposal-placeholder")
   const latestProposalDecision = findLatestProposalDecision(messages)
   const recentProposalDecisions = findRecentProposalDecisions(messages)
+  const latestStoredNote = [...messages]
+    .reverse()
+    .find((message) => message.role === "user" && message.kind === "message")
+  const visibleMessages = messages.filter((message) => {
+    if (
+      message.kind === "proposal-placeholder" ||
+      message.kind === "context-card"
+    ) {
+      return true
+    }
+
+    return Boolean(parseProposalDecision(message.text))
+  })
   const proposalDecisionTrend = getProposalDecisionTrend(
     recentProposalDecisions,
   )
@@ -691,9 +705,21 @@ export function AgentShell({
         </SurfaceCard>
       ) : null}
 
+      {latestStoredNote ? (
+        <SurfaceCard className="proposal-starter-card" variant="inset">
+          <SurfaceCardHeader padding="compact" title="Latest note" />
+          <SurfaceCardBody className="grid gap-2" padding="compact">
+            <p>{latestStoredNote.text}</p>
+            <span className="inline-meta">
+              {formatTimestampLabel(latestStoredNote.createdAt)}
+            </span>
+          </SurfaceCardBody>
+        </SurfaceCard>
+      ) : null}
+
       <ScrollArea className="message-list-scroll">
-        <div className="message-list">
-          {messages.map((message) => (
+        <div className="message-list review-log-list">
+          {visibleMessages.map((message) => (
             <AgentShellMessageCard
               activeView={activeView}
               build={build}

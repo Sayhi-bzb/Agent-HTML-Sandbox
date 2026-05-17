@@ -22,7 +22,15 @@ import {
   type ReviewFocusIntent,
   type ReviewFocusTarget,
 } from "./lib/review-focus"
-import type { ReviewTimelineActionConfig } from "./lib/review-flow"
+import {
+  findLatestProposalDecision,
+  findRecentProposalDecisions,
+  getCurrentReviewStage,
+  getProposalDecisionTrend,
+  getReviewTimeline,
+  getReviewTimelineActionConfig,
+  type ReviewTimelineActionConfig,
+} from "./lib/review-flow"
 import {
   createSourceFocusTargetFromDiagnostic,
   createSourceFocusTargetFromGroup,
@@ -94,6 +102,7 @@ import type {
   RuntimeReport,
   WorkbenchView,
 } from "./lib/types"
+import { copyText } from "./lib/utils"
 
 type CommandState = {
   loading: boolean
@@ -128,9 +137,26 @@ type HydratedSessionState = {
   previewHtml?: string
 }
 
+type PanelLayoutState = {
+  sessions: number
+  workbench: number
+  shell: number
+}
+
+const panelLayoutStorageKey = "agent-html-app:panel-layout:v1"
+const defaultPanelLayout: PanelLayoutState = {
+  sessions: 18,
+  workbench: 52,
+  shell: 30,
+}
+
 export function App() {
   const [appState, setAppState] = useState<AppState>(mockAppState)
   const [sessionDrafts, setSessionDrafts] = useState<Record<string, string>>({})
+  const [sessionSearchFocusKey, setSessionSearchFocusKey] = useState<string>()
+  const [panelLayout, setPanelLayout] = useState<PanelLayoutState>(() =>
+    readStoredPanelLayout(),
+  )
   const [agentShellReviewIntent, setAgentShellReviewIntent] =
     useState<ReviewFocusIntent>()
   const [agentShellClearReviewFocusKey, setAgentShellClearReviewFocusKey] =
@@ -161,9 +187,57 @@ export function App() {
     appState.chat,
     currentDraftSource,
   )
-  const latestProposalText = [...appState.chat]
+  const latestProposal = [...appState.chat]
     .reverse()
-    .find((message) => message.kind === "proposal-placeholder")?.text
+    .find((message) => message.kind === "proposal-placeholder")
+  const latestProposalText = latestProposal?.text
+  const latestProposalDecision = findLatestProposalDecision(appState.chat)
+  const recentProposalDecisions = findRecentProposalDecisions(appState.chat)
+  const proposalDecisionTrend = getProposalDecisionTrend(
+    recentProposalDecisions,
+  )
+  const latestProposalIsStale = latestProposal
+    ? appState.currentSession.summary.updatedAt > latestProposal.createdAt
+    : false
+  const currentReviewStage = getCurrentReviewStage({
+    build: appState.currentBuild,
+    hasUnsavedSourceChanges,
+    inspect: appState.currentInspect,
+    latestProposalExists: Boolean(latestProposal),
+    latestProposalIsStale,
+    proposalComparison,
+    session: appState.currentSession,
+    sourceValidation: currentSourceValidation,
+  })
+  const reviewTimeline = getReviewTimeline({
+    build: appState.currentBuild,
+    hasUnsavedSourceChanges,
+    inspect: appState.currentInspect,
+    latestProposal,
+    latestProposalDecision,
+    proposalDecisionTrend,
+    latestProposalIsStale,
+    messages: appState.chat,
+    proposalComparison,
+    session: appState.currentSession,
+    sourceValidation: currentSourceValidation,
+  })
+  const currentStageItem =
+    reviewTimeline.find((item) => item.id === currentReviewStage) ??
+    reviewTimeline[0]
+  const currentStageAction = getReviewTimelineActionConfig({
+    stage: currentReviewStage,
+    activeView,
+    build: appState.currentBuild,
+    hasUnsavedSourceChanges,
+    inspect: appState.currentInspect,
+    latestProposalExists: Boolean(latestProposal),
+    latestProposalDecision,
+    latestProposalIsStale,
+    proposalComparison,
+    sessionHasPreview: appState.currentSession.summary.hasPreview,
+    sourceValidation: currentSourceValidation,
+  })
   const availableReviewFocusTargets = getAvailableReviewFocusTargets({
     proposalText: latestProposalText,
     build: appState.currentBuild,
@@ -218,6 +292,72 @@ export function App() {
       mediaQuery.removeEventListener("change", syncTheme)
     }
   }, [])
+
+  useEffect(() => {
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) {
+        return
+      }
+
+      const modifier = event.metaKey || event.ctrlKey
+      if (!modifier) {
+        return
+      }
+
+      const key = event.key.toLowerCase()
+
+      switch (key) {
+        case "k":
+          event.preventDefault()
+          setSessionSearchFocusKey(`search-${Date.now()}`)
+          break
+        case "s":
+          if (!hasUnsavedSourceChanges || commandState.savingSource) {
+            return
+          }
+          event.preventDefault()
+          void handleSaveSource(currentDraftSource)
+          break
+        case "enter":
+          if (commandState.runningBuild) {
+            return
+          }
+          event.preventDefault()
+          void handleBuild()
+          break
+        case "i":
+          if (!event.shiftKey || commandState.runningInspect) {
+            return
+          }
+          event.preventDefault()
+          void handleInspect()
+          break
+        case "1":
+          event.preventDefault()
+          void handleViewChange("preview")
+          break
+        case "2":
+          event.preventDefault()
+          void handleViewChange("source")
+          break
+        case "3":
+          event.preventDefault()
+          void handleViewChange("inspect")
+          break
+      }
+    }
+
+    window.addEventListener("keydown", handleKeydown)
+    return () => {
+      window.removeEventListener("keydown", handleKeydown)
+    }
+  }, [
+    commandState.runningBuild,
+    commandState.runningInspect,
+    commandState.savingSource,
+    currentDraftSource,
+    hasUnsavedSourceChanges,
+  ])
 
   useEffect(() => {
     setAgentShellReviewIntent(undefined)
@@ -1429,10 +1569,67 @@ export function App() {
         <RuntimeBanner report={appState.runtimeReport} />
       ) : null}
 
-      <ResizablePanelGroup className="app-shell" orientation="horizontal">
-        <ResizablePanel className="app-pane" defaultSize={18} minSize={14}>
+      <SurfaceCard className="stage-banner" variant="banner">
+        <SurfaceCardHeader title={currentStageItem?.label ?? "Current stage"}>
+          <div className="stage-banner-meta">
+            <StatusBadge
+              tone={statusToneForStage(currentStageItem?.pillClassName)}
+            >
+              {currentStageItem?.statusLabel ?? "Current"}
+            </StatusBadge>
+            <span className="inline-meta">
+              {appState.currentSession.summary.name}
+            </span>
+            <span className="inline-meta">View {activeView}</span>
+          </div>
+        </SurfaceCardHeader>
+        <SurfaceCardBody className="stage-banner-body" padding="compact">
+          <p>{currentStageItem?.summary}</p>
+          <div className="stage-banner-actions">
+            {currentStageAction ? (
+              <Button
+                onClick={() => {
+                  void handleRunReviewAction(currentStageAction.handler)
+                }}
+                size="sm"
+                type="button"
+              >
+                {currentStageAction.label}
+              </Button>
+            ) : null}
+            <Button
+              onClick={() => {
+                void copyText(appState.currentSession.sourcePath)
+              }}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              Copy source path
+            </Button>
+          </div>
+        </SurfaceCardBody>
+      </SurfaceCard>
+
+      <ResizablePanelGroup
+        className="app-shell"
+        defaultLayout={toGroupLayout(panelLayout)}
+        onLayoutChanged={(layout) => {
+          const nextLayout = normalizePanelLayout(layout)
+          setPanelLayout(nextLayout)
+          persistPanelLayout(nextLayout)
+        }}
+        orientation="horizontal"
+      >
+        <ResizablePanel
+          className="app-pane"
+          defaultSize={panelLayout.sessions}
+          id="sessions"
+          minSize={14}
+        >
           <SessionsSidebar
             activeSessionId={appState.currentSession.summary.id}
+            focusSearchKey={sessionSearchFocusKey}
             isBusy={isSidebarBusy}
             onCreateSession={() => {
               void handleCreateSession()
@@ -1453,7 +1650,12 @@ export function App() {
           />
         </ResizablePanel>
         <ResizableHandle className="app-shell-handle" withHandle />
-        <ResizablePanel className="app-pane" defaultSize={52} minSize={34}>
+        <ResizablePanel
+          className="app-pane"
+          defaultSize={panelLayout.workbench}
+          id="workbench"
+          minSize={34}
+        >
           <Workbench
             activeView={activeView}
             activeReviewFocus={agentShellReviewFocus}
@@ -1494,7 +1696,12 @@ export function App() {
           />
         </ResizablePanel>
         <ResizableHandle className="app-shell-handle" withHandle />
-        <ResizablePanel className="app-pane" defaultSize={30} minSize={20}>
+        <ResizablePanel
+          className="app-pane"
+          defaultSize={panelLayout.shell}
+          id="shell"
+          minSize={20}
+        >
           <AgentShell
             activeView={activeView}
             activeSourceFocusReviewStatus={sourceFocusReviewStatus}
@@ -1633,11 +1840,88 @@ function RuntimeBanner({ report }: { report: RuntimeReport }) {
           <StatusBadge>ok {report.counts.ok}</StatusBadge>
           <StatusBadge tone="dirty">warn {report.counts.warn}</StatusBadge>
           <StatusBadge tone="error">fail {report.counts.fail}</StatusBadge>
+          <span className="inline-meta">v{report.packageVersion}</span>
         </div>
       </SurfaceCardHeader>
-      <SurfaceCardBody className="sr-only" padding="none">
-        Runtime health summary
+      <SurfaceCardBody className="runtime-banner-body" padding="compact">
+        <span className="inline-meta">{report.runtimeRoot}</span>
+        <span className="inline-meta">{report.outputDir}</span>
       </SurfaceCardBody>
     </SurfaceCard>
   )
+}
+
+function readStoredPanelLayout(): PanelLayoutState {
+  if (typeof window === "undefined") {
+    return defaultPanelLayout
+  }
+
+  try {
+    const raw = window.localStorage.getItem(panelLayoutStorageKey)
+    if (!raw) {
+      return defaultPanelLayout
+    }
+
+    const parsed = JSON.parse(raw) as Partial<PanelLayoutState>
+    if (
+      typeof parsed.sessions === "number" &&
+      typeof parsed.workbench === "number" &&
+      typeof parsed.shell === "number"
+    ) {
+      return {
+        sessions: parsed.sessions,
+        workbench: parsed.workbench,
+        shell: parsed.shell,
+      }
+    }
+  } catch {
+    return defaultPanelLayout
+  }
+
+  return defaultPanelLayout
+}
+
+function persistPanelLayout(layout: PanelLayoutState) {
+  if (typeof window === "undefined") {
+    return
+  }
+
+  window.localStorage.setItem(panelLayoutStorageKey, JSON.stringify(layout))
+}
+
+function normalizePanelLayout(
+  layout: Record<string, number>,
+): PanelLayoutState {
+  return {
+    sessions: layout.sessions ?? defaultPanelLayout.sessions,
+    workbench: layout.workbench ?? defaultPanelLayout.workbench,
+    shell: layout.shell ?? defaultPanelLayout.shell,
+  }
+}
+
+function toGroupLayout(layout: PanelLayoutState) {
+  return {
+    sessions: layout.sessions,
+    workbench: layout.workbench,
+    shell: layout.shell,
+  }
+}
+
+function statusToneForStage(
+  className?: string,
+): "default" | "accent" | "ready" | "dirty" | "error" | "building" {
+  switch (className) {
+    case "status-ready":
+      return "ready"
+    case "status-dirty":
+      return "dirty"
+    case "status-error":
+      return "error"
+    case "status-building":
+      return "building"
+    case "accent":
+      return "accent"
+    default:
+      return "default"
+  }
 }

@@ -1461,6 +1461,38 @@ body {
   color: var(--foreground);
 }
 
+.runtime-banner-body,
+.stage-banner-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.stage-banner {
+  margin-bottom: 12px;
+  border: 1px solid var(--hairline-strong);
+}
+
+.stage-banner-meta,
+.stage-banner-actions,
+.preview-header-actions,
+.preview-provenance-actions,
+.session-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.session-group-header {
+  justify-content: space-between;
+  margin-bottom: 8px;
+  color: var(--body);
+  font-size: 0.82rem;
+}
+
 .app-shell {
   display: flex;
   gap: 0;
@@ -1554,6 +1586,12 @@ body {
   padding: 10px 16px 16px;
 }
 
+.session-groups,
+.session-group {
+  display: grid;
+  gap: 12px;
+}
+
 .session-card,
 .message-card,
 .context-card,
@@ -1619,6 +1657,15 @@ body {
   gap: 16px;
 }
 
+.preview-header-actions {
+  justify-content: space-between;
+  width: 100%;
+}
+
+.preview-viewport-toggle {
+  gap: 6px;
+}
+
 .source-focus-banner-body {
   gap: 12px;
 }
@@ -1630,6 +1677,25 @@ body {
   border-radius: 12px;
   background: var(--canvas-soft);
   box-shadow: none;
+}
+
+.preview-frame-shell {
+  display: flex;
+  justify-content: center;
+  min-height: 100%;
+}
+
+.preview-frame-shell-desktop .preview-frame {
+  width: 100%;
+  max-width: 1180px;
+}
+
+.preview-frame-shell-tablet .preview-frame {
+  width: min(860px, 100%);
+}
+
+.preview-frame-shell-focus .preview-frame {
+  width: min(640px, 100%);
 }
 
 .preview-frame {
@@ -1766,6 +1832,10 @@ body {
 .context-message-card,
 .draft-compare-card {
   border-color: var(--hairline);
+}
+
+.review-log-list {
+  gap: 10px;
 }
 
 .agent-shell > .context-card,
