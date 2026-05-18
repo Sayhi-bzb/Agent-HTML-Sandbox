@@ -22,7 +22,7 @@ Adoption rules:
 - 对外 props 需要收敛成少量语义字段。
 - 组件行为需要在 artifact / preview / build 路径下保持可解释。
 
-Renderer archetypes:
+Current implementation archetypes:
 
 - `primitive`: 单根导出、轻量 props。
 - `compound`: 标题/内容容器。
@@ -32,6 +32,28 @@ Renderer archetypes:
 - `table`: row/cell 分层结构。
 - `tabs`: trigger/content 切换结构。
 - `interactive-collection`: item/trigger/content 交互集合。
+
+Recommended honest families:
+
+- `text-field`: 文本输入字段，如 `input`、`textarea`。
+- `toggle-field`: 布尔切换字段，如 `checkbox`、`switch`。
+- `range-field`: 数值范围字段，如 `slider`。
+- `choice-group`: 常显单选项组，如 `radio-group`。
+- `choice-inline`: 内联单选项集，如 `toggle-group`。
+- `choice-overlay`: 触发器 + 面板式单选选择器，如 `select`、`combobox`。
+- `compound`: 标题/内容容器。
+- `primitive`: 单根导出、轻量 props。
+- `table`: row/cell 分层结构。
+- `tabs`: trigger/content 切换结构。
+- `interactive-collection`: item/trigger/content 交互集合。
+
+Honesty rule:
+
+- 当前实现 archetype 记录的是代码事实，不等于诚实组件家族。
+- 诚实组件家族优先按组合结构、交互语义、状态模型和可见性模型划分，
+  不能仅因 `label`、`value`、`description` 这类表面 props 相似就压平。
+- 后续实现可以在 renderer 层复用适配器，但 spec 不应为了迁就复用而抹掉
+  `toggle-field`、`range-field`、`choice-group`、`choice-overlay` 之间的差异。
 
 Status:
 
@@ -52,25 +74,33 @@ Status:
 
 ## Supported Today
 
-| Component | Archetype | Note |
-| --- | --- | --- |
-| `alert` | `compound` | 稳定 callout 语义。 |
-| `badge` | `primitive` | 稳定短状态标签。 |
-| `progress` | `primitive` | 只读数值进度展示。 |
-| `input` | `field-control` | 共享文本字段 contract。 |
-| `textarea` | `field-control` | 共享多行文本字段 contract。 |
-| `checkbox` | `field-control` | 布尔确认字段。 |
-| `switch` | `field-control` | 布尔偏好切换字段。 |
-| `slider` | `field-control` | 数值偏好字段。 |
-| `radio-group` | `field-control` | 通过 `option` 子节点表达单组选项。 |
-| `toggle-group` | `option-set` | 内联单选项集。 |
-| `select` | `option-set` | 受控单选选择器。 |
-| `combobox` | `option-set` | searchable single-select。 |
-| `card` | `compound` | 分组内容容器。 |
-| `separator` | `primitive` | 语义分隔符。 |
-| `table` | `table` | 结构化证据表格。 |
-| `tabs` | `tabs` | 多视图切换结构。 |
-| `accordion` | `interactive-collection` | 折叠分组结构。 |
+下表同时记录两件事：
+
+- `Current implementation archetype`: 当前代码里的 renderer 收敛层。
+- `Honest family`: 更贴近真实组合结构和交互语义的家族归类。
+
+这两列不一致时，以 `Honest family` 作为后续设计校准方向，以
+`Current implementation archetype` 作为当前实现事实。
+
+| Component | Current implementation archetype | Honest family | Note |
+| --- | --- | --- | --- |
+| `alert` | `compound` | `compound` | 稳定 callout 语义。 |
+| `badge` | `primitive` | `primitive` | 稳定短状态标签。 |
+| `progress` | `primitive` | `primitive` | 只读数值进度展示。 |
+| `input` | `field-control` | `text-field` | 单行文本字段。 |
+| `textarea` | `field-control` | `text-field` | 多行文本字段。 |
+| `checkbox` | `field-control` | `toggle-field` | 布尔确认字段。 |
+| `switch` | `field-control` | `toggle-field` | 布尔偏好切换字段。 |
+| `slider` | `field-control` | `range-field` | 数值偏好字段。 |
+| `radio-group` | `field-control` | `choice-group` | 通过 `option` 子节点表达单组选项。 |
+| `toggle-group` | `option-set` | `choice-inline` | 内联单选项集。 |
+| `select` | `option-set` | `choice-overlay` | 受控单选选择器。 |
+| `combobox` | `option-set` | `choice-overlay` | searchable single-select。 |
+| `card` | `compound` | `compound` | 分组内容容器。 |
+| `separator` | `primitive` | `primitive` | 语义分隔符。 |
+| `table` | `table` | `table` | 结构化证据表格。 |
+| `tabs` | `tabs` | `tabs` | 多视图切换结构。 |
+| `accordion` | `interactive-collection` | `interactive-collection` | 折叠分组结构。 |
 
 ## Supported Component Parameter Split
 
@@ -88,10 +118,10 @@ Status:
 | `card` | `title`、allowed children | surface、border、radius、padding、header/content spacing、title emphasis | `size`、内部 shell composition |
 | `separator` | none | divider thickness、tone、vertical rhythm policy | 具体 class、orientation wiring |
 | `input` / `textarea` | `label`、`value`、`description` | field chrome、padding、label/help text treatment、invalid / disabled visuals | `defaultValue`、`required`、implementation props |
-| `checkbox` / `switch` | `label`、`checked`、`description` | control chrome、track/thumb/check treatment、field spacing | controlled state wiring、implementation props |
-| `slider` | `label`、`value`、`description` | track / thumb treatment、field spacing、numeric emphasis | controlled state wiring、implementation props |
-| `radio-group` | `label`、`value`、`description`、`option.value`、`option.label` | option spacing、selected/unselected treatment、group shell chrome | group wiring、shadcn item composition |
-| `toggle-group` | `label`、`value`、`description`、`option.value`、`option.label` | option spacing、active/inactive treatment、group shell chrome | controlled selection wiring、group/item implementation |
+| `checkbox` / `switch` | `label`、`checked`、`description` | control chrome、track/thumb/check treatment、toggle row spacing、label/control grouping treatment | controlled state wiring、implementation props |
+| `slider` | `label`、`value`、`description` | track / thumb treatment、range spacing、numeric emphasis | controlled state wiring、implementation props |
+| `radio-group` | `label`、`value`、`description`、`option.value`、`option.label` | option spacing、selected/unselected treatment、group shell chrome、option-row composition | group wiring、shadcn item composition |
+| `toggle-group` | `label`、`value`、`description`、`option.value`、`option.label` | inline option spacing、active/inactive treatment、group shell chrome | controlled selection wiring、group/item implementation |
 | `select` / `combobox` | `label`、`value`、`description`、`option.value`、`option.label` | trigger visual、panel visual、item hover/selected treatment、empty-state treatment | `defaultValue`、`placeholder`、list / trigger / content implementation、overlay / collection state wiring |
 | `table` | `row.kind`、`cell` text content | header/body treatment、row dividers、striping、cell padding、numeric/text emphasis | table export choice、DOM structure details |
 | `tabs` | `default`、`tab.value`、`tab.label`、tab children | tabs list treatment、active trigger treatment、content pane shell | `defaultValue`、`value`、trigger/content export wiring、fallback implementation |
@@ -150,9 +180,11 @@ Status:
    `Card`、`TabsList`、`TabsTrigger`、`SelectContent`、`AccordionTrigger`
    这类 exports 属于实现层，不直接进入 agent-facing vocabulary。
 
-2. 用 archetype 吃掉组件差异，不用完整 props 直通。
-   当前 `compound`、`field-control`、`option-set`、`table`、`tabs`、
-   `interactive-collection` 已经在承担这件事。
+2. 用 archetype 吃掉实现细节，不用完整 props 直通。
+   但 archetype 不能为了复用而压平真实家族差异。当前实现层的
+   `field-control`、`option-set` 仍可存在，但 spec 语义层应继续区分
+   `text-field`、`toggle-field`、`range-field`、`choice-group`、
+   `choice-inline`、`choice-overlay`。
 
 3. 用语义 prop 映射少量视觉含义，而不是开放 shadcn `variant`。
    例如 `alert.tone -> Alert variant`、`badge.tone -> Badge variant`
@@ -165,6 +197,11 @@ Status:
 5. 把组合结构和 state wiring 锁在实现层。
    `tabs` 的 trigger/content、`select` 的 trigger/content/item、`accordion`
    的 item/trigger/content 组合必须由 adapter 固定生成，而不是让 agent 或样式配置改写。
+
+6. spec 记录的家族必须诚实反映官方组合边界。
+   例如 `checkbox` / `switch` 不应仅因与文本字段共享少量 props 就归入同一诚实家族；
+   `radio-group` 不应与 `toggle-group`、`select`、`combobox` 混成单一
+   “option set” 概念。
 
 ## Current State
 

@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises"
 import path from "node:path"
 
 import { cliDefaults } from "../config/defaults.mjs"
+import { getLegacyResolvedDocumentStyleTokens } from "../config/internal-core-bridge.mjs"
 import { getCliSchemaOutput } from "./schema.mjs"
 import { buildRuntimeArtifact } from "./runtime-build.mjs"
 import {
@@ -178,8 +179,9 @@ export function createInspection(document) {
     throw new Error("Cannot inspect an invalid agent-html document.")
   }
 
-  const { documentStyleConfigReference, ...resolvedDocumentStyleTokens } =
-    document.meta
+  const { documentStyleConfigReference } = document.meta
+  const resolvedDocumentStyleTokens =
+    getLegacyResolvedDocumentStyleTokens(document.meta)
 
   return {
     kind: "agent-html-inspection",

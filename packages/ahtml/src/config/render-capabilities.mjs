@@ -19,15 +19,57 @@ export const rendererKindDefinitions = {
   primitive: {
     requiredFields: ["component"],
   },
-  "field-control": {
+  "text-field": {
     requiredFields: ["root", "label", "control", "labelProp"],
     requiredWhenPresent: {
       description: ["descriptionProp"],
       fallback: ["valueProp"],
-      item: ["itemSlot", "itemValueProp", "itemHeadingProp"],
     },
   },
-  "option-set": {
+  "toggle-field": {
+    requiredFields: ["root", "label", "control", "labelProp"],
+    requiredWhenPresent: {
+      description: ["descriptionProp"],
+    },
+  },
+  "range-field": {
+    requiredFields: ["root", "label", "control", "labelProp"],
+    requiredWhenPresent: {
+      description: ["descriptionProp"],
+      fallback: ["valueProp"],
+    },
+  },
+  "choice-group": {
+    requiredFields: [
+      "root",
+      "label",
+      "control",
+      "item",
+      "itemSlot",
+      "itemValueProp",
+      "itemHeadingProp",
+      "labelProp",
+    ],
+    requiredWhenPresent: {
+      description: ["descriptionProp"],
+    },
+  },
+  "choice-inline": {
+    requiredFields: [
+      "root",
+      "label",
+      "control",
+      "item",
+      "itemSlot",
+      "itemValueProp",
+      "itemHeadingProp",
+      "labelProp",
+    ],
+    requiredWhenPresent: {
+      description: ["descriptionProp"],
+    },
+  },
+  "choice-overlay": {
     requiredFields: [
       "root",
       "label",

@@ -14,7 +14,12 @@ const agentDocument = generatedDocument as AgentDocument
 const runtimeRendererVerification =
   runtimeVerificationState as RuntimeVerificationState
 const rendererSpecByName = createRendererSpecMap(runtimeRendererVerification)
-const RendererNode = createRendererNode(rendererSpecByName)
+const RendererNode = createRendererNode(
+  rendererSpecByName,
+  agentDocument.meta.styleProfile.componentStyle.treatments,
+)
+const shellProjection = getStyleProfileLegacyProjection(agentDocument)
+const documentStyleCss = createDocumentStyleCss(agentDocument)
 
 assertRendererRegistryParity(runtimeRendererVerification, rendererSpecByName)
 
@@ -30,22 +35,26 @@ export function App() {
   }, [title])
 
   return (
-    <main
-      className={shellClassName}
-      data-theme={agentDocument.meta.theme}
-      data-density={agentDocument.meta.density}
-      data-tone={agentDocument.meta.tone}
-      data-width={agentDocument.meta.width}
-    >
-      {agentDocument.components.map((node, index) => (
-        <RendererNode key={index} node={node} />
-      ))}
-    </main>
+    <>
+      <style>{documentStyleCss}</style>
+      <main
+        className={shellClassName}
+        data-style-profile={agentDocument.meta.styleProfile.id}
+        data-theme={shellProjection.theme}
+        data-density={shellProjection.density}
+        data-tone={shellProjection.tone}
+        data-width={shellProjection.width}
+      >
+        {agentDocument.components.map((node, index) => (
+          <RendererNode key={index} node={node} />
+        ))}
+      </main>
+    </>
   )
 }
 
 function getShellClassName(agentDocument: AgentDocument) {
-  const { density, tone, width } = agentDocument.meta
+  const { density, tone, width } = getStyleProfileLegacyProjection(agentDocument)
   const widthClassName =
     width === "wide"
       ? "max-w-7xl"
@@ -66,6 +75,52 @@ function getShellClassName(agentDocument: AgentDocument) {
     densityClassName,
     toneClassName,
   ].join(" ")
+}
+
+function getStyleProfileLegacyProjection(agentDocument: AgentDocument) {
+  return agentDocument.meta.styleProfile.globalStyle.legacyProjection
+}
+
+function createDocumentStyleCss(agentDocument: AgentDocument) {
+  const globalStyle = agentDocument.meta.styleProfile.globalStyle
+
+  return [
+    `:root{${createGlobalStyleDeclarations(globalStyle, "light")}}`,
+    `@media (prefers-color-scheme: dark){:root{${createGlobalStyleDeclarations(
+      globalStyle,
+      "dark",
+    )}}}`,
+  ].join("")
+}
+
+function createGlobalStyleDeclarations(
+  globalStyle: AgentDocument["meta"]["styleProfile"]["globalStyle"],
+  mode: "light" | "dark",
+) {
+  return [
+    `${globalStyle.cssVariableMap.background}:${globalStyle.tokenSets[mode].background};`,
+    `${globalStyle.cssVariableMap.foreground}:${globalStyle.tokenSets[mode].foreground};`,
+    `${globalStyle.cssVariableMap.card}:${globalStyle.tokenSets[mode].card};`,
+    `${globalStyle.cssVariableMap.cardForeground}:${globalStyle.tokenSets[mode].cardForeground};`,
+    `${globalStyle.cssVariableMap.popover}:${globalStyle.tokenSets[mode].popover};`,
+    `${globalStyle.cssVariableMap.popoverForeground}:${globalStyle.tokenSets[mode].popoverForeground};`,
+    `${globalStyle.cssVariableMap.primary}:${globalStyle.tokenSets[mode].primary};`,
+    `${globalStyle.cssVariableMap.primaryForeground}:${globalStyle.tokenSets[mode].primaryForeground};`,
+    `${globalStyle.cssVariableMap.secondary}:${globalStyle.tokenSets[mode].secondary};`,
+    `${globalStyle.cssVariableMap.secondaryForeground}:${globalStyle.tokenSets[mode].secondaryForeground};`,
+    `${globalStyle.cssVariableMap.muted}:${globalStyle.tokenSets[mode].muted};`,
+    `${globalStyle.cssVariableMap.mutedForeground}:${globalStyle.tokenSets[mode].mutedForeground};`,
+    `${globalStyle.cssVariableMap.accent}:${globalStyle.tokenSets[mode].accent};`,
+    `${globalStyle.cssVariableMap.accentForeground}:${globalStyle.tokenSets[mode].accentForeground};`,
+    `${globalStyle.cssVariableMap.destructive}:${globalStyle.tokenSets[mode].destructive};`,
+    `${globalStyle.cssVariableMap.border}:${globalStyle.tokenSets[mode].border};`,
+    `${globalStyle.cssVariableMap.input}:${globalStyle.tokenSets[mode].input};`,
+    `${globalStyle.cssVariableMap.ring}:${globalStyle.tokenSets[mode].ring};`,
+    `${globalStyle.cssVariableMap.radius}:${globalStyle.radiusScale.base};`,
+    `${globalStyle.cssVariableMap.fontSans}:${globalStyle.typography.fontSans};`,
+    `${globalStyle.cssVariableMap.fontHeading}:${globalStyle.typography.fontHeading};`,
+    `color-scheme:${mode};`,
+  ].join("")
 }
 
 function getDocumentTitle(agentDocument: AgentDocument) {

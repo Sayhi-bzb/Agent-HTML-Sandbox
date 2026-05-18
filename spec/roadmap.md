@@ -34,6 +34,8 @@ semantic component contract
 - The grouped adoption lane for `combobox`, `switch`, and `slider` is closed.
 - Current implementation exposes approved document style config references
   through `style-ref` as the current main visual configuration entry.
+- Active style-system execution planning now lives in
+  `spec/style-system-execution.md`; this roadmap remains future-facing.
 - Overlay, menu, navigation, and app-shell semantics remain outside the current
   product lane.
 

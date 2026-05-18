@@ -86,6 +86,47 @@ describe("sanitizeAgentHtml", () => {
     expect(result.document).toEqual({
       meta: {
         documentStyleConfigReference: "report-default",
+        styleProfile: {
+          id: "report-default",
+          globalStyle: {
+            tokenSets: {
+              light: expect.objectContaining({
+                background: "#f7f7f4",
+                foreground: "#26251e",
+              }),
+              dark: expect.objectContaining({
+                background: "oklch(0.145 0 0)",
+                foreground: "oklch(0.985 0 0)",
+              }),
+            },
+            radiusScale: expect.objectContaining({
+              base: "0.75rem",
+            }),
+            typography: expect.objectContaining({
+              fontHeading: "var(--font-sans)",
+            }),
+            cssVariableMap: expect.objectContaining({
+              border: "--border",
+            }),
+            legacyProjection: {
+              theme: "neutral",
+              density: "comfortable",
+              tone: "report",
+              width: "article",
+            },
+          },
+          componentStyle: {
+            treatments: {
+              alert: "report-alert",
+              badge: "report-badge",
+              card: "report-card",
+              input: "report-field",
+              table: "report-table",
+              tabs: "report-tabs",
+              textarea: "report-field",
+            },
+          },
+        },
         theme: "neutral",
         density: "comfortable",
         tone: "report",
@@ -224,6 +265,47 @@ describe("sanitizeAgentHtml", () => {
     expect(result.diagnostics).toEqual([])
     expect(result.document?.meta).toEqual({
       documentStyleConfigReference: "report-default",
+      styleProfile: {
+        id: "report-default",
+        globalStyle: {
+          tokenSets: {
+            light: expect.objectContaining({
+              background: "#f7f7f4",
+              foreground: "#26251e",
+            }),
+            dark: expect.objectContaining({
+              background: "oklch(0.145 0 0)",
+              foreground: "oklch(0.985 0 0)",
+            }),
+          },
+          radiusScale: expect.objectContaining({
+            lg: "var(--radius)",
+          }),
+          typography: expect.objectContaining({
+            fontSans: expect.stringContaining("Inter Variable"),
+          }),
+          cssVariableMap: expect.objectContaining({
+            radius: "--radius",
+          }),
+          legacyProjection: {
+            theme: "neutral",
+            density: "comfortable",
+            tone: "report",
+            width: "article",
+          },
+        },
+        componentStyle: {
+          treatments: {
+            alert: "report-alert",
+            badge: "report-badge",
+            card: "report-card",
+            input: "report-field",
+            table: "report-table",
+            tabs: "report-tabs",
+            textarea: "report-field",
+          },
+        },
+      },
       theme: "neutral",
       density: "comfortable",
       tone: "report",
@@ -490,7 +572,7 @@ describe("sanitizeAgentHtml", () => {
     })
   })
 
-  it("accepts boolean, single-select, and option-set controls inside supported content containers", () => {
+  it("accepts boolean, single-select, and choice controls inside supported content containers", () => {
     const result = sanitizeAgentHtml(`
       <page title="Reviewer Form">
         <card title="Decision">

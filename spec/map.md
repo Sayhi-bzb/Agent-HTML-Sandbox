@@ -54,6 +54,8 @@ semantic component contract
 
 - Treat `spec/map.md` as the main refactor guidance document for configuration,
   layering, and public surface decisions.
+- Use `spec/style-system-execution.md` for the active style-system execution
+  cadence, phase order, and acceptance proof path.
 - Keep the public surface limited to semantic components plus controlled
   document-level visual entry.
 - Treat `style-ref` as a style profile id, not as a token set or partial style
@@ -83,5 +85,7 @@ semantic component contract
 ## Current Pass
 
 - The current artifact-focused pass is complete.
+- Active style-system migration planning now lives in
+  `spec/style-system-execution.md`.
 - `style-ref` remains the current public visual entry.
 - No component-level public style knobs are part of the current contract.

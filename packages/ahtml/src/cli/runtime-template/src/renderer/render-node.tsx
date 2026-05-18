@@ -12,6 +12,7 @@ import type {
 
 export function createRendererNode(
   rendererSpecByName: Map<string, RendererSpecComponent>,
+  componentTreatments: Record<string, string> = {},
 ) {
   function RendererNode({ node }: { node: AgentNode }) {
     if (node.type === "text") {
@@ -47,13 +48,30 @@ export function createRendererNode(
     )
   }
 
+  function getComponentMetadataProps(
+    node: AgentComponentNode,
+    rendererSpec: RendererSpecComponent,
+  ) {
+    const treatment = componentTreatments[node.name]
+    const className = mergeClassNames(
+      rendererSpec.rootClassName,
+      treatment ? componentTreatmentClassNames[treatment] : undefined,
+    )
+
+    return {
+      "data-agent-html-component": node.name,
+      ...(treatment ? { "data-ahtml-treatment": treatment } : {}),
+      ...(className ? { className } : {}),
+    }
+  }
+
   function renderPrimitiveComponent(
     node: AgentComponentNode,
     rendererSpec: RendererSpecComponent,
   ) {
     const Component = resolveElement(rendererSpec.component)
     const props = {
-      "data-agent-html-component": node.name,
+      ...getComponentMetadataProps(node, rendererSpec),
       ...applyPropMappings(node.props, rendererSpec.propMappings),
     }
     const children =
@@ -75,8 +93,7 @@ export function createRendererNode(
     const TitleContainer = resolveElement(rendererSpec.titleContainer)
     const Content = resolveElement(rendererSpec.content)
     const props = {
-      "data-agent-html-component": node.name,
-      className: rendererSpec.rootClassName,
+      ...getComponentMetadataProps(node, rendererSpec),
       ...applyPropMappings(node.props, rendererSpec.propMappings),
     }
     const title = renderCompoundTitle(node, rendererSpec, Title)
@@ -97,7 +114,57 @@ export function createRendererNode(
     )
   }
 
-  function renderFieldControlComponent(
+  function renderTextFieldComponent(
+    node: AgentComponentNode,
+    rendererSpec: RendererSpecComponent,
+  ) {
+    const Root = resolveElement(rendererSpec.root)
+    const Label = resolveElement(rendererSpec.label)
+    const Control = resolveElement(rendererSpec.control)
+    const Description = resolveElement(rendererSpec.description)
+    const labelProp = requireRendererSpecField(rendererSpec, "labelProp")
+    const descriptionProp = rendererSpec.description
+      ? requireRendererSpecField(rendererSpec, "descriptionProp")
+      : undefined
+    const valueProp = rendererSpec.fallback
+      ? requireRendererSpecField(rendererSpec, "valueProp")
+      : undefined
+    const label = node.props[labelProp]
+    const description = descriptionProp
+      ? node.props[descriptionProp]
+      : undefined
+    const controlProps = {
+      ...rendererSpec.staticProps,
+      ...applyPropMappings(node.props, rendererSpec.propMappings),
+    }
+
+    return (
+      <>
+        <Root
+          {...getComponentMetadataProps(node, rendererSpec)}
+        >
+          {label ? (
+            <Label className={rendererSpec.labelClassName}>{label}</Label>
+          ) : null}
+          <Control {...controlProps} />
+          {description && Description ? (
+            <Description className={rendererSpec.descriptionClassName}>
+              {description}
+            </Description>
+          ) : null}
+        </Root>
+        {rendererSpec.fallback && valueProp
+          ? renderNoScriptFieldControlFallback({
+              description,
+              label,
+              value: node.props[valueProp],
+            })
+          : null}
+      </>
+    )
+  }
+
+  function renderToggleFieldComponent(
     node: AgentComponentNode,
     rendererSpec: RendererSpecComponent,
   ) {
@@ -110,90 +177,164 @@ export function createRendererNode(
     const descriptionProp = rendererSpec.description
       ? requireRendererSpecField(rendererSpec, "descriptionProp")
       : undefined
-    const Item = rendererSpec.item
-      ? resolveElement(rendererSpec.item)
-      : undefined
     const label = node.props[labelProp]
     const description = descriptionProp
       ? node.props[descriptionProp]
       : undefined
-    const itemSlot = rendererSpec.item
-      ? requireRendererSpecField(rendererSpec, "itemSlot")
-      : undefined
-    const itemValueProp = rendererSpec.item
-      ? requireRendererSpecField(rendererSpec, "itemValueProp")
-      : undefined
-    const itemHeadingProp = rendererSpec.item
-      ? requireRendererSpecField(rendererSpec, "itemHeadingProp")
-      : undefined
-    const valueProp = rendererSpec.fallback
-      ? requireRendererSpecField(rendererSpec, "valueProp")
-      : undefined
-    const items =
-      itemSlot && Item ? getStructuredItemsForNode(node, itemSlot) : undefined
-    const controlProps = applyPropMappings(
-      node.props,
-      rendererSpec.propMappings,
-    )
+    const controlProps = {
+      ...rendererSpec.staticProps,
+      ...applyPropMappings(node.props, rendererSpec.propMappings),
+    }
 
     return (
-      <>
-        <Root
-          data-agent-html-component={node.name}
-          className={rendererSpec.rootClassName}
-        >
-          {label ? (
-            <Label className={rendererSpec.labelClassName}>{label}</Label>
-          ) : null}
-          {Item && items && itemValueProp && itemHeadingProp ? (
-            <Control {...controlProps}>
-              {items.map((item) => {
-                const itemValue = getStructuredItemValue(item, itemValueProp)
-                const itemHeading = getStructuredItemHeading(
-                  item,
-                  itemHeadingProp,
-                )
-
-                return (
-                  <Root key={itemValue || itemHeading} orientation="horizontal">
-                    <Item aria-label={itemHeading} value={itemValue} />
-                    <FieldContent>
-                      <Label className={rendererSpec.labelClassName}>
-                        {itemHeading}
-                      </Label>
-                      {item.children.length > 0 ? (
-                        <Description
-                          className={rendererSpec.descriptionClassName}
-                        >
-                          {renderInlineChildren(item)}
-                        </Description>
-                      ) : null}
-                    </FieldContent>
-                  </Root>
-                )
-              })}
-            </Control>
-          ) : (
-            <Control {...controlProps} />
-          )}
-          {description && Description ? (
-            <Description className={rendererSpec.descriptionClassName}>
-              {description}
-            </Description>
-          ) : null}
+      <Root
+        {...getComponentMetadataProps(node, rendererSpec)}
+      >
+        <Root orientation="horizontal">
+          <Control {...controlProps} />
+          <FieldContent>
+            {label ? (
+              <Label className={rendererSpec.labelClassName}>{label}</Label>
+            ) : null}
+            {description && Description ? (
+              <Description className={rendererSpec.descriptionClassName}>
+                {description}
+              </Description>
+            ) : null}
+          </FieldContent>
         </Root>
-        {rendererSpec.fallback && !Item && valueProp
-          ? renderNoScriptFieldControlFallback({
-              description,
-              label,
-              value: node.props[valueProp],
-            })
-          : null}
-      </>
+      </Root>
     )
   }
 
-  function renderOptionSetComponent(
+  function renderRangeFieldComponent(
+    node: AgentComponentNode,
+    rendererSpec: RendererSpecComponent,
+  ) {
+    return renderTextFieldComponent(node, rendererSpec)
+  }
+
+  function renderChoiceGroupComponent(
+    node: AgentComponentNode,
+    rendererSpec: RendererSpecComponent,
+  ) {
+    const Root = resolveElement(rendererSpec.root)
+    const FieldContent = resolveElement("FieldContent")
+    const Label = resolveElement(rendererSpec.label)
+    const Control = resolveElement(rendererSpec.control)
+    const Item = resolveElement(rendererSpec.item)
+    const Description = resolveElement(rendererSpec.description)
+    const labelProp = requireRendererSpecField(rendererSpec, "labelProp")
+    const descriptionProp = rendererSpec.description
+      ? requireRendererSpecField(rendererSpec, "descriptionProp")
+      : undefined
+    const itemSlot = requireRendererSpecField(rendererSpec, "itemSlot")
+    const itemValueProp = requireRendererSpecField(rendererSpec, "itemValueProp")
+    const itemHeadingProp = requireRendererSpecField(
+      rendererSpec,
+      "itemHeadingProp",
+    )
+    const label = node.props[labelProp]
+    const description = descriptionProp
+      ? node.props[descriptionProp]
+      : undefined
+    const items = getStructuredItemsForNode(node, itemSlot)
+    const controlProps = getRendererProps(node.props, rendererSpec)
+
+    return (
+      <Root
+        {...getComponentMetadataProps(node, rendererSpec)}
+      >
+        {label ? (
+          <Label className={rendererSpec.labelClassName}>{label}</Label>
+        ) : null}
+        <Control {...controlProps}>
+          {items.map((item) => {
+            const itemValue = getStructuredItemValue(item, itemValueProp)
+            const itemHeading = getStructuredItemHeading(item, itemHeadingProp)
+
+            return (
+              <Root key={itemValue || itemHeading} orientation="horizontal">
+                <Item aria-label={itemHeading} value={itemValue} />
+                <FieldContent>
+                  <Label className={rendererSpec.labelClassName}>
+                    {itemHeading}
+                  </Label>
+                  {item.children.length > 0 ? (
+                    <Description className={rendererSpec.descriptionClassName}>
+                      {renderInlineChildren(item)}
+                    </Description>
+                  ) : null}
+                </FieldContent>
+              </Root>
+            )
+          })}
+        </Control>
+        {description && Description ? (
+          <Description className={rendererSpec.descriptionClassName}>
+            {description}
+          </Description>
+        ) : null}
+      </Root>
+    )
+  }
+
+  function renderChoiceInlineComponent(
+    node: AgentComponentNode,
+    rendererSpec: RendererSpecComponent,
+  ) {
+    const Root = resolveElement(rendererSpec.root)
+    const Label = resolveElement(rendererSpec.label)
+    const Control = resolveElement(rendererSpec.control)
+    const Item = resolveElement(rendererSpec.item)
+    const Description = resolveElement(rendererSpec.description)
+    const labelProp = requireRendererSpecField(rendererSpec, "labelProp")
+    const descriptionProp = rendererSpec.description
+      ? requireRendererSpecField(rendererSpec, "descriptionProp")
+      : undefined
+    const itemSlot = requireRendererSpecField(rendererSpec, "itemSlot")
+    const itemValueProp = requireRendererSpecField(
+      rendererSpec,
+      "itemValueProp",
+    )
+    const itemHeadingProp = requireRendererSpecField(
+      rendererSpec,
+      "itemHeadingProp",
+    )
+    const label = node.props[labelProp]
+    const description = descriptionProp
+      ? node.props[descriptionProp]
+      : undefined
+    const items = getStructuredItemsForNode(node, itemSlot)
+    const controlProps = getRendererProps(node.props, rendererSpec)
+
+    return (
+      <Root
+        {...getComponentMetadataProps(node, rendererSpec)}
+      >
+        {label ? (
+          <Label className={rendererSpec.labelClassName}>{label}</Label>
+        ) : null}
+        <Control {...controlProps}>
+          {items.map((item) =>
+            renderOptionSetItem({
+              Item,
+              item,
+              itemHeadingProp,
+              itemValueProp,
+            }),
+          )}
+        </Control>
+        {description && Description ? (
+          <Description className={rendererSpec.descriptionClassName}>
+            {description}
+          </Description>
+        ) : null}
+      </Root>
+    )
+  }
+
+  function renderChoiceOverlayComponent(
     node: AgentComponentNode,
     rendererSpec: RendererSpecComponent,
   ) {
@@ -268,8 +409,7 @@ export function createRendererNode(
     return (
       <>
         <Root
-          data-agent-html-component={node.name}
-          className={rendererSpec.rootClassName}
+          {...getComponentMetadataProps(node, rendererSpec)}
         >
           {label ? (
             <Label className={rendererSpec.labelClassName}>{label}</Label>
@@ -347,8 +487,7 @@ export function createRendererNode(
     )
     const Item = resolveElement(rendererSpec.item)
     const rootProps = {
-      "data-agent-html-component": node.name,
-      className: rendererSpec.rootClassName,
+      ...getComponentMetadataProps(node, rendererSpec),
       ...applyPropMappings(node.props, rendererSpec.propMappings),
     }
 
@@ -385,7 +524,7 @@ export function createRendererNode(
     )
 
     return (
-      <Root data-agent-html-component={node.name}>
+      <Root {...getComponentMetadataProps(node, rendererSpec)}>
         {headerRows.length > 0 ? (
           <Header>
             {headerRows.map((row, index) =>
@@ -451,7 +590,7 @@ export function createRendererNode(
     return (
       <>
         <Root
-          data-agent-html-component={node.name}
+          {...getComponentMetadataProps(node, rendererSpec)}
           type={mode}
           defaultValue={values}
         >
@@ -506,7 +645,10 @@ export function createRendererNode(
 
     return (
       <>
-        <Root data-agent-html-component={node.name} defaultValue={defaultValue}>
+        <Root
+          {...getComponentMetadataProps(node, rendererSpec)}
+          defaultValue={defaultValue}
+        >
           <List>
             {tabs.map((tab) => (
               <Trigger
@@ -748,16 +890,50 @@ export function createRendererNode(
     ) => React.ReactNode
   > = {
     primitive: renderPrimitiveComponent,
-    "field-control": renderFieldControlComponent,
+    "text-field": renderTextFieldComponent,
+    "toggle-field": renderToggleFieldComponent,
+    "range-field": renderRangeFieldComponent,
+    "choice-group": renderChoiceGroupComponent,
+    "choice-inline": renderChoiceInlineComponent,
+    "choice-overlay": renderChoiceOverlayComponent,
     compound: renderCompoundComponent,
     collection: renderCollectionComponent,
     table: renderTableComponent,
     "interactive-collection": renderAccordionComponent,
-    "option-set": renderOptionSetComponent,
     tabs: renderTabsComponent,
   }
 
   return RendererNode
+}
+
+const componentTreatmentClassNames: Record<string, string> = {
+  "ops-alert": "border border-border/80 bg-card/95 shadow-sm",
+  "ops-badge": "uppercase tracking-[0.18em] text-[0.65rem]",
+  "ops-card": "rounded-xl border-border/80 shadow-sm",
+  "ops-field": "gap-2 [&_input]:h-9 [&_textarea]:min-h-28",
+  "ops-table":
+    "[&_td]:py-2 [&_th]:py-2 [&_th]:text-[0.68rem] [&_th]:uppercase [&_th]:tracking-[0.2em]",
+  "ops-tabs": "gap-3 [&_button]:h-8 [&_button]:text-xs [&_button]:tracking-[0.1em]",
+  "report-alert": "border-l-4 border-l-primary/70 shadow-sm",
+  "report-badge": "uppercase tracking-[0.14em]",
+  "report-card": "rounded-2xl border-border/70 shadow-sm",
+  "report-field": "gap-3 [&_input]:bg-card/90 [&_textarea]:bg-card/90",
+  "report-table":
+    "[&_th]:text-xs [&_th]:uppercase [&_th]:tracking-[0.16em]",
+  "report-tabs":
+    "gap-4 [&_button]:rounded-full [&_button]:tracking-[0.02em]",
+  "review-alert": "border-l-4 border-l-foreground/30 bg-muted/35",
+  "review-badge": "font-semibold tracking-[0.1em]",
+  "review-card": "rounded-xl border-border/90",
+  "review-field":
+    "gap-2 [&_input]:border-border/90 [&_textarea]:border-border/90",
+  "review-table": "[&_td]:align-top [&_td]:py-2 [&_th]:text-[0.72rem]",
+  "review-tabs":
+    "gap-3 [&_button]:font-medium [&_button]:tracking-[0.05em]",
+}
+
+function mergeClassNames(...values: Array<string | undefined>) {
+  return values.filter(Boolean).join(" ") || undefined
 }
 
 function getStructuredItemValue(

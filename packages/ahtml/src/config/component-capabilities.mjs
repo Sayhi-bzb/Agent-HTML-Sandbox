@@ -288,7 +288,7 @@ export const componentCapabilityDefinitions = {
   },
   input: {
     source: "shadcn",
-    renderKind: "field-control",
+    renderKind: "text-field",
     uiProtocol: uiProtocolDefinitions.input,
     requiredRegistryModules: [
       ...fieldRegistryModules,
@@ -300,7 +300,7 @@ export const componentCapabilityDefinitions = {
     requiredRegistryItem: "input",
     requiredExports: ["Input"],
     renderer: {
-      kind: "field-control",
+      kind: "text-field",
       root: "Field",
       label: "FieldLabel",
       control: "Input",
@@ -315,7 +315,7 @@ export const componentCapabilityDefinitions = {
   },
   textarea: {
     source: "shadcn",
-    renderKind: "field-control",
+    renderKind: "text-field",
     uiProtocol: uiProtocolDefinitions.textarea,
     requiredRegistryModules: [
       ...fieldRegistryModules,
@@ -327,7 +327,7 @@ export const componentCapabilityDefinitions = {
     requiredRegistryItem: "textarea",
     requiredExports: ["Textarea"],
     renderer: {
-      kind: "field-control",
+      kind: "text-field",
       root: "Field",
       label: "FieldLabel",
       control: "Textarea",
@@ -342,7 +342,7 @@ export const componentCapabilityDefinitions = {
   },
   checkbox: {
     source: "shadcn",
-    renderKind: "field-control",
+    renderKind: "toggle-field",
     uiProtocol: uiProtocolDefinitions.checkbox,
     requiredRegistryModules: [
       ...fieldRegistryModules,
@@ -354,7 +354,7 @@ export const componentCapabilityDefinitions = {
     requiredRegistryItem: "checkbox",
     requiredExports: ["Checkbox"],
     renderer: {
-      kind: "field-control",
+      kind: "toggle-field",
       root: "Field",
       label: "FieldLabel",
       control: "Checkbox",
@@ -369,7 +369,7 @@ export const componentCapabilityDefinitions = {
   },
   switch: {
     source: "shadcn",
-    renderKind: "field-control",
+    renderKind: "toggle-field",
     uiProtocol: uiProtocolDefinitions.switch,
     requiredRegistryModules: [
       ...fieldRegistryModules,
@@ -381,7 +381,7 @@ export const componentCapabilityDefinitions = {
     requiredRegistryItem: "switch",
     requiredExports: ["Switch"],
     renderer: {
-      kind: "field-control",
+      kind: "toggle-field",
       root: "Field",
       label: "FieldLabel",
       control: "Switch",
@@ -396,7 +396,7 @@ export const componentCapabilityDefinitions = {
   },
   slider: {
     source: "shadcn",
-    renderKind: "field-control",
+    renderKind: "range-field",
     uiProtocol: uiProtocolDefinitions.slider,
     requiredRegistryModules: [
       ...fieldRegistryModules,
@@ -408,7 +408,7 @@ export const componentCapabilityDefinitions = {
     requiredRegistryItem: "slider",
     requiredExports: ["Slider"],
     renderer: {
-      kind: "field-control",
+      kind: "range-field",
       root: "Field",
       label: "FieldLabel",
       control: "Slider",
@@ -425,7 +425,7 @@ export const componentCapabilityDefinitions = {
   },
   "radio-group": {
     source: "shadcn",
-    renderKind: "field-control",
+    renderKind: "choice-group",
     uiProtocol: uiProtocolDefinitions["radio-group"],
     requiredRegistryModules: [
       ...fieldRegistryModules,
@@ -437,7 +437,7 @@ export const componentCapabilityDefinitions = {
     requiredRegistryItem: "radio-group",
     requiredExports: ["RadioGroup", "RadioGroupItem"],
     renderer: {
-      kind: "field-control",
+      kind: "choice-group",
       root: "Field",
       label: "FieldLabel",
       control: "RadioGroup",
@@ -456,7 +456,7 @@ export const componentCapabilityDefinitions = {
   },
   "toggle-group": {
     source: "shadcn",
-    renderKind: "option-set",
+    renderKind: "choice-inline",
     uiProtocol: uiProtocolDefinitions["toggle-group"],
     requiredRegistryModules: [
       ...fieldRegistryModules,
@@ -468,7 +468,7 @@ export const componentCapabilityDefinitions = {
     requiredRegistryItem: "toggle-group",
     requiredExports: ["ToggleGroup", "ToggleGroupItem"],
     renderer: {
-      kind: "option-set",
+      kind: "choice-inline",
       root: "Field",
       label: "FieldLabel",
       control: "ToggleGroup",
@@ -490,7 +490,7 @@ export const componentCapabilityDefinitions = {
   },
   select: {
     source: "shadcn",
-    renderKind: "option-set",
+    renderKind: "choice-overlay",
     uiProtocol: uiProtocolDefinitions.select,
     requiredRegistryModules: [
       ...fieldRegistryModules,
@@ -516,7 +516,7 @@ export const componentCapabilityDefinitions = {
       "SelectValue",
     ],
     renderer: {
-      kind: "option-set",
+      kind: "choice-overlay",
       root: "Field",
       label: "FieldLabel",
       control: "Select",
@@ -540,7 +540,7 @@ export const componentCapabilityDefinitions = {
   },
   combobox: {
     source: "shadcn",
-    renderKind: "option-set",
+    renderKind: "choice-overlay",
     uiProtocol: uiProtocolDefinitions.combobox,
     requiredRegistryModules: [
       ...fieldRegistryModules,
@@ -568,7 +568,7 @@ export const componentCapabilityDefinitions = {
       "ComboboxList",
     ],
     renderer: {
-      kind: "option-set",
+      kind: "choice-overlay",
       root: "Field",
       label: "FieldLabel",
       controlRoot: "Combobox",

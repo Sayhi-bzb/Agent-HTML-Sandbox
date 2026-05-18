@@ -16,6 +16,100 @@ export type AgentNode = AgentTextNode | AgentComponentNode
 
 export type AgentDocument = {
   meta: {
+    documentStyleConfigReference: string
+    styleProfile: {
+      id: string
+      globalStyle: {
+        tokenSets: {
+          light: {
+            background: string
+            foreground: string
+            card: string
+            cardForeground: string
+            popover: string
+            popoverForeground: string
+            primary: string
+            primaryForeground: string
+            secondary: string
+            secondaryForeground: string
+            muted: string
+            mutedForeground: string
+            accent: string
+            accentForeground: string
+            destructive: string
+            border: string
+            input: string
+            ring: string
+          }
+          dark: {
+            background: string
+            foreground: string
+            card: string
+            cardForeground: string
+            popover: string
+            popoverForeground: string
+            primary: string
+            primaryForeground: string
+            secondary: string
+            secondaryForeground: string
+            muted: string
+            mutedForeground: string
+            accent: string
+            accentForeground: string
+            destructive: string
+            border: string
+            input: string
+            ring: string
+          }
+        }
+        radiusScale: {
+          base: string
+          sm: string
+          md: string
+          lg: string
+          xl: string
+          "2xl": string
+          "3xl": string
+          "4xl": string
+        }
+        typography: {
+          fontSans: string
+          fontHeading: string
+        }
+        cssVariableMap: {
+          background: string
+          foreground: string
+          card: string
+          cardForeground: string
+          popover: string
+          popoverForeground: string
+          primary: string
+          primaryForeground: string
+          secondary: string
+          secondaryForeground: string
+          muted: string
+          mutedForeground: string
+          accent: string
+          accentForeground: string
+          destructive: string
+          border: string
+          input: string
+          ring: string
+          radius: string
+          fontSans: string
+          fontHeading: string
+        }
+        legacyProjection: {
+          theme: string
+          density: string
+          tone: string
+          width: string
+        }
+      }
+      componentStyle: {
+        treatments: Record<string, string>
+      }
+    }
     theme: string
     density: string
     tone: string

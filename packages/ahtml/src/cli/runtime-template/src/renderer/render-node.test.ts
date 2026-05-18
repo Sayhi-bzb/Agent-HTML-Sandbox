@@ -135,6 +135,42 @@ describe("createRendererNode", () => {
     expect(markup).toContain("<li>Second</li>")
   })
 
+  it("applies builtin component treatment metadata and classes internally", () => {
+    const rendererSpecByName = new Map([
+      [
+        "card",
+        {
+          name: "card",
+          kind: "compound",
+          renderKind: "compound",
+          slots: [{ name: "children", children: [] }],
+          root: "section",
+          title: "h2",
+          titleProp: "title",
+          content: "div",
+          childMode: "block",
+        },
+      ],
+    ])
+
+    const RendererNode = createRendererNode(rendererSpecByName, {
+      card: "ops-card",
+    })
+    const markup = renderToStaticMarkup(
+      React.createElement(RendererNode, {
+        node: {
+          type: "component",
+          name: "card",
+          props: { title: "Overview" },
+          children: [{ type: "text", value: "Scoped internals." }],
+        },
+      }),
+    )
+
+    expect(markup).toContain('data-ahtml-treatment="ops-card"')
+    expect(markup).toContain('class="rounded-xl border-border/80 shadow-sm"')
+  })
+
   it("uses renderer spec prop names for tabs content and labels", () => {
     const rendererSpecByName = new Map([
       [
@@ -221,14 +257,14 @@ describe("createRendererNode", () => {
     expect(markup).toContain('value="0"')
   })
 
-  it("renders field-control components with visible labels and default values", () => {
+  it("renders text-field components with visible labels and default values", () => {
     const rendererSpecByName = new Map([
       [
         "textarea",
         {
           name: "textarea",
-          kind: "field-control",
-          renderKind: "field-control",
+          kind: "text-field",
+          renderKind: "text-field",
           slots: [{ name: "children", children: [] }],
           root: "Field",
           label: "FieldLabel",
@@ -269,14 +305,14 @@ describe("createRendererNode", () => {
     expect(markup).toContain("<p>Long-form field.</p>")
   })
 
-  it("renders checkbox field-control components with boolean prop coercion", () => {
+  it("renders checkbox toggle-field components with boolean prop coercion", () => {
     const rendererSpecByName = new Map([
       [
         "checkbox",
         {
           name: "checkbox",
-          kind: "field-control",
-          renderKind: "field-control",
+          kind: "toggle-field",
+          renderKind: "toggle-field",
           slots: [{ name: "children", children: [] }],
           root: "Field",
           label: "FieldLabel",
@@ -313,16 +349,17 @@ describe("createRendererNode", () => {
     expect(markup).toContain('aria-label="Ship now"')
     expect(markup).toContain("checked")
     expect(markup).toContain("<p>Boolean field.</p>")
+    expect(markup).toContain('orientation="horizontal"><input')
   })
 
-  it("renders switch field-control components with boolean prop coercion", () => {
+  it("renders switch toggle-field components with boolean prop coercion", () => {
     const rendererSpecByName = new Map([
       [
         "switch",
         {
           name: "switch",
-          kind: "field-control",
-          renderKind: "field-control",
+          kind: "toggle-field",
+          renderKind: "toggle-field",
           slots: [{ name: "children", children: [] }],
           root: "Field",
           label: "FieldLabel",
@@ -359,16 +396,17 @@ describe("createRendererNode", () => {
     expect(markup).toContain('aria-label="Live Sync"')
     expect(markup).toContain("checked")
     expect(markup).toContain("<p>Immediate preference toggle.</p>")
+    expect(markup).toContain('orientation="horizontal"><input')
   })
 
-  it("renders slider field-control components with numeric coercion and fallback", () => {
+  it("renders slider range-field components with numeric coercion and fallback", () => {
     const rendererSpecByName = new Map([
       [
         "slider",
         {
           name: "slider",
-          kind: "field-control",
-          renderKind: "field-control",
+          kind: "range-field",
+          renderKind: "range-field",
           slots: [{ name: "children", children: [] }],
           root: "Field",
           label: "FieldLabel",
@@ -410,14 +448,14 @@ describe("createRendererNode", () => {
     expect(markup).toContain(">70</p>")
   })
 
-  it("renders radio-group field-control components with option children", () => {
+  it("renders radio-group choice-group components with option children", () => {
     const rendererSpecByName = new Map([
       [
         "radio-group",
         {
           name: "radio-group",
-          kind: "field-control",
-          renderKind: "field-control",
+          kind: "choice-group",
+          renderKind: "choice-group",
           slots: [
             {
               name: "option",
@@ -481,14 +519,14 @@ describe("createRendererNode", () => {
     expect(markup).toContain("<p>Single-select field.</p>")
   })
 
-  it("renders toggle-group option-set components with static props and option children", () => {
+  it("renders toggle-group choice-inline components with static props and option children", () => {
     const rendererSpecByName = new Map([
       [
         "toggle-group",
         {
           name: "toggle-group",
-          kind: "option-set",
-          renderKind: "option-set",
+          kind: "choice-inline",
+          renderKind: "choice-inline",
           slots: [
             {
               name: "option",
@@ -548,22 +586,25 @@ describe("createRendererNode", () => {
 
     expect(markup).toContain("<label>Rollout Mode</label>")
     expect(markup).toContain("<ToggleGroup")
-    expect(markup).toContain('type="single"')
     expect(markup).toContain('aria-label="Rollout Mode"')
+    expect(markup).toContain('type="single"')
     expect(markup).toContain("<ToggleGroupItem")
     expect(markup).toContain('value="fast"')
+    expect(markup).toContain(">Fast")
     expect(markup).toContain("Prefer speed.")
     expect(markup).toContain("<p>Inline option set.</p>")
+    expect(markup).not.toContain("Trigger")
+    expect(markup).not.toContain("Content")
   })
 
-  it("renders select option-set components with trigger/content structure and fallback", () => {
+  it("renders select choice-overlay components with trigger/content structure and fallback", () => {
     const rendererSpecByName = new Map([
       [
         "select",
         {
           name: "select",
-          kind: "option-set",
-          renderKind: "option-set",
+          kind: "choice-overlay",
+          renderKind: "choice-overlay",
           slots: [
             {
               name: "option",
@@ -639,14 +680,14 @@ describe("createRendererNode", () => {
     expect(markup).toContain("Today (selected)")
   })
 
-  it("renders combobox option-set components with collection and empty-state composition", () => {
+  it("renders combobox choice-overlay components with collection and empty-state composition", () => {
     const rendererSpecByName = new Map([
       [
         "combobox",
         {
           name: "combobox",
-          kind: "option-set",
-          renderKind: "option-set",
+          kind: "choice-overlay",
+          renderKind: "choice-overlay",
           slots: [
             {
               name: "option",

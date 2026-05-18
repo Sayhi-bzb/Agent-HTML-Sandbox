@@ -55,8 +55,100 @@ export type DocumentStyleConfigReference =
   | "ops-compact"
   | "review-dense"
 
+export type SemanticColorTokenSet = {
+  readonly background: string
+  readonly foreground: string
+  readonly card: string
+  readonly cardForeground: string
+  readonly popover: string
+  readonly popoverForeground: string
+  readonly primary: string
+  readonly primaryForeground: string
+  readonly secondary: string
+  readonly secondaryForeground: string
+  readonly muted: string
+  readonly mutedForeground: string
+  readonly accent: string
+  readonly accentForeground: string
+  readonly destructive: string
+  readonly border: string
+  readonly input: string
+  readonly ring: string
+}
+
+export type GlobalStyleTokenSets = {
+  readonly light: SemanticColorTokenSet
+  readonly dark: SemanticColorTokenSet
+}
+
+export type RadiusScale = {
+  readonly base: string
+  readonly sm: string
+  readonly md: string
+  readonly lg: string
+  readonly xl: string
+  readonly "2xl": string
+  readonly "3xl": string
+  readonly "4xl": string
+}
+
+export type TypographyProfile = {
+  readonly fontSans: string
+  readonly fontHeading: string
+}
+
+export type CssVariableMap = {
+  readonly background: "--background"
+  readonly foreground: "--foreground"
+  readonly card: "--card"
+  readonly cardForeground: "--card-foreground"
+  readonly popover: "--popover"
+  readonly popoverForeground: "--popover-foreground"
+  readonly primary: "--primary"
+  readonly primaryForeground: "--primary-foreground"
+  readonly secondary: "--secondary"
+  readonly secondaryForeground: "--secondary-foreground"
+  readonly muted: "--muted"
+  readonly mutedForeground: "--muted-foreground"
+  readonly accent: "--accent"
+  readonly accentForeground: "--accent-foreground"
+  readonly destructive: "--destructive"
+  readonly border: "--border"
+  readonly input: "--input"
+  readonly ring: "--ring"
+  readonly radius: "--radius"
+  readonly fontSans: "--font-sans"
+  readonly fontHeading: "--font-heading"
+}
+
+export type LegacyGlobalStyleProjection = {
+  readonly theme: RenderTheme
+  readonly density: RenderDensity
+  readonly tone: RenderTone
+  readonly width: RenderWidth
+}
+
+export type GlobalStyleProfile = {
+  readonly tokenSets: GlobalStyleTokenSets
+  readonly radiusScale: RadiusScale
+  readonly typography: TypographyProfile
+  readonly cssVariableMap: CssVariableMap
+  readonly legacyProjection: LegacyGlobalStyleProjection
+}
+
+export type ComponentStyleProfile = {
+  readonly treatments: Readonly<Record<string, string>>
+}
+
+export type StyleProfile = {
+  readonly id: DocumentStyleConfigReference
+  readonly globalStyle: GlobalStyleProfile
+  readonly componentStyle: ComponentStyleProfile
+}
+
 export type RenderConfig = {
   readonly documentStyleConfigReference: DocumentStyleConfigReference
+  readonly styleProfile: StyleProfile
   readonly theme: RenderTheme
   readonly density: RenderDensity
   readonly tone: RenderTone

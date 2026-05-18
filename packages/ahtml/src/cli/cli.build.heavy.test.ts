@@ -91,6 +91,10 @@ describe("agent-html CLI heavy build flows", () => {
     await expectFile(path.join(outputDir, "index.html"), 'data-slot="switch"')
     await expectFile(path.join(outputDir, "index.html"), 'data-slot="alert"')
     await expectFile(path.join(outputDir, "index.html"), 'data-slot="badge"')
+    await expectFile(
+      path.join(outputDir, "index.html"),
+      'data-ahtml-treatment="ops-card"',
+    )
     await expectFileMissingText(
       path.join(outputDir, "index.html"),
       'class="ahtml-section" data-agent-html-component="tab"',
@@ -108,6 +112,18 @@ describe("agent-html CLI heavy build flows", () => {
     await expectFile(
       path.join(outputDir, "index.html"),
       "Ops reviewer (selected)",
+    )
+    await expectFile(
+      path.join(outputDir, "index.html"),
+      'data-style-profile="ops-compact"',
+    )
+    await expectFile(
+      path.join(outputDir, "index.html"),
+      "max-w-6xl gap-4 py-8 items-stretch",
+    )
+    await expectFile(
+      path.join(outputDir, "index.html"),
+      ":root{--background:#f7f7f4;--foreground:#26251e;",
     )
     await expectFile(
       path.join(outputDir, "assets", "ahtml.css"),
@@ -212,6 +228,10 @@ describe("agent-html CLI heavy build flows", () => {
       "Built from semantic syntax.",
     )
     await expectFile(path.join(outputDir, "index.html"), ">Ready</span>")
+    await expectFile(
+      path.join(outputDir, "index.html"),
+      "@media (prefers-color-scheme: dark){:root{--background:oklch(0.145 0 0);",
+    )
     await removeTempDir(tempDir)
   }, 120000)
 

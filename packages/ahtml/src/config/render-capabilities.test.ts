@@ -32,7 +32,7 @@ describe("createRuntimeElementRegistrySpec", () => {
         },
         {
           name: "switch",
-          kind: "field-control",
+          kind: "toggle-field",
           requiredRegistryModules: [
             {
               registryItem: "field",
@@ -57,7 +57,7 @@ describe("createRuntimeElementRegistrySpec", () => {
         },
         {
           name: "slider",
-          kind: "field-control",
+          kind: "range-field",
           requiredRegistryModules: [
             {
               registryItem: "field",
@@ -103,7 +103,7 @@ describe("createRuntimeElementRegistrySpec", () => {
         },
         {
           name: "select",
-          kind: "option-set",
+          kind: "choice-overlay",
           requiredRegistryModules: [
             {
               registryItem: "field",
@@ -147,7 +147,7 @@ describe("createRuntimeElementRegistrySpec", () => {
         },
         {
           name: "combobox",
-          kind: "option-set",
+          kind: "choice-overlay",
           requiredRegistryModules: [
             {
               registryItem: "field",
@@ -343,8 +343,8 @@ describe("createRuntimeElementRegistrySpec", () => {
   })
 
   it("keeps runtime renderer kind template in sync with shared kind definitions", () => {
-    expect(createRuntimeRendererKindSpec().kinds).toEqual([
-      ...runtimeRendererKinds,
-    ])
+    expect(createRuntimeRendererKindSpec().kinds).toEqual(
+      [...runtimeRendererKinds].sort(),
+    )
   })
 })

@@ -46,6 +46,8 @@ export const createPublicRenderConfigContract =
 export const createPublicSafetyPolicy = core.createPublicSafetyPolicy
 export const DEFAULT_RENDER_CONFIG = core.DEFAULT_RENDER_CONFIG
 export const formatForbiddenPolicy = core.formatForbiddenPolicy
+export const getLegacyResolvedDocumentStyleTokens =
+  core.getLegacyResolvedDocumentStyleTokens
 export const parseRenderConfig = core.parseRenderConfig
 export const PUBLIC_DOCUMENT_STYLE_CONFIG_REFERENCE_VALUES =
   core.PUBLIC_DOCUMENT_STYLE_CONFIG_REFERENCE_VALUES

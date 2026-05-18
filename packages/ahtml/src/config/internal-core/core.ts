@@ -17,6 +17,7 @@ export {
 } from "./public-agent-contract"
 export {
   DEFAULT_RENDER_CONFIG,
+  getLegacyResolvedDocumentStyleTokens,
   parseRenderConfig,
   PUBLIC_DOCUMENT_STYLE_CONFIG_REFERENCE_VALUES,
   PUBLIC_RENDER_CONFIG_KEY,

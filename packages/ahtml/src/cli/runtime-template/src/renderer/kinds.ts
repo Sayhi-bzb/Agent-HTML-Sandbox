@@ -1,12 +1,16 @@
 export const runtimeRendererKinds = [
+  "choice-group",
+  "choice-inline",
+  "choice-overlay",
   "collection",
   "compound",
-  "field-control",
   "interactive-collection",
-  "option-set",
   "primitive",
+  "range-field",
   "table",
   "tabs",
+  "text-field",
+  "toggle-field",
 ] as const
 
 export type RendererKind = (typeof runtimeRendererKinds)[number]

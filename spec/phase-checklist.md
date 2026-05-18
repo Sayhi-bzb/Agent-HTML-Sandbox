@@ -7,6 +7,7 @@ and reopen guide instead of a phase-by-phase execution log.
 
 - `spec/map.md` is the compact current-state snapshot.
 - `spec/roadmap.md` is future-facing only.
+- `spec/style-system-execution.md` owns the active style-system phase plan.
 - `spec/components-adoption.md` is the stable support matrix for the completed
   grouped-adoption lane.
 - If product semantics reopen, start a new checklist rather than restoring the
@@ -21,7 +22,8 @@ and reopen guide instead of a phase-by-phase execution log.
   runtime verification and renderer parity derive from the shared runtime
   contract.
 - Current architecture and refactor guidance live in `spec/map.md`; this file
-  only records verification rhythm and reopen guardrails.
+  only records verification rhythm and reopen guardrails; it does not resume
+  owning phase-by-phase execution plans.
 - CLI schema 继续暴露受控文档级视觉配置入口；不得恢复兼容 alias surface。
 - 组件级 visual mapping 说明仅作为内部设计与 renderer guardrail，不升级为
   schema、prompt 或 `.agent.html` 的 public config key。

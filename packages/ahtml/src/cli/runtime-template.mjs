@@ -88,47 +88,71 @@ export async function writeRuntimeTemplate({
 
 export function resolveRuntimeDependencies(packageRoot) {
   const packageRequire = createRequire(path.join(packageRoot, "package.json"))
+  const viteRoot = resolvePackageRoot("vite", packageRequire)
+  const reactRoot = resolvePackageRoot("react", packageRequire)
+  const reactDomRoot = resolvePackageRoot("react-dom", packageRequire)
+  const baseUiReactRoot = resolvePackageRoot("@base-ui/react", packageRequire)
+  const shadcnRoot = resolvePackageRoot("shadcn", packageRequire)
+  const tailwindcssRoot = resolvePackageRoot("tailwindcss", packageRequire)
 
   return {
-    viteBin: path.join(
-      path.dirname(packageRequire.resolve("vite/package.json")),
-      "bin",
-      "vite.js",
-    ),
+    viteBin: path.join(viteRoot, "bin", "vite.js"),
     viteModule: packageRequire.resolve("vite"),
     viteReactPlugin: packageRequire.resolve("@vitejs/plugin-react"),
-    reactRoot: path.dirname(packageRequire.resolve("react/package.json")),
+    reactRoot,
     reactJsxRuntime: packageRequire.resolve("react/jsx-runtime"),
-    reactDomRoot: path.dirname(
-      packageRequire.resolve("react-dom/package.json"),
-    ),
+    reactDomRoot,
     reactDomClient: packageRequire.resolve("react-dom/client"),
     reactDomServer: packageRequire.resolve("react-dom/server"),
-    baseUiReactRoot: path.dirname(
-      packageRequire.resolve("@base-ui/react/package.json"),
-    ),
+    baseUiReactRoot,
     classVarianceAuthorityRoot: packageRequire.resolve(
       "class-variance-authority",
     ),
     clsxRoot: packageRequire.resolve("clsx"),
     lucideReactRoot: packageRequire.resolve("lucide-react"),
     radixUiRoot: packageRequire.resolve("radix-ui"),
-    shadcnTailwindStylesheet: path.join(
-      path.dirname(path.dirname(packageRequire.resolve("shadcn"))),
-      "dist",
-      "tailwind.css",
-    ),
+    shadcnTailwindStylesheet: path.join(shadcnRoot, "dist", "tailwind.css"),
     tailwindMergeRoot: packageRequire.resolve("tailwind-merge"),
-    tailwindcssStylesheet: path.join(
-      path.dirname(packageRequire.resolve("tailwindcss/package.json")),
-      "index.css",
-    ),
+    tailwindcssStylesheet: path.join(tailwindcssRoot, "index.css"),
     tailwindcssVitePlugin: packageRequire.resolve("@tailwindcss/vite"),
     twAnimateCssStylesheet: resolvePackageSearchPathAsset({
       assetPath: path.join("dist", "tw-animate.css"),
       packageName: "tw-animate-css",
       packageRequire,
     }),
+  }
+}
+
+function resolvePackageRoot(packageName, packageRequire) {
+  try {
+    return path.dirname(packageRequire.resolve(`${packageName}/package.json`))
+  } catch {
+    return findPackageRootFromResolvedPath(
+      packageRequire.resolve(packageName),
+      packageName,
+    )
+  }
+}
+
+function findPackageRootFromResolvedPath(resolvedPath, packageName) {
+  let current = path.dirname(resolvedPath)
+
+  while (true) {
+    const packageJsonPath = path.join(current, "package.json")
+
+    if (existsSync(packageJsonPath)) {
+      return current
+    }
+
+    const parent = path.dirname(current)
+
+    if (parent === current) {
+      throw new Error(
+        `Unable to locate package root for ${packageName} from ${resolvedPath}.`,
+      )
+    }
+
+    current = parent
   }
 }
 
@@ -200,7 +224,10 @@ async function initShadcnRuntime({
   }
 
   await rm(paths.runtimeDir, { force: true, recursive: true })
-  await rename(generatedRuntimeDir, paths.runtimeDir)
+  await moveGeneratedRuntimeDir({
+    from: generatedRuntimeDir,
+    to: paths.runtimeDir,
+  })
   await normalizeRuntimeTemplateViteConfig(paths)
 }
 
@@ -460,6 +487,40 @@ async function installShadcnComponents({
 function normalizeCssImportPath({ from, to }) {
   const relative = path.relative(path.dirname(from), to).replaceAll("\\", "/")
   return relative.startsWith(".") ? relative : `./${relative}`
+}
+
+async function moveGeneratedRuntimeDir({
+  from,
+  to,
+  attempts = 6,
+  retryDelayMs = 200,
+}) {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await rename(from, to)
+      return
+    } catch (error) {
+      if (!isRetryableRuntimeRenameError(error) || attempt === attempts) {
+        throw error
+      }
+
+      await wait(retryDelayMs * attempt)
+    }
+  }
+}
+
+function isRetryableRuntimeRenameError(error) {
+  return (
+    Boolean(error) &&
+    typeof error === "object" &&
+    ["EACCES", "EBUSY", "EPERM"].includes(String(error.code))
+  )
+}
+
+function wait(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
 }
 
 async function runShadcnCli(
