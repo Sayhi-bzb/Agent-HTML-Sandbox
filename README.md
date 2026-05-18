@@ -64,11 +64,11 @@ ahtml prompt
 ```bash
 ahtml build artifact.agent.html
 ahtml preview artifact.agent.html
-ahtml gallery --style-ref report-default
+ahtml gallery
 ```
 
 Open the preview URL printed by `ahtml preview` to review the output.
-Use `ahtml gallery` when you want a fixed showcase page for a specific `style-ref` before writing a document.
+Use `ahtml gallery` when you want to open the style editor and showcase canvas, manage local style ids, and pick the current default style for later preview/build.
 
 ## How It Works
 

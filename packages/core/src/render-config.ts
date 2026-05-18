@@ -310,6 +310,7 @@ export type ParseRenderConfigOptions = {
   readonly resolveStyleProfileReference?: (
     documentStyleConfigReference: DocumentStyleConfigReference,
   ) => StyleProfile | undefined
+  readonly resolveDefaultStyleProfileReference?: () => StyleProfile | undefined
 }
 
 export function parseRenderConfig(
@@ -319,7 +320,13 @@ export function parseRenderConfig(
   const styleRefInput = StyleRefRenderConfigInputSchema.safeParse(input)
 
   if (!styleRefInput.success) {
-    throw new Error("Invalid document-style-config render config.")
+    const defaultStyleProfile = options.resolveDefaultStyleProfileReference?.()
+
+    if (defaultStyleProfile) {
+      return createRenderConfigFromStyleProfile(defaultStyleProfile)
+    }
+
+    return DEFAULT_RENDER_CONFIG
   }
 
   const documentStyleConfigReference =

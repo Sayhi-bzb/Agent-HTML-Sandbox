@@ -45,6 +45,15 @@ function validateRenderConfig(
   options: ParseRenderConfigOptions,
 ): RenderConfig {
   if (!attrs) {
+    const defaultStyleProfile = options.resolveDefaultStyleProfileReference?.()
+
+    if (defaultStyleProfile) {
+      return {
+        documentStyleConfigReference: defaultStyleProfile.id,
+        styleProfile: defaultStyleProfile,
+      }
+    }
+
     return DEFAULT_RENDER_CONFIG
   }
 

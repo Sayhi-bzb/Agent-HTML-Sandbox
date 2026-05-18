@@ -46,10 +46,12 @@ import {
   writeJsonResponse,
 } from "./preview-server.mjs"
 import {
-  getStyleProfileSource,
+  deleteStyleProfile,
   listStyleProfileReferences,
+  readCurrentStyleProfileReference,
   resolveStyleProfileByReference,
   saveUserStyleProfile,
+  writeCurrentStyleProfileReference,
 } from "./style-profile-storage.mjs"
 
 const packageRoot = path.resolve(
@@ -347,13 +349,10 @@ async function galleryCommand(commandArgs, definition) {
     fail(`Unexpected argument "${positionals[0]}".`)
   }
 
-  if (!options["style-ref"]) {
-    fail("gallery requires --style-ref <id>.")
-  }
-
   const port = parsePort(options.port ?? cliDefaults.previewPort, "gallery")
-
-  const result = await buildGalleryArtifact(options["style-ref"], options.out)
+  const result = await buildGalleryArtifact(undefined, {
+    styleReference: await readCurrentStyleProfileReference(runtimePaths),
+  })
 
   if (!result?.ok) {
     process.exitCode = 1
@@ -361,9 +360,7 @@ async function galleryCommand(commandArgs, definition) {
   }
 
   await serveDirectory(result.outputDir, port, {
-    requestHandler: createGalleryRequestHandler({
-      styleReference: options["style-ref"],
-    }),
+    requestHandler: createGalleryRequestHandler(),
   })
 }
 
@@ -433,9 +430,8 @@ async function doctorCommand(commandArgs, definition) {
   }
 }
 
-function createGalleryRequestHandler({ styleReference }) {
-  let currentStyleReference = styleReference
-  let currentStyleProfilePromise = loadGalleryStyleProfile(styleReference)
+function createGalleryRequestHandler() {
+  let currentStyleProfilePromise = loadGalleryState()
 
   return async ({ request, response }) => {
     const requestUrl = new URL(request.url ?? "/", "http://localhost")
@@ -444,15 +440,92 @@ function createGalleryRequestHandler({ styleReference }) {
       request.method === "GET" &&
       requestUrl.pathname === "/__ahtml/gallery/state"
     ) {
-      const styleProfile = await currentStyleProfilePromise
-
       writeJsonResponse(response, 200, {
         ok: true,
-        availableStyleReferences: await listStyleProfileReferences(runtimePaths),
-        profileSource: styleProfile.source,
-        styleReference: currentStyleReference,
-        styleProfile: styleProfile.profile,
+        ...(await currentStyleProfilePromise),
       })
+      return true
+    }
+
+    if (
+      request.method === "POST" &&
+      requestUrl.pathname === "/__ahtml/gallery/select"
+    ) {
+      try {
+        const body = await readJsonBody(request)
+        const styleReference = String(body.styleReference ?? "").trim()
+
+        if (!styleReference) {
+          throw new Error("styleReference is required.")
+        }
+
+        const profile = await resolveStyleProfileByReference(
+          runtimePaths,
+          styleReference,
+        )
+
+        if (!profile) {
+          throw new Error(`Unknown style profile "${styleReference}".`)
+        }
+
+        await writeCurrentStyleProfileReference(runtimePaths, styleReference)
+        currentStyleProfilePromise = loadGalleryState()
+
+        writeJsonResponse(response, 200, {
+          ok: true,
+          ...(await currentStyleProfilePromise),
+        })
+      } catch (error) {
+        writeJsonResponse(response, 400, {
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        })
+      }
+
+      return true
+    }
+
+    if (
+      request.method === "POST" &&
+      requestUrl.pathname === "/__ahtml/gallery/create"
+    ) {
+      try {
+        const body = await readJsonBody(request)
+        const styleReference = String(body.styleReference ?? "").trim()
+
+        if (!styleReference) {
+          throw new Error("styleReference is required.")
+        }
+
+        const existingProfile = await resolveStyleProfileByReference(
+          runtimePaths,
+          styleReference,
+        )
+
+        if (existingProfile) {
+          throw new Error(`Style profile "${styleReference}" already exists.`)
+        }
+
+        const currentState = await currentStyleProfilePromise
+        const profile = {
+          ...currentState.styleProfile,
+          id: styleReference,
+        }
+        await saveUserStyleProfile(runtimePaths, profile)
+        await writeCurrentStyleProfileReference(runtimePaths, styleReference)
+        currentStyleProfilePromise = loadGalleryState()
+
+        writeJsonResponse(response, 200, {
+          ok: true,
+          ...(await currentStyleProfilePromise),
+        })
+      } catch (error) {
+        writeJsonResponse(response, 400, {
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        })
+      }
+
       return true
     }
 
@@ -463,46 +536,44 @@ function createGalleryRequestHandler({ styleReference }) {
       try {
         const body = await readJsonBody(request)
         const profileInput = StyleProfileSchema.parse(body.styleProfile)
-        const saveMode = body.mode === "save-as" ? "save-as" : "save"
-        const targetId =
-          saveMode === "save-as"
-            ? String(body.targetId ?? "").trim()
-            : profileInput.id
-        const profile = { ...profileInput, id: targetId }
-        const source = body.profileSource === "builtin" ? "builtin" : "user"
-
-        if (!targetId) {
-          writeJsonResponse(response, 400, {
-            ok: false,
-            error: "save target id is required.",
-          })
-          return true
-        }
-
-        if (saveMode === "save" && source === "builtin") {
-          writeJsonResponse(response, 400, {
-            ok: false,
-            error:
-              "Built-in style profiles cannot be overwritten. Use Save As.",
-          })
-          return true
-        }
-
-        const saved = await saveUserStyleProfile(runtimePaths, profile, {
-          overwrite: saveMode === "save",
+        const saved = await saveUserStyleProfile(runtimePaths, profileInput, {
+          overwrite: true,
         })
-        currentStyleReference = saved.id
-        currentStyleProfilePromise = Promise.resolve({
-          profile: saved.profile,
-          source: saved.source,
-        })
+        await writeCurrentStyleProfileReference(runtimePaths, saved.id)
+        currentStyleProfilePromise = loadGalleryState()
 
         writeJsonResponse(response, 200, {
           ok: true,
-          profileSource: saved.source,
-          styleReference: saved.id,
-          styleProfile: saved.profile,
-          overwritten: saved.overwritten,
+          ...(await currentStyleProfilePromise),
+        })
+      } catch (error) {
+        writeJsonResponse(response, 400, {
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        })
+      }
+
+      return true
+    }
+
+    if (
+      request.method === "POST" &&
+      requestUrl.pathname === "/__ahtml/gallery/delete"
+    ) {
+      try {
+        const body = await readJsonBody(request)
+        const styleReference = String(body.styleReference ?? "").trim()
+
+        if (!styleReference) {
+          throw new Error("styleReference is required.")
+        }
+
+        await deleteStyleProfile(runtimePaths, styleReference)
+        currentStyleProfilePromise = loadGalleryState()
+
+        writeJsonResponse(response, 200, {
+          ok: true,
+          ...(await currentStyleProfilePromise),
         })
       } catch (error) {
         writeJsonResponse(response, 400, {
@@ -518,7 +589,8 @@ function createGalleryRequestHandler({ styleReference }) {
   }
 }
 
-async function loadGalleryStyleProfile(styleReference) {
+async function loadGalleryState() {
+  const styleReference = await readCurrentStyleProfileReference(runtimePaths)
   const profile = await resolveStyleProfileByReference(runtimePaths, styleReference)
 
   if (!profile) {
@@ -526,8 +598,9 @@ async function loadGalleryStyleProfile(styleReference) {
   }
 
   return {
-    profile,
-    source: getStyleProfileSource(styleReference),
+    availableStyleReferences: await listStyleProfileReferences(runtimePaths),
+    styleReference,
+    styleProfile: profile,
   }
 }
 

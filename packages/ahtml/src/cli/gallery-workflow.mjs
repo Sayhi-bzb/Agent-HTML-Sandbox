@@ -9,8 +9,8 @@ import {
 import { getRuntimeRenderDiagnostics } from "./runtime-renderability.mjs"
 import { getCliSchemaOutput } from "./schema.mjs"
 import {
-  getStyleProfileSource,
   listStyleProfileReferences,
+  readCurrentStyleProfileReference,
   resolveStyleProfileByReference,
 } from "./style-profile-storage.mjs"
 import { printDiagnostics, writeJsonFile } from "./cli-io.mjs"
@@ -42,8 +42,11 @@ export function createGalleryWorkflow({
   readPackageVersion,
   ensureManagedRuntime,
 }) {
-  async function buildGalleryArtifact(styleReference, outputPath, options = {}) {
+  async function buildGalleryArtifact(outputPath, options = {}) {
     const outputDir = path.resolve(userRoot, outputPath ?? defaultOutputDir)
+    const styleReference =
+      options.styleReference ??
+      (await readCurrentStyleProfileReference(runtimePaths))
     const styleProfile = await resolveStyleProfileByReference(
       runtimePaths,
       styleReference,
@@ -65,7 +68,6 @@ export function createGalleryWorkflow({
       styleProfile,
       styleReference,
       availableStyleReferences: await listStyleProfileReferences(runtimePaths),
-      profileSource: getStyleProfileSource(styleReference),
     })
     const runtimeDiagnostics = await getRuntimeRenderDiagnostics({
       document,
@@ -120,229 +122,87 @@ export function createStyleGalleryDocument(styleProfile) {
   return {
     meta: renderConfig,
     components: [
-      component("page", { title: `${styleProfile.id} style gallery` }, [
-        component(
-          "alert",
-          {
-            title: "Gallery Preview",
-            tone: "success",
-          },
-          [
-            text(
-              `Previewing ${styleProfile.id} through the managed shadcn runtime. The gallery reuses the public style-ref pipeline and semantic components only.`,
-            ),
-          ],
-        ),
-        component("card", { title: "Coverage" }, [
-          component("badge", { tone: "success" }, [text(styleProfile.id)]),
-          component("separator"),
+      component("page", { title: `${styleProfile.id} showcase canvas` }, [
+        component("card", { title: "Feedback" }, [
+          component("alert", { title: "Status surfaces", tone: "success" }, [
+            text("Showcase canvas surfaces contrast and treatment changes immediately."),
+          ]),
+          component("badge", { tone: "success" }, [text("Current profile")]),
+          component("progress", { value: "68" }),
+        ]),
+        component("card", { title: "Content" }, [
+          text("Tables, cards, and lists are stitched together into one continuous preview."),
+          component("table", {}, [
+            headerRow("Signal", "Value"),
+            bodyRow("font sans", styleProfile.globalStyle.typography.fontSans),
+            bodyRow("radius base", styleProfile.globalStyle.radiusScale.base),
+            bodyRow("card treatment", styleProfile.componentStyle.treatments.card ?? "none"),
+          ]),
           component("list", {}, [
-            item("Palette tokens in light and dark modes"),
-            item("Typography, spacing, and radius through real content"),
-            item("Forms, data views, badges, alerts, and disclosure patterns"),
+            item("Showcase canvas"),
+            item("Current profile"),
+            item("Continuous preview"),
           ]),
         ]),
-        component("tabs", { default: "overview" }, [
-          component("tab", { value: "overview", label: "Overview" }, [
-            component("card", { title: "Profile Summary" }, [
-              text(
-                `This profile resolves from style-ref="${styleProfile.id}" and applies token sets, typography, radius, and component treatments through the existing runtime contract.`,
-              ),
-              component("separator"),
-              component("table", {}, [
-                headerRow("Signal", "Value"),
-                bodyRow("font sans", styleProfile.globalStyle.typography.fontSans),
-                bodyRow(
-                  "font heading",
-                  styleProfile.globalStyle.typography.fontHeading,
-                ),
-                bodyRow("radius base", styleProfile.globalStyle.radiusScale.base),
-                bodyRow(
-                  "card treatment",
-                  styleProfile.componentStyle.treatments.card ?? "none",
-                ),
-                bodyRow(
-                  "tabs treatment",
-                  styleProfile.componentStyle.treatments.tabs ?? "none",
-                ),
+        component("card", { title: "Forms" }, [
+          component("input", {
+            label: "Owner",
+            value: "Ops reviewer",
+            description: "Single-line field.",
+          }),
+          component("textarea", {
+            label: "Notes",
+            value: "Preview all components under one style id.",
+            description: "Long-form field.",
+          }),
+          component("slider", {
+            label: "Review strictness",
+            value: "70",
+            description: "Read-only numeric field.",
+          }),
+        ]),
+        component("card", { title: "Selection" }, [
+          component(
+            "select",
+            {
+              label: "Style Profile",
+              value: styleProfile.id,
+              description: "Overlay controls should inherit the active style.",
+            },
+            [
+              option(styleProfile.id, styleProfile.id, "Current profile"),
+              option("review-dense", "review-dense", "Builtin"),
+            ],
+          ),
+          component(
+            "combobox",
+            {
+              label: "Current style id",
+              value: styleProfile.id,
+              description: "Canvas should update from one selected style id.",
+            },
+            [
+              option(styleProfile.id, styleProfile.id, "Current profile"),
+              option("team-ops", "team-ops", "User profile"),
+            ],
+          ),
+        ]),
+        component("card", { title: "Disclosure" }, [
+          component("tabs", { default: "summary" }, [
+            component("tab", { value: "summary", label: "Summary" }, [
+              component("card", { title: "Canvas" }, [
+                text("All scenes stay on one continuous showcase surface."),
               ]),
             ]),
-            component("card", { title: "Status Surface" }, [
-              component("badge", { tone: "success" }, [text("Ready")]),
-              component(
-                "alert",
-                { title: "Default Accent", tone: "danger" },
-                [
-                  text(
-                    "Alerts and badges show how semantic status styling lands under the current profile.",
-                  ),
-                ],
-              ),
-              component("progress", { value: "82" }),
-              component("list", {}, [
-                item("Page spacing uses the runtime layout shell."),
-                item("Cards inherit the selected treatment mapping."),
-                item("Interactive scenes reuse the same artifact pipeline."),
+            component("tab", { value: "details", label: "Details" }, [
+              component("accordion", {}, [
+                component("accordion-item", {
+                  value: "tokens",
+                  title: "Token strategy",
+                }, [
+                  text("Palette, radius, and typography changes should remain obvious."),
+                ]),
               ]),
-            ]),
-          ]),
-          component("tab", { value: "palette", label: "Palette" }, [
-            component("card", { title: "Light Tokens" }, [
-              component("table", {}, [
-                headerRow("Token", "Value"),
-                ...createTokenRows(styleProfile.globalStyle.tokenSets.light),
-              ]),
-            ]),
-            component("card", { title: "Dark Tokens" }, [
-              component("table", {}, [
-                headerRow("Token", "Value"),
-                ...createTokenRows(styleProfile.globalStyle.tokenSets.dark),
-              ]),
-            ]),
-          ]),
-          component("tab", { value: "typography", label: "Typography" }, [
-            component("card", { title: "Heading Rhythm" }, [
-              text("Section titles, card titles, and dense technical copy should stay legible."),
-              component("separator"),
-              component("badge", { tone: "success" }, [text("Heading sample")]),
-              text(
-                "A gallery preview is useful when teams want to compare tone, spacing, and information density before publishing artifacts.",
-              ),
-            ]),
-            component("card", { title: "Body Copy" }, [
-              text(
-                "The body face should remain calm under long operational notes, release checklists, and audit findings. This scene keeps the preview grounded in realistic artifact copy instead of abstract placeholder text.",
-              ),
-              component("list", {}, [
-                item("Readable under both light and dark palettes"),
-                item("Compatible with dense tables and form-heavy reviews"),
-                item("No free-form per-document token overrides"),
-              ]),
-            ]),
-          ]),
-          component("tab", { value: "forms", label: "Forms" }, [
-            component("card", { title: "Inputs & Choices" }, [
-              component("input", {
-                label: "Owner",
-                value: "Ops reviewer",
-                description: "Single-line field.",
-              }),
-              component("textarea", {
-                label: "Notes",
-                value: "Ship after the guard lands and the evidence table is reviewed.",
-                description: "Long-form field.",
-              }),
-              component("checkbox", {
-                label: "Ship now",
-                checked: "true",
-                description: "Boolean field.",
-              }),
-              component("switch", {
-                label: "Live Sync",
-                checked: "true",
-                description: "Immediate preference toggle.",
-              }),
-              component("slider", {
-                label: "Review strictness",
-                value: "70",
-                description: "Read-only numeric field.",
-              }),
-              component(
-                "radio-group",
-                {
-                  label: "Direction",
-                  value: "ship",
-                  description: "Single-select field.",
-                },
-                [
-                  option("ship", "Ship", "Use the current direction."),
-                  option("hold", "Hold", "Wait for the guard."),
-                ],
-              ),
-              component(
-                "toggle-group",
-                {
-                  label: "Rollout Mode",
-                  value: "fast",
-                  description: "Inline option set.",
-                },
-                [
-                  option("fast", "Fast", "Prefer speed."),
-                  option("safe", "Safe", "Prefer guardrails."),
-                ],
-              ),
-              component(
-                "select",
-                {
-                  label: "Deployment Window",
-                  value: "today",
-                  description: "Choose a release window.",
-                },
-                [
-                  option("today", "Today", "Ship in the current window."),
-                  option("tomorrow", "Tomorrow", "Wait for the next window."),
-                ],
-              ),
-              component(
-                "combobox",
-                {
-                  label: "Escalation Owner",
-                  value: "Ops reviewer",
-                  description: "Searchable single-select field.",
-                },
-                [
-                  option("Ops reviewer", "Ops reviewer", "Current reviewer."),
-                  option(
-                    "Security reviewer",
-                    "Security reviewer",
-                    "Escalation reviewer.",
-                  ),
-                ],
-              ),
-            ]),
-          ]),
-          component("tab", { value: "data", label: "Data" }, [
-            component("card", { title: "Review Table" }, [
-              component("table", {}, [
-                headerRow("Area", "Status"),
-                bodyRow("Runtime", "Ready"),
-                bodyRow("Token model", "shadcn theming"),
-                bodyRow("Legacy globals", "Removed"),
-                bodyRow("Preview surface", "CLI gallery"),
-              ]),
-            ]),
-            component("card", { title: "Delivery Signals" }, [
-              component("progress", { value: "64" }),
-              component("list", {}, [
-                item("Profile tokens feed CSS variables directly."),
-                item("Tables, alerts, and cards share one treatment system."),
-                item("Gallery output is a normal static artifact directory."),
-              ]),
-            ]),
-          ]),
-          component("tab", { value: "disclosure", label: "Disclosure" }, [
-            component("accordion", {}, [
-              component(
-                "accordion-item",
-                { value: "runtime", title: "Runtime Notes" },
-                [
-                  component("list", {}, [
-                    item("Gallery uses document.generated.json under AHTML_HOME."),
-                    item("The preview server serves the built static output."),
-                    item("No separate app shell or editor state is introduced."),
-                  ]),
-                ],
-              ),
-              component(
-                "accordion-item",
-                { value: "treatments", title: "Component Treatments" },
-                [
-                  component("table", {}, [
-                    headerRow("Component", "Treatment"),
-                    ...createTreatmentRows(styleProfile.componentStyle.treatments),
-                  ]),
-                ],
-              ),
             ]),
           ]),
         ]),
@@ -353,7 +213,6 @@ export function createStyleGalleryDocument(styleProfile) {
 
 export function createGalleryRuntimeState({
   availableStyleReferences,
-  profileSource,
   styleProfile,
   styleReference,
 }) {
@@ -363,7 +222,6 @@ export function createGalleryRuntimeState({
     mode: "gallery",
     gallery: {
       availableStyleReferences,
-      profileSource,
       styleReference,
       styleProfile,
     },

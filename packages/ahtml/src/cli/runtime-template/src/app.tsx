@@ -21,7 +21,6 @@ type RuntimeState = {
   mode?: "document" | "gallery"
   gallery?: {
     availableStyleReferences: string[]
-    profileSource: "builtin" | "user"
     styleReference: string
     styleProfile: StyleProfile
   }
@@ -30,28 +29,25 @@ type RuntimeState = {
 type GalleryStateResponse = {
   ok: boolean
   availableStyleReferences: string[]
-  profileSource: "builtin" | "user"
   styleReference: string
   styleProfile: StyleProfile
 }
 
-type GallerySaveResponse = {
+type GalleryMutationResponse = {
   ok: boolean
   error?: string
-  overwritten?: boolean
-  profileSource?: "builtin" | "user"
+  availableStyleReferences?: string[]
   styleReference?: string
   styleProfile?: StyleProfile
 }
 
 type GalleryEditorState = {
   availableStyleReferences: string[]
+  createId: string
   draftProfile: StyleProfile
   error: string
   isDirty: boolean
   isSaving: boolean
-  profileSource: "builtin" | "user"
-  saveAsId: string
   status: string
   styleReference: string
 }
@@ -78,7 +74,6 @@ export function App() {
       <GalleryApp
         availableStyleReferences={runtimeState.gallery.availableStyleReferences}
         initialProfile={runtimeState.gallery.styleProfile}
-        profileSource={runtimeState.gallery.profileSource}
         styleReference={runtimeState.gallery.styleReference}
       />
     )
@@ -99,7 +94,7 @@ function DocumentApp({ document }: { document: AgentDocument }) {
       <style>{createSharedShellCss()}</style>
       <style>{documentStyleCss}</style>
       <main
-        className="mx-auto grid min-h-screen w-full max-w-4xl gap-6 px-4 py-10 sm:px-6"
+        className="ahtml-document-shell"
         data-style-profile={document.meta.styleProfile.id}
       >
         {document.components.map((node, index) => (
@@ -113,27 +108,20 @@ function DocumentApp({ document }: { document: AgentDocument }) {
 function GalleryApp({
   availableStyleReferences,
   initialProfile,
-  profileSource,
   styleReference,
 }: {
   availableStyleReferences: string[]
   initialProfile: StyleProfile
-  profileSource: "builtin" | "user"
   styleReference: string
 }) {
   const [editorState, setEditorState] = React.useState<GalleryEditorState>({
     availableStyleReferences,
+    createId: "",
     draftProfile: initialProfile,
     error: "",
     isDirty: false,
     isSaving: false,
-    profileSource,
-    saveAsId:
-      profileSource === "builtin" ? `${initialProfile.id}-copy` : initialProfile.id,
-    status:
-      profileSource === "builtin"
-        ? "Built-in profile. Use Save As to persist changes."
-        : "User profile loaded.",
+    status: "Style gallery ready.",
     styleReference,
   })
 
@@ -150,14 +138,7 @@ function GalleryApp({
         availableStyleReferences: nextState.availableStyleReferences,
         draftProfile: current.isDirty ? current.draftProfile : nextState.styleProfile,
         error: "",
-        profileSource: current.isDirty ? current.profileSource : nextState.profileSource,
-        saveAsId:
-          current.isDirty
-            ? current.saveAsId
-            : nextState.profileSource === "builtin"
-              ? `${nextState.styleProfile.id}-copy`
-              : nextState.styleProfile.id,
-        status: current.isDirty ? current.status : createLoadedStatus(nextState.profileSource),
+        status: current.isDirty ? current.status : "Style gallery ready.",
         styleReference: current.isDirty
           ? current.styleReference
           : nextState.styleReference,
@@ -200,46 +181,25 @@ function GalleryApp({
   )
 
   const saveProfile = React.useCallback(
-    async (mode: "save" | "save-as") => {
-      const targetId =
-        mode === "save"
-          ? editorState.profileSource === "user"
-            ? editorState.styleReference
-            : ""
-          : editorState.saveAsId.trim()
-
-      if (!targetId) {
-        setEditorState((current) => ({
-          ...current,
-          error: 'Save As requires a target id such as "team-ops".',
-        }))
-        return
-      }
-
+    async () => {
       setEditorState((current) => ({
         ...current,
         error: "",
         isSaving: true,
-        status: mode === "save" ? "Saving profile..." : "Creating user profile...",
+        status: "Saving style profile...",
       }))
 
       try {
         const response = await fetch("/__ahtml/gallery/save", {
           body: JSON.stringify({
-            mode,
-            profileSource: editorState.profileSource,
-            styleProfile: {
-              ...editorState.draftProfile,
-              id: targetId,
-            },
-            targetId,
+            styleProfile: editorState.draftProfile,
           }),
           headers: {
             "content-type": "application/json",
           },
           method: "POST",
         })
-        const result = (await response.json()) as GallerySaveResponse
+        const result = (await response.json()) as GalleryMutationResponse
 
         if (!response.ok || !result.ok || !result.styleProfile || !result.styleReference) {
           throw new Error(result.error ?? "Unable to save gallery style profile.")
@@ -247,23 +207,13 @@ function GalleryApp({
 
         setEditorState((current) => ({
           ...current,
-          availableStyleReferences: current.availableStyleReferences.includes(
-            result.styleReference!,
-          )
-            ? current.availableStyleReferences
-            : [...current.availableStyleReferences, result.styleReference!].sort(
-                (left, right) => left.localeCompare(right),
-              ),
+          availableStyleReferences:
+            result.availableStyleReferences ?? current.availableStyleReferences,
           draftProfile: result.styleProfile!,
           error: "",
           isDirty: false,
           isSaving: false,
-          profileSource: "user",
-          saveAsId: result.styleReference!,
-          status:
-            mode === "save"
-              ? `Saved ${result.styleReference}.`
-              : `Saved as ${result.styleReference}.`,
+          status: `Saved ${result.styleReference}.`,
           styleReference: result.styleReference!,
         }))
       } catch (error) {
@@ -277,6 +227,152 @@ function GalleryApp({
     },
     [editorState],
   )
+
+  const selectStyleReference = React.useCallback(
+    async (nextStyleReference: string) => {
+      setEditorState((current) => ({
+        ...current,
+        error: "",
+        status: `Loading ${nextStyleReference}...`,
+      }))
+
+      try {
+        const response = await fetch("/__ahtml/gallery/select", {
+          body: JSON.stringify({
+            styleReference: nextStyleReference,
+          }),
+          headers: {
+            "content-type": "application/json",
+          },
+          method: "POST",
+        })
+        const result = (await response.json()) as GalleryMutationResponse
+
+        if (!response.ok || !result.ok || !result.styleProfile || !result.styleReference) {
+          throw new Error(result.error ?? "Unable to switch style profile.")
+        }
+
+        setEditorState((current) => ({
+          ...current,
+          availableStyleReferences:
+            result.availableStyleReferences ?? current.availableStyleReferences,
+          draftProfile: result.styleProfile!,
+          error: "",
+          isDirty: false,
+          status: `Selected ${result.styleReference}.`,
+          styleReference: result.styleReference!,
+        }))
+      } catch (error) {
+        setEditorState((current) => ({
+          ...current,
+          error: error instanceof Error ? error.message : String(error),
+          status: "Switch failed.",
+        }))
+      }
+    },
+    [],
+  )
+
+  const createStyleReference = React.useCallback(async () => {
+    const createId = editorState.createId.trim()
+
+    if (!createId) {
+      setEditorState((current) => ({
+        ...current,
+        error: 'New style id is required, for example "team-ops".',
+      }))
+      return
+    }
+
+    setEditorState((current) => ({
+      ...current,
+      error: "",
+      isSaving: true,
+      status: `Creating ${createId}...`,
+    }))
+
+    try {
+      const response = await fetch("/__ahtml/gallery/create", {
+        body: JSON.stringify({
+          styleReference: createId,
+        }),
+        headers: {
+          "content-type": "application/json",
+        },
+        method: "POST",
+      })
+      const result = (await response.json()) as GalleryMutationResponse
+
+      if (!response.ok || !result.ok || !result.styleProfile || !result.styleReference) {
+        throw new Error(result.error ?? "Unable to create style profile.")
+      }
+
+      setEditorState((current) => ({
+        ...current,
+        availableStyleReferences:
+          result.availableStyleReferences ?? current.availableStyleReferences,
+        createId: "",
+        draftProfile: result.styleProfile!,
+        error: "",
+        isDirty: false,
+        isSaving: false,
+        status: `Created ${result.styleReference}.`,
+        styleReference: result.styleReference!,
+      }))
+    } catch (error) {
+      setEditorState((current) => ({
+        ...current,
+        error: error instanceof Error ? error.message : String(error),
+        isSaving: false,
+        status: "Create failed.",
+      }))
+    }
+  }, [editorState.createId])
+
+  const deleteCurrentStyleReference = React.useCallback(async () => {
+    setEditorState((current) => ({
+      ...current,
+      error: "",
+      isSaving: true,
+      status: `Deleting ${current.styleReference}...`,
+    }))
+
+    try {
+      const response = await fetch("/__ahtml/gallery/delete", {
+        body: JSON.stringify({
+          styleReference: editorState.styleReference,
+        }),
+        headers: {
+          "content-type": "application/json",
+        },
+        method: "POST",
+      })
+      const result = (await response.json()) as GalleryMutationResponse
+
+      if (!response.ok || !result.ok || !result.styleProfile || !result.styleReference) {
+        throw new Error(result.error ?? "Unable to delete style profile.")
+      }
+
+      setEditorState((current) => ({
+        ...current,
+        availableStyleReferences:
+          result.availableStyleReferences ?? current.availableStyleReferences,
+        draftProfile: result.styleProfile!,
+        error: "",
+        isDirty: false,
+        isSaving: false,
+        status: `Deleted style. Current is ${result.styleReference}.`,
+        styleReference: result.styleReference!,
+      }))
+    } catch (error) {
+      setEditorState((current) => ({
+        ...current,
+        error: error instanceof Error ? error.message : String(error),
+        isSaving: false,
+        status: "Delete failed.",
+      }))
+    }
+  }, [editorState.styleReference])
 
   return (
     <>
@@ -299,15 +395,55 @@ function GalleryApp({
 
             <section className="ahtml-gallery-panel">
               <div className="ahtml-gallery-panel-header">
-                <h2>Session</h2>
-                <span>{editorState.profileSource}</span>
+                <h2>Style Id</h2>
+                <span>global</span>
               </div>
               <div className="ahtml-gallery-stack">
-                <FieldRow label="Current style-ref" value={editorState.styleReference} />
+                <label className="ahtml-gallery-field">
+                  <span>Current style id</span>
+                  <select
+                    onChange={(event) => void selectStyleReference(event.target.value)}
+                    value={editorState.styleReference}
+                  >
+                    {editorState.availableStyleReferences.map((styleId) => (
+                      <option key={styleId} value={styleId}>
+                        {styleId}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <FieldRow
-                  label="Available refs"
+                  label="Available ids"
                   value={editorState.availableStyleReferences.join(", ")}
                   multiline
+                />
+                <div className="ahtml-gallery-actions">
+                  <button
+                    className="ahtml-gallery-button"
+                    disabled={editorState.isSaving}
+                    onClick={() => void createStyleReference()}
+                    type="button"
+                  >
+                    New Id
+                  </button>
+                  <button
+                    className="ahtml-gallery-button"
+                    disabled={editorState.isSaving}
+                    onClick={() => void deleteCurrentStyleReference()}
+                    type="button"
+                  >
+                    Delete Id
+                  </button>
+                </div>
+                <LabeledInput
+                  label="New Style Id"
+                  value={editorState.createId}
+                  onChange={(value) =>
+                    setEditorState((current) => ({
+                      ...current,
+                      createId: value,
+                    }))
+                  }
                 />
                 <p className="ahtml-gallery-status">{editorState.status}</p>
                 {editorState.error ? (
@@ -456,37 +592,17 @@ function GalleryApp({
             <section className="ahtml-gallery-panel">
               <div className="ahtml-gallery-panel-header">
                 <h2>Persist</h2>
-                <span>local</span>
+                <span>config</span>
               </div>
               <div className="ahtml-gallery-stack">
-                <div className="ahtml-gallery-actions">
-                  <button
-                    className="ahtml-gallery-button ahtml-gallery-button-primary"
-                    disabled={editorState.profileSource !== "user" || editorState.isSaving}
-                    onClick={() => void saveProfile("save")}
-                    type="button"
-                  >
-                    Save
-                  </button>
-                  <button
-                    className="ahtml-gallery-button"
-                    disabled={editorState.isSaving}
-                    onClick={() => void saveProfile("save-as")}
-                    type="button"
-                  >
-                    Save As
-                  </button>
-                </div>
-                <LabeledInput
-                  label="Save As Id"
-                  value={editorState.saveAsId}
-                  onChange={(value) =>
-                    setEditorState((current) => ({
-                      ...current,
-                      saveAsId: value,
-                    }))
-                  }
-                />
+                <button
+                  className="ahtml-gallery-button ahtml-gallery-button-primary"
+                  disabled={editorState.isSaving}
+                  onClick={() => void saveProfile()}
+                  type="button"
+                >
+                  Save Current Style
+                </button>
               </div>
             </section>
           </div>
@@ -496,10 +612,10 @@ function GalleryApp({
           <div className="ahtml-gallery-preview-header">
             <div>
               <p className="ahtml-gallery-kicker">Preview</p>
-              <h2>Full component index</h2>
+              <h2>Showcase canvas</h2>
             </div>
             <p className="ahtml-gallery-preview-note">
-              All scenes reuse the semantic renderer and current draft style profile.
+              All components are stitched into one continuous semantic preview surface.
             </p>
           </div>
           <div className="ahtml-gallery-preview-surface">
@@ -598,12 +714,6 @@ function fetchGalleryState() {
       return (await response.json()) as GalleryStateResponse
     })
     .catch(() => null)
-}
-
-function createLoadedStatus(profileSource: "builtin" | "user") {
-  return profileSource === "builtin"
-    ? "Built-in profile. Use Save As to persist changes."
-    : "User profile loaded."
 }
 
 function createGalleryPreviewDocument(styleProfile: StyleProfile): AgentDocument {
@@ -862,6 +972,77 @@ function createSharedShellCss() {
       color: var(--foreground);
       font-family: var(--font-sans);
     }
+    .ahtml-document-shell {
+      width: min(100%, 72rem);
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 4rem 1.25rem 5rem;
+      box-sizing: border-box;
+      display: grid;
+      gap: 2rem;
+    }
+    .ahtml-document-shell > * {
+      min-width: 0;
+    }
+    .ahtml-document-shell [data-agent-html-component="page"] {
+      display: grid;
+      gap: 2rem;
+    }
+    .ahtml-document-shell [data-agent-html-component="page"] > * {
+      min-width: 0;
+    }
+    .ahtml-document-shell .ahtml-prose-block {
+      max-width: 68ch;
+    }
+    .ahtml-document-shell .ahtml-prose-block > p {
+      line-height: 1.75;
+    }
+    .ahtml-document-shell .ahtml-prose-inline {
+      line-height: 1.65;
+    }
+    .ahtml-document-shell .ahtml-section-stack {
+      display: grid;
+      gap: 1.35rem;
+    }
+    .ahtml-document-shell [data-slot="card-content"].ahtml-section-stack > :where(
+      [data-agent-html-component="alert"],
+      [data-agent-html-component="table"],
+      [data-agent-html-component="list"],
+      [data-agent-html-component="tabs"],
+      [data-agent-html-component="accordion"],
+      [data-agent-html-component="checkbox"],
+      [data-agent-html-component="switch"],
+      [data-agent-html-component="input"],
+      [data-agent-html-component="textarea"],
+      [data-agent-html-component="slider"],
+      [data-agent-html-component="radio-group"],
+      [data-agent-html-component="toggle-group"],
+      [data-agent-html-component="select"],
+      [data-agent-html-component="combobox"],
+      [data-agent-html-component="progress"],
+      [data-agent-html-component="badge"],
+      [data-agent-html-component="separator"]
+    ) + :where(
+      [data-agent-html-component="alert"],
+      [data-agent-html-component="table"],
+      [data-agent-html-component="list"],
+      [data-agent-html-component="tabs"],
+      [data-agent-html-component="accordion"],
+      [data-agent-html-component="checkbox"],
+      [data-agent-html-component="switch"],
+      [data-agent-html-component="input"],
+      [data-agent-html-component="textarea"],
+      [data-agent-html-component="slider"],
+      [data-agent-html-component="radio-group"],
+      [data-agent-html-component="toggle-group"],
+      [data-agent-html-component="select"],
+      [data-agent-html-component="combobox"],
+      [data-agent-html-component="progress"],
+      [data-agent-html-component="badge"],
+      [data-agent-html-component="separator"]
+    ) {
+      margin-top: 0;
+    }
     .ahtml-gallery-shell {
       display: grid;
       grid-template-columns: minmax(20rem, 26rem) minmax(0, 1fr);
@@ -954,6 +1135,16 @@ function createSharedShellCss() {
       color: var(--foreground);
       font: inherit;
     }
+    .ahtml-gallery-field select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0.72rem 0.85rem;
+      border-radius: calc(var(--radius) * 1.1);
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--background) 90%, var(--card) 10%);
+      color: var(--foreground);
+      font: inherit;
+    }
     .ahtml-gallery-token-row {
       display: grid;
       grid-template-columns: 1.75rem minmax(0, 1fr);
@@ -1021,6 +1212,14 @@ function createSharedShellCss() {
       gap: 1.25rem;
     }
     @media (max-width: 1100px) {
+      .ahtml-document-shell {
+        width: min(100%, 60rem);
+        padding: 2.75rem 1rem 3.5rem;
+        gap: 1.5rem;
+      }
+      .ahtml-document-shell [data-agent-html-component="page"] {
+        gap: 1.5rem;
+      }
       .ahtml-gallery-shell {
         grid-template-columns: 1fr;
       }
@@ -1034,6 +1233,12 @@ function createSharedShellCss() {
       .ahtml-gallery-preview-header {
         align-items: start;
         flex-direction: column;
+      }
+    }
+    @media (min-width: 1200px) {
+      .ahtml-document-shell {
+        width: min(100%, 76rem);
+        padding-top: 4.5rem;
       }
     }
   `

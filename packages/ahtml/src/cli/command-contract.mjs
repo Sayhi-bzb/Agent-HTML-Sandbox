@@ -148,28 +148,18 @@ export const commandMetadata = {
     },
   },
   gallery: {
-    summary: "Build and preview a style gallery for one style-ref.",
+    summary: "Open the style gallery editor and preview canvas.",
     purpose:
-      "Generate and serve a fixed showcase artifact for an exact style profile reference.",
-    usage: "ahtml gallery --style-ref <id> [--out <dir>] [--port <port>]",
+      "Open the managed gallery editor for style ids, customization, and showcase preview.",
+    usage: "ahtml gallery [--port <port>]",
     options: [
-      {
-        name: "style-ref",
-        description: "Exact document style config reference to preview.",
-        value: true,
-      },
-      {
-        name: "out",
-        description: `Output directory. Defaults to ${cliDefaults.galleryOutputDir}.`,
-        value: true,
-      },
       {
         name: "port",
         description: `Local HTTP port. Defaults to ${cliDefaults.previewPort}.`,
         value: true,
       },
     ],
-    example: "ahtml gallery --style-ref report-default",
+    example: "ahtml gallery",
   },
   doctor: {
     summary: "Check runtime health and output paths.",
@@ -276,7 +266,7 @@ Main workflow:
   ahtml prompt
   ahtml build ${cliDefaults.documentPath}
   ahtml preview ${cliDefaults.documentPath}
-  ahtml gallery --style-ref report-default
+  ahtml gallery
   ahtml doctor
 
 Defaults:

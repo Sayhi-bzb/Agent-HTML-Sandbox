@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url"
 
 export const runtimeManifestName = "runtime.json"
 export const styleProfileManifestName = "style-profiles.manifest.json"
+export const styleProfileStateName = "style-profile-state.json"
 export const runtimeRenderer = "shadcn-runtime"
 export const runtimeVersion = 1
 export const runtimePackageRoot = path.resolve(
@@ -41,6 +42,11 @@ export function getRuntimePaths(env = process.env) {
       runtimeRoot,
       "config",
       styleProfileManifestName,
+    ),
+    styleProfileStatePath: path.join(
+      runtimeRoot,
+      "config",
+      styleProfileStateName,
     ),
     promptUiManifestPath: path.join(
       runtimeRoot,

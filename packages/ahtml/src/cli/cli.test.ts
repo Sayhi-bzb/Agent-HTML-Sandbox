@@ -51,7 +51,7 @@ describe("agent-html CLI contracts", () => {
       expect(result.stdout).toContain("ahtml prompt")
       expect(result.stdout).toContain("ahtml build artifact.agent.html")
       expect(result.stdout).toContain("ahtml preview artifact.agent.html")
-      expect(result.stdout).toContain("ahtml gallery --style-ref report-default")
+      expect(result.stdout).toContain("ahtml gallery")
       expect(result.stdout).not.toContain("agent-html.project.json")
       expect(result.stdout).not.toContain("--scaffold")
     }
@@ -71,7 +71,7 @@ describe("agent-html CLI contracts", () => {
     expect(readme).toContain("ahtml prompt")
     expect(readme).toContain("ahtml build artifact.agent.html")
     expect(readme).toContain("ahtml preview artifact.agent.html")
-    expect(readme).toContain("ahtml gallery --style-ref report-default")
+    expect(readme).toContain("ahtml gallery")
   })
 
   it("prints agent-facing schema without implementation props", async () => {
@@ -251,16 +251,12 @@ describe("agent-html CLI contracts", () => {
       "unknown-attr",
     )
     await expectCliFailure(
-      runCliWithServer(["gallery"], {}, tempDir),
-      "gallery requires --style-ref <id>.",
-    )
-    await expectCliFailure(
-      runCliWithServer(["gallery", "--style-ref", "report-default", "extra"]),
+      runCliWithServer(["gallery", "extra"], {}, tempDir),
       'Unexpected argument "extra".',
     )
     await expectCliFailure(
       runCliWithServer(
-        ["gallery", "--style-ref", "report-default", "--port", "bad"],
+        ["gallery", "--port", "bad"],
         {},
         tempDir,
       ),
@@ -390,7 +386,7 @@ describe("agent-html CLI contracts", () => {
     await removeTempDir(tempDir)
   })
 
-  it("requires an exact style profile for gallery previews", async () => {
+  it("rejects the removed gallery --style-ref argument", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
     const runtimeHome = path.join(tempDir, ".ahtml")
 
@@ -400,15 +396,7 @@ describe("agent-html CLI contracts", () => {
         { AHTML_HOME: runtimeHome },
         tempDir,
       ),
-      'Unknown style profile "team-missing".',
-    )
-    await expectCliFailure(
-      runCliWithServer(
-        ["gallery", "--style-ref", "team-missing"],
-        { AHTML_HOME: runtimeHome },
-        tempDir,
-      ),
-      "Available style-ref values: ops-compact, report-default, review-dense.",
+      "does not accept --style-ref",
     )
     await expectPathMissing(path.join(runtimeHome, "config", "runtime.json"))
     await removeTempDir(tempDir)

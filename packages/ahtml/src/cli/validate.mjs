@@ -1,13 +1,19 @@
 import { sanitizeAgentHtml } from "../config/internal-core-bridge.mjs"
-import { createStyleProfileResolver } from "./style-profile-storage.mjs"
+import {
+  createStyleProfileResolver,
+  readCurrentStyleProfileReference,
+  resolveStyleProfileByReference,
+} from "./style-profile-storage.mjs"
 
 export async function validateAgentHtmlSource(source, runtimeContext) {
-  const resolveStyleProfileReference = await loadStyleProfileResolver(
+  const renderConfigResolvers = await loadStyleProfileResolvers(
     runtimeContext,
   )
-  const result = sanitizeAgentHtml(source, {
-    resolveStyleProfileReference,
-  })
+  const normalizedSource = await ensureDefaultStyleRefHeader(
+    source,
+    runtimeContext,
+  )
+  const result = sanitizeAgentHtml(normalizedSource, renderConfigResolvers)
 
   return { diagnostics: result.diagnostics, document: result.document }
 }
@@ -26,12 +32,26 @@ export function validateRenderConfig(config, values) {
   )
 }
 
-async function loadStyleProfileResolver(runtimeContext) {
+async function loadStyleProfileResolvers(runtimeContext) {
   if (!isRuntimePaths(runtimeContext)) {
     return undefined
   }
 
-  return createStyleProfileResolver(runtimeContext)
+  const resolveStyleProfileReference = await createStyleProfileResolver(
+    runtimeContext,
+  )
+  const currentStyleReference = await readCurrentStyleProfileReference(
+    runtimeContext,
+  )
+  const defaultStyleProfile = await resolveStyleProfileByReference(
+    runtimeContext,
+    currentStyleReference,
+  )
+
+  return {
+    resolveStyleProfileReference,
+    resolveDefaultStyleProfileReference: () => defaultStyleProfile,
+  }
 }
 
 function isRuntimePaths(value) {
@@ -39,5 +59,22 @@ function isRuntimePaths(value) {
     Boolean(value) &&
     typeof value === "object" &&
     typeof value.userStyleProfilesDir === "string"
+  )
+}
+
+async function ensureDefaultStyleRefHeader(source, runtimeContext) {
+  if (
+    !isRuntimePaths(runtimeContext) ||
+    /<meta-agent\b/i.test(source)
+  ) {
+    return source
+  }
+
+  const currentStyleReference = await readCurrentStyleProfileReference(
+    runtimeContext,
+  )
+
+  return [`<meta-agent style-ref="${currentStyleReference}" />`, source].join(
+    "\n\n",
   )
 }

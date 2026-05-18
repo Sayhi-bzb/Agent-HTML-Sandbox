@@ -257,6 +257,7 @@ describe("createRendererNode", () => {
 
     expect(markup).toContain('data-ahtml-treatment="ops-card"')
     expect(markup).toContain('class="rounded-xl border-border/80 shadow-sm"')
+    expect(markup).toContain('class="ahtml-section-stack ahtml-prose-block"')
   })
 
   it("uses renderer spec prop names for tabs content and labels", () => {
@@ -392,6 +393,49 @@ describe("createRendererNode", () => {
     expect(markup).toContain(
       '<p id="ahtml-textarea-0-description">Long-form field.</p>',
     )
+  })
+
+  it("collapses multiline prose text in compound components instead of preserving source indentation", () => {
+    const rendererSpecByName = new Map([
+      [
+        "alert",
+        {
+          name: "alert",
+          kind: "compound",
+          renderKind: "compound",
+          slots: [{ name: "children", children: ["text"] }],
+          root: "section",
+          content: "div",
+          titleProp: "title",
+          childMode: "block",
+          textMode: "prose",
+        },
+      ],
+    ])
+
+    const RendererNode = createRendererNode(rendererSpecByName)
+    const markup = renderToStaticMarkup(
+      React.createElement(RendererNode, {
+        node: {
+          type: "component",
+          name: "alert",
+          props: {},
+          children: [
+            {
+              type: "text",
+              value:
+                "First line,\n      second line with indentation,\n      and third line.",
+            },
+          ],
+        },
+      }),
+    )
+
+    expect(markup).toContain(
+      "<p class=\"m-0 whitespace-normal\">First line, second line with indentation, and third line.</p>",
+    )
+    expect(markup).not.toContain("whitespace-pre-wrap")
+    expect(markup).not.toContain("\n      second line")
   })
 
   it("renders checkbox toggle-field components with boolean prop coercion", () => {
@@ -783,6 +827,76 @@ describe("createRendererNode", () => {
     )
     expect(markup).toContain("<noscript>")
     expect(markup).toContain("Today (selected)")
+  })
+
+  it("collapses multiline option descriptions in select fallback and item text", () => {
+    const rendererSpecByName = new Map([
+      [
+        "select",
+        {
+          name: "select",
+          kind: "select-overlay",
+          renderKind: "select-overlay",
+          slots: [
+            {
+              name: "option",
+              childNames: ["option"],
+              children: ["text"],
+            },
+          ],
+          root: "Field",
+          label: "FieldTitle",
+          control: "Select",
+          controlTrigger: "SelectTrigger",
+          controlValue: "SelectValue",
+          controlContent: "SelectContent",
+          itemContainer: "SelectGroup",
+          item: "SelectItem",
+          itemSlot: "option",
+          itemValueProp: "value",
+          itemHeadingProp: "label",
+          description: "FieldDescription",
+          labelProp: "label",
+          descriptionProp: "description",
+          fallback: true,
+          propMappings: [{ prop: "value", target: "defaultValue" }],
+        },
+      ],
+    ])
+
+    const RendererNode = createRendererNode(rendererSpecByName)
+    const markup = renderToStaticMarkup(
+      React.createElement(RendererNode, {
+        node: {
+          type: "component",
+          name: "select",
+          props: {
+            label: "Deployment Window",
+            value: "today",
+            description: "Choose a release window.",
+          },
+          children: [
+            {
+              type: "component",
+              name: "option",
+              props: { value: "today", label: "Today" },
+              children: [
+                {
+                  type: "text",
+                  value:
+                    "Ship in the current window,\n      after all checks pass.",
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    )
+
+    expect(markup).toContain(
+      "Ship in the current window, after all checks pass.",
+    )
+    expect(markup).not.toContain("\n      after all checks pass")
   })
 
   it("renders combobox combobox-input components with collection and empty-state composition", () => {

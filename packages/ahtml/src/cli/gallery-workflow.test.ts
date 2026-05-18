@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url"
 import { describe, expect, it } from "vitest"
 
 describe("gallery workflow", () => {
-  it("creates a fixed showcase document from a style profile", async () => {
+  it("creates a continuous showcase document from a style profile", async () => {
     const { createStyleGalleryDocument } = await importGalleryWorkflowModule()
     const { parseRenderConfig } = await importInternalCoreBridge()
     const styleProfile = parseRenderConfig({
@@ -22,25 +22,23 @@ describe("gallery workflow", () => {
       type: "component",
       name: "page",
       props: {
-        title: "ops-compact style gallery",
+        title: "ops-compact showcase canvas",
       },
     })
 
     const serialized = JSON.stringify(document)
 
-    expect(serialized).toContain('"name":"tabs"')
-    expect(serialized).toContain('"label":"Overview"')
-    expect(serialized).toContain('"label":"Palette"')
-    expect(serialized).toContain('"label":"Typography"')
-    expect(serialized).toContain('"label":"Forms"')
-    expect(serialized).toContain('"label":"Data"')
-    expect(serialized).toContain('"label":"Disclosure"')
+    expect(serialized).toContain('"title":"Feedback"')
+    expect(serialized).toContain('"title":"Content"')
+    expect(serialized).toContain('"title":"Forms"')
+    expect(serialized).toContain('"title":"Selection"')
+    expect(serialized).toContain('"title":"Disclosure"')
     expect(serialized).toContain(
       styleProfile.globalStyle.tokenSets.light.background,
     )
     expect(serialized).toContain(styleProfile.componentStyle.treatments.card)
-    expect(serialized).toContain("Legacy globals")
-    expect(serialized).toContain("CLI gallery")
+    expect(serialized).toContain("Showcase canvas")
+    expect(serialized).toContain("Current profile")
   })
 })
 

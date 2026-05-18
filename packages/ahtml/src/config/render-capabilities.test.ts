@@ -356,4 +356,59 @@ describe("createRuntimeElementRegistrySpec", () => {
       [...runtimeRendererKinds].sort(),
     )
   })
+
+  it("carries explicit prose text semantics for multiline content renderers", () => {
+    const rendererMapping = createRendererMapping([
+      {
+        name: "page",
+        props: [{ name: "title", valueKind: "string" }],
+        allowedChildren: ["card", "alert", "#text"],
+      },
+      {
+        name: "alert",
+        props: [
+          { name: "title", valueKind: "string" },
+          { name: "tone", valueKind: "enum", enumValues: ["neutral"] },
+        ],
+        allowedChildren: ["#text"],
+      },
+      {
+        name: "card",
+        props: [{ name: "title", valueKind: "string" }],
+        allowedChildren: ["#text"],
+      },
+      {
+        name: "badge",
+        props: [],
+        allowedChildren: ["#text"],
+      },
+      {
+        name: "list",
+        props: [
+          { name: "variant", valueKind: "enum", enumValues: ["unordered"] },
+        ],
+        allowedChildren: ["item"],
+      },
+      {
+        name: "item",
+        props: [],
+        allowedChildren: ["#text"],
+      },
+    ])
+
+    expect(
+      Object.fromEntries(
+        rendererMapping.components.map((component) => [
+          component.name,
+          component.textMode,
+        ]),
+      ),
+    ).toMatchObject({
+      page: "prose",
+      alert: "prose",
+      card: "prose",
+      badge: "prose",
+      list: "prose",
+    })
+  })
 })

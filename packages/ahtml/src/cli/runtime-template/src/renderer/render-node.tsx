@@ -21,6 +21,7 @@ export function createRendererNode(
   function RendererNode({
     node,
     path = [0],
+    textMode,
   }: {
     node: AgentNode
     path?: RendererPath
@@ -122,6 +123,10 @@ export function createRendererNode(
       ...applyPropMappings(node.props, rendererSpec.propMappings),
     }
     const title = renderCompoundTitle(node, rendererSpec, Title)
+    const contentClassName = mergeClassNames(
+      "ahtml-section-stack",
+      rendererSpec.childMode === "block" ? "ahtml-prose-block" : undefined,
+    )
     const content =
       rendererSpec.childMode === "inline"
         ? renderInlineChildren(node, path, rendererSpec.textMode)
@@ -134,7 +139,7 @@ export function createRendererNode(
         ) : (
           title
         )}
-        {Content ? <Content>{content}</Content> : content}
+        {Content ? <Content className={contentClassName}>{content}</Content> : content}
       </Root>
     )
   }
@@ -1220,23 +1225,26 @@ const componentTreatmentClassNames: Record<string, string> = {
   "ops-field": "gap-2 [&_input]:h-9 [&_textarea]:min-h-28",
   "ops-table":
     "[&_td]:py-2 [&_th]:py-2 [&_th]:text-[0.68rem] [&_th]:uppercase [&_th]:tracking-[0.2em]",
-  "ops-tabs": "gap-3 [&_button]:h-8 [&_button]:text-xs [&_button]:tracking-[0.1em]",
-  "report-alert": "border-l-4 border-l-primary/70 shadow-sm",
-  "report-badge": "uppercase tracking-[0.14em]",
-  "report-card": "rounded-2xl border-border/70 shadow-sm",
+  "ops-tabs":
+    "gap-4 [&_[data-slot=tabs-list]]:mb-1 [&_button]:h-8 [&_button]:text-xs [&_button]:tracking-[0.1em]",
+  "report-alert":
+    "border-l-4 border-l-primary/70 shadow-sm [&_[data-slot=alert-description]]:max-w-[66ch]",
+  "report-badge": "uppercase tracking-[0.14em] self-start",
+  "report-card":
+    "rounded-[1.6rem] border-border/70 bg-card/96 shadow-[0_20px_70px_color-mix(in_srgb,var(--foreground)_7%,transparent)]",
   "report-field": "gap-3 [&_input]:bg-card/90 [&_textarea]:bg-card/90",
   "report-table":
-    "[&_th]:text-xs [&_th]:uppercase [&_th]:tracking-[0.16em]",
+    "[&_td]:align-top [&_td]:py-3 [&_th]:pb-3 [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-[0.16em]",
   "report-tabs":
-    "gap-4 [&_button]:rounded-full [&_button]:tracking-[0.02em]",
+    "gap-5 [&_[data-slot=tabs-list]]:mb-2 [&_button]:rounded-full [&_button]:px-3.5 [&_button]:tracking-[0.02em]",
   "review-alert": "border-l-4 border-l-foreground/30 bg-muted/35",
-  "review-badge": "font-semibold tracking-[0.1em]",
+  "review-badge": "font-semibold tracking-[0.1em] self-start",
   "review-card": "rounded-xl border-border/90",
   "review-field":
     "gap-2 [&_input]:border-border/90 [&_textarea]:border-border/90",
   "review-table": "[&_td]:align-top [&_td]:py-2 [&_th]:text-[0.72rem]",
   "review-tabs":
-    "gap-3 [&_button]:font-medium [&_button]:tracking-[0.05em]",
+    "gap-4 [&_[data-slot=tabs-list]]:mb-1 [&_button]:font-medium [&_button]:tracking-[0.05em]",
 }
 
 type FieldSemantics = {

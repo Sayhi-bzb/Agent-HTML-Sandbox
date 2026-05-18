@@ -1,5 +1,6 @@
 /// <reference types="node" />
 // @vitest-environment node
+// @ts-nocheck
 
 import { mkdtemp, readFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
@@ -9,8 +10,11 @@ import { afterEach, describe, expect, it } from "vitest"
 
 import { getRuntimePaths } from "./runtime-paths.mjs"
 import {
+  deleteStyleProfile,
   loadUserStyleProfilesById,
+  readCurrentStyleProfileReference,
   saveUserStyleProfile,
+  writeCurrentStyleProfileReference,
 } from "./style-profile-storage.mjs"
 
 const tempDirs: string[] = []
@@ -53,13 +57,31 @@ describe("style profile storage", () => {
     ).toBe("#0b5fff")
   })
 
-  it("rejects built-in ids and invalid save-as ids", async () => {
+  it("persists and falls back current style ids", async () => {
     const runtimeHome = await createRuntimeHome()
     const paths = getRuntimePaths({ AHTML_HOME: runtimeHome })
 
-    await expect(
-      saveUserStyleProfile(paths, createProfile("report-default", "#0f766e")),
-    ).rejects.toThrow('Cannot overwrite built-in style profile "report-default"')
+    await saveUserStyleProfile(paths, createProfile("report-default", "#0f766e"), {
+      overwrite: true,
+    })
+    await writeCurrentStyleProfileReference(paths, "report-default")
+
+    expect(await readCurrentStyleProfileReference(paths)).toBe("report-default")
+
+    await saveUserStyleProfile(paths, createProfile("team-ops", "#0f766e"))
+    await writeCurrentStyleProfileReference(paths, "team-ops")
+
+    expect(await readCurrentStyleProfileReference(paths)).toBe("team-ops")
+
+    const deletion = await deleteStyleProfile(paths, "team-ops")
+    expect(deletion.deleted).toBe(true)
+    expect(deletion.currentStyleProfileId).toBe("report-default")
+    expect(await readCurrentStyleProfileReference(paths)).toBe("report-default")
+  })
+
+  it("rejects invalid ids", async () => {
+    const runtimeHome = await createRuntimeHome()
+    const paths = getRuntimePaths({ AHTML_HOME: runtimeHome })
 
     await expect(
       saveUserStyleProfile(paths, createProfile("TeamOps", "#0f766e")),

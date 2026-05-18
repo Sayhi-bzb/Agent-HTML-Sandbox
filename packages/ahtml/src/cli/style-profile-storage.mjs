@@ -10,6 +10,7 @@ import {
 
 export const styleProfileManifestKind = "ahtml-style-profile-manifest"
 export const styleProfileGeneratorKind = "ahtml-style-profile-registry"
+export const styleProfileStateKind = "ahtml-style-profile-state"
 const styleProfileIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 export function createStyleProfileStorageManifest(paths) {
@@ -55,6 +56,7 @@ export async function writeStyleProfileStorage(paths) {
   }
 
   await writeJsonFile(paths.styleProfileManifestPath, manifest)
+  await writeCurrentStyleProfileReference(paths, DEFAULT_STYLE_PROFILE_REFERENCE)
   return manifest
 }
 
@@ -88,9 +90,12 @@ export async function assertStyleProfileStorage(paths) {
 
 export async function createStyleProfileResolver(paths) {
   const userProfilesById = await loadUserStyleProfilesById(paths)
+  const currentStyleReference = await readCurrentStyleProfileReference(paths)
 
   return (documentStyleConfigReference) =>
-    userProfilesById.get(documentStyleConfigReference)
+    documentStyleConfigReference
+      ? userProfilesById.get(documentStyleConfigReference)
+      : userProfilesById.get(currentStyleReference)
 }
 
 export async function resolveStyleProfileByReference(paths, styleReference) {
@@ -165,31 +170,96 @@ export async function saveUserStyleProfile(paths, profile, options = {}) {
     )
   }
 
-  if (isBuiltinStyleProfileReference(profileId)) {
-    throw new Error(
-      `Cannot overwrite built-in style profile "${profileId}". Save as a new user profile id instead.`,
-    )
-  }
-
   const parsedProfile = StyleProfileSchema.parse(profile)
-  const userProfilesById = await loadUserStyleProfilesById(paths)
-  const exists = userProfilesById.has(profileId)
+  const existingProfile = await resolveStyleProfileByReference(paths, profileId)
+  const exists = Boolean(existingProfile)
+  const targetPath = isBuiltinStyleProfileReference(profileId)
+    ? path.join(paths.builtinStyleProfilesDir, `${profileId}.json`)
+    : path.join(paths.userStyleProfilesDir, `${profileId}.json`)
 
   if (exists && options.overwrite !== true) {
     throw new Error(
-      `User style profile "${profileId}" already exists. Pass overwrite to replace it.`,
+      `Style profile "${profileId}" already exists. Pass overwrite to replace it.`,
     )
   }
 
-  const targetPath = path.join(paths.userStyleProfilesDir, `${profileId}.json`)
   await writeJsonFile(targetPath, parsedProfile)
 
   return {
     id: profileId,
     path: targetPath,
-    source: "user",
+    source: getStyleProfileSource(profileId),
     overwritten: exists,
     profile: parsedProfile,
+  }
+}
+
+export async function readCurrentStyleProfileReference(paths) {
+  try {
+    const source = await readFile(paths.styleProfileStatePath, "utf8")
+    const state = JSON.parse(source)
+    const styleReference = state?.currentStyleProfileId
+
+    if (!styleProfileIdPattern.test(styleReference ?? "")) {
+      return DEFAULT_STYLE_PROFILE_REFERENCE
+    }
+
+    const profile = await resolveStyleProfileByReference(paths, styleReference)
+    return profile ? styleReference : DEFAULT_STYLE_PROFILE_REFERENCE
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return DEFAULT_STYLE_PROFILE_REFERENCE
+    }
+
+    throw error
+  }
+}
+
+export async function writeCurrentStyleProfileReference(paths, styleReference) {
+  const nextStyleReference = (await resolveStyleProfileByReference(paths, styleReference))
+    ? styleReference
+    : DEFAULT_STYLE_PROFILE_REFERENCE
+
+  await writeJsonFile(paths.styleProfileStatePath, {
+    kind: styleProfileStateKind,
+    version: STYLE_PROFILE_STORAGE_VERSION,
+    currentStyleProfileId: nextStyleReference,
+  })
+
+  return nextStyleReference
+}
+
+export async function deleteStyleProfile(paths, styleReference) {
+  const targetPath = isBuiltinStyleProfileReference(styleReference)
+    ? path.join(paths.builtinStyleProfilesDir, `${styleReference}.json`)
+    : path.join(paths.userStyleProfilesDir, `${styleReference}.json`)
+
+  try {
+    const { unlink } = await import("node:fs/promises")
+    await unlink(targetPath)
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return {
+        deleted: false,
+        currentStyleProfileId: await readCurrentStyleProfileReference(paths),
+      }
+    }
+
+    throw error
+  }
+
+  const currentStyleProfileId = await readCurrentStyleProfileReference(paths)
+  const nextCurrentStyleProfileId =
+    currentStyleProfileId === styleReference
+      ? await writeCurrentStyleProfileReference(
+          paths,
+          DEFAULT_STYLE_PROFILE_REFERENCE,
+        )
+      : currentStyleProfileId
+
+  return {
+    deleted: true,
+    currentStyleProfileId: nextCurrentStyleProfileId,
   }
 }
 
