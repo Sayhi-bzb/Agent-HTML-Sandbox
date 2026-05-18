@@ -4,19 +4,38 @@ import React from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it, vi } from "vitest"
 
-vi.mock("./elements", () => ({
-  resolveElement(name) {
+vi.mock("./elements", () => {
+  const ComboboxItemsContext = React.createContext<unknown[]>([])
+  const ComboboxSelectedItemContext = React.createContext<unknown>(undefined)
+
+  return {
+    resolveElement(name) {
     if (name === "ComboboxInput") {
       return ({
         children,
         ...props
       }: React.PropsWithChildren<Record<string, unknown>>) =>
-        React.createElement(
-          "div",
-          null,
-          React.createElement("input", props),
-          children,
-        )
+        {
+          const selectedItem = React.useContext(ComboboxSelectedItemContext)
+          const selectedLabel =
+            selectedItem &&
+            typeof selectedItem === "object" &&
+            "label" in selectedItem
+              ? selectedItem.label
+              : undefined
+
+          return React.createElement(
+            "div",
+            null,
+            React.createElement("input", {
+              ...props,
+              ...(typeof selectedLabel === "string"
+                ? { value: selectedLabel }
+                : {}),
+            }),
+            children,
+          )
+        }
     }
 
     if (name === "Input") {
@@ -47,8 +66,44 @@ vi.mock("./elements", () => ({
       return "p"
     }
 
-    if (name === "Combobox") {
+    if (name === "FieldTitle") {
       return "div"
+    }
+
+    if (name === "Combobox") {
+      return ({
+        children,
+        items,
+        defaultValue,
+        ...props
+      }: React.PropsWithChildren<Record<string, unknown>>) =>
+        React.createElement(
+          ComboboxItemsContext.Provider,
+          {
+            value: Array.isArray(items) ? items : [],
+          },
+          React.createElement(
+            ComboboxSelectedItemContext.Provider,
+            {
+              value: defaultValue,
+            },
+            React.createElement("div", props, children),
+          ),
+        )
+    }
+
+    if (name === "Accordion") {
+      return ({
+        children,
+        ...props
+      }: React.PropsWithChildren<Record<string, unknown>>) =>
+        React.createElement(
+          "div",
+          {
+            "data-accordion-props": JSON.stringify(props),
+          },
+          children,
+        )
     }
 
     if (name === "ComboboxContent") {
@@ -64,7 +119,21 @@ vi.mock("./elements", () => ({
     }
 
     if (name === "ComboboxCollection") {
-      return "div"
+      return ({
+        children,
+      }: React.PropsWithChildren<Record<string, unknown>>) => {
+        if (typeof children !== "function") {
+          throw new TypeError("ComboboxCollection children must be a function.")
+        }
+
+        const items = React.useContext(ComboboxItemsContext)
+
+        return React.createElement(
+          React.Fragment,
+          null,
+          items.map((item, index) => children(item, index)),
+        )
+      }
     }
 
     if (name === "ComboboxItem") {
@@ -76,8 +145,9 @@ vi.mock("./elements", () => ({
     }
 
     return name ?? React.Fragment
-  },
-}))
+    },
+  }
+})
 
 import { createRendererNode } from "./render-node"
 
@@ -272,10 +342,7 @@ describe("createRendererNode", () => {
           description: "FieldDescription",
           labelProp: "label",
           descriptionProp: "description",
-          propMappings: [
-            { prop: "value", target: "defaultValue" },
-            { prop: "label", target: "aria-label" },
-          ],
+          propMappings: [{ prop: "value", target: "defaultValue" }],
         },
       ],
     ])
@@ -297,12 +364,16 @@ describe("createRendererNode", () => {
     )
 
     expect(markup).toContain('data-agent-html-component="textarea"')
-    expect(markup).toContain("<label>Notes</label>")
     expect(markup).toContain(
-      '<textarea aria-label="Notes">Ship after the guard lands.</textarea>',
+      '<label id="ahtml-textarea-0-label" for="ahtml-textarea-0-control">Notes</label>',
     )
-    expect(markup).toContain('aria-label="Notes"')
-    expect(markup).toContain("<p>Long-form field.</p>")
+    expect(markup).toContain('id="ahtml-textarea-0-control"')
+    expect(markup).toContain('aria-labelledby="ahtml-textarea-0-label"')
+    expect(markup).toContain('aria-describedby="ahtml-textarea-0-description"')
+    expect(markup).toContain(">Ship after the guard lands.</textarea>")
+    expect(markup).toContain(
+      '<p id="ahtml-textarea-0-description">Long-form field.</p>',
+    )
   })
 
   it("renders checkbox toggle-field components with boolean prop coercion", () => {
@@ -320,10 +391,7 @@ describe("createRendererNode", () => {
           description: "FieldDescription",
           labelProp: "label",
           descriptionProp: "description",
-          propMappings: [
-            { prop: "checked", target: "defaultChecked", coerce: "boolean" },
-            { prop: "label", target: "aria-label" },
-          ],
+          propMappings: [{ prop: "checked", target: "defaultChecked", coerce: "boolean" }],
         },
       ],
     ])
@@ -344,12 +412,18 @@ describe("createRendererNode", () => {
       }),
     )
 
-    expect(markup).toContain("<label>Ship now</label>")
+    expect(markup).toContain(
+      '<label id="ahtml-checkbox-0-label" for="ahtml-checkbox-0-control">Ship now</label>',
+    )
     expect(markup).toContain("<input")
-    expect(markup).toContain('aria-label="Ship now"')
+    expect(markup).toContain('id="ahtml-checkbox-0-control"')
+    expect(markup).toContain('aria-labelledby="ahtml-checkbox-0-label"')
+    expect(markup).toContain('aria-describedby="ahtml-checkbox-0-description"')
     expect(markup).toContain("checked")
-    expect(markup).toContain("<p>Boolean field.</p>")
-    expect(markup).toContain('orientation="horizontal"><input')
+    expect(markup).toContain(
+      '<p id="ahtml-checkbox-0-description">Boolean field.</p>',
+    )
+    expect(markup).toContain('orientation="horizontal"')
   })
 
   it("renders switch toggle-field components with boolean prop coercion", () => {
@@ -367,10 +441,7 @@ describe("createRendererNode", () => {
           description: "FieldDescription",
           labelProp: "label",
           descriptionProp: "description",
-          propMappings: [
-            { prop: "checked", target: "defaultChecked", coerce: "boolean" },
-            { prop: "label", target: "aria-label" },
-          ],
+          propMappings: [{ prop: "checked", target: "defaultChecked", coerce: "boolean" }],
         },
       ],
     ])
@@ -391,12 +462,18 @@ describe("createRendererNode", () => {
       }),
     )
 
-    expect(markup).toContain("<label>Live Sync</label>")
+    expect(markup).toContain(
+      '<label id="ahtml-switch-0-label" for="ahtml-switch-0-control">Live Sync</label>',
+    )
     expect(markup).toContain("<input")
-    expect(markup).toContain('aria-label="Live Sync"')
+    expect(markup).toContain('id="ahtml-switch-0-control"')
+    expect(markup).toContain('aria-labelledby="ahtml-switch-0-label"')
+    expect(markup).toContain('aria-describedby="ahtml-switch-0-description"')
     expect(markup).toContain("checked")
-    expect(markup).toContain("<p>Immediate preference toggle.</p>")
-    expect(markup).toContain('orientation="horizontal"><input')
+    expect(markup).toContain(
+      '<p id="ahtml-switch-0-description">Immediate preference toggle.</p>',
+    )
+    expect(markup).toContain('orientation="horizontal"')
   })
 
   it("renders slider range-field components with numeric coercion and fallback", () => {
@@ -440,8 +517,13 @@ describe("createRendererNode", () => {
       }),
     )
 
-    expect(markup).toContain("<label>Review strictness</label>")
+    expect(markup).toContain(
+      '<label id="ahtml-slider-0-label" for="ahtml-slider-0-control">Review strictness</label>',
+    )
     expect(markup).toContain("<input")
+    expect(markup).toContain('id="ahtml-slider-0-control"')
+    expect(markup).toContain('aria-labelledby="ahtml-slider-0-label"')
+    expect(markup).toContain('aria-describedby="ahtml-slider-0-description"')
     expect(markup).toContain('aria-label="Review strictness"')
     expect(markup).toContain('value="70"')
     expect(markup).toContain("<noscript>")
@@ -464,7 +546,7 @@ describe("createRendererNode", () => {
             },
           ],
           root: "Field",
-          label: "FieldLabel",
+          label: "FieldTitle",
           control: "RadioGroup",
           item: "RadioGroupItem",
           itemSlot: "option",
@@ -473,10 +555,7 @@ describe("createRendererNode", () => {
           description: "FieldDescription",
           labelProp: "label",
           descriptionProp: "description",
-          propMappings: [
-            { prop: "value", target: "defaultValue" },
-            { prop: "label", target: "aria-label" },
-          ],
+          propMappings: [{ prop: "value", target: "defaultValue" }],
         },
       ],
     ])
@@ -510,13 +589,18 @@ describe("createRendererNode", () => {
       }),
     )
 
-    expect(markup).toContain("<label>Direction</label>")
+    expect(markup).toContain(
+      '<div id="ahtml-radio-group-0-label">Direction</div>',
+    )
     expect(markup).toContain("<RadioGroup")
-    expect(markup).toContain('aria-label="Direction"')
+    expect(markup).toContain('aria-labelledby="ahtml-radio-group-0-label"')
+    expect(markup).toContain('aria-describedby="ahtml-radio-group-0-description"')
     expect(markup).toContain("<RadioGroupItem")
-    expect(markup).toContain("<label>Ship</label>")
+    expect(markup).toContain('<div id="ahtml-option-0-0-label">Ship</div>')
     expect(markup).toContain("Use the current direction.")
-    expect(markup).toContain("<p>Single-select field.</p>")
+    expect(markup).toContain(
+      '<p id="ahtml-radio-group-0-description">Single-select field.</p>',
+    )
   })
 
   it("renders toggle-group choice-inline components with static props and option children", () => {
@@ -535,7 +619,7 @@ describe("createRendererNode", () => {
             },
           ],
           root: "Field",
-          label: "FieldLabel",
+          label: "FieldTitle",
           control: "ToggleGroup",
           item: "ToggleGroupItem",
           itemSlot: "option",
@@ -547,10 +631,7 @@ describe("createRendererNode", () => {
           staticProps: {
             type: "single",
           },
-          propMappings: [
-            { prop: "value", target: "defaultValue" },
-            { prop: "label", target: "aria-label" },
-          ],
+          propMappings: [{ prop: "value", target: "defaultValue" }],
         },
       ],
     ])
@@ -584,27 +665,34 @@ describe("createRendererNode", () => {
       }),
     )
 
-    expect(markup).toContain("<label>Rollout Mode</label>")
+    expect(markup).toContain(
+      '<div id="ahtml-toggle-group-0-label">Rollout Mode</div>',
+    )
     expect(markup).toContain("<ToggleGroup")
-    expect(markup).toContain('aria-label="Rollout Mode"')
+    expect(markup).toContain('aria-labelledby="ahtml-toggle-group-0-label"')
+    expect(markup).toContain(
+      'aria-describedby="ahtml-toggle-group-0-description"',
+    )
     expect(markup).toContain('type="single"')
     expect(markup).toContain("<ToggleGroupItem")
     expect(markup).toContain('value="fast"')
     expect(markup).toContain(">Fast")
     expect(markup).toContain("Prefer speed.")
-    expect(markup).toContain("<p>Inline option set.</p>")
+    expect(markup).toContain(
+      '<p id="ahtml-toggle-group-0-description">Inline option set.</p>',
+    )
     expect(markup).not.toContain("Trigger")
     expect(markup).not.toContain("Content")
   })
 
-  it("renders select choice-overlay components with trigger/content structure and fallback", () => {
+  it("renders select select-overlay components with trigger/content structure and fallback", () => {
     const rendererSpecByName = new Map([
       [
         "select",
         {
           name: "select",
-          kind: "choice-overlay",
-          renderKind: "choice-overlay",
+          kind: "select-overlay",
+          renderKind: "select-overlay",
           slots: [
             {
               name: "option",
@@ -613,7 +701,7 @@ describe("createRendererNode", () => {
             },
           ],
           root: "Field",
-          label: "FieldLabel",
+          label: "FieldTitle",
           control: "Select",
           controlTrigger: "SelectTrigger",
           controlValue: "SelectValue",
@@ -627,10 +715,7 @@ describe("createRendererNode", () => {
           labelProp: "label",
           descriptionProp: "description",
           fallback: true,
-          propMappings: [
-            { prop: "value", target: "defaultValue" },
-            { prop: "label", target: "aria-label" },
-          ],
+          propMappings: [{ prop: "value", target: "defaultValue" }],
         },
       ],
     ])
@@ -666,28 +751,33 @@ describe("createRendererNode", () => {
       }),
     )
 
-    expect(markup).toContain("<label>Deployment Window</label>")
+    expect(markup).toContain(
+      '<div id="ahtml-select-0-label">Deployment Window</div>',
+    )
     expect(markup).toContain("<Select")
-    expect(markup).toContain("<SelectTrigger>")
+    expect(markup).toContain(
+      '<SelectTrigger id="ahtml-select-0-control" aria-labelledby="ahtml-select-0-label" aria-describedby="ahtml-select-0-description">',
+    )
     expect(markup).toContain("<SelectValue")
     expect(markup).toContain("<SelectContent>")
     expect(markup).toContain("<div><SelectItem")
     expect(markup).toContain("<SelectItem")
-    expect(markup).toContain('aria-label="Deployment Window"')
     expect(markup).toContain("Ship in the current window.")
-    expect(markup).toContain("<p>Choose a release window.</p>")
+    expect(markup).toContain(
+      '<p id="ahtml-select-0-description">Choose a release window.</p>',
+    )
     expect(markup).toContain("<noscript>")
     expect(markup).toContain("Today (selected)")
   })
 
-  it("renders combobox choice-overlay components with collection and empty-state composition", () => {
+  it("renders combobox combobox-input components with collection and empty-state composition", () => {
     const rendererSpecByName = new Map([
       [
         "combobox",
         {
           name: "combobox",
-          kind: "choice-overlay",
-          renderKind: "choice-overlay",
+          kind: "combobox-input",
+          renderKind: "combobox-input",
           slots: [
             {
               name: "option",
@@ -696,7 +786,7 @@ describe("createRendererNode", () => {
             },
           ],
           root: "Field",
-          label: "FieldLabel",
+          label: "FieldTitle",
           controlRoot: "Combobox",
           control: "ComboboxInput",
           controlContent: "ComboboxContent",
@@ -712,10 +802,6 @@ describe("createRendererNode", () => {
           descriptionProp: "description",
           emptyText: "No results found.",
           fallback: true,
-          propMappings: [
-            { prop: "value", target: "defaultValue" },
-            { prop: "label", target: "aria-label" },
-          ],
         },
       ],
     ])
@@ -752,14 +838,20 @@ describe("createRendererNode", () => {
       }),
     )
 
-    expect(markup).toContain("<label>Owner</label>")
+    expect(markup).toContain('<div id="ahtml-combobox-0-label">Owner</div>')
     expect(markup).toContain("<input")
-    expect(markup).toContain('aria-label="Owner"')
+    expect(markup).toContain('id="ahtml-combobox-0-control"')
+    expect(markup).toContain('aria-labelledby="ahtml-combobox-0-label"')
+    expect(markup).toContain(
+      'aria-describedby="ahtml-combobox-0-description"',
+    )
     expect(markup).toContain('value="Ops reviewer"')
     expect(markup).toContain("<section")
     expect(markup).toContain("<div")
     expect(markup).toContain("No results found.")
     expect(markup).toContain("Ops reviewer")
+    expect(markup).toContain("Current reviewer.")
+    expect(markup).toContain("Security reviewer")
     expect(markup).toContain("<noscript>")
     expect(markup).toContain("Ops reviewer (selected)")
   })
@@ -770,8 +862,8 @@ describe("createRendererNode", () => {
         "accordion",
         {
           name: "accordion",
-          kind: "interactive-collection",
-          renderKind: "interactive-collection",
+          kind: "accordion",
+          renderKind: "accordion",
           slots: [
             {
               name: "accordion-item",
@@ -786,7 +878,9 @@ describe("createRendererNode", () => {
           itemSlot: "accordion-item",
           itemValueProp: "slug",
           itemHeadingProp: "heading",
-          mode: "multiple",
+          modeProp: "mode",
+          defaultProp: "default",
+          defaultMode: "multiple",
           fallback: true,
         },
       ],
@@ -811,10 +905,75 @@ describe("createRendererNode", () => {
       }),
     )
 
+    expect(markup).toContain('&quot;type&quot;:&quot;multiple&quot;')
+    expect(markup).not.toContain("defaultValue")
     expect(markup).toContain(">Details</AccordionTrigger>")
     expect(markup).toContain(
       '<h2 class="m-0 text-lg font-medium leading-7">Details</h2>',
     )
     expect(markup).toContain("<noscript>")
+  })
+
+  it("parses explicit accordion default state instead of opening every item", () => {
+    const rendererSpecByName = new Map([
+      [
+        "accordion",
+        {
+          name: "accordion",
+          kind: "accordion",
+          renderKind: "accordion",
+          slots: [
+            {
+              name: "accordion-item",
+              childNames: ["accordion-item"],
+              children: ["text"],
+            },
+          ],
+          root: "Accordion",
+          item: "AccordionItem",
+          trigger: "AccordionTrigger",
+          content: "AccordionContent",
+          itemSlot: "accordion-item",
+          itemValueProp: "slug",
+          itemHeadingProp: "heading",
+          modeProp: "mode",
+          defaultProp: "default",
+          defaultMode: "multiple",
+        },
+      ],
+    ])
+
+    const RendererNode = createRendererNode(rendererSpecByName)
+    const markup = renderToStaticMarkup(
+      React.createElement(RendererNode, {
+        node: {
+          type: "component",
+          name: "accordion",
+          props: {
+            mode: "multiple",
+            default: "details, audit",
+          },
+          children: [
+            {
+              type: "component",
+              name: "accordion-item",
+              props: { slug: "details", heading: "Details" },
+              children: [{ type: "text", value: "Accordion content" }],
+            },
+            {
+              type: "component",
+              name: "accordion-item",
+              props: { slug: "audit", heading: "Audit" },
+              children: [{ type: "text", value: "Audit content" }],
+            },
+          ],
+        },
+      }),
+    )
+
+    expect(markup).toContain('&quot;type&quot;:&quot;multiple&quot;')
+    expect(markup).toContain(
+      '&quot;defaultValue&quot;:[&quot;details&quot;,&quot;audit&quot;]',
+    )
   })
 })

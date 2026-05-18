@@ -18,14 +18,14 @@ const RendererNode = createRendererNode(
   rendererSpecByName,
   agentDocument.meta.styleProfile.componentStyle.treatments,
 )
-const shellProjection = getStyleProfileLegacyProjection(agentDocument)
 const documentStyleCss = createDocumentStyleCss(agentDocument)
+const shellClassName =
+  "mx-auto grid min-h-screen w-full max-w-4xl gap-6 px-4 py-10 sm:px-6 items-stretch"
 
 assertRendererRegistryParity(runtimeRendererVerification, rendererSpecByName)
 
 export function App() {
   const title = getDocumentTitle(agentDocument)
-  const shellClassName = getShellClassName(agentDocument)
 
   React.useEffect(() => {
     if (title && typeof document !== "undefined") {
@@ -40,45 +40,13 @@ export function App() {
       <main
         className={shellClassName}
         data-style-profile={agentDocument.meta.styleProfile.id}
-        data-theme={shellProjection.theme}
-        data-density={shellProjection.density}
-        data-tone={shellProjection.tone}
-        data-width={shellProjection.width}
       >
         {agentDocument.components.map((node, index) => (
-          <RendererNode key={index} node={node} />
+          <RendererNode key={index} node={node} path={[index]} />
         ))}
       </main>
     </>
   )
-}
-
-function getShellClassName(agentDocument: AgentDocument) {
-  const { density, tone, width } = getStyleProfileLegacyProjection(agentDocument)
-  const widthClassName =
-    width === "wide"
-      ? "max-w-7xl"
-      : width === "dashboard"
-        ? "max-w-6xl"
-        : "max-w-4xl"
-  const densityClassName = density === "compact" ? "gap-4 py-8" : "gap-6 py-10"
-  const toneClassName =
-    tone === "dashboard"
-      ? "items-stretch"
-      : tone === "decision"
-        ? "items-start"
-        : "items-stretch"
-
-  return [
-    "mx-auto grid min-h-screen w-full px-4 sm:px-6",
-    widthClassName,
-    densityClassName,
-    toneClassName,
-  ].join(" ")
-}
-
-function getStyleProfileLegacyProjection(agentDocument: AgentDocument) {
-  return agentDocument.meta.styleProfile.globalStyle.legacyProjection
 }
 
 function createDocumentStyleCss(agentDocument: AgentDocument) {

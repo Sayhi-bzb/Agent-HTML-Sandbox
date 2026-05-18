@@ -966,7 +966,22 @@ export const GENERATED_STANDARD_COMPONENT_SCHEMAS = [
   {
     "name": "accordion",
     "description": "Expandable section group.",
-    "props": [],
+    "props": [
+      {
+        "name": "mode",
+        "valueKind": "enum",
+        "description": "Whether one or multiple sections may stay open.",
+        "enumValues": [
+          "single",
+          "multiple"
+        ]
+      },
+      {
+        "name": "default",
+        "valueKind": "text",
+        "description": "Initially open accordion item value, or a comma-separated list when mode is \"multiple\"."
+      }
+    ],
     "allowedChildren": [
       "accordion-item"
     ]

@@ -1,9 +1,10 @@
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises"
+import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises"
 import path from "node:path"
 
 import {
   BUILTIN_STYLE_PROFILES_BY_REFERENCE,
   DEFAULT_STYLE_PROFILE_REFERENCE,
+  StyleProfileSchema,
   STYLE_PROFILE_STORAGE_VERSION,
 } from "../config/internal-core-bridge.mjs"
 
@@ -82,6 +83,79 @@ export async function assertStyleProfileStorage(paths) {
   }
 
   return `${manifest.profiles.length} builtin profiles -> ${paths.userStyleProfilesDir}`
+}
+
+export async function createStyleProfileResolver(paths) {
+  const userProfilesById = await loadUserStyleProfilesById(paths)
+
+  return (documentStyleConfigReference) =>
+    userProfilesById.get(documentStyleConfigReference)
+}
+
+export async function resolveStyleProfileByReference(paths, styleReference) {
+  if (BUILTIN_STYLE_PROFILES_BY_REFERENCE[styleReference]) {
+    return BUILTIN_STYLE_PROFILES_BY_REFERENCE[styleReference]
+  }
+
+  const userProfilesById = await loadUserStyleProfilesById(paths)
+  return userProfilesById.get(styleReference)
+}
+
+export async function listStyleProfileReferences(paths) {
+  const userProfilesById = await loadUserStyleProfilesById(paths)
+
+  return [
+    ...Object.keys(BUILTIN_STYLE_PROFILES_BY_REFERENCE),
+    ...userProfilesById.keys(),
+  ].sort((left, right) => left.localeCompare(right))
+}
+
+export async function loadUserStyleProfilesById(paths) {
+  if (!(await pathExists(paths.userStyleProfilesDir))) {
+    return new Map()
+  }
+
+  const entries = await readdir(paths.userStyleProfilesDir, {
+    withFileTypes: true,
+  })
+  const userProfilesById = new Map()
+
+  for (const entry of entries) {
+    if (!entry.isFile() || path.extname(entry.name) !== ".json") {
+      continue
+    }
+
+    const profilePath = path.join(paths.userStyleProfilesDir, entry.name)
+    const profileId = path.basename(entry.name, ".json")
+
+    try {
+      const source = await readFile(profilePath, "utf8")
+      const parsedProfile = StyleProfileSchema.safeParse(JSON.parse(source))
+
+      if (!parsedProfile.success || parsedProfile.data.id !== profileId) {
+        continue
+      }
+
+      userProfilesById.set(profileId, parsedProfile.data)
+    } catch {
+      continue
+    }
+  }
+
+  return userProfilesById
+}
+
+async function pathExists(filePath) {
+  try {
+    await stat(filePath)
+    return true
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return false
+    }
+
+    throw error
+  }
 }
 
 async function writeJsonFile(filePath, value) {

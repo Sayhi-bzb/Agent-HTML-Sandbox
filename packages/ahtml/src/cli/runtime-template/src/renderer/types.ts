@@ -99,21 +99,11 @@ export type AgentDocument = {
           fontSans: string
           fontHeading: string
         }
-        legacyProjection: {
-          theme: string
-          density: string
-          tone: string
-          width: string
-        }
       }
       componentStyle: {
         treatments: Record<string, string>
       }
     }
-    theme: string
-    density: string
-    tone: string
-    width: string
   }
   components: AgentNode[]
 }
@@ -190,6 +180,8 @@ export type RendererSpecComponent = {
   defaultProp?: string
   fallback?: boolean
   mode?: string
+  modeProp?: string
+  defaultMode?: string
   headerKind?: string
   kindProp?: string
   itemValueProp?: string
@@ -207,6 +199,16 @@ export type RuntimeVerificationState = {
     components: {
       name: string
       renderKind?: string
+      behavior?: {
+        model: string
+        runtimeOwner: string
+        forwardedProps?: string[]
+        visualStateProp?: string
+        modeProp?: string
+        defaultProp?: string
+        defaultMode?: string
+        multiValueDelimiter?: string
+      }
       slots?: RendererSlot[]
     }[]
   }

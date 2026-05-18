@@ -48,6 +48,8 @@ const rendererSpecScalarFields = [
   "defaultProp",
   "fallback",
   "mode",
+  "modeProp",
+  "defaultMode",
   "headerKind",
   "kindProp",
   "itemValueProp",

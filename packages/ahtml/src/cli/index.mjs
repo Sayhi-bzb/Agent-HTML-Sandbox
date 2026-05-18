@@ -14,6 +14,7 @@ import {
   createArtifactWorkflow,
   formatInspectionSummary,
 } from "./artifact-workflow.mjs"
+import { createGalleryWorkflow } from "./gallery-workflow.mjs"
 import {
   readPackageVersion as readPackageVersionFromPackage,
   writeOrPrint,
@@ -51,6 +52,10 @@ const defaultOutputDir = path.join(
   userRoot,
   ...cliDefaults.outputDir.split("/"),
 )
+const defaultGalleryOutputDir = path.join(
+  userRoot,
+  ...cliDefaults.galleryOutputDir.split("/"),
+)
 const {
   buildArtifact,
   ensureManagedRuntime,
@@ -64,6 +69,14 @@ const {
   runtimePaths,
   readPackageVersion,
 })
+const { buildGalleryArtifact } = createGalleryWorkflow({
+  userRoot,
+  defaultOutputDir: defaultGalleryOutputDir,
+  packageRoot,
+  runtimePaths,
+  readPackageVersion,
+  ensureManagedRuntime,
+})
 const command = process.argv[2]
 const args = process.argv.slice(3)
 const commandHandlers = {
@@ -73,6 +86,7 @@ const commandHandlers = {
   build: buildCommand,
   inspect: inspectCommand,
   preview: previewCommand,
+  gallery: galleryCommand,
   doctor: doctorCommand,
 }
 const commandDefinitions = createCommandDefinitions(commandHandlers)
@@ -303,13 +317,37 @@ async function previewCommand(commandArgs, definition) {
     fail(`Unexpected argument "${positionals[1]}".`)
   }
 
+  const port = parsePort(options.port ?? cliDefaults.previewPort, "preview")
+
   const result = await buildArtifact(inputPath, options.out)
   if (!result?.ok) {
     process.exitCode = 1
     return
   }
 
-  const port = parsePort(options.port ?? cliDefaults.previewPort)
+  await serveDirectory(result.outputDir, port)
+}
+
+async function galleryCommand(commandArgs, definition) {
+  const { options, positionals } = parseOptions(commandArgs, definition)
+
+  if (positionals.length > 0) {
+    fail(`Unexpected argument "${positionals[0]}".`)
+  }
+
+  if (!options["style-ref"]) {
+    fail("gallery requires --style-ref <id>.")
+  }
+
+  const port = parsePort(options.port ?? cliDefaults.previewPort, "gallery")
+
+  const result = await buildGalleryArtifact(options["style-ref"], options.out)
+
+  if (!result?.ok) {
+    process.exitCode = 1
+    return
+  }
+
   await serveDirectory(result.outputDir, port)
 }
 

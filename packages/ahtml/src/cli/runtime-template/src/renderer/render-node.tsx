@@ -10,18 +10,27 @@ import type {
   RendererSpecComponent,
 } from "./types"
 
+type RendererPathSegment = number | string
+type RendererPath = RendererPathSegment[]
+
 export function createRendererNode(
   rendererSpecByName: Map<string, RendererSpecComponent>,
   componentTreatments: Record<string, string> = {},
 ) {
-  function RendererNode({ node }: { node: AgentNode }) {
+  function RendererNode({
+    node,
+    path = [0],
+  }: {
+    node: AgentNode
+    path?: RendererPath
+  }) {
     if (node.type === "text") {
       return <p className="m-0 whitespace-pre-wrap">{node.value}</p>
     }
 
     const rendererSpec = rendererSpecByName.get(node.name)
     if (rendererSpec) {
-      return renderComponent(node, rendererSpec)
+      return renderComponent(node, rendererSpec, path)
     }
 
     if (isRuntimeRenderableComponent(node.name)) {
@@ -36,11 +45,12 @@ export function createRendererNode(
   function renderComponent(
     node: AgentComponentNode,
     rendererSpec: RendererSpecComponent,
+    path: RendererPath,
   ) {
     const render = rendererKindHandlers[rendererSpec.kind as RendererKind]
 
     if (render) {
-      return render(node, rendererSpec)
+      return render(node, rendererSpec, path)
     }
 
     throw new Error(
@@ -68,6 +78,7 @@ export function createRendererNode(
   function renderPrimitiveComponent(
     node: AgentComponentNode,
     rendererSpec: RendererSpecComponent,
+    path: RendererPath,
   ) {
     const Component = resolveElement(rendererSpec.component)
     const props = {
@@ -76,9 +87,9 @@ export function createRendererNode(
     }
     const children =
       rendererSpec.childMode === "inline"
-        ? renderInlineChildren(node)
+        ? renderInlineChildren(node, path)
         : rendererSpec.childMode === "block"
-          ? renderChildren(node)
+          ? renderChildren(node, path)
           : undefined
 
     return <Component {...props}>{children}</Component>
@@ -87,6 +98,7 @@ export function createRendererNode(
   function renderCompoundComponent(
     node: AgentComponentNode,
     rendererSpec: RendererSpecComponent,
+    path: RendererPath,
   ) {
     const Root = resolveElement(rendererSpec.root)
     const Title = resolveElement(rendererSpec.title)
@@ -99,8 +111,8 @@ export function createRendererNode(
     const title = renderCompoundTitle(node, rendererSpec, Title)
     const content =
       rendererSpec.childMode === "inline"
-        ? renderInlineChildren(node)
-        : renderChildren(node)
+        ? renderInlineChildren(node, path)
+        : renderChildren(node, path)
 
     return (
       <Root {...props}>
@@ -117,6 +129,7 @@ export function createRendererNode(
   function renderTextFieldComponent(
     node: AgentComponentNode,
     rendererSpec: RendererSpecComponent,
+    path: RendererPath,
   ) {
     const Root = resolveElement(rendererSpec.root)
     const Label = resolveElement(rendererSpec.label)
@@ -133,22 +146,35 @@ export function createRendererNode(
     const description = descriptionProp
       ? node.props[descriptionProp]
       : undefined
+    const fieldSemantics = createFieldSemantics({
+      description,
+      label,
+      name: node.name,
+      path,
+    })
     const controlProps = {
       ...rendererSpec.staticProps,
       ...applyPropMappings(node.props, rendererSpec.propMappings),
+      ...getFieldControlProps(fieldSemantics),
     }
 
     return (
       <>
-        <Root
-          {...getComponentMetadataProps(node, rendererSpec)}
-        >
+        <Root {...getComponentMetadataProps(node, rendererSpec)}>
           {label ? (
-            <Label className={rendererSpec.labelClassName}>{label}</Label>
+            <Label
+              {...getFieldLabelProps(fieldSemantics, true)}
+              className={rendererSpec.labelClassName}
+            >
+              {label}
+            </Label>
           ) : null}
           <Control {...controlProps} />
           {description && Description ? (
-            <Description className={rendererSpec.descriptionClassName}>
+            <Description
+              {...getFieldDescriptionProps(fieldSemantics)}
+              className={rendererSpec.descriptionClassName}
+            >
               {description}
             </Description>
           ) : null}
@@ -167,6 +193,7 @@ export function createRendererNode(
   function renderToggleFieldComponent(
     node: AgentComponentNode,
     rendererSpec: RendererSpecComponent,
+    path: RendererPath,
   ) {
     const Root = resolveElement(rendererSpec.root)
     const FieldContent = resolveElement("FieldContent")
@@ -181,28 +208,42 @@ export function createRendererNode(
     const description = descriptionProp
       ? node.props[descriptionProp]
       : undefined
+    const fieldSemantics = createFieldSemantics({
+      description,
+      label,
+      name: node.name,
+      path,
+    })
     const controlProps = {
       ...rendererSpec.staticProps,
       ...applyPropMappings(node.props, rendererSpec.propMappings),
+      ...getFieldControlProps(fieldSemantics),
     }
 
     return (
       <Root
         {...getComponentMetadataProps(node, rendererSpec)}
+        orientation="horizontal"
       >
-        <Root orientation="horizontal">
-          <Control {...controlProps} />
-          <FieldContent>
-            {label ? (
-              <Label className={rendererSpec.labelClassName}>{label}</Label>
-            ) : null}
-            {description && Description ? (
-              <Description className={rendererSpec.descriptionClassName}>
-                {description}
-              </Description>
-            ) : null}
-          </FieldContent>
-        </Root>
+        <Control {...controlProps} />
+        <FieldContent>
+          {label ? (
+            <Label
+              {...getFieldLabelProps(fieldSemantics, true)}
+              className={rendererSpec.labelClassName}
+            >
+              {label}
+            </Label>
+          ) : null}
+          {description && Description ? (
+            <Description
+              {...getFieldDescriptionProps(fieldSemantics)}
+              className={rendererSpec.descriptionClassName}
+            >
+              {description}
+            </Description>
+          ) : null}
+        </FieldContent>
       </Root>
     )
   }
@@ -210,17 +251,20 @@ export function createRendererNode(
   function renderRangeFieldComponent(
     node: AgentComponentNode,
     rendererSpec: RendererSpecComponent,
+    path: RendererPath,
   ) {
-    return renderTextFieldComponent(node, rendererSpec)
+    return renderTextFieldComponent(node, rendererSpec, path)
   }
 
   function renderChoiceGroupComponent(
     node: AgentComponentNode,
     rendererSpec: RendererSpecComponent,
+    path: RendererPath,
   ) {
     const Root = resolveElement(rendererSpec.root)
     const FieldContent = resolveElement("FieldContent")
-    const Label = resolveElement(rendererSpec.label)
+    const GroupLabel = resolveElement(rendererSpec.label)
+    const ItemLabel = resolveElement("FieldTitle")
     const Control = resolveElement(rendererSpec.control)
     const Item = resolveElement(rendererSpec.item)
     const Description = resolveElement(rendererSpec.description)
@@ -239,30 +283,62 @@ export function createRendererNode(
       ? node.props[descriptionProp]
       : undefined
     const items = getStructuredItemsForNode(node, itemSlot)
-    const controlProps = getRendererProps(node.props, rendererSpec)
+    const fieldSemantics = createFieldSemantics({
+      description,
+      label,
+      name: node.name,
+      path,
+    })
+    const controlProps = {
+      ...getRendererProps(node.props, rendererSpec),
+      ...getFieldLabelledByProps(fieldSemantics),
+    }
 
     return (
-      <Root
-        {...getComponentMetadataProps(node, rendererSpec)}
-      >
+      <Root {...getComponentMetadataProps(node, rendererSpec)}>
         {label ? (
-          <Label className={rendererSpec.labelClassName}>{label}</Label>
+          <GroupLabel
+            {...getFieldLabelProps(fieldSemantics, false)}
+            className={rendererSpec.labelClassName}
+          >
+            {label}
+          </GroupLabel>
         ) : null}
         <Control {...controlProps}>
-          {items.map((item) => {
+          {items.map((item, index) => {
             const itemValue = getStructuredItemValue(item, itemValueProp)
             const itemHeading = getStructuredItemHeading(item, itemHeadingProp)
+            const itemPath = appendRendererPath(path, index)
+            const itemSemantics = createFieldSemantics({
+              description: item.children.length > 0 ? "option-description" : undefined,
+              label: itemHeading,
+              name: item.name,
+              path: itemPath,
+            })
 
             return (
-              <Root key={itemValue || itemHeading} orientation="horizontal">
-                <Item aria-label={itemHeading} value={itemValue} />
+              <Root
+                key={itemValue || itemHeading}
+                data-agent-html-component={item.name}
+                orientation="horizontal"
+              >
+                <Item
+                  {...getFieldControlProps(itemSemantics)}
+                  value={itemValue}
+                />
                 <FieldContent>
-                  <Label className={rendererSpec.labelClassName}>
+                  <ItemLabel
+                    {...getFieldLabelProps(itemSemantics, false)}
+                    className={rendererSpec.labelClassName}
+                  >
                     {itemHeading}
-                  </Label>
+                  </ItemLabel>
                   {item.children.length > 0 ? (
-                    <Description className={rendererSpec.descriptionClassName}>
-                      {renderInlineChildren(item)}
+                    <Description
+                      {...getFieldDescriptionProps(itemSemantics)}
+                      className={rendererSpec.descriptionClassName}
+                    >
+                      {renderInlineChildren(item, itemPath)}
                     </Description>
                   ) : null}
                 </FieldContent>
@@ -271,7 +347,10 @@ export function createRendererNode(
           })}
         </Control>
         {description && Description ? (
-          <Description className={rendererSpec.descriptionClassName}>
+          <Description
+            {...getFieldDescriptionProps(fieldSemantics)}
+            className={rendererSpec.descriptionClassName}
+          >
             {description}
           </Description>
         ) : null}
@@ -282,6 +361,7 @@ export function createRendererNode(
   function renderChoiceInlineComponent(
     node: AgentComponentNode,
     rendererSpec: RendererSpecComponent,
+    path: RendererPath,
   ) {
     const Root = resolveElement(rendererSpec.root)
     const Label = resolveElement(rendererSpec.label)
@@ -306,27 +386,43 @@ export function createRendererNode(
       ? node.props[descriptionProp]
       : undefined
     const items = getStructuredItemsForNode(node, itemSlot)
-    const controlProps = getRendererProps(node.props, rendererSpec)
+    const fieldSemantics = createFieldSemantics({
+      description,
+      label,
+      name: node.name,
+      path,
+    })
+    const controlProps = {
+      ...getRendererProps(node.props, rendererSpec),
+      ...getFieldLabelledByProps(fieldSemantics),
+    }
 
     return (
-      <Root
-        {...getComponentMetadataProps(node, rendererSpec)}
-      >
+      <Root {...getComponentMetadataProps(node, rendererSpec)}>
         {label ? (
-          <Label className={rendererSpec.labelClassName}>{label}</Label>
+          <Label
+            {...getFieldLabelProps(fieldSemantics, false)}
+            className={rendererSpec.labelClassName}
+          >
+            {label}
+          </Label>
         ) : null}
         <Control {...controlProps}>
-          {items.map((item) =>
+          {items.map((item, index) =>
             renderOptionSetItem({
               Item,
               item,
               itemHeadingProp,
+              path: appendRendererPath(path, index),
               itemValueProp,
             }),
           )}
         </Control>
         {description && Description ? (
-          <Description className={rendererSpec.descriptionClassName}>
+          <Description
+            {...getFieldDescriptionProps(fieldSemantics)}
+            className={rendererSpec.descriptionClassName}
+          >
             {description}
           </Description>
         ) : null}
@@ -334,23 +430,17 @@ export function createRendererNode(
     )
   }
 
-  function renderChoiceOverlayComponent(
+  function renderSelectOverlayComponent(
     node: AgentComponentNode,
     rendererSpec: RendererSpecComponent,
+    path: RendererPath,
   ) {
     const Root = resolveElement(rendererSpec.root)
     const Label = resolveElement(rendererSpec.label)
-    const ControlRoot = rendererSpec.controlRoot
-      ? resolveElement(rendererSpec.controlRoot)
-      : React.Fragment
     const Control = resolveElement(rendererSpec.control)
     const ControlTrigger = resolveElement(rendererSpec.controlTrigger)
     const ControlValue = resolveElement(rendererSpec.controlValue)
     const ControlContent = resolveElement(rendererSpec.controlContent)
-    const ControlEmpty = resolveElement(rendererSpec.controlEmpty)
-    const ControlList = rendererSpec.controlList
-      ? resolveElement(rendererSpec.controlList)
-      : undefined
     const ItemContainer = rendererSpec.itemContainer
       ? resolveElement(rendererSpec.itemContainer)
       : undefined
@@ -374,71 +464,46 @@ export function createRendererNode(
       ? node.props[descriptionProp]
       : undefined
     const items = getStructuredItemsForNode(node, itemSlot)
-    const optionSetContainerId =
-      rendererSpec.itemContainer && rendererSpec.controlListAttr
-        ? createOptionSetContainerId(node, itemValueProp, items)
-        : undefined
-    const controlProps = getOptionSetControlProps({
-      itemContainerId: optionSetContainerId,
-      rendererSpec,
-      props: node.props,
+    const fieldSemantics = createFieldSemantics({
+      description,
+      label,
+      name: node.name,
+      path,
     })
+    const controlProps = getRendererProps(node.props, rendererSpec)
+    const triggerProps = getFieldControlProps(fieldSemantics)
     const selectedValue = controlProps.defaultValue
     const renderedItems = renderOptionSetItems({
       Item,
       ItemContainer,
-      itemContainerId: optionSetContainerId,
       itemHeadingProp,
       items,
       itemValueProp,
+      path,
     })
-    const renderedOptionSetList = ControlList ? (
-      <ControlList>{renderedItems}</ControlList>
-    ) : (
-      renderedItems
-    )
-    const renderedOptionSetContent = (
-      <>
-        {ControlEmpty && rendererSpec.emptyText ? (
-          <ControlEmpty>{rendererSpec.emptyText}</ControlEmpty>
-        ) : null}
-        {renderedOptionSetList}
-      </>
-    )
 
     return (
       <>
-        <Root
-          {...getComponentMetadataProps(node, rendererSpec)}
-        >
+        <Root {...getComponentMetadataProps(node, rendererSpec)}>
           {label ? (
-            <Label className={rendererSpec.labelClassName}>{label}</Label>
+            <Label
+              {...getFieldLabelProps(fieldSemantics, false)}
+              className={rendererSpec.labelClassName}
+            >
+              {label}
+            </Label>
           ) : null}
-          <ControlRoot>
-            {rendererSpec.controlTrigger && rendererSpec.controlContent ? (
-              <Control {...controlProps}>
-                <>
-                  <ControlTrigger>
-                    {rendererSpec.controlValue ? <ControlValue /> : null}
-                  </ControlTrigger>
-                  <ControlContent>{renderedOptionSetContent}</ControlContent>
-                </>
-              </Control>
-            ) : rendererSpec.controlContent ? (
-              <Control {...controlProps}>
-                <ControlContent>{renderedOptionSetContent}</ControlContent>
-              </Control>
-            ) : rendererSpec.itemContainer ? (
-              <>
-                <Control {...controlProps} />
-                {renderedOptionSetContent}
-              </>
-            ) : (
-              <Control {...controlProps}>{renderedOptionSetContent}</Control>
-            )}
-          </ControlRoot>
+          <Control {...controlProps}>
+            <ControlTrigger {...triggerProps}>
+              {rendererSpec.controlValue ? <ControlValue /> : null}
+            </ControlTrigger>
+            <ControlContent>{renderedItems}</ControlContent>
+          </Control>
           {description && Description ? (
-            <Description className={rendererSpec.descriptionClassName}>
+            <Description
+              {...getFieldDescriptionProps(fieldSemantics)}
+              className={rendererSpec.descriptionClassName}
+            >
               {description}
             </Description>
           ) : null}
@@ -449,6 +514,109 @@ export function createRendererNode(
               itemHeadingProp,
               itemValueProp,
               selectedValue,
+            })
+          : null}
+      </>
+    )
+  }
+
+  function renderComboboxInputComponent(
+    node: AgentComponentNode,
+    rendererSpec: RendererSpecComponent,
+    path: RendererPath,
+  ) {
+    const Root = resolveElement(rendererSpec.root)
+    const Label = resolveElement(rendererSpec.label)
+    const ControlRoot = resolveElement(rendererSpec.controlRoot)
+    const Control = resolveElement(rendererSpec.control)
+    const ControlContent = resolveElement(rendererSpec.controlContent)
+    const ControlEmpty = resolveElement(rendererSpec.controlEmpty)
+    const ControlList = resolveElement(rendererSpec.controlList)
+    const ItemContainer = resolveElement(rendererSpec.itemContainer)
+    const Item = resolveElement(rendererSpec.item)
+    const Description = resolveElement(rendererSpec.description)
+    const labelProp = requireRendererSpecField(rendererSpec, "labelProp")
+    const descriptionProp = rendererSpec.description
+      ? requireRendererSpecField(rendererSpec, "descriptionProp")
+      : undefined
+    const itemSlot = requireRendererSpecField(rendererSpec, "itemSlot")
+    const itemValueProp = requireRendererSpecField(
+      rendererSpec,
+      "itemValueProp",
+    )
+    const itemHeadingProp = requireRendererSpecField(
+      rendererSpec,
+      "itemHeadingProp",
+    )
+    const label = node.props[labelProp]
+    const description = descriptionProp
+      ? node.props[descriptionProp]
+      : undefined
+    const items = getStructuredItemsForNode(node, itemSlot)
+    const fieldSemantics = createFieldSemantics({
+      description,
+      label,
+      name: node.name,
+      path,
+    })
+    const comboboxItems = createComboboxItems(items, itemValueProp, itemHeadingProp)
+    const selectedItem = findComboboxSelectedItem(comboboxItems, node.props.value)
+    const controlRootProps = {
+      ...(rendererSpec.staticProps ?? {}),
+      items: comboboxItems,
+      ...(selectedItem ? { defaultValue: selectedItem } : {}),
+    }
+    const controlProps = getFieldControlProps(fieldSemantics)
+
+    return (
+      <>
+        <Root {...getComponentMetadataProps(node, rendererSpec)}>
+          {label ? (
+            <Label
+              {...getFieldLabelProps(fieldSemantics, false)}
+              className={rendererSpec.labelClassName}
+            >
+              {label}
+            </Label>
+          ) : null}
+          <ControlRoot {...controlRootProps}>
+            <Control {...controlProps} />
+            <ControlContent>
+              {ControlEmpty && rendererSpec.emptyText ? (
+                <ControlEmpty>{rendererSpec.emptyText}</ControlEmpty>
+              ) : null}
+              <ControlList>
+                <ItemContainer>
+                  {(item: ComboboxRendererItem) => (
+                    <Item key={item.value} value={item}>
+                      {item.label}
+                      {item.description ? (
+                        <>
+                          {": "}
+                          {item.description}
+                        </>
+                      ) : null}
+                    </Item>
+                  )}
+                </ItemContainer>
+              </ControlList>
+            </ControlContent>
+          </ControlRoot>
+          {description && Description ? (
+            <Description
+              {...getFieldDescriptionProps(fieldSemantics)}
+              className={rendererSpec.descriptionClassName}
+            >
+              {description}
+            </Description>
+          ) : null}
+        </Root>
+        {rendererSpec.fallback
+          ? renderNoScriptOptionSetFallback({
+              items,
+              itemHeadingProp,
+              itemValueProp,
+              selectedValue: node.props.value,
             })
           : null}
       </>
@@ -475,6 +643,7 @@ export function createRendererNode(
   function renderCollectionComponent(
     node: AgentComponentNode,
     rendererSpec: RendererSpecComponent,
+    path: RendererPath,
   ) {
     const Root = resolveElement(
       rendererSpec.rootByProp
@@ -496,8 +665,8 @@ export function createRendererNode(
         {getSlotChildren(node, rendererSpec.itemSlot).map((item, index) => (
           <Item key={index}>
             {rendererSpec.childMode === "inline"
-              ? renderInlineChildren(item)
-              : renderChildren(item)}
+              ? renderInlineChildren(item, appendRendererPath(path, index))
+              : renderChildren(item, appendRendererPath(path, index))}
           </Item>
         ))}
       </Root>
@@ -507,6 +676,7 @@ export function createRendererNode(
   function renderTableComponent(
     node: AgentComponentNode,
     rendererSpec: RendererSpecComponent,
+    path: RendererPath,
   ) {
     const Root = resolveElement(rendererSpec.root)
     const Header = resolveElement(rendererSpec.header)
@@ -528,13 +698,27 @@ export function createRendererNode(
         {headerRows.length > 0 ? (
           <Header>
             {headerRows.map((row, index) =>
-              renderTableRow(row, index, rendererSpec, cellSlot, true),
+              renderTableRow(
+                row,
+                index,
+                rendererSpec,
+                cellSlot,
+                true,
+                appendRendererPath(path, "header", index),
+              ),
             )}
           </Header>
         ) : null}
         <Body>
           {bodyRows.map((row, index) =>
-            renderTableRow(row, index, rendererSpec, cellSlot, false),
+            renderTableRow(
+              row,
+              index,
+              rendererSpec,
+              cellSlot,
+              false,
+              appendRendererPath(path, "body", index),
+            ),
           )}
         </Body>
       </Root>
@@ -547,6 +731,7 @@ export function createRendererNode(
     rendererSpec: RendererSpecComponent,
     cellSlot: string,
     isHeader: boolean,
+    path: RendererPath,
   ) {
     const Row = resolveElement(rendererSpec.row)
     const Cell = resolveElement(
@@ -557,7 +742,7 @@ export function createRendererNode(
       <Row key={index} data-agent-html-component={row.name}>
         {getSlotChildren(row, cellSlot).map((cell, cellIndex) => (
           <Cell key={cellIndex} data-agent-html-component={cell.name}>
-            {renderInlineChildren(cell)}
+            {renderInlineChildren(cell, appendRendererPath(path, cellIndex))}
           </Cell>
         ))}
       </Row>
@@ -567,6 +752,7 @@ export function createRendererNode(
   function renderAccordionComponent(
     node: AgentComponentNode,
     rendererSpec: RendererSpecComponent,
+    path: RendererPath,
   ) {
     const Root = resolveElement(rendererSpec.root)
     const Item = resolveElement(rendererSpec.item)
@@ -581,20 +767,27 @@ export function createRendererNode(
       rendererSpec,
       "itemHeadingProp",
     )
-    const mode = requireRendererSpecField(rendererSpec, "mode")
+    const modeProp = requireRendererSpecField(rendererSpec, "modeProp")
+    const defaultProp = requireRendererSpecField(rendererSpec, "defaultProp")
     const items = getStructuredItemsForNode(node, itemSlot)
-    const values = items.map((item) =>
-      getStructuredItemValue(item, itemValueProp),
-    )
+    const mode = resolveAccordionMode({
+      explicitMode: node.props[modeProp],
+      fallbackMode: rendererSpec.defaultMode,
+    })
+    const defaultValue = resolveAccordionDefaultValue({
+      defaultPropValue: node.props[defaultProp],
+      mode,
+    })
+    const rootProps = {
+      ...getComponentMetadataProps(node, rendererSpec),
+      type: mode,
+      ...(defaultValue !== undefined ? { defaultValue } : {}),
+    }
 
     return (
       <>
-        <Root
-          {...getComponentMetadataProps(node, rendererSpec)}
-          type={mode}
-          defaultValue={values}
-        >
-          {items.map((item) => (
+        <Root {...rootProps}>
+          {items.map((item, index) => (
             <Item
               key={getStructuredItemValue(item, itemValueProp)}
               value={getStructuredItemValue(item, itemValueProp)}
@@ -602,12 +795,17 @@ export function createRendererNode(
               <Trigger>
                 {getStructuredItemHeading(item, itemHeadingProp)}
               </Trigger>
-              <Content>{renderChildren(item)}</Content>
+              <Content>{renderChildren(item, appendRendererPath(path, index))}</Content>
             </Item>
           ))}
         </Root>
         {rendererSpec.fallback
-          ? renderNoScriptSectionFallback(items, itemValueProp, itemHeadingProp)
+          ? renderNoScriptSectionFallback(
+              items,
+              itemValueProp,
+              itemHeadingProp,
+              appendRendererPath(path, "noscript"),
+            )
           : null}
       </>
     )
@@ -616,6 +814,7 @@ export function createRendererNode(
   function renderTabsComponent(
     node: AgentComponentNode,
     rendererSpec: RendererSpecComponent,
+    path: RendererPath,
   ) {
     const Root = resolveElement(rendererSpec.root)
     const List = resolveElement(rendererSpec.list)
@@ -659,17 +858,22 @@ export function createRendererNode(
               </Trigger>
             ))}
           </List>
-          {tabs.map((tab) => (
+          {tabs.map((tab, index) => (
             <Content
               key={getStructuredItemValue(tab, itemValueProp)}
               value={getStructuredItemValue(tab, itemValueProp)}
             >
-              {renderChildren(tab)}
+              {renderChildren(tab, appendRendererPath(path, index))}
             </Content>
           ))}
         </Root>
         {rendererSpec.fallback
-          ? renderNoScriptSectionFallback(tabs, itemValueProp, itemHeadingProp)
+          ? renderNoScriptSectionFallback(
+              tabs,
+              itemValueProp,
+              itemHeadingProp,
+              appendRendererPath(path, "noscript"),
+            )
           : null}
       </>
     )
@@ -679,11 +883,12 @@ export function createRendererNode(
     items: AgentComponentNode[],
     itemValueProp: string,
     itemHeadingProp: string,
+    path: RendererPath,
   ) {
     return (
       <noscript>
         <section className="grid gap-3">
-          {items.map((item) => (
+          {items.map((item, index) => (
             <section
               className="grid gap-3"
               key={getConfiguredPropValue(item, itemValueProp)}
@@ -691,7 +896,7 @@ export function createRendererNode(
               <h2 className="m-0 text-lg font-medium leading-7">
                 {getConfiguredPropValue(item, itemHeadingProp)}
               </h2>
-              {renderChildren(item)}
+              {renderChildren(item, appendRendererPath(path, index))}
             </section>
           ))}
         </section>
@@ -729,7 +934,7 @@ export function createRendererNode(
                   {selected ? " (selected)" : ""}
                 </Label>
                 {item.children.length > 0 ? (
-                  <Description>{renderInlineChildren(item)}</Description>
+                  <Description>{renderInlineChildren(item, ["noscript"])}</Description>
                 ) : null}
               </Field>
             )
@@ -744,26 +949,16 @@ export function createRendererNode(
     item,
     itemHeadingProp,
     itemValueProp,
-    itemInDatalist = false,
+    path,
   }: {
     Item: React.ElementType
     item: AgentComponentNode
     itemHeadingProp: string
     itemValueProp: string
-    itemInDatalist?: boolean
+    path: RendererPath
   }) {
     const itemValue = getStructuredItemValue(item, itemValueProp)
     const itemHeading = getStructuredItemHeading(item, itemHeadingProp)
-
-    if (itemInDatalist) {
-      return (
-        <Item
-          key={itemValue || itemHeading}
-          label={itemHeading}
-          value={itemValue}
-        />
-      )
-    }
 
     return (
       <Item key={itemValue || itemHeading} value={itemValue}>
@@ -771,7 +966,7 @@ export function createRendererNode(
         {item.children.length > 0 ? (
           <>
             {": "}
-            {renderInlineChildren(item)}
+            {renderInlineChildren(item, path)}
           </>
         ) : null}
       </Item>
@@ -807,52 +1002,58 @@ export function createRendererNode(
   function renderOptionSetItems({
     Item,
     ItemContainer,
-    itemContainerId,
     itemHeadingProp,
     items,
     itemValueProp,
+    path,
   }: {
     Item: React.ElementType
     ItemContainer?: React.ElementType
-    itemContainerId?: string
     itemHeadingProp: string
     items: AgentComponentNode[]
     itemValueProp: string
+    path: RendererPath
   }) {
-    const renderedItems = items.map((item) =>
+    const renderedItems = items.map((item, index) =>
       renderOptionSetItem({
         Item,
         item,
         itemHeadingProp,
-        itemInDatalist: Boolean(itemContainerId),
+        path: appendRendererPath(path, index),
         itemValueProp,
       }),
     )
 
     if (ItemContainer) {
-      const containerProps = itemContainerId
-        ? { id: itemContainerId }
-        : undefined
-
-      return <ItemContainer {...containerProps}>{renderedItems}</ItemContainer>
+      return <ItemContainer>{renderedItems}</ItemContainer>
     }
 
     return renderedItems
   }
 
-  function renderChildren(node: AgentComponentNode) {
+  function renderChildren(node: AgentComponentNode, path: RendererPath) {
     return node.children.map((child, index) => (
-      <RendererNode key={index} node={child} />
+      <RendererNode
+        key={index}
+        node={child}
+        path={appendRendererPath(path, index)}
+      />
     ))
   }
 
-  function renderInlineChildren(node: AgentComponentNode) {
+  function renderInlineChildren(node: AgentComponentNode, path: RendererPath) {
     return node.children.map((child, index) => {
       if (child.type === "text") {
         return <React.Fragment key={index}>{child.value}</React.Fragment>
       }
 
-      return <RendererNode key={index} node={child} />
+      return (
+        <RendererNode
+          key={index}
+          node={child}
+          path={appendRendererPath(path, index)}
+        />
+      )
     })
   }
 
@@ -887,6 +1088,7 @@ export function createRendererNode(
     (
       node: AgentComponentNode,
       rendererSpec: RendererSpecComponent,
+      path: RendererPath,
     ) => React.ReactNode
   > = {
     primitive: renderPrimitiveComponent,
@@ -895,11 +1097,12 @@ export function createRendererNode(
     "range-field": renderRangeFieldComponent,
     "choice-group": renderChoiceGroupComponent,
     "choice-inline": renderChoiceInlineComponent,
-    "choice-overlay": renderChoiceOverlayComponent,
+    "combobox-input": renderComboboxInputComponent,
     compound: renderCompoundComponent,
     collection: renderCollectionComponent,
     table: renderTableComponent,
-    "interactive-collection": renderAccordionComponent,
+    accordion: renderAccordionComponent,
+    "select-overlay": renderSelectOverlayComponent,
     tabs: renderTabsComponent,
   }
 
@@ -932,8 +1135,124 @@ const componentTreatmentClassNames: Record<string, string> = {
     "gap-3 [&_button]:font-medium [&_button]:tracking-[0.05em]",
 }
 
+type FieldSemantics = {
+  controlId: string
+  labelId?: string
+  descriptionId?: string
+}
+
+type ComboboxRendererItem = {
+  value: string
+  label: string
+  description?: string
+}
+
 function mergeClassNames(...values: Array<string | undefined>) {
   return values.filter(Boolean).join(" ") || undefined
+}
+
+function appendRendererPath(
+  path: RendererPath,
+  ...segments: RendererPathSegment[]
+) {
+  return [...path, ...segments]
+}
+
+function createNodeDomId(name: string, path: RendererPath) {
+  return ["ahtml", name, ...path.map(String)]
+    .join("-")
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+}
+
+function createFieldSemantics({
+  description,
+  label,
+  name,
+  path,
+}: {
+  description?: string
+  label?: string
+  name: string
+  path: RendererPath
+}) {
+  const fieldId = createNodeDomId(name, path)
+
+  return {
+    controlId: `${fieldId}-control`,
+    ...(label ? { labelId: `${fieldId}-label` } : {}),
+    ...(description ? { descriptionId: `${fieldId}-description` } : {}),
+  } satisfies FieldSemantics
+}
+
+function getFieldControlProps(fieldSemantics: FieldSemantics) {
+  return {
+    id: fieldSemantics.controlId,
+    ...getFieldLabelledByProps(fieldSemantics),
+  }
+}
+
+function getFieldLabelledByProps(fieldSemantics: FieldSemantics) {
+  return {
+    ...(fieldSemantics.labelId
+      ? { "aria-labelledby": fieldSemantics.labelId }
+      : {}),
+    ...(fieldSemantics.descriptionId
+      ? { "aria-describedby": fieldSemantics.descriptionId }
+      : {}),
+  }
+}
+
+function getFieldLabelProps(
+  fieldSemantics: FieldSemantics,
+  labelableControl: boolean,
+) {
+  return {
+    ...(fieldSemantics.labelId ? { id: fieldSemantics.labelId } : {}),
+    ...(labelableControl ? { htmlFor: fieldSemantics.controlId } : {}),
+  }
+}
+
+function getFieldDescriptionProps(fieldSemantics: FieldSemantics) {
+  return fieldSemantics.descriptionId
+    ? { id: fieldSemantics.descriptionId }
+    : {}
+}
+
+function createComboboxItems(
+  items: AgentComponentNode[],
+  itemValueProp: string,
+  itemHeadingProp: string,
+) {
+  return items.map((item) => ({
+    value: getStructuredItemValue(item, itemValueProp),
+    label: getStructuredItemHeading(item, itemHeadingProp),
+    ...(item.children.length > 0
+      ? { description: renderInlineTextContent(item.children) }
+      : {}),
+  }))
+}
+
+function findComboboxSelectedItem(
+  items: ComboboxRendererItem[],
+  value: string | undefined,
+) {
+  if (!value) {
+    return undefined
+  }
+
+  return items.find((item) => item.value === value) ?? {
+    value,
+    label: value,
+  }
+}
+
+function renderInlineTextContent(children: AgentNode[]) {
+  return children
+    .map((child) => (child.type === "text" ? child.value : ""))
+    .join("")
 }
 
 function getStructuredItemValue(
@@ -962,47 +1281,41 @@ function getStructuredDefaultValue({
   return explicitValue || getStructuredItemValue(items[0], itemValueProp)
 }
 
-function getOptionSetControlProps({
-  itemContainerId,
-  props,
-  rendererSpec,
+function resolveAccordionMode({
+  explicitMode,
+  fallbackMode,
 }: {
-  itemContainerId?: string
-  props: Record<string, string>
-  rendererSpec: RendererSpecComponent
+  explicitMode?: string
+  fallbackMode?: string
 }) {
-  const controlProps = getRendererProps(props, rendererSpec)
-
-  if (!itemContainerId || !rendererSpec.controlListAttr) {
-    return controlProps
-  }
-
-  return {
-    ...controlProps,
-    [rendererSpec.controlListAttr]: itemContainerId,
-  }
+  return explicitMode === "single" || explicitMode === "multiple"
+    ? explicitMode
+    : fallbackMode === "single"
+      ? "single"
+      : "multiple"
 }
 
-function createOptionSetContainerId(
-  node: AgentComponentNode,
-  itemValueProp: string,
-  items: AgentComponentNode[],
-) {
-  if (items.length === 0) {
+function resolveAccordionDefaultValue({
+  defaultPropValue,
+  mode,
+}: {
+  defaultPropValue?: string
+  mode: "single" | "multiple"
+}) {
+  if (!defaultPropValue) {
     return undefined
   }
 
-  const seed = [
-    node.name,
-    node.props.label ?? "",
-    ...items.map((item) => getStructuredItemValue(item, itemValueProp) ?? ""),
-  ]
-    .join("-")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
+  const values = defaultPropValue
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
 
-  return seed.length > 0 ? `${seed}-options` : `${node.name}-options`
+  if (values.length === 0) {
+    return undefined
+  }
+
+  return mode === "single" ? values[0] : values
 }
 
 function applyPropMappings(

@@ -2,7 +2,13 @@ const textChild = "#text"
 const fieldRegistryModules = [
   {
     registryItem: "field",
-    exports: ["Field", "FieldContent", "FieldDescription", "FieldLabel"],
+    exports: [
+      "Field",
+      "FieldContent",
+      "FieldDescription",
+      "FieldLabel",
+      "FieldTitle",
+    ],
   },
 ]
 
@@ -276,6 +282,12 @@ export const componentCapabilityDefinitions = {
   progress: {
     source: "shadcn",
     renderKind: "primitive",
+    behavior: {
+      model: "determinate-progress",
+      runtimeOwner: "managed-ui",
+      forwardedProps: ["value"],
+      visualStateProp: "value",
+    },
     uiProtocol: uiProtocolDefinitions.progress,
     requiredRegistryItem: "progress",
     requiredExports: ["Progress"],
@@ -307,10 +319,7 @@ export const componentCapabilityDefinitions = {
       description: "FieldDescription",
       labelProp: "label",
       descriptionProp: "description",
-      propMappings: [
-        { prop: "value", target: "defaultValue" },
-        { prop: "label", target: "aria-label" },
-      ],
+      propMappings: [{ prop: "value", target: "defaultValue" }],
     },
   },
   textarea: {
@@ -334,10 +343,7 @@ export const componentCapabilityDefinitions = {
       description: "FieldDescription",
       labelProp: "label",
       descriptionProp: "description",
-      propMappings: [
-        { prop: "value", target: "defaultValue" },
-        { prop: "label", target: "aria-label" },
-      ],
+      propMappings: [{ prop: "value", target: "defaultValue" }],
     },
   },
   checkbox: {
@@ -361,10 +367,7 @@ export const componentCapabilityDefinitions = {
       description: "FieldDescription",
       labelProp: "label",
       descriptionProp: "description",
-      propMappings: [
-        { prop: "checked", target: "defaultChecked", coerce: "boolean" },
-        { prop: "label", target: "aria-label" },
-      ],
+      propMappings: [{ prop: "checked", target: "defaultChecked", coerce: "boolean" }],
     },
   },
   switch: {
@@ -388,10 +391,7 @@ export const componentCapabilityDefinitions = {
       description: "FieldDescription",
       labelProp: "label",
       descriptionProp: "description",
-      propMappings: [
-        { prop: "checked", target: "defaultChecked", coerce: "boolean" },
-        { prop: "label", target: "aria-label" },
-      ],
+      propMappings: [{ prop: "checked", target: "defaultChecked", coerce: "boolean" }],
     },
   },
   slider: {
@@ -439,7 +439,7 @@ export const componentCapabilityDefinitions = {
     renderer: {
       kind: "choice-group",
       root: "Field",
-      label: "FieldLabel",
+      label: "FieldTitle",
       control: "RadioGroup",
       item: "RadioGroupItem",
       itemSlot: "option",
@@ -448,10 +448,7 @@ export const componentCapabilityDefinitions = {
       description: "FieldDescription",
       labelProp: "label",
       descriptionProp: "description",
-      propMappings: [
-        { prop: "value", target: "defaultValue" },
-        { prop: "label", target: "aria-label" },
-      ],
+      propMappings: [{ prop: "value", target: "defaultValue" }],
     },
   },
   "toggle-group": {
@@ -470,7 +467,7 @@ export const componentCapabilityDefinitions = {
     renderer: {
       kind: "choice-inline",
       root: "Field",
-      label: "FieldLabel",
+      label: "FieldTitle",
       control: "ToggleGroup",
       item: "ToggleGroupItem",
       itemSlot: "option",
@@ -482,15 +479,12 @@ export const componentCapabilityDefinitions = {
       staticProps: {
         type: "single",
       },
-      propMappings: [
-        { prop: "value", target: "defaultValue" },
-        { prop: "label", target: "aria-label" },
-      ],
+      propMappings: [{ prop: "value", target: "defaultValue" }],
     },
   },
   select: {
     source: "shadcn",
-    renderKind: "choice-overlay",
+    renderKind: "select-overlay",
     uiProtocol: uiProtocolDefinitions.select,
     requiredRegistryModules: [
       ...fieldRegistryModules,
@@ -516,9 +510,9 @@ export const componentCapabilityDefinitions = {
       "SelectValue",
     ],
     renderer: {
-      kind: "choice-overlay",
+      kind: "select-overlay",
       root: "Field",
-      label: "FieldLabel",
+      label: "FieldTitle",
       control: "Select",
       controlTrigger: "SelectTrigger",
       controlValue: "SelectValue",
@@ -532,15 +526,12 @@ export const componentCapabilityDefinitions = {
       labelProp: "label",
       descriptionProp: "description",
       fallback: true,
-      propMappings: [
-        { prop: "value", target: "defaultValue" },
-        { prop: "label", target: "aria-label" },
-      ],
+      propMappings: [{ prop: "value", target: "defaultValue" }],
     },
   },
   combobox: {
     source: "shadcn",
-    renderKind: "choice-overlay",
+    renderKind: "combobox-input",
     uiProtocol: uiProtocolDefinitions.combobox,
     requiredRegistryModules: [
       ...fieldRegistryModules,
@@ -568,9 +559,9 @@ export const componentCapabilityDefinitions = {
       "ComboboxList",
     ],
     renderer: {
-      kind: "choice-overlay",
+      kind: "combobox-input",
       root: "Field",
-      label: "FieldLabel",
+      label: "FieldTitle",
       controlRoot: "Combobox",
       control: "ComboboxInput",
       controlContent: "ComboboxContent",
@@ -586,10 +577,6 @@ export const componentCapabilityDefinitions = {
       descriptionProp: "description",
       emptyText: "No results found.",
       fallback: true,
-      propMappings: [
-        { prop: "value", target: "defaultValue" },
-        { prop: "label", target: "aria-label" },
-      ],
     },
   },
   table: {
@@ -662,7 +649,15 @@ export const componentCapabilityDefinitions = {
   },
   accordion: {
     source: "shadcn",
-    renderKind: "interactive-collection",
+    renderKind: "accordion",
+    behavior: {
+      model: "explicit-default-state",
+      runtimeOwner: "renderer",
+      modeProp: "mode",
+      defaultProp: "default",
+      defaultMode: "multiple",
+      multiValueDelimiter: ",",
+    },
     uiProtocol: uiProtocolDefinitions.accordion,
     requiredRegistryItem: "accordion",
     requiredExports: [
@@ -672,7 +667,7 @@ export const componentCapabilityDefinitions = {
       "AccordionTrigger",
     ],
     renderer: {
-      kind: "interactive-collection",
+      kind: "accordion",
       root: "Accordion",
       item: "AccordionItem",
       trigger: "AccordionTrigger",
@@ -680,7 +675,9 @@ export const componentCapabilityDefinitions = {
       itemSlot: "accordion-item",
       itemValueProp: "value",
       itemHeadingProp: "title",
-      mode: "multiple",
+      modeProp: "mode",
+      defaultProp: "default",
+      defaultMode: "multiple",
       fallback: true,
     },
   },

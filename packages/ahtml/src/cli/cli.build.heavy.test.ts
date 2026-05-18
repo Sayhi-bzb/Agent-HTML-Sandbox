@@ -119,7 +119,7 @@ describe("agent-html CLI heavy build flows", () => {
     )
     await expectFile(
       path.join(outputDir, "index.html"),
-      "max-w-6xl gap-4 py-8 items-stretch",
+      "max-w-4xl gap-6 px-4 py-10 sm:px-6 items-stretch",
     )
     await expectFile(
       path.join(outputDir, "index.html"),
@@ -235,6 +235,55 @@ describe("agent-html CLI heavy build flows", () => {
     await removeTempDir(tempDir)
   }, 120000)
 
+  it("builds artifacts from user style profiles stored under AHTML_HOME", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
+    const runtimeHome = path.join(tempDir, ".ahtml")
+    const inputPath = path.join(tempDir, "team-ops.agent.html")
+    const outputDir = path.join(tempDir, "html")
+
+    await writeCustomStyleProfile(runtimeHome)
+    await writeFile(
+      inputPath,
+      [
+        '<meta-agent style-ref="team-ops" />',
+        '<page title="Team Ops"><card title="Summary">Custom profile.</card></page>',
+      ].join("\n"),
+    )
+
+    await runCliWithServer(
+      ["build", inputPath, "--out", outputDir],
+      { AHTML_HOME: runtimeHome },
+      tempDir,
+    )
+
+    await expectFile(path.join(outputDir, "index.html"), "Team Ops")
+    await expectFile(
+      path.join(outputDir, "index.html"),
+      'data-style-profile="team-ops"',
+    )
+    await expectFile(
+      path.join(outputDir, "index.html"),
+      'data-ahtml-treatment="review-card"',
+    )
+    await expectFile(
+      path.join(outputDir, "index.html"),
+      "max-w-4xl gap-6 px-4 py-10 sm:px-6 items-stretch",
+    )
+    await expectFile(
+      path.join(outputDir, "index.html"),
+      ":root{--background:#fcfbf8;--foreground:#1f2933;",
+    )
+    await expectFile(
+      path.join(outputDir, "index.html"),
+      "@media (prefers-color-scheme: dark){:root{--background:oklch(0.18 0.02 190);",
+    )
+    await expectFile(
+      path.join(outputDir, "agent-html.inspect.json"),
+      '"documentStyleConfigReference": "team-ops"',
+    )
+    await removeTempDir(tempDir)
+  }, 120000)
+
   it("fails build when runtime renderer mapping drifts from verification data", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
     const runtimeHome = path.join(tempDir, "runtime-home")
@@ -318,7 +367,6 @@ describe("agent-html CLI heavy build flows", () => {
       inspection: {
         configModel: string
         config: { documentStyleConfigReference: string }
-        resolvedDocumentStyleTokens: { density: string }
         components: { name: string; count: number }[]
       }
     }>(stdout)
@@ -336,9 +384,7 @@ describe("agent-html CLI heavy build flows", () => {
     expect(result.inspection.config.documentStyleConfigReference).toBe(
       "ops-compact",
     )
-    expect(result.inspection.resolvedDocumentStyleTokens.density).toBe(
-      "compact",
-    )
+    expect(stdout).not.toContain("resolvedDocumentStyleTokens")
     expect(result.inspection.components).toEqual([
       { name: "card", count: 1 },
       { name: "page", count: 1 },
@@ -384,8 +430,9 @@ describe("agent-html CLI heavy build flows", () => {
     expect(documentInspection.stdout).toContain(
       '"configModel": "document-style-config-reference"',
     )
-    expect(documentInspection.stdout).toContain('"resolvedDocumentStyleTokens"')
-    expect(documentInspection.stdout).toContain('"density": "compact"')
+    expect(documentInspection.stdout).not.toContain(
+      '"resolvedDocumentStyleTokens"',
+    )
     expect(documentInspection.stdout).not.toContain('"resolvedConfig"')
     expect(documentInspection.stdout).toContain('"name": "card"')
 
@@ -400,13 +447,127 @@ describe("agent-html CLI heavy build flows", () => {
     expect(artifactInspection.stdout).toContain(
       "documentStyleConfigReference: ops-compact",
     )
-    expect(artifactInspection.stdout).toContain(
+    expect(artifactInspection.stdout).not.toContain(
       "resolved document style tokens:",
     )
     expect(artifactInspection.stdout).not.toContain("resolved config")
-    expect(artifactInspection.stdout).toContain("- density: compact")
     expect(artifactInspection.stdout).toContain("- card: 1")
 
     await removeTempDir(tempDir)
   }, 120000)
 })
+
+async function writeCustomStyleProfile(runtimeHome: string) {
+  const profileDir = path.join(
+    runtimeHome,
+    "config",
+    "style-profiles",
+    "user",
+  )
+  const profilePath = path.join(profileDir, "team-ops.json")
+
+  await mkdir(profileDir, { recursive: true })
+  await writeFile(
+    profilePath,
+    `${JSON.stringify(createCustomStyleProfile(), null, 2)}\n`,
+  )
+}
+
+function createCustomStyleProfile() {
+  return {
+    id: "team-ops",
+    globalStyle: {
+      tokenSets: {
+        light: {
+          background: "#fcfbf8",
+          foreground: "#1f2933",
+          card: "#ffffff",
+          cardForeground: "#1f2933",
+          popover: "#ffffff",
+          popoverForeground: "#1f2933",
+          primary: "#0f766e",
+          primaryForeground: "#f8fafc",
+          secondary: "#f2f7f6",
+          secondaryForeground: "#1f2933",
+          muted: "#eef4f3",
+          mutedForeground: "#52606d",
+          accent: "#dff5f2",
+          accentForeground: "#134e4a",
+          destructive: "#be123c",
+          border: "#d9e2ec",
+          input: "#bcccdc",
+          ring: "#0f766e",
+        },
+        dark: {
+          background: "oklch(0.18 0.02 190)",
+          foreground: "oklch(0.96 0.01 190)",
+          card: "oklch(0.24 0.02 190)",
+          cardForeground: "oklch(0.96 0.01 190)",
+          popover: "oklch(0.24 0.02 190)",
+          popoverForeground: "oklch(0.96 0.01 190)",
+          primary: "oklch(0.74 0.11 190)",
+          primaryForeground: "oklch(0.2 0.02 190)",
+          secondary: "oklch(0.3 0.02 190)",
+          secondaryForeground: "oklch(0.96 0.01 190)",
+          muted: "oklch(0.28 0.02 190)",
+          mutedForeground: "oklch(0.78 0.01 190)",
+          accent: "oklch(0.32 0.03 190)",
+          accentForeground: "oklch(0.96 0.01 190)",
+          destructive: "oklch(0.62 0.2 20)",
+          border: "oklch(1 0 0 / 12%)",
+          input: "oklch(1 0 0 / 18%)",
+          ring: "oklch(0.74 0.11 190)",
+        },
+      },
+      radiusScale: {
+        base: "0.9rem",
+        sm: "calc(var(--radius) * 0.6)",
+        md: "calc(var(--radius) * 0.8)",
+        lg: "var(--radius)",
+        xl: "calc(var(--radius) * 1.4)",
+        "2xl": "calc(var(--radius) * 1.8)",
+        "3xl": "calc(var(--radius) * 2.2)",
+        "4xl": "calc(var(--radius) * 2.6)",
+      },
+      typography: {
+        fontSans:
+          '"Inter Variable", system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif',
+        fontHeading: "var(--font-sans)",
+      },
+      cssVariableMap: {
+        background: "--background",
+        foreground: "--foreground",
+        card: "--card",
+        cardForeground: "--card-foreground",
+        popover: "--popover",
+        popoverForeground: "--popover-foreground",
+        primary: "--primary",
+        primaryForeground: "--primary-foreground",
+        secondary: "--secondary",
+        secondaryForeground: "--secondary-foreground",
+        muted: "--muted",
+        mutedForeground: "--muted-foreground",
+        accent: "--accent",
+        accentForeground: "--accent-foreground",
+        destructive: "--destructive",
+        border: "--border",
+        input: "--input",
+        ring: "--ring",
+        radius: "--radius",
+        fontSans: "--font-sans",
+        fontHeading: "--font-heading",
+      },
+    },
+    componentStyle: {
+      treatments: {
+        alert: "ops-alert",
+        badge: "ops-badge",
+        card: "review-card",
+        input: "ops-field",
+        table: "ops-table",
+        tabs: "ops-tabs",
+        textarea: "ops-field",
+      },
+    },
+  }
+}

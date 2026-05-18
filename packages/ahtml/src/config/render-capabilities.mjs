@@ -73,7 +73,29 @@ export const rendererKindDefinitions = {
     requiredFields: [
       "root",
       "label",
+      "item",
+      "itemSlot",
+      "itemValueProp",
+      "itemHeadingProp",
+      "labelProp",
+      "controlContent",
+    ],
+    requiredAnyOf: [["control", "controlRoot"]],
+    requiredWhenPresent: {
+      description: ["descriptionProp"],
+      controlValue: ["controlTrigger"],
+      controlEmpty: ["controlContent"],
+      controlList: ["itemContainer"],
+      itemContainer: ["controlContent"],
+    },
+  },
+  "select-overlay": {
+    requiredFields: [
+      "root",
+      "label",
       "control",
+      "controlTrigger",
+      "controlContent",
       "item",
       "itemSlot",
       "itemValueProp",
@@ -82,10 +104,28 @@ export const rendererKindDefinitions = {
     ],
     requiredWhenPresent: {
       description: ["descriptionProp"],
-      controlTrigger: ["controlContent"],
       controlValue: ["controlTrigger"],
-      controlList: ["controlContent"],
-      controlListAttr: ["itemContainer"],
+      itemContainer: ["controlContent"],
+    },
+  },
+  "combobox-input": {
+    requiredFields: [
+      "root",
+      "label",
+      "controlRoot",
+      "control",
+      "controlContent",
+      "controlList",
+      "itemContainer",
+      "item",
+      "itemSlot",
+      "itemValueProp",
+      "itemHeadingProp",
+      "labelProp",
+    ],
+    requiredWhenPresent: {
+      description: ["descriptionProp"],
+      controlEmpty: ["controlContent"],
     },
   },
   compound: {
@@ -112,7 +152,7 @@ export const rendererKindDefinitions = {
       "headerKind",
     ],
   },
-  "interactive-collection": {
+  accordion: {
     requiredFields: [
       "root",
       "item",
@@ -121,7 +161,8 @@ export const rendererKindDefinitions = {
       "itemSlot",
       "itemValueProp",
       "itemHeadingProp",
-      "mode",
+      "modeProp",
+      "defaultProp",
     ],
   },
   tabs: {
@@ -161,6 +202,7 @@ export function createRuntimeVerificationData(components) {
           source: definition?.source ?? "ahtml-standard",
           props: component.props.map((prop) => prop.name),
           slots: createUiSlots(component, componentMap),
+          ...(definition?.behavior ? { behavior: definition.behavior } : {}),
         }
       }),
   }

@@ -43,12 +43,6 @@ describe("document-style-config render config", () => {
             foreground: "--foreground",
             radius: "--radius",
           }),
-          legacyProjection: {
-            theme: "neutral",
-            density: "comfortable",
-            tone: "report",
-            width: "article",
-          },
         },
         componentStyle: {
           treatments: {
@@ -62,10 +56,6 @@ describe("document-style-config render config", () => {
           },
         },
       },
-      theme: "neutral",
-      density: "comfortable",
-      tone: "report",
-      width: "article",
     })
 
     expect(parseRenderConfig({ "style-ref": "ops-compact" })).toEqual({
@@ -94,12 +84,6 @@ describe("document-style-config render config", () => {
             primary: "--primary",
             fontHeading: "--font-heading",
           }),
-          legacyProjection: {
-            theme: "neutral",
-            density: "compact",
-            tone: "dashboard",
-            width: "dashboard",
-          },
         },
         componentStyle: {
           treatments: {
@@ -113,50 +97,63 @@ describe("document-style-config render config", () => {
           },
         },
       },
-      theme: "neutral",
-      density: "compact",
-      tone: "dashboard",
-      width: "dashboard",
     })
   })
 
-  it("rejects resolved token combinations that do not match the selected reference", () => {
+  it("accepts resolved user style profiles through a runtime resolver", () => {
+    const baseRenderConfig = parseRenderConfig({ "style-ref": "ops-compact" })
+    const customStyleProfile: ReturnType<
+      typeof parseRenderConfig
+    >["styleProfile"] = {
+      ...baseRenderConfig.styleProfile,
+      id: "team-ops",
+      globalStyle: {
+        ...baseRenderConfig.styleProfile.globalStyle,
+        tokenSets: {
+          light: {
+            ...baseRenderConfig.styleProfile.globalStyle.tokenSets.light,
+            background: "#fcfbf8",
+            primary: "#0f766e",
+          },
+        dark: {
+          ...baseRenderConfig.styleProfile.globalStyle.tokenSets.dark,
+          background: "oklch(0.18 0.02 190)",
+          primary: "oklch(0.74 0.11 190)",
+        },
+      },
+    },
+    componentStyle: {
+      treatments: {
+        ...baseRenderConfig.styleProfile.componentStyle.treatments,
+          card: "review-card",
+        },
+      },
+    }
+
+    const resolved = parseRenderConfig(
+      { "style-ref": "team-ops" },
+      {
+        resolveStyleProfileReference: (reference) =>
+          reference === "team-ops" ? customStyleProfile : undefined,
+      },
+    )
+
+    expect(RenderConfigSchema.parse(resolved)).toEqual({
+      documentStyleConfigReference: "team-ops",
+      styleProfile: customStyleProfile,
+    })
+  })
+
+  it("rejects resolved style profiles that do not match the selected reference", () => {
+    const config = parseRenderConfig({ "style-ref": "ops-compact" })
+
     expect(() =>
       RenderConfigSchema.parse({
-        documentStyleConfigReference: "ops-compact",
+        ...config,
         styleProfile: {
-          id: "ops-compact",
-          globalStyle: {
-            tokenSets: {
-              light: expect.anything(),
-              dark: expect.anything(),
-            },
-            radiusScale: expect.anything(),
-            typography: expect.anything(),
-            cssVariableMap: expect.anything(),
-            legacyProjection: {
-              theme: "neutral",
-              density: "comfortable",
-              tone: "dashboard",
-              width: "dashboard",
-            },
-          },
-          componentStyle: {
-            treatments: {
-              alert: "ops-alert",
-              badge: "ops-badge",
-              card: "ops-card",
-              input: "ops-field",
-              table: "ops-table",
-              tabs: "ops-tabs",
-              textarea: "ops-field",
-            },
-          },
+          ...config.styleProfile,
+          id: "report-default",
         },
-        theme: "neutral",
-        density: "comfortable",
-        tone: "dashboard",
-        width: "dashboard",
       }),
     ).toThrow()
   })
@@ -188,6 +185,12 @@ describe("document-style-config render config", () => {
         width: "dashboard",
       }),
     ).toThrow("Invalid document-style-config render config.")
+  })
+
+  it("falls back to the default profile for unresolved but well-formed style references", () => {
+    expect(parseRenderConfig({ "style-ref": "team-missing" })).toEqual(
+      DEFAULT_RENDER_CONFIG,
+    )
   })
 
   it("exposes only the public render config keys", () => {

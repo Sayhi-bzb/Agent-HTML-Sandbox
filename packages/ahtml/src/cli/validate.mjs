@@ -1,7 +1,13 @@
 import { sanitizeAgentHtml } from "../config/internal-core-bridge.mjs"
+import { createStyleProfileResolver } from "./style-profile-storage.mjs"
 
-export async function validateAgentHtmlSource(source) {
-  const result = sanitizeAgentHtml(source)
+export async function validateAgentHtmlSource(source, runtimeContext) {
+  const resolveStyleProfileReference = await loadStyleProfileResolver(
+    runtimeContext,
+  )
+  const result = sanitizeAgentHtml(source, {
+    resolveStyleProfileReference,
+  })
 
   return { diagnostics: result.diagnostics, document: result.document }
 }
@@ -17,5 +23,21 @@ export function validateRenderConfig(config, values) {
       ([key, allowedValues]) =>
         typeof config[key] === "string" && allowedValues.includes(config[key]),
     )
+  )
+}
+
+async function loadStyleProfileResolver(runtimeContext) {
+  if (!isRuntimePaths(runtimeContext)) {
+    return undefined
+  }
+
+  return createStyleProfileResolver(runtimeContext)
+}
+
+function isRuntimePaths(value) {
+  return (
+    Boolean(value) &&
+    typeof value === "object" &&
+    typeof value.userStyleProfilesDir === "string"
   )
 }

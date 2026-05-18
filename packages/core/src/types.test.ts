@@ -12,6 +12,8 @@ import type {
 describe("agent-html public types", () => {
   it("models a checked render config with a document style config reference", () => {
     const styleReference = "ops-compact" satisfies DocumentStyleConfigReference
+    const customStyleReference =
+      "team-ops" satisfies DocumentStyleConfigReference
     const meta = {
       documentStyleConfigReference: styleReference,
       styleProfile: {
@@ -97,12 +99,6 @@ describe("agent-html public types", () => {
             fontSans: "--font-sans",
             fontHeading: "--font-heading",
           },
-          legacyProjection: {
-            theme: "neutral",
-            density: "compact",
-            tone: "report",
-            width: "article",
-          },
         },
         componentStyle: {
           treatments: {
@@ -116,10 +112,6 @@ describe("agent-html public types", () => {
           },
         },
       },
-      theme: "neutral",
-      density: "compact",
-      tone: "report",
-      width: "article",
     } satisfies RenderConfig
 
     const pageComponentSchema = {
@@ -155,9 +147,12 @@ describe("agent-html public types", () => {
     } satisfies SanitizedAgentHtml
 
     expect(pageComponentSchema.name).toBe("page")
+    expect(customStyleReference).toBe("team-ops")
     expect(document.meta.documentStyleConfigReference).toBe("ops-compact")
     expect(document.meta.styleProfile.id).toBe("ops-compact")
-    expect(document.meta.density).toBe("compact")
+    expect(document.meta.styleProfile.globalStyle.cssVariableMap.radius).toBe(
+      "--radius",
+    )
     expect(document.components[0]?.name).toBe("page")
   })
 

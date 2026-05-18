@@ -2,11 +2,13 @@ import http from "node:http"
 import { readFile, stat } from "node:fs/promises"
 import path from "node:path"
 
-export function parsePort(value) {
+export function parsePort(value, commandName = "preview") {
   const port = Number(value)
 
   if (!Number.isInteger(port) || port < 0 || port > 65535) {
-    throw new Error("preview --port must be an integer from 0 to 65535.")
+    throw new Error(
+      `${commandName} --port must be an integer from 0 to 65535.`,
+    )
   }
 
   return port

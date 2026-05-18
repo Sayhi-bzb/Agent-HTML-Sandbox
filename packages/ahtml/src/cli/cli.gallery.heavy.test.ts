@@ -19,21 +19,24 @@ import {
 
 const { getRegistryUrl } = useShadcnCliHarness()
 
-describe("agent-html CLI heavy preview flows", () => {
-  it("serves a preview from the generated static output", async () => {
+describe("agent-html CLI heavy gallery flows", () => {
+  it("serves a built-in style gallery preview", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
     const runtimeHome = path.join(tempDir, ".ahtml")
-    const inputPath = path.join(tempDir, "artifact.agent.html")
-    const outputDir = path.join(tempDir, "html")
-
-    await writeFile(
-      inputPath,
-      '<page title="CLI Preview"><card>Preview by CLI</card></page>',
-    )
+    const outputDir = path.join(tempDir, "gallery")
 
     const preview = spawn(
       process.execPath,
-      [cliPath, "preview", inputPath, "--out", outputDir, "--port", "0"],
+      [
+        cliPath,
+        "gallery",
+        "--style-ref",
+        "report-default",
+        "--out",
+        outputDir,
+        "--port",
+        "0",
+      ],
       {
         cwd: tempDir,
         env: createCliEnv(
@@ -51,10 +54,17 @@ describe("agent-html CLI heavy preview flows", () => {
       const response = await fetch(url)
       const body = await response.text()
 
-      expect(body).toContain("Preview by CLI")
-      expect(body).toContain(
-        'rel="icon" type="image/svg+xml" href="./ghost.svg"',
-      )
+      expect(body).toContain("report-default style gallery")
+      expect(body).toContain("Gallery Preview")
+      expect(body).toContain("Profile Summary")
+      expect(body).toContain("Overview")
+      expect(body).toContain("Palette")
+      expect(body).toContain("Forms")
+      expect(body).toContain('data-style-profile="report-default"')
+      expect(body).toContain('data-slot="tabs"')
+      expect(body).toContain('data-slot="table"')
+      expect(body).toContain("card treatment")
+      expect(body).toContain("report-card")
     } finally {
       preview.kill("SIGTERM")
       await waitForProcessExit(preview)
@@ -62,24 +72,25 @@ describe("agent-html CLI heavy preview flows", () => {
     }
   }, 120000)
 
-  it("serves previews for user style profiles stored under AHTML_HOME", async () => {
+  it("serves user style galleries from AHTML_HOME storage", async () => {
     const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
     const runtimeHome = path.join(tempDir, ".ahtml")
-    const inputPath = path.join(tempDir, "team-ops.agent.html")
-    const outputDir = path.join(tempDir, "html")
+    const outputDir = path.join(tempDir, "gallery")
 
     await writeCustomStyleProfile(runtimeHome)
-    await writeFile(
-      inputPath,
-      [
-        '<meta-agent style-ref="team-ops" />',
-        '<page title="Team Preview"><card title="Summary">Preview by user profile.</card></page>',
-      ].join("\n"),
-    )
 
     const preview = spawn(
       process.execPath,
-      [cliPath, "preview", inputPath, "--out", outputDir, "--port", "0"],
+      [
+        cliPath,
+        "gallery",
+        "--style-ref",
+        "team-ops",
+        "--out",
+        outputDir,
+        "--port",
+        "0",
+      ],
       {
         cwd: tempDir,
         env: createCliEnv(
@@ -97,9 +108,11 @@ describe("agent-html CLI heavy preview flows", () => {
       const response = await fetch(url)
       const body = await response.text()
 
-      expect(body).toContain("Team Preview")
+      expect(body).toContain("team-ops style gallery")
       expect(body).toContain('data-style-profile="team-ops"')
+      expect(body).toContain('data-ahtml-treatment="review-card"')
       expect(body).toContain(":root{--background:#fcfbf8;--foreground:#1f2933;")
+      expect(body).toContain("Previewing team-ops through the managed shadcn runtime.")
     } finally {
       preview.kill("SIGTERM")
       await waitForProcessExit(preview)

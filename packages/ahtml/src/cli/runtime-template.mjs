@@ -23,6 +23,7 @@ import {
   createShadcnRuntimeSurface,
   recordAhtmlGlueProof,
 } from "./runtime-surface.mjs"
+import { applyManagedRuntimeUiOverrides } from "./runtime-managed-ui.mjs"
 import { getDefaultShadcnPreset } from "./shadcn-api.mjs"
 
 const execFileAsync = promisify(execFile)
@@ -65,6 +66,10 @@ export async function writeRuntimeTemplate({
     components: setup.components,
     paths,
     shadcnTemplateDir,
+  })
+  await applyManagedRuntimeUiOverrides({
+    components: setup.components,
+    paths,
   })
   await injectRendererFiles({
     paths,

@@ -1,10 +1,10 @@
 import { z } from "zod"
 
 import type {
+  BuiltinDocumentStyleConfigReference,
   CssVariableMap,
   DocumentStyleConfigReference,
   GlobalStyleProfile,
-  LegacyGlobalStyleProjection,
   RadiusScale,
   RenderConfig,
   SemanticColorTokenSet,
@@ -21,7 +21,9 @@ export const PUBLIC_DOCUMENT_STYLE_CONFIG_REFERENCE_VALUES = [
   "report-default",
   "ops-compact",
   "review-dense",
-] as const
+] as const satisfies readonly BuiltinDocumentStyleConfigReference[]
+
+const documentStyleConfigReferencePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 const neutralLightSemanticTokens: SemanticColorTokenSet = {
   background: "#f7f7f4",
@@ -134,66 +136,138 @@ const BUILTIN_COMPONENT_TREATMENTS_BY_REFERENCE = {
     tabs: "review-tabs",
     textarea: "review-field",
   },
-} as const
-
-export const BUILTIN_STYLE_PROFILES_BY_REFERENCE = {
-  "report-default": createStyleProfile("report-default", {
-    theme: "neutral",
-    density: "comfortable",
-    tone: "report",
-    width: "article",
-  }),
-  "ops-compact": createStyleProfile("ops-compact", {
-    theme: "neutral",
-    density: "compact",
-    tone: "dashboard",
-    width: "dashboard",
-  }),
-  "review-dense": createStyleProfile("review-dense", {
-    theme: "neutral",
-    density: "compact",
-    tone: "decision",
-    width: "wide",
-  }),
-} as const
-
-const RESOLVED_DOCUMENT_STYLE_CONFIGS_BY_REFERENCE = {
-  "report-default": {
-    documentStyleConfigReference: "report-default",
-    styleProfile: BUILTIN_STYLE_PROFILES_BY_REFERENCE["report-default"],
-    theme: "neutral",
-    density: "comfortable",
-    tone: "report",
-    width: "article",
-  },
-  "ops-compact": {
-    documentStyleConfigReference: "ops-compact",
-    styleProfile: BUILTIN_STYLE_PROFILES_BY_REFERENCE["ops-compact"],
-    theme: "neutral",
-    density: "compact",
-    tone: "dashboard",
-    width: "dashboard",
-  },
-  "review-dense": {
-    documentStyleConfigReference: "review-dense",
-    styleProfile: BUILTIN_STYLE_PROFILES_BY_REFERENCE["review-dense"],
-    theme: "neutral",
-    density: "compact",
-    tone: "decision",
-    width: "wide",
-  },
 } as const satisfies Readonly<
   Record<
-    (typeof PUBLIC_DOCUMENT_STYLE_CONFIG_REFERENCE_VALUES)[number],
-    RenderConfig
+    BuiltinDocumentStyleConfigReference,
+    Readonly<Record<string, string>>
   >
+>
+
+const DocumentStyleConfigReferenceSchema = z
+  .string()
+  .regex(
+    documentStyleConfigReferencePattern,
+    "document style config references must use lowercase kebab-case ids.",
+  )
+
+const SemanticColorTokenSetSchema = z
+  .object({
+    background: z.string(),
+    foreground: z.string(),
+    card: z.string(),
+    cardForeground: z.string(),
+    popover: z.string(),
+    popoverForeground: z.string(),
+    primary: z.string(),
+    primaryForeground: z.string(),
+    secondary: z.string(),
+    secondaryForeground: z.string(),
+    muted: z.string(),
+    mutedForeground: z.string(),
+    accent: z.string(),
+    accentForeground: z.string(),
+    destructive: z.string(),
+    border: z.string(),
+    input: z.string(),
+    ring: z.string(),
+  })
+  .strict()
+
+const RadiusScaleSchema = z
+  .object({
+    base: z.string(),
+    sm: z.string(),
+    md: z.string(),
+    lg: z.string(),
+    xl: z.string(),
+    "2xl": z.string(),
+    "3xl": z.string(),
+    "4xl": z.string(),
+  })
+  .strict()
+
+const TypographyProfileSchema = z
+  .object({
+    fontSans: z.string(),
+    fontHeading: z.string(),
+  })
+  .strict()
+
+const CssVariableMapSchema = z
+  .object({
+    background: z.literal(defaultCssVariableMap.background),
+    foreground: z.literal(defaultCssVariableMap.foreground),
+    card: z.literal(defaultCssVariableMap.card),
+    cardForeground: z.literal(defaultCssVariableMap.cardForeground),
+    popover: z.literal(defaultCssVariableMap.popover),
+    popoverForeground: z.literal(defaultCssVariableMap.popoverForeground),
+    primary: z.literal(defaultCssVariableMap.primary),
+    primaryForeground: z.literal(defaultCssVariableMap.primaryForeground),
+    secondary: z.literal(defaultCssVariableMap.secondary),
+    secondaryForeground: z.literal(defaultCssVariableMap.secondaryForeground),
+    muted: z.literal(defaultCssVariableMap.muted),
+    mutedForeground: z.literal(defaultCssVariableMap.mutedForeground),
+    accent: z.literal(defaultCssVariableMap.accent),
+    accentForeground: z.literal(defaultCssVariableMap.accentForeground),
+    destructive: z.literal(defaultCssVariableMap.destructive),
+    border: z.literal(defaultCssVariableMap.border),
+    input: z.literal(defaultCssVariableMap.input),
+    ring: z.literal(defaultCssVariableMap.ring),
+    radius: z.literal(defaultCssVariableMap.radius),
+    fontSans: z.literal(defaultCssVariableMap.fontSans),
+    fontHeading: z.literal(defaultCssVariableMap.fontHeading),
+  })
+  .strict()
+
+export const StyleProfileSchema = z
+  .object({
+    id: DocumentStyleConfigReferenceSchema,
+    globalStyle: z
+      .object({
+        tokenSets: z
+          .object({
+            light: SemanticColorTokenSetSchema,
+            dark: SemanticColorTokenSetSchema,
+          })
+          .strict(),
+        radiusScale: RadiusScaleSchema,
+        typography: TypographyProfileSchema,
+        cssVariableMap: CssVariableMapSchema,
+      })
+      .strict(),
+    componentStyle: z
+      .object({
+        treatments: z.record(z.string(), z.string()),
+      })
+      .strict(),
+  })
+  .strict()
+
+export const BUILTIN_STYLE_PROFILES_BY_REFERENCE = {
+  "report-default": createStyleProfile("report-default"),
+  "ops-compact": createStyleProfile("ops-compact"),
+  "review-dense": createStyleProfile("review-dense"),
+} as const satisfies Readonly<
+  Record<BuiltinDocumentStyleConfigReference, StyleProfile>
+>
+
+const RESOLVED_DOCUMENT_STYLE_CONFIGS_BY_REFERENCE = {
+  "report-default": createRenderConfigFromStyleProfile(
+    BUILTIN_STYLE_PROFILES_BY_REFERENCE["report-default"],
+  ),
+  "ops-compact": createRenderConfigFromStyleProfile(
+    BUILTIN_STYLE_PROFILES_BY_REFERENCE["ops-compact"],
+  ),
+  "review-dense": createRenderConfigFromStyleProfile(
+    BUILTIN_STYLE_PROFILES_BY_REFERENCE["review-dense"],
+  ),
+} as const satisfies Readonly<
+  Record<BuiltinDocumentStyleConfigReference, RenderConfig>
 >
 
 const StyleRefRenderConfigInputSchema = z
   .object({
-    [PUBLIC_RENDER_CONFIG_KEY]: z.enum(
-      PUBLIC_DOCUMENT_STYLE_CONFIG_REFERENCE_VALUES,
-    ),
+    [PUBLIC_RENDER_CONFIG_KEY]: DocumentStyleConfigReferenceSchema,
   })
   .strict()
 
@@ -208,16 +282,21 @@ export const PUBLIC_RENDER_CONFIG_DEFAULTS = {
 export const DEFAULT_STYLE_PROFILE_REFERENCE =
   PUBLIC_RENDER_CONFIG_DEFAULTS[PUBLIC_RENDER_CONFIG_KEY]
 
-const resolvedRenderConfigSchemas = [
-  createResolvedRenderConfigSchema("report-default"),
-  createResolvedRenderConfigSchema("ops-compact"),
-  createResolvedRenderConfigSchema("review-dense"),
-] as const
-
-export const RenderConfigSchema = z.discriminatedUnion(
-  "documentStyleConfigReference",
-  resolvedRenderConfigSchemas,
-)
+export const RenderConfigSchema = z
+  .object({
+    documentStyleConfigReference: DocumentStyleConfigReferenceSchema,
+    styleProfile: StyleProfileSchema,
+  })
+  .strict()
+  .superRefine((config, ctx) => {
+    if (config.documentStyleConfigReference !== config.styleProfile.id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "document style config reference must match style profile id.",
+        path: ["documentStyleConfigReference"],
+      })
+    }
+  })
 
 export const DEFAULT_RENDER_CONFIG = resolveResolvedDocumentStyleConfig(
   PUBLIC_RENDER_CONFIG_DEFAULTS[PUBLIC_RENDER_CONFIG_KEY],
@@ -227,188 +306,100 @@ export const RENDER_CONFIG_KEYS = Object.keys(
   RENDER_CONFIG_VALUES,
 ) as readonly (keyof typeof RENDER_CONFIG_VALUES)[]
 
-export function parseRenderConfig(input: unknown): RenderConfig {
-  const styleRefInput = StyleRefRenderConfigInputSchema.safeParse(input)
-
-  if (styleRefInput.success) {
-    return resolveResolvedDocumentStyleConfig(
-      styleRefInput.data[PUBLIC_RENDER_CONFIG_KEY],
-    )
-  }
-
-  throw new Error("Invalid document-style-config render config.")
+export type ParseRenderConfigOptions = {
+  readonly resolveStyleProfileReference?: (
+    documentStyleConfigReference: DocumentStyleConfigReference,
+  ) => StyleProfile | undefined
 }
 
-export function getLegacyResolvedDocumentStyleTokens(renderConfig: RenderConfig) {
+export function parseRenderConfig(
+  input: unknown,
+  options: ParseRenderConfigOptions = {},
+): RenderConfig {
+  const styleRefInput = StyleRefRenderConfigInputSchema.safeParse(input)
+
+  if (!styleRefInput.success) {
+    throw new Error("Invalid document-style-config render config.")
+  }
+
+  const documentStyleConfigReference =
+    styleRefInput.data[PUBLIC_RENDER_CONFIG_KEY]
+  const builtinConfig = resolveBuiltinRenderConfig(documentStyleConfigReference)
+
+  if (builtinConfig) {
+    return builtinConfig
+  }
+
+  const styleProfile = options.resolveStyleProfileReference?.(
+    documentStyleConfigReference,
+  )
+
+  if (styleProfile) {
+    return createRenderConfigFromStyleProfile(styleProfile)
+  }
+
+  return DEFAULT_RENDER_CONFIG
+}
+
+export function createRenderConfigFromStyleProfile(
+  styleProfile: StyleProfile,
+): RenderConfig {
+  const parsedStyleProfile = StyleProfileSchema.parse(styleProfile)
+
   return {
-    theme: renderConfig.styleProfile.globalStyle.legacyProjection.theme,
-    density: renderConfig.styleProfile.globalStyle.legacyProjection.density,
-    tone: renderConfig.styleProfile.globalStyle.legacyProjection.tone,
-    width: renderConfig.styleProfile.globalStyle.legacyProjection.width,
-  } as const
+    documentStyleConfigReference: parsedStyleProfile.id,
+    styleProfile: parsedStyleProfile,
+  }
+}
+
+function resolveBuiltinRenderConfig(
+  documentStyleConfigReference: DocumentStyleConfigReference,
+) {
+  if (!isBuiltinDocumentStyleConfigReference(documentStyleConfigReference)) {
+    return undefined
+  }
+
+  return resolveResolvedDocumentStyleConfig(documentStyleConfigReference)
+}
+
+function isBuiltinDocumentStyleConfigReference(
+  documentStyleConfigReference: DocumentStyleConfigReference,
+): documentStyleConfigReference is BuiltinDocumentStyleConfigReference {
+  return PUBLIC_DOCUMENT_STYLE_CONFIG_REFERENCE_VALUES.includes(
+    documentStyleConfigReference as BuiltinDocumentStyleConfigReference,
+  )
 }
 
 function resolveResolvedDocumentStyleConfig(
-  documentStyleConfigReference: DocumentStyleConfigReference,
+  documentStyleConfigReference: BuiltinDocumentStyleConfigReference,
 ): RenderConfig {
   return RESOLVED_DOCUMENT_STYLE_CONFIGS_BY_REFERENCE[documentStyleConfigReference]
 }
 
-function createResolvedRenderConfigSchema(
-  documentStyleConfigReference: DocumentStyleConfigReference,
-) {
-  const config =
-    RESOLVED_DOCUMENT_STYLE_CONFIGS_BY_REFERENCE[documentStyleConfigReference]
-
-  return z
-    .object({
-      documentStyleConfigReference: z.literal(
-        config.documentStyleConfigReference,
-      ),
-      styleProfile: z.object({
-        id: z.literal(config.styleProfile.id),
-        globalStyle: z.object({
-          tokenSets: z.object({
-            light: createSemanticColorTokenSetSchema(
-              config.styleProfile.globalStyle.tokenSets.light,
-            ),
-            dark: createSemanticColorTokenSetSchema(
-              config.styleProfile.globalStyle.tokenSets.dark,
-            ),
-          }),
-          radiusScale: createRadiusScaleSchema(
-            config.styleProfile.globalStyle.radiusScale,
-          ),
-          typography: createTypographyProfileSchema(
-            config.styleProfile.globalStyle.typography,
-          ),
-          cssVariableMap: createCssVariableMapSchema(
-            config.styleProfile.globalStyle.cssVariableMap,
-          ),
-          legacyProjection: z.object({
-            theme: z.literal(
-              config.styleProfile.globalStyle.legacyProjection.theme,
-            ),
-            density: z.literal(
-              config.styleProfile.globalStyle.legacyProjection.density,
-            ),
-            tone: z.literal(
-              config.styleProfile.globalStyle.legacyProjection.tone,
-            ),
-            width: z.literal(
-              config.styleProfile.globalStyle.legacyProjection.width,
-            ),
-          }),
-        }),
-        componentStyle: z.object({
-          treatments: z.record(z.string(), z.string()),
-        }),
-      }),
-      theme: z.literal(config.theme),
-      density: z.literal(config.density),
-      tone: z.literal(config.tone),
-      width: z.literal(config.width),
-    })
-    .strict()
-}
-
 function createStyleProfile(
-  id: DocumentStyleConfigReference,
-  legacyProjection: LegacyGlobalStyleProjection,
+  id: BuiltinDocumentStyleConfigReference,
 ): StyleProfile {
   return {
     id,
-    globalStyle: createGlobalStyleProfile(legacyProjection),
+    globalStyle: createGlobalStyleProfile(),
     componentStyle: createComponentStyleProfile(id),
   }
 }
 
-function createComponentStyleProfile(id: DocumentStyleConfigReference) {
+function createComponentStyleProfile(id: BuiltinDocumentStyleConfigReference) {
   return {
     treatments: { ...BUILTIN_COMPONENT_TREATMENTS_BY_REFERENCE[id] },
   }
 }
 
-function createGlobalStyleProfile(
-  legacyProjection: LegacyGlobalStyleProjection,
-): GlobalStyleProfile {
+function createGlobalStyleProfile(): GlobalStyleProfile {
   return {
     tokenSets: {
-      light: neutralLightSemanticTokens,
-      dark: neutralDarkSemanticTokens,
+      light: { ...neutralLightSemanticTokens },
+      dark: { ...neutralDarkSemanticTokens },
     },
-    radiusScale: defaultRadiusScale,
-    typography: defaultTypographyProfile,
-    cssVariableMap: defaultCssVariableMap,
-    legacyProjection,
+    radiusScale: { ...defaultRadiusScale },
+    typography: { ...defaultTypographyProfile },
+    cssVariableMap: { ...defaultCssVariableMap },
   }
-}
-
-function createSemanticColorTokenSetSchema(tokens: SemanticColorTokenSet) {
-  return z.object({
-    background: z.literal(tokens.background),
-    foreground: z.literal(tokens.foreground),
-    card: z.literal(tokens.card),
-    cardForeground: z.literal(tokens.cardForeground),
-    popover: z.literal(tokens.popover),
-    popoverForeground: z.literal(tokens.popoverForeground),
-    primary: z.literal(tokens.primary),
-    primaryForeground: z.literal(tokens.primaryForeground),
-    secondary: z.literal(tokens.secondary),
-    secondaryForeground: z.literal(tokens.secondaryForeground),
-    muted: z.literal(tokens.muted),
-    mutedForeground: z.literal(tokens.mutedForeground),
-    accent: z.literal(tokens.accent),
-    accentForeground: z.literal(tokens.accentForeground),
-    destructive: z.literal(tokens.destructive),
-    border: z.literal(tokens.border),
-    input: z.literal(tokens.input),
-    ring: z.literal(tokens.ring),
-  })
-}
-
-function createRadiusScaleSchema(radiusScale: RadiusScale) {
-  return z.object({
-    base: z.literal(radiusScale.base),
-    sm: z.literal(radiusScale.sm),
-    md: z.literal(radiusScale.md),
-    lg: z.literal(radiusScale.lg),
-    xl: z.literal(radiusScale.xl),
-    "2xl": z.literal(radiusScale["2xl"]),
-    "3xl": z.literal(radiusScale["3xl"]),
-    "4xl": z.literal(radiusScale["4xl"]),
-  })
-}
-
-function createTypographyProfileSchema(typography: TypographyProfile) {
-  return z.object({
-    fontSans: z.literal(typography.fontSans),
-    fontHeading: z.literal(typography.fontHeading),
-  })
-}
-
-function createCssVariableMapSchema(cssVariableMap: CssVariableMap) {
-  return z.object({
-    background: z.literal(cssVariableMap.background),
-    foreground: z.literal(cssVariableMap.foreground),
-    card: z.literal(cssVariableMap.card),
-    cardForeground: z.literal(cssVariableMap.cardForeground),
-    popover: z.literal(cssVariableMap.popover),
-    popoverForeground: z.literal(cssVariableMap.popoverForeground),
-    primary: z.literal(cssVariableMap.primary),
-    primaryForeground: z.literal(cssVariableMap.primaryForeground),
-    secondary: z.literal(cssVariableMap.secondary),
-    secondaryForeground: z.literal(cssVariableMap.secondaryForeground),
-    muted: z.literal(cssVariableMap.muted),
-    mutedForeground: z.literal(cssVariableMap.mutedForeground),
-    accent: z.literal(cssVariableMap.accent),
-    accentForeground: z.literal(cssVariableMap.accentForeground),
-    destructive: z.literal(cssVariableMap.destructive),
-    border: z.literal(cssVariableMap.border),
-    input: z.literal(cssVariableMap.input),
-    ring: z.literal(cssVariableMap.ring),
-    radius: z.literal(cssVariableMap.radius),
-    fontSans: z.literal(cssVariableMap.fontSans),
-    fontHeading: z.literal(cssVariableMap.fontHeading),
-  })
 }

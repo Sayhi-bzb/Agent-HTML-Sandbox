@@ -1,7 +1,7 @@
 /// <reference types="node" />
 // @vitest-environment node
 
-import { mkdir, writeFile } from "node:fs/promises"
+import { mkdir, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 
@@ -79,6 +79,20 @@ type LoadedModules = {
     readonly algorithm: string
     readonly files: Record<string, string>
   }>
+  readonly createManagedRuntimeUiProof: (
+    components: readonly string[],
+  ) => Promise<{
+    readonly algorithm: string
+    readonly files: Record<string, string>
+  }>
+  readonly getManagedRuntimeUiOverrideEntries: (
+    components: readonly string[],
+  ) => readonly {
+    readonly component: string
+    readonly fileName: string
+    readonly runtimeRelativePath: string
+    readonly sourcePath: string
+  }[]
   readonly createRuntimeVerificationState: (input: {
     readonly components: readonly string[]
     readonly runtimeBase: string
@@ -156,8 +170,11 @@ type RuntimeManifest = {
   readonly paths: Record<string, string>
 }
 
-type RuntimeSurfaceWithGlueProof = Record<string, unknown> & {
+type RuntimeSurfaceWithProofs = Record<string, unknown> & {
   readonly ahtmlGlueProof: {
+    readonly files: Record<string, string>
+  }
+  readonly ahtmlManagedUiProof: {
     readonly files: Record<string, string>
   }
 }
@@ -264,7 +281,7 @@ describe("runtime surface completeness", () => {
     const { assertRuntimeSurface } = await loadModules()
     const fixture = await createRuntimeFixture()
     const runtimeSurface = fixture.manifest
-      .shadcnRuntimeSurface as RuntimeSurfaceWithGlueProof
+      .shadcnRuntimeSurface as RuntimeSurfaceWithProofs
     const manifest = {
       ...fixture.manifest,
       shadcnRuntimeSurface: {
@@ -286,6 +303,57 @@ describe("runtime surface completeness", () => {
       }),
     ).rejects.toThrow(
       "surface ahtmlGlueProof src/app.tsx does not match runtime file hash",
+    )
+  })
+
+  it("rejects managed UI proof drift between manifest and checked-in override source", async () => {
+    const { assertRuntimeSurface } = await loadModules()
+    const fixture = await createRuntimeFixture()
+    const runtimeSurface = fixture.manifest
+      .shadcnRuntimeSurface as RuntimeSurfaceWithProofs
+    const manifest = {
+      ...fixture.manifest,
+      shadcnRuntimeSurface: {
+        ...runtimeSurface,
+        ahtmlManagedUiProof: {
+          ...runtimeSurface.ahtmlManagedUiProof,
+          files: {
+            ...runtimeSurface.ahtmlManagedUiProof.files,
+            "src/components/ui/progress.tsx": "drifted-proof",
+          },
+        },
+      },
+    }
+
+    await expect(
+      assertRuntimeSurface({
+        manifest,
+        paths: fixture.runtimePaths,
+      }),
+    ).rejects.toThrow(
+      "surface ahtmlManagedUiProof src/components/ui/progress.tsx does not match checked-in managed UI source hash",
+    )
+  })
+
+  it("rejects runtime managed UI files that drift from checked-in override source", async () => {
+    const { assertRuntimeSurface } = await loadModules()
+    const fixture = await createRuntimeFixture()
+
+    await writeFile(
+      path.join(
+        fixture.runtimePaths.runtimeComponentsDir,
+        "progress.tsx",
+      ),
+      'export function Progress() { return "drift" }\n',
+    )
+
+    await expect(
+      assertRuntimeSurface({
+        manifest: fixture.manifest,
+        paths: fixture.runtimePaths,
+      }),
+    ).rejects.toThrow(
+      "runtime managed UI file src/components/ui/progress.tsx does not match checked-in managed UI source hash",
     )
   })
 
@@ -359,8 +427,10 @@ async function createRuntimeFixture({
     requiredShadcnRuntimeExports,
     supportedRuntimeBase,
     createAhtmlGlueProof,
+    createManagedRuntimeUiProof,
     createPromptUiManifest,
     getCliSchemaOutput,
+    getManagedRuntimeUiOverrideEntries,
     getRuntimePaths,
     nativeRuntimeSetup,
     runtimeRenderer,
@@ -496,7 +566,7 @@ async function createRuntimeFixture({
   )
   await writeFile(
     path.join(runtimePaths.runtimeSrcDir, "renderer", "kinds.ts"),
-    'export const runtimeRendererKinds = ["choice-group","choice-inline","choice-overlay","collection","compound","interactive-collection","primitive","range-field","table","tabs","text-field","toggle-field"] as const\nexport type RendererKind = (typeof runtimeRendererKinds)[number]\n',
+    'export const runtimeRendererKinds = ["accordion","choice-group","choice-inline","combobox-input","collection","compound","primitive","range-field","select-overlay","table","tabs","text-field","toggle-field"] as const\nexport type RendererKind = (typeof runtimeRendererKinds)[number]\n',
   )
   await writeFile(
     path.join(runtimePaths.runtimeSrcDir, "renderer", "parity.ts"),
@@ -525,15 +595,23 @@ async function createRuntimeFixture({
       requiredShadcnRuntimeExports,
       component,
     )
+    const managedOverride = getManagedRuntimeUiOverrideEntries(
+      nativeRuntimeSetup.components,
+    ).find((entry) => entry.component === component)
     await writeFile(
       path.join(runtimePaths.runtimeComponentsDir, `${component}.tsx`),
-      createComponentModule(exports),
+      managedOverride
+        ? await readFile(managedOverride.sourcePath, "utf8")
+        : createComponentModule(exports),
     )
   }
 
   const shadcnRuntimeSurface = {
     ...baseRuntimeSurface,
     ahtmlGlueProof: await createAhtmlGlueProof(runtimePaths),
+    ahtmlManagedUiProof: await createManagedRuntimeUiProof(
+      nativeRuntimeSetup.components,
+    ),
   }
   const manifest = createManagedRuntimeManifest({
     componentSource: nativeRuntimeSetup.componentSource,
@@ -683,6 +761,7 @@ async function loadModules(): Promise<LoadedModules> {
   const [
     renderCapabilitiesModule,
     doctorChecksModule,
+    runtimeManagedUiModule,
     runtimePathsModule,
     runtimeContractModule,
     runtimeSetupModule,
@@ -706,6 +785,18 @@ async function loadModules(): Promise<LoadedModules> {
     import(
       pathToFileURL(
         path.join(root, "packages", "ahtml", "src", "cli", "doctor-checks.mjs"),
+      ).href
+    ),
+    import(
+      pathToFileURL(
+        path.join(
+          root,
+          "packages",
+          "ahtml",
+          "src",
+          "cli",
+          "runtime-managed-ui.mjs",
+        ),
       ).href
     ),
     import(
@@ -787,8 +878,11 @@ async function loadModules(): Promise<LoadedModules> {
     createManagedRuntimeManifest:
       runtimeContractModule.createManagedRuntimeManifest,
     createAhtmlGlueProof: runtimeSurfaceModule.createAhtmlGlueProof,
+    createManagedRuntimeUiProof: runtimeManagedUiModule.createManagedRuntimeUiProof,
     createRuntimeVerificationState:
       runtimeContractModule.createRuntimeVerificationState,
+    getManagedRuntimeUiOverrideEntries:
+      runtimeManagedUiModule.getManagedRuntimeUiOverrideEntries,
     nativeRuntimeSetup: runtimeSetupModule.nativeRuntimeSetup,
     assertBuiltArtifactCss: runtimeSurfaceModule.assertBuiltArtifactCss,
     assertRuntimeSurface: runtimeSurfaceModule.assertRuntimeSurface,

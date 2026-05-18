@@ -513,9 +513,22 @@ export const COMPONENT_SCHEMA_OVERLAYS = [
     description: "Expandable section group.",
     expose: true,
     sourceComponents: ["Accordion"],
-    props: [],
+    props: [
+      {
+        name: "mode",
+        valueKind: "enum",
+        description: "Whether one or multiple sections may stay open.",
+        enumValues: ["single", "multiple"],
+      },
+      {
+        name: "default",
+        valueKind: "text",
+        description:
+          'Initially open accordion item value, or a comma-separated list when mode is "multiple".',
+      },
+    ],
     allowedChildren: ["accordion-item"],
-    hiddenProps: ["type", "collapsible"],
+    hiddenProps: ["type", "collapsible", "defaultValue", "value"],
   },
   {
     name: "accordion-item",

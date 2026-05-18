@@ -2,7 +2,6 @@ import { readFile } from "node:fs/promises"
 import path from "node:path"
 
 import { cliDefaults } from "../config/defaults.mjs"
-import { getLegacyResolvedDocumentStyleTokens } from "../config/internal-core-bridge.mjs"
 import { getCliSchemaOutput } from "./schema.mjs"
 import { buildRuntimeArtifact } from "./runtime-build.mjs"
 import {
@@ -34,7 +33,7 @@ export function createArtifactWorkflow({
     const inputFilePath = path.resolve(userRoot, inputPath)
     const outputDir = path.resolve(userRoot, outputPath ?? defaultOutputDir)
     const source = await readFile(inputFilePath, "utf8")
-    const validation = await validateAgentHtmlSource(source)
+    const validation = await validateAgentHtmlSource(source, runtimePaths)
 
     if (validation.diagnostics.length > 0) {
       if (options.printDiagnostics !== false) {
@@ -121,7 +120,7 @@ export function createArtifactWorkflow({
 
   async function inspectDocument(inputPath) {
     const source = await readFile(path.resolve(userRoot, inputPath), "utf8")
-    const validation = await validateAgentHtmlSource(source)
+    const validation = await validateAgentHtmlSource(source, runtimePaths)
 
     if (validation.diagnostics.length > 0) {
       throw new ArtifactWorkflowValidationError(
@@ -145,7 +144,7 @@ export function createArtifactWorkflow({
   async function validateDocument(inputPath, options = {}) {
     const inputFilePath = path.resolve(userRoot, inputPath)
     const source = await readFile(inputFilePath, "utf8")
-    const validation = await validateAgentHtmlSource(source)
+    const validation = await validateAgentHtmlSource(source, runtimePaths)
 
     if (validation.diagnostics.length > 0) {
       if (options.printDiagnostics !== false) {
@@ -180,8 +179,6 @@ export function createInspection(document) {
   }
 
   const { documentStyleConfigReference } = document.meta
-  const resolvedDocumentStyleTokens =
-    getLegacyResolvedDocumentStyleTokens(document.meta)
 
   return {
     kind: "agent-html-inspection",
@@ -189,7 +186,6 @@ export function createInspection(document) {
     config: {
       documentStyleConfigReference,
     },
-    resolvedDocumentStyleTokens,
     components: countComponents(document.components),
   }
 }
@@ -239,14 +235,6 @@ export function formatInspectionSummary(inspection) {
     ...Object.entries(inspection.config).map(
       ([key, value]) => `${key}: ${value}`,
     ),
-    ...(inspection.resolvedDocumentStyleTokens
-      ? [
-          "resolved document style tokens:",
-          ...Object.entries(inspection.resolvedDocumentStyleTokens).map(
-            ([key, value]) => `- ${key}: ${value}`,
-          ),
-        ]
-      : []),
     "components:",
   ]
 

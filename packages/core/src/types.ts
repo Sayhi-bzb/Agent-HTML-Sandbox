@@ -42,18 +42,12 @@ export type GeneratedShadcnIntrospection = {
   readonly registryDependencies?: readonly string[]
 }
 
-export type RenderTheme = "neutral"
-
-export type RenderDensity = "compact" | "comfortable"
-
-export type RenderTone = "dashboard" | "decision" | "report"
-
-export type RenderWidth = "article" | "dashboard" | "wide"
-
-export type DocumentStyleConfigReference =
+export type BuiltinDocumentStyleConfigReference =
   | "report-default"
   | "ops-compact"
   | "review-dense"
+
+export type DocumentStyleConfigReference = string
 
 export type SemanticColorTokenSet = {
   readonly background: string
@@ -121,19 +115,11 @@ export type CssVariableMap = {
   readonly fontHeading: "--font-heading"
 }
 
-export type LegacyGlobalStyleProjection = {
-  readonly theme: RenderTheme
-  readonly density: RenderDensity
-  readonly tone: RenderTone
-  readonly width: RenderWidth
-}
-
 export type GlobalStyleProfile = {
   readonly tokenSets: GlobalStyleTokenSets
   readonly radiusScale: RadiusScale
   readonly typography: TypographyProfile
   readonly cssVariableMap: CssVariableMap
-  readonly legacyProjection: LegacyGlobalStyleProjection
 }
 
 export type ComponentStyleProfile = {
@@ -149,10 +135,6 @@ export type StyleProfile = {
 export type RenderConfig = {
   readonly documentStyleConfigReference: DocumentStyleConfigReference
   readonly styleProfile: StyleProfile
-  readonly theme: RenderTheme
-  readonly density: RenderDensity
-  readonly tone: RenderTone
-  readonly width: RenderWidth
 }
 
 export type PublicRenderConfigModel = "document-style-config-reference"

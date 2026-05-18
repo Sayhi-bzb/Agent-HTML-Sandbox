@@ -5,6 +5,7 @@ import {
   TEXT_CHILD,
 } from "../component-schema"
 import { DEFAULT_RENDER_CONFIG, parseRenderConfig } from "../render-config"
+import type { ParseRenderConfigOptions } from "../render-config"
 import type { RenderConfig, SanitizedNode, StandardAgentNode } from "../types"
 import type {
   AgentHtmlDiagnostic,
@@ -23,9 +24,12 @@ const FORBIDDEN_ATTR_NAMES = new Set(
   BLOCKED_AGENT_FACING_PROP_NAMES.flatMap((name) => [name, name.toLowerCase()]),
 )
 
-export function validateAgentHtml(parsed: ParsedAgentHtml): ValidatedAgentHtml {
+export function validateAgentHtml(
+  parsed: ParsedAgentHtml,
+  options: ParseRenderConfigOptions = {},
+): ValidatedAgentHtml {
   const diagnostics = [...parsed.diagnostics]
-  const meta = validateRenderConfig(parsed.metaAttrs, diagnostics)
+  const meta = validateRenderConfig(parsed.metaAttrs, diagnostics, options)
   const components = validateRootNodes(parsed.nodes, diagnostics)
 
   return {
@@ -38,13 +42,14 @@ export function validateAgentHtml(parsed: ParsedAgentHtml): ValidatedAgentHtml {
 function validateRenderConfig(
   attrs: Readonly<Record<string, string>> | undefined,
   diagnostics: AgentHtmlDiagnostic[],
+  options: ParseRenderConfigOptions,
 ): RenderConfig {
   if (!attrs) {
     return DEFAULT_RENDER_CONFIG
   }
 
   try {
-    return parseRenderConfig(attrs)
+    return parseRenderConfig(attrs, options)
   } catch {
     // fall through to structured diagnostics
   }

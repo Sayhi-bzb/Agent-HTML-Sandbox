@@ -1,7 +1,7 @@
 /// <reference types="node" />
 // @vitest-environment node
 
-import { mkdtemp, readFile, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 
@@ -51,6 +51,7 @@ describe("agent-html CLI contracts", () => {
       expect(result.stdout).toContain("ahtml prompt")
       expect(result.stdout).toContain("ahtml build artifact.agent.html")
       expect(result.stdout).toContain("ahtml preview artifact.agent.html")
+      expect(result.stdout).toContain("ahtml gallery --style-ref report-default")
       expect(result.stdout).not.toContain("agent-html.project.json")
       expect(result.stdout).not.toContain("--scaffold")
     }
@@ -70,6 +71,7 @@ describe("agent-html CLI contracts", () => {
     expect(readme).toContain("ahtml prompt")
     expect(readme).toContain("ahtml build artifact.agent.html")
     expect(readme).toContain("ahtml preview artifact.agent.html")
+    expect(readme).toContain("ahtml gallery --style-ref report-default")
   })
 
   it("prints agent-facing schema without implementation props", async () => {
@@ -248,6 +250,22 @@ describe("agent-html CLI contracts", () => {
       runCliWithServer(["preview", inputPath], {}, tempDir),
       "unknown-attr",
     )
+    await expectCliFailure(
+      runCliWithServer(["gallery"], {}, tempDir),
+      "gallery requires --style-ref <id>.",
+    )
+    await expectCliFailure(
+      runCliWithServer(["gallery", "--style-ref", "report-default", "extra"]),
+      'Unexpected argument "extra".',
+    )
+    await expectCliFailure(
+      runCliWithServer(
+        ["gallery", "--style-ref", "report-default", "--port", "bad"],
+        {},
+        tempDir,
+      ),
+      "gallery --port must be an integer from 0 to 65535.",
+    )
     await expectPathMissing(path.join(outputDir, "index.html"))
     await expectCliFailure(
       runCliWithServer(["prompt", "--format"]),
@@ -372,6 +390,110 @@ describe("agent-html CLI contracts", () => {
     await removeTempDir(tempDir)
   })
 
+  it("requires an exact style profile for gallery previews", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
+    const runtimeHome = path.join(tempDir, ".ahtml")
+
+    await expectCliFailure(
+      runCliWithServer(
+        ["gallery", "--style-ref", "team-missing"],
+        { AHTML_HOME: runtimeHome },
+        tempDir,
+      ),
+      'Unknown style profile "team-missing".',
+    )
+    await expectCliFailure(
+      runCliWithServer(
+        ["gallery", "--style-ref", "team-missing"],
+        { AHTML_HOME: runtimeHome },
+        tempDir,
+      ),
+      "Available style-ref values: ops-compact, report-default, review-dense.",
+    )
+    await expectPathMissing(path.join(runtimeHome, "config", "runtime.json"))
+    await removeTempDir(tempDir)
+  })
+
+  it("validates and inspects user style profiles from runtime storage without bootstrapping the runtime", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
+    const runtimeHome = path.join(tempDir, ".ahtml")
+    const inputPath = path.join(tempDir, "team-ops.agent.html")
+
+    await writeCustomStyleProfile(runtimeHome)
+    await writeFile(
+      inputPath,
+      [
+        '<meta-agent style-ref="team-ops" />',
+        '<page title="Team Ops"><card title="Summary">Ready.</card></page>',
+      ].join("\n"),
+    )
+
+    const validation = await runCliWithServer(
+      ["validate", "--input", inputPath, "--format", "json"],
+      { AHTML_HOME: runtimeHome },
+      tempDir,
+    )
+    const parsedValidation = parseJson<{
+      kind: string
+      ok: boolean
+      inspection?: {
+        config: { documentStyleConfigReference: string }
+      }
+    }>(validation.stdout)
+    expect(parsedValidation.kind).toBe("agent-html-validation-result")
+    expect(parsedValidation.ok).toBe(true)
+    expect(parsedValidation.inspection?.config.documentStyleConfigReference).toBe(
+      "team-ops",
+    )
+    expect(validation.stdout).not.toContain("resolvedDocumentStyleTokens")
+
+    const inspection = await runCliWithServer(
+      ["inspect", "--input", inputPath, "--format", "json"],
+      { AHTML_HOME: runtimeHome },
+      tempDir,
+    )
+    expect(inspection.stdout).toContain(
+      '"documentStyleConfigReference": "team-ops"',
+    )
+    expect(inspection.stdout).not.toContain('"resolvedDocumentStyleTokens"')
+    await expectPathMissing(path.join(runtimeHome, "config", "runtime.json"))
+    await removeTempDir(tempDir)
+  })
+
+  it("falls back to the default profile for unresolved runtime style references in validate", async () => {
+    const tempDir = await mkdtemp(path.join(tmpdir(), "agent-html-cli-"))
+    const runtimeHome = path.join(tempDir, ".ahtml")
+    const inputPath = path.join(tempDir, "fallback.agent.html")
+
+    await writeFile(
+      inputPath,
+      [
+        '<meta-agent style-ref="team-missing" />',
+        '<page title="Fallback"><card title="Summary">Default profile.</card></page>',
+      ].join("\n"),
+    )
+
+    const validation = await runCliWithServer(
+      ["validate", "--input", inputPath, "--format", "json"],
+      { AHTML_HOME: runtimeHome },
+      tempDir,
+    )
+    const parsedValidation = parseJson<{
+      ok: boolean
+      inspection?: {
+        config: { documentStyleConfigReference: string }
+      }
+    }>(validation.stdout)
+
+    expect(parsedValidation.ok).toBe(true)
+    expect(parsedValidation.inspection?.config.documentStyleConfigReference).toBe(
+      "report-default",
+    )
+    expect(validation.stdout).not.toContain("resolvedDocumentStyleTokens")
+    await expectPathMissing(path.join(runtimeHome, "config", "runtime.json"))
+    await removeTempDir(tempDir)
+  })
+
   it("accepts representative agent-html fixtures", async () => {
     const { validateAgentHtmlSource } = await importValidateModule()
 
@@ -385,3 +507,118 @@ describe("agent-html CLI contracts", () => {
     }
   })
 })
+
+async function writeCustomStyleProfile(runtimeHome: string) {
+  const profileDir = path.join(
+    runtimeHome,
+    "config",
+    "style-profiles",
+    "user",
+  )
+  const profilePath = path.join(profileDir, "team-ops.json")
+
+  await mkdir(profileDir, { recursive: true })
+  await writeFile(
+    profilePath,
+    `${JSON.stringify(createCustomStyleProfile(), null, 2)}\n`,
+  )
+}
+
+function createCustomStyleProfile() {
+  return {
+    id: "team-ops",
+    globalStyle: {
+      tokenSets: {
+        light: {
+          background: "#fcfbf8",
+          foreground: "#1f2933",
+          card: "#ffffff",
+          cardForeground: "#1f2933",
+          popover: "#ffffff",
+          popoverForeground: "#1f2933",
+          primary: "#0f766e",
+          primaryForeground: "#f8fafc",
+          secondary: "#f2f7f6",
+          secondaryForeground: "#1f2933",
+          muted: "#eef4f3",
+          mutedForeground: "#52606d",
+          accent: "#dff5f2",
+          accentForeground: "#134e4a",
+          destructive: "#be123c",
+          border: "#d9e2ec",
+          input: "#bcccdc",
+          ring: "#0f766e",
+        },
+        dark: {
+          background: "oklch(0.18 0.02 190)",
+          foreground: "oklch(0.96 0.01 190)",
+          card: "oklch(0.24 0.02 190)",
+          cardForeground: "oklch(0.96 0.01 190)",
+          popover: "oklch(0.24 0.02 190)",
+          popoverForeground: "oklch(0.96 0.01 190)",
+          primary: "oklch(0.74 0.11 190)",
+          primaryForeground: "oklch(0.2 0.02 190)",
+          secondary: "oklch(0.3 0.02 190)",
+          secondaryForeground: "oklch(0.96 0.01 190)",
+          muted: "oklch(0.28 0.02 190)",
+          mutedForeground: "oklch(0.78 0.01 190)",
+          accent: "oklch(0.32 0.03 190)",
+          accentForeground: "oklch(0.96 0.01 190)",
+          destructive: "oklch(0.62 0.2 20)",
+          border: "oklch(1 0 0 / 12%)",
+          input: "oklch(1 0 0 / 18%)",
+          ring: "oklch(0.74 0.11 190)",
+        },
+      },
+      radiusScale: {
+        base: "0.9rem",
+        sm: "calc(var(--radius) * 0.6)",
+        md: "calc(var(--radius) * 0.8)",
+        lg: "var(--radius)",
+        xl: "calc(var(--radius) * 1.4)",
+        "2xl": "calc(var(--radius) * 1.8)",
+        "3xl": "calc(var(--radius) * 2.2)",
+        "4xl": "calc(var(--radius) * 2.6)",
+      },
+      typography: {
+        fontSans:
+          '"Inter Variable", system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif',
+        fontHeading: "var(--font-sans)",
+      },
+      cssVariableMap: {
+        background: "--background",
+        foreground: "--foreground",
+        card: "--card",
+        cardForeground: "--card-foreground",
+        popover: "--popover",
+        popoverForeground: "--popover-foreground",
+        primary: "--primary",
+        primaryForeground: "--primary-foreground",
+        secondary: "--secondary",
+        secondaryForeground: "--secondary-foreground",
+        muted: "--muted",
+        mutedForeground: "--muted-foreground",
+        accent: "--accent",
+        accentForeground: "--accent-foreground",
+        destructive: "--destructive",
+        border: "--border",
+        input: "--input",
+        ring: "--ring",
+        radius: "--radius",
+        fontSans: "--font-sans",
+        fontHeading: "--font-heading",
+      },
+    },
+    componentStyle: {
+      treatments: {
+        alert: "ops-alert",
+        badge: "ops-badge",
+        card: "review-card",
+        input: "ops-field",
+        table: "ops-table",
+        tabs: "ops-tabs",
+        textarea: "ops-field",
+      },
+    },
+  }
+}

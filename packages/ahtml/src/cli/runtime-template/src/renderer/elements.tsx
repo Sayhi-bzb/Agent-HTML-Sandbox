@@ -24,6 +24,7 @@ import {
   FieldContent,
   FieldDescription,
   FieldLabel,
+  FieldTitle,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
@@ -81,6 +82,7 @@ const runtimeElementRegistry: Record<string, React.ElementType> = {
   FieldContent,
   FieldDescription,
   FieldLabel,
+  FieldTitle,
   Input,
   Progress,
   RadioGroup,

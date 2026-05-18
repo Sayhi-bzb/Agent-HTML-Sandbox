@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { parseRenderConfig } from "../render-config"
 import { sanitizeAgentHtml } from "./sanitize-agent-html"
 
 const semanticReportSource = `
@@ -56,6 +57,38 @@ const collaborationWorkbenchSource = `
   </page>
 `
 
+function createCustomStyleProfile(
+  id = "team-ops",
+): ReturnType<typeof parseRenderConfig>["styleProfile"] {
+  const baseRenderConfig = parseRenderConfig({ "style-ref": "ops-compact" })
+
+  return {
+    ...baseRenderConfig.styleProfile,
+    id,
+    globalStyle: {
+      ...baseRenderConfig.styleProfile.globalStyle,
+      tokenSets: {
+        light: {
+          ...baseRenderConfig.styleProfile.globalStyle.tokenSets.light,
+          background: "#fcfbf8",
+          primary: "#0f766e",
+        },
+        dark: {
+          ...baseRenderConfig.styleProfile.globalStyle.tokenSets.dark,
+          background: "oklch(0.18 0.02 190)",
+          primary: "oklch(0.74 0.11 190)",
+        },
+      },
+    },
+    componentStyle: {
+      treatments: {
+        ...baseRenderConfig.styleProfile.componentStyle.treatments,
+        card: "review-card",
+      },
+    },
+  }
+}
+
 describe("sanitizeAgentHtml", () => {
   it("produces SanitizedAgentHtml for valid MVP agent-html", () => {
     const result = sanitizeAgentHtml(`
@@ -108,12 +141,6 @@ describe("sanitizeAgentHtml", () => {
             cssVariableMap: expect.objectContaining({
               border: "--border",
             }),
-            legacyProjection: {
-              theme: "neutral",
-              density: "comfortable",
-              tone: "report",
-              width: "article",
-            },
           },
           componentStyle: {
             treatments: {
@@ -127,10 +154,6 @@ describe("sanitizeAgentHtml", () => {
             },
           },
         },
-        theme: "neutral",
-        density: "comfortable",
-        tone: "report",
-        width: "article",
       },
       components: [
         {
@@ -287,12 +310,6 @@ describe("sanitizeAgentHtml", () => {
           cssVariableMap: expect.objectContaining({
             radius: "--radius",
           }),
-          legacyProjection: {
-            theme: "neutral",
-            density: "comfortable",
-            tone: "report",
-            width: "article",
-          },
         },
         componentStyle: {
           treatments: {
@@ -306,11 +323,65 @@ describe("sanitizeAgentHtml", () => {
           },
         },
       },
-      theme: "neutral",
-      density: "comfortable",
-      tone: "report",
-      width: "article",
     })
+  })
+
+  it("resolves runtime style profiles through sanitize options", () => {
+    const result = sanitizeAgentHtml(
+      `
+        <meta-agent style-ref="team-ops" />
+        <page title="Team Ops">
+          <card title="Summary">Ready.</card>
+        </page>
+      `,
+      {
+        resolveStyleProfileReference: (reference) =>
+          reference === "team-ops" ? createCustomStyleProfile() : undefined,
+      },
+    )
+
+    expect(result.diagnostics).toEqual([])
+    expect(result.document?.meta).toMatchObject({
+      documentStyleConfigReference: "team-ops",
+      styleProfile: {
+        id: "team-ops",
+        globalStyle: {
+          tokenSets: {
+            light: expect.objectContaining({
+              background: "#fcfbf8",
+              primary: "#0f766e",
+            }),
+            dark: expect.objectContaining({
+              background: "oklch(0.18 0.02 190)",
+              primary: "oklch(0.74 0.11 190)",
+            }),
+          },
+        },
+        componentStyle: {
+          treatments: expect.objectContaining({
+            card: "review-card",
+          }),
+        },
+      },
+    })
+  })
+
+  it("falls back to the default profile for unresolved runtime style references", () => {
+    const result = sanitizeAgentHtml(`
+      <meta-agent style-ref="team-missing" />
+      <page title="Fallback">
+        <card title="Summary">Default profile.</card>
+      </page>
+    `)
+
+    expect(result.diagnostics).toEqual([])
+    expect(result.document?.meta.documentStyleConfigReference).toBe(
+      "report-default",
+    )
+    expect(result.document?.meta.styleProfile.id).toBe("report-default")
+    expect(result.document?.meta.styleProfile.componentStyle.treatments.card).toBe(
+      "report-card",
+    )
   })
 
   it("keeps the page root after a self-closing meta-agent header", () => {

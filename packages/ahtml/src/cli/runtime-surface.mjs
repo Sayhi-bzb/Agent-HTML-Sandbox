@@ -4,6 +4,7 @@ import path from "node:path"
 
 import { requiredShadcnRuntimeExports } from "../config/render-capabilities.mjs"
 import { parseJson } from "./cli-io.mjs"
+import { createManagedRuntimeUiProof } from "./runtime-managed-ui.mjs"
 
 const requiredCssImports = [
   "tailwindcss",
@@ -81,6 +82,9 @@ export async function recordAhtmlGlueProof({ paths, surface }) {
   return {
     ...surface,
     ahtmlGlueProof: await createAhtmlGlueProof(paths),
+    ahtmlManagedUiProof: await createManagedRuntimeUiProof(
+      surface.registryItems ?? [],
+    ),
   }
 }
 
@@ -444,6 +448,11 @@ export async function assertRuntimeSurface({ manifest, paths }) {
     expectedName: "expected runtime requiredExports",
   })
   await assertManagedRuntimeProof({ paths, surface })
+  await assertManagedRuntimeUiProof({
+    components: manifest.installedUiComponents ?? manifest.components ?? [],
+    paths,
+    surface,
+  })
 
   if (issues.length > 0) {
     throw new Error(
@@ -468,8 +477,11 @@ export function formatShadcnRuntimeProvenance(surface) {
   }
 
   const proofCount = Object.keys(surface.ahtmlGlueProof?.files ?? {}).length
+  const managedUiCount = Object.keys(
+    surface.ahtmlManagedUiProof?.files ?? {},
+  ).length
 
-  return `${String(surface.shellSource ?? "missing")}/${String(surface.initSource ?? "missing")}/${String(surface.tailwindVersion ?? "missing")} glue-files:${proofCount}`
+  return `${String(surface.shellSource ?? "missing")}/${String(surface.initSource ?? "missing")}/${String(surface.tailwindVersion ?? "missing")} glue-files:${proofCount} managed-ui-files:${managedUiCount}`
 }
 
 export function getShadcnRuntimeProvenanceState(surface) {
@@ -654,6 +666,47 @@ async function assertManagedRuntimeProof({ paths, surface }) {
     if (proof.files[relativePath] !== expectedProof.files[relativePath]) {
       throw new Error(
         `surface ahtmlGlueProof ${relativePath} does not match runtime file hash. Actual: ${String(proof.files[relativePath])} Expected: ${String(expectedProof.files[relativePath])}.`,
+      )
+    }
+  }
+}
+
+async function assertManagedRuntimeUiProof({ components, paths, surface }) {
+  const proof = requireObject(
+    surface.ahtmlManagedUiProof,
+    "surface ahtmlManagedUiProof must be an object.",
+  )
+  const expectedProof = await createManagedRuntimeUiProof(components)
+
+  if (proof.algorithm !== expectedProof.algorithm) {
+    throw new Error(
+      `surface ahtmlManagedUiProof algorithm must be ${expectedProof.algorithm}, got ${String(proof.algorithm)}.`,
+    )
+  }
+
+  assertSameStringSet({
+    actual: Object.keys(proof.files ?? {}),
+    actualName: "surface ahtmlManagedUiProof files",
+    expected: Object.keys(expectedProof.files),
+    expectedName: "expected ahtmlManagedUiProof files",
+  })
+
+  for (const relativePath of Object.keys(expectedProof.files)) {
+    if (proof.files[relativePath] !== expectedProof.files[relativePath]) {
+      throw new Error(
+        `surface ahtmlManagedUiProof ${relativePath} does not match checked-in managed UI source hash. Actual: ${String(proof.files[relativePath])} Expected: ${String(expectedProof.files[relativePath])}.`,
+      )
+    }
+
+    const runtimeSource = await readFile(
+      path.join(paths.runtimeDir, relativePath.replaceAll("/", path.sep)),
+      "utf8",
+    )
+    const runtimeHash = createContentHash(runtimeSource)
+
+    if (runtimeHash !== expectedProof.files[relativePath]) {
+      throw new Error(
+        `runtime managed UI file ${relativePath} does not match checked-in managed UI source hash. Actual: ${runtimeHash} Expected: ${String(expectedProof.files[relativePath])}.`,
       )
     }
   }

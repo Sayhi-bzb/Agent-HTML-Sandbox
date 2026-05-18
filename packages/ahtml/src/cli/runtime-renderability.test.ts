@@ -9,10 +9,7 @@ describe("createRuntimeRenderDiagnostics", () => {
     const diagnostics = createRuntimeRenderDiagnostics({
       document: {
         meta: {
-          theme: "neutral",
-          density: "compact",
-          tone: "report",
-          width: "article",
+          documentStyleConfigReference: "report-default",
         },
         components: [
           {
@@ -95,10 +92,7 @@ describe("createRuntimeRenderDiagnostics", () => {
     const diagnostics = createRuntimeRenderDiagnostics({
       document: {
         meta: {
-          theme: "neutral",
-          density: "compact",
-          tone: "report",
-          width: "article",
+          documentStyleConfigReference: "report-default",
         },
         components: [],
       },
@@ -179,10 +173,7 @@ describe("createRuntimeRenderDiagnostics", () => {
     const diagnostics = createRuntimeRenderDiagnostics({
       document: {
         meta: {
-          theme: "neutral",
-          density: "compact",
-          tone: "report",
-          width: "article",
+          documentStyleConfigReference: "report-default",
         },
         components: [],
       },
@@ -264,10 +255,7 @@ describe("createRuntimeRenderDiagnostics", () => {
     const diagnostics = createRuntimeRenderDiagnostics({
       document: {
         meta: {
-          theme: "neutral",
-          density: "compact",
-          tone: "report",
-          width: "article",
+          documentStyleConfigReference: "report-default",
         },
         components: [
           {

@@ -103,7 +103,7 @@ describe("createRuntimeElementRegistrySpec", () => {
         },
         {
           name: "select",
-          kind: "choice-overlay",
+          kind: "select-overlay",
           requiredRegistryModules: [
             {
               registryItem: "field",
@@ -112,6 +112,7 @@ describe("createRuntimeElementRegistrySpec", () => {
                 "FieldContent",
                 "FieldDescription",
                 "FieldLabel",
+                "FieldTitle",
               ],
             },
             {
@@ -136,7 +137,7 @@ describe("createRuntimeElementRegistrySpec", () => {
             "SelectValue",
           ],
           root: "Field",
-          label: "FieldLabel",
+          label: "FieldTitle",
           control: "Select",
           controlTrigger: "SelectTrigger",
           controlValue: "SelectValue",
@@ -147,7 +148,7 @@ describe("createRuntimeElementRegistrySpec", () => {
         },
         {
           name: "combobox",
-          kind: "choice-overlay",
+          kind: "combobox-input",
           requiredRegistryModules: [
             {
               registryItem: "field",
@@ -156,6 +157,7 @@ describe("createRuntimeElementRegistrySpec", () => {
                 "FieldContent",
                 "FieldDescription",
                 "FieldLabel",
+                "FieldTitle",
               ],
             },
             {
@@ -182,7 +184,7 @@ describe("createRuntimeElementRegistrySpec", () => {
             "ComboboxList",
           ],
           root: "Field",
-          label: "FieldLabel",
+          label: "FieldTitle",
           controlRoot: "Combobox",
           control: "ComboboxInput",
           controlContent: "ComboboxContent",
@@ -217,7 +219,13 @@ describe("createRuntimeElementRegistrySpec", () => {
         },
         {
           registryItem: "field",
-          exports: ["Field", "FieldContent", "FieldDescription", "FieldLabel"],
+          exports: [
+            "Field",
+            "FieldContent",
+            "FieldDescription",
+            "FieldLabel",
+            "FieldTitle",
+          ],
         },
         {
           registryItem: "select",

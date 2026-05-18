@@ -66,6 +66,7 @@ describe("standard component schema", () => {
           readonly components: readonly {
             readonly name: string
             readonly renderKind: string
+            readonly behavior?: Record<string, unknown>
             readonly slots: readonly { readonly name: string }[]
           }[]
         }
@@ -114,25 +115,47 @@ describe("standard component schema", () => {
         ]),
       ),
     ).toEqual({
-      accordion: "interactive-collection",
+      accordion: "accordion",
       alert: "compound",
       badge: "primitive",
       card: "compound",
       checkbox: "toggle-field",
       slider: "range-field",
-      combobox: "choice-overlay",
+      combobox: "combobox-input",
       input: "text-field",
       list: "collection",
       page: "compound",
       progress: "primitive",
       "radio-group": "choice-group",
       separator: "primitive",
-      select: "choice-overlay",
+      select: "select-overlay",
       switch: "toggle-field",
       table: "table",
       textarea: "text-field",
       "toggle-group": "choice-inline",
       tabs: "tabs",
+    })
+    expect(
+      Object.fromEntries(
+        runtimeContract.verificationData.components
+          .filter((component) => component.behavior)
+          .map((component) => [component.name, component.behavior]),
+      ),
+    ).toEqual({
+      accordion: {
+        model: "explicit-default-state",
+        runtimeOwner: "renderer",
+        modeProp: "mode",
+        defaultProp: "default",
+        defaultMode: "multiple",
+        multiValueDelimiter: ",",
+      },
+      progress: {
+        model: "determinate-progress",
+        runtimeOwner: "managed-ui",
+        forwardedProps: ["value"],
+        visualStateProp: "value",
+      },
     })
   })
 
@@ -197,6 +220,8 @@ describe("standard component schema", () => {
       "default",
       "value",
       "label",
+      "mode",
+      "default",
       "value",
       "title",
     ])
