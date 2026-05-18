@@ -20,6 +20,8 @@ and reopen guide instead of a phase-by-phase execution log.
 - Public agent-facing rules derive from the shared public agent contract;
   runtime verification and renderer parity derive from the shared runtime
   contract.
+- Current architecture and refactor guidance live in `spec/map.md`; this file
+  only records verification rhythm and reopen guardrails.
 - CLI schema 继续暴露受控文档级视觉配置入口；不得恢复兼容 alias surface。
 - 组件级 visual mapping 说明仅作为内部设计与 renderer guardrail，不升级为
   schema、prompt 或 `.agent.html` 的 public config key。

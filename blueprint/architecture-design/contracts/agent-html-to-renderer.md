@@ -16,7 +16,8 @@ renderer adapter 消费已检查结构和 RenderConfig，通过通用 registry /
 - renderer adapter 只接收 parse / sanitize 后的 RenderConfig。
 - renderer adapter 只渲染已注册标准组件。
 - renderer adapter 只按已批准的 document style config reference 应用渲染风格，并消费其解析后的全局样式层与组件样式层结果。
-- core 负责把 public `style-ref` spelling 解析并归一为 checked RenderConfig；renderer adapter 不消费 raw header wording，也不直接承接外部主题编辑协议。
+- core 负责把 public `style-ref` spelling 解析并归一为 checked RenderConfig；renderer adapter 不消费 raw header wording，也不直接承接外部主题编辑器协议。
+- 若 `style-ref` 引用不存在，core 负责回退到默认完整样式方案，再进入 renderer adapter。
 - renderer adapter 必须通过通用 resolver 为每个 registered component 提供明确渲染能力，输出 shadcn/native/composite React 结构或明确 unsupported diagnostics。
 - renderer adapter 负责把语义节点映射到内部 UI 实现，而不是把 agent 当作 shadcn 组件作者。
 - renderer adapter 不得把 registered component 的正常路径静默渲染为 generic section fallback。

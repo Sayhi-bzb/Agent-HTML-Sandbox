@@ -2,13 +2,9 @@
 
 ## 摘要
 
-本文记录当前这轮关于“从 shadcn 抽取可控视觉参数，并演化出捏脸式
-style/ui 配置系统”的研究背景、现状判断、技术可行性分析和后续研究方向。
-
-当前 agent-html 的公开 surface 仍然坚持 semantic-first：agent 主要写语义
-结构，视觉选择属于独立配置层，而不是逐组件样式调参面。当前 shipped
-config 只通过 `style-ref` 选择受控 document-level style reference，并在
-内部解析为 `theme`、`density`、`tone`、`width` 等有限 token。
+本文保留当前这轮关于“从 shadcn 抽取可控视觉参数，并演化出捏脸式
+style/ui 配置系统”的研究背景、证据与分析材料。当前重构指导与公开路线以
+`spec/map.md` 为准；本文只作为研究参考附录。
 
 本研究关注的问题不是“如何把 shadcn 的完整 props 暴露给 agent 或用户”，
 而是“如何在不破坏 usage/configuration/implementation 三层隔离的前提下，
@@ -32,8 +28,8 @@ agent-facing usage layer，后者属于独立 configuration layer。当前产品
 坚持 configuration-isolated，而不是让 agent 直接操作完整视觉参数包。
 
 当前 shipped implementation 已经完成 artifact-focused pass。公开 visual
-config 仍只有 document-level `style-ref`。这意味着用户今天能做的是“选择整套
-preset”，而不是“细粒度捏脸”。
+config 当前仍只有 document-level `style-ref`。这意味着用户今天对外仍主要是
+“选择整套 preset”，而不是直接编辑细粒度皮肤参数。
 
 研究动机来自一个新的需求方向：希望用户未来能够以更细粒度的方式定制 style
 和 UI 皮肤细节，但又不能简单退化成开放 `className`、Tailwind、
@@ -102,8 +98,8 @@ runtime template 当前直接把 document meta 写到 `<main>` 的 data attribut
 同时，shell class 只根据 `density`、`tone`、`width` 拼出有限的 layout /
 spacing / posture 差异。
 
-这说明一个现实约束：当前 `RenderConfig` 太薄，还不足以直接承接未来的
-“捏脸系统”。如果未来要支持更丰富的 visual config，配置模型本身必须变厚。
+这说明一个现实约束：当前 `RenderConfig` 太薄，还不足以直接承接更丰富的
+视觉配置能力。
 
 ## 为什么选择 shadcn 作为研究入口
 
@@ -368,9 +364,9 @@ user config -> normalized style axes -> component recipe mapping
 - 很难保证跨组件稳定语义；
 - 会把 shadcn 升级成本和行为复杂度直接转嫁给 public contract。
 
-## 建议的研究路线
+## 研究路径观察
 
-### 第一步：抽取层
+### 抽取层
 
 目标：继续稳定提取 shadcn 中真正有价值的视觉结构数据。
 
@@ -387,7 +383,7 @@ user config -> normalized style axes -> component recipe mapping
 
 这一步的目标不是对外开放，而是把 implementation facts 抽完整、抽稳定。
 
-### 第二步：归一层
+### 归一层
 
 目标：建立自己的 visual ontology，把 recipe 抽象成统一参数轴。
 
@@ -401,7 +397,7 @@ user config -> normalized style axes -> component recipe mapping
 这一步是整个研究路线中最重要、也最需要人工判断的一步。真正困难不在解析代码，
 而在建立稳定 vocabulary。
 
-### 第三步：映射层
+### 映射层
 
 目标：把规范化视觉轴映射回 document style config 与 renderer。
 
@@ -415,9 +411,9 @@ user config -> normalized style axes -> component recipe mapping
 
 只有在这一步明确后，未来的“捏脸系统”才可能真正稳定落地。
 
-## 推荐优先覆盖的对象
+## 适合优先覆盖的对象
 
-若后续要做下一阶段研究或实验，建议优先覆盖这些范围：
+若后续继续扩展研究或实验，较适合优先覆盖这些范围：
 
 ### 第一优先级
 
@@ -440,7 +436,7 @@ user config -> normalized style axes -> component recipe mapping
 
 这些组件视觉收益高、语义相对稳定、实现上又已经能抽出较清晰 recipe。
 
-## 当前不建议优先推进的对象
+## 暂不优先的对象
 
 当前不建议优先作为“捏脸系统”第一批对象：
 
@@ -462,17 +458,15 @@ user config -> normalized style axes -> component recipe mapping
 如果在 visual config 还没稳定前就把它们纳入“捏脸系统”，很容易把
 configuration layer 重新拉回行为层。
 
-## 仍待后续研究或产品决策的问题
+## 仍待进一步研究的问题
 
 以下问题本轮没有试图拍板，但它们会直接影响后续设计：
 
-1. `configuration layer` 是否继续坚持“单 `style-ref` 引用”模型，
-   还是需要更厚的 `DocumentStyleConfig` surface。
-2. 未来的 style system 是只给内部 config author 使用，还是给终端用户直接编辑。
-3. `componentTreatments` 应按 renderer archetype 归并，还是按组件族归并。
-4. 是否允许极少量组件保留受控语义词，例如 `tone`。
-5. 参数轴如何保持 stable vocabulary，避免 future migration 时产生平行概念。
-6. config 变化应如何进入 schema / prompt，而不让 agent 重新背负实现噪声。
+1. `componentTreatments` 应按 renderer archetype 归并，还是按组件族归并。
+2. 是否允许极少量组件保留受控语义词，例如 `tone`。
+3. 参数轴如何保持 stable vocabulary，避免 future migration 时产生平行概念。
+4. config 变化应如何进入 schema / prompt，而不让 agent 重新背负实现噪声。
+5. 未来的 style system 是只给内部 config author 使用，还是给终端用户直接编辑。
 
 ## 结论
 

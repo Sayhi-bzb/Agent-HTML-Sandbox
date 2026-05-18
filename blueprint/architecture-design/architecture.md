@@ -16,7 +16,7 @@ document style config reference
 stable shareable HTML artifact
 ```
 
-agent-html 用 HTML artifact 替代冗长 Markdown agent 输出。agent-facing 层只让 agent 表达信息结构、关系、决策和反馈入口；视觉风格由独立配置层决定。配置层内部再细分为全局样式层和组件样式层，并通过 `style-ref` 选择已批准的 document style config reference；最终产物应让人更容易阅读、比较、分享、归档，并把反馈带回 agent 工作流。
+agent-html 用 HTML artifact 替代冗长 Markdown agent 输出。agent-facing 层只让 agent 表达信息结构、关系、决策和反馈入口；视觉风格由独立配置层决定。配置层内部再细分为全局样式层和组件样式层，并通过 `style-ref` 选择一份已批准的完整样式方案；最终产物应让人更容易阅读、比较、分享、归档，并把反馈带回 agent 工作流。
 
 工程形态是：
 
@@ -53,7 +53,7 @@ static artifact directory
 ```txt
 semantic component contract
         +
-approved document style config references
+approved style profile references
         ↓
 CLI schema output
         ↓
@@ -96,16 +96,18 @@ agent-facing 组件是标准化语义组件，不是自由拼装的 UI primitive
 
 ## 4. configuration layer owns visual choice
 
-视觉选择必须先收束为已批准的 document style config reference，再进入 renderer。
+视觉选择必须先收束为已批准的完整样式方案引用，再进入 renderer。
 
 配置层由两部分组成：
 
-- 全局样式层：负责 theme token、light/dark 结构、字体、radius、spacing、shadow、semantic colors 及其生成逻辑。
+- 全局样式层：负责 theme token、light/dark 结构、字体、radius、spacing、shadow、semantic colors 及其生成逻辑。其 token 规范基线来自 shadcn 官方 theming convention。
 - 组件样式层：负责受控组件视觉映射与 treatment 选择。
 
-全局样式层以 `tweakcn` 生态为基础。项目应复用 `tweakcn` 的主题 token 模型、主题组织方式和生成逻辑，而不是为全局样式再维护一套平行生态。若 agent-html 现有全局主题约定与 `tweakcn` 基线冲突，应以 `tweakcn` 为准调整配置层思想。
+全局样式层的工程实现参考 `tweakcn` 的 theme model、preset 组织方式和 generator，但全局样式层本身仍以 shadcn 官方 token 规范为来源。项目不为全局样式维护另一套平行规范。
 
-用户或调用方负责选择 document style config reference；agent 只在 schema 明确允许时写入受控视觉配置入口。RenderConfig 的默认职责是解析已批准的视觉配置选择，而不是直接拼装任意视觉参数。
+`style-ref` 是一份完整样式方案的引用 id。每个方案同时包含全局样式层配置和组件样式层配置。方案来源包括内置方案与用户方案，两类方案分目录管理。找不到引用时系统回退默认方案。方案本身必须是完整成品，不采用继承或运行时合并。
+
+用户或调用方负责选择 document style config reference；agent 只在 schema 明确允许时写入受控视觉配置入口。RenderConfig 的默认职责是解析已批准的完整样式方案，而不是直接拼装任意视觉参数。
 
 ## 5. runtime verification facts assist maintenance, not define the contract
 

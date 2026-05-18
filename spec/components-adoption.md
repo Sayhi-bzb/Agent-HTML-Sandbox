@@ -42,43 +42,13 @@ Status:
 
 ## Layer Separation Guidance
 
-当前 shipped public surface 通过 `style-ref` 暴露公共视觉入口：
+当前配置层与公开视觉入口的主说明已收敛到 `spec/map.md`。本文件只保留与组件
+接入判断直接相关的最小分层约束：
 
-- agent-facing render config 当前仍只有 document-level `style-ref`。
-- `style-ref` 指向 approved `DocumentStyleConfigReference`，
-  不是 theme token 集合，也不是 per-component variant 集合。
-- `theme`、`density`、`tone`、`width` 继续是 resolved internal tokens，不是
-  agent-facing config vocabulary。
-- 本节定义的是长期分层原则与内部 visual mapping guardrails，
-  不是当前 prompt / schema 已开放的自由参数面，也不意味着未来会开放组件级
-  public style 参数。
-
-推荐维持三层隔离：
-
-| Layer | Owns | Can decide | Must not decide |
-| --- | --- | --- | --- |
-| `usage layer` | agent-facing schema / `.agent.html` | 组件名、语义 props、slot / child 结构、稳定值 | theme、radius、spacing、variant、Tailwind class、shadcn props |
-| `configuration layer` | approved document style config reference | 文档级视觉入口，以及它触发的受控视觉策略集 | 组件语义、允许 children、trigger 结构、fallback 行为、per-component public knobs、任意 CSS 逃逸 |
-| `implementation layer` | renderer / managed runtime / shadcn | 具体 exports、variant 映射、Tailwind、Radix/Base UI 组合细节 | agent-facing contract 或文档写作协议 |
-
-参数归类规则：
-
-- 属于内容意义、结构意义、稳定 identity 或稳定选择状态的参数，进入
-  `usage layer`。
-- 只影响最终视觉实现，但不改变语义树和交互边界的参数，不进入 public
-  `usage layer`；当前应由 document-level config reference 经过内部 visual
-  mapping 间接决定。
-- 依赖 shadcn 组合方式、Radix / Base UI state wiring、`cva` variants、
-  Tailwind class 或内部 exports 的参数，留在 `implementation layer`。
-
-文档级配置层长期保持“外部引用”模型：
-
-- 文档只引用一个 approved `DocumentStyleConfigReference`，并通过
-  `style-ref` 选择该引用。
-- 真实的 per-component 视觉规则属于内部 visual mapping，不进入正文积木协议，
-  也不形成单独的 public config key。
-- 同一语义组件在不同 document style reference 下可以换视觉实现，但不得换
-  语义、结构或 renderer kind。
+- agent-facing public surface 当前仍通过 `style-ref` 选择受控文档级视觉入口。
+- 组件级 visual mapping 属于内部配置 / 渲染路径，不进入正文积木协议。
+- 组件接入判断继续遵守语义使用层、配置层、实现层分离，不把 shadcn 原始 props
+  或实现细节暴露回 agent-facing surface。
 
 ## Supported Today
 
@@ -188,9 +158,9 @@ Status:
    例如 `alert.tone -> Alert variant`、`badge.tone -> Badge variant`
    可以存在，但映射规则应由 renderer / config 层维护。
 
-4. 把 document style reference、其 resolved tokens，以及 surface treatment
-   留给配置层或内部映射层。公开 surface 只暴露 `style-ref`，不应被扩写成
-   通用视觉参数面。
+4. 把 document style reference、其 global style tokens 和 component
+   treatment 留给配置层或内部映射层。公开 surface 只暴露当前 `style-ref`，
+   不应被扩写成通用视觉参数面。
 
 5. 把组合结构和 state wiring 锁在实现层。
    `tabs` 的 trigger/content、`select` 的 trigger/content/item、`accordion`
@@ -202,7 +172,7 @@ Status:
 - 当前 artifact-focused support surface 已稳定。
 - 当前 lane 不包含 overlay、menu、navigation 或 app-shell 语义。
 - 当前公开 render-config 只通过 `style-ref` 暴露 document-level style
-  reference，不是 theme / variant token surface。
+  reference。
 - 本文出现的组件级 visual mapping 仅是内部设计指导，不是当前 schema 已开放
   能力，也不是 future public config 承诺。
 - 当前无 active shadcn debt；只有在未来升级导致本地 fixture drift 时再重开。

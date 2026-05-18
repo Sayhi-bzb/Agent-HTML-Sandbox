@@ -119,25 +119,25 @@ Note: 当前公开 visual config catalog 只由 DocumentStyleConfigReference 组
 
 Ownership: configuration contract / CLI
 
-Purpose: 表示文档级 style config 的受控引用。
+Purpose: 表示文档级完整样式方案的受控引用 id。
 
 Consumers: agent, parse / sanitize, CLI schema output
 
 Change rule: 引用 identity、允许值或解析规则变化必须同步 schema、sanitize schema、配置解析和 tests。
 
-Note: 它通过 `style-ref` 被选择，只选择已批准配置。它是配置层入口，不等于 CSS、Tailwind class、shadcn props、全局主题 token 或组件样式细节。
+Note: 它通过 `style-ref` 被选择，只引用已批准的完整样式方案。它是配置层入口，不等于 CSS、Tailwind class、shadcn props、全局主题 token 或组件样式细节。
 
 ## 7.2. DocumentStyleConfig
 
 Ownership: configuration contract / renderer adapter
 
-Purpose: 表示独立配置层中的受控样式配置对象，内部包含全局样式层与组件样式层。
+Purpose: 表示独立配置层中的完整样式方案对象，内部包含全局样式层与组件样式层。
 
 Consumers: parse / sanitize, renderer adapter, CLI inspect/config view
 
 Change rule: 配置结构变化必须同步配置解析、renderer 解析、schema 文案和 tests。
 
-Note: 它描述受控视觉映射，不得改变 ComponentSchema 语义，也不得退化为任意 CSS、完整 shadcn props、外部资源 passthrough 或与 `tweakcn` 平行的全局主题体系。
+Note: 它描述受控视觉映射，不得改变 ComponentSchema 语义，也不得退化为任意 CSS、完整 shadcn props、外部资源 passthrough 或独立于 shadcn 官方 theming convention 的平行全局主题体系。每个配置对象都必须是完整方案，不采用继承或运行时合并。
 
 ## 8. AgentHtmlDocument
 
@@ -173,7 +173,7 @@ Consumers: agent, parse / sanitize, renderer adapter
 
 Change rule: RenderConfig key / value 变化必须同步 schema、sanitize schema、renderer adapter 配置解析和 tests。
 
-Note: 它默认从 DocumentStyleConfigReference 解析得到，并承接配置层的全局样式层与组件样式层结果。它不是 CSS、style、className、Tailwind class、shadcn props、script 或外部资源入口。
+Note: 它默认从 DocumentStyleConfigReference 解析得到，并承接配置层的全局样式层与组件样式层结果。若引用不存在则回退默认方案。它不是 CSS、style、className、Tailwind class、shadcn props、script 或外部资源入口。
 
 ## 11. AhtmlRuntimeConfig
 

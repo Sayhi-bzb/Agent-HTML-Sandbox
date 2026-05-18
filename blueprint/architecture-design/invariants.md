@@ -34,9 +34,9 @@ props schema / tokens 是 agent-facing 组件能力入口。
 
 视觉选择必须先收束为已批准的 document style config reference。
 
-独立配置层必须细分为全局样式层和组件样式层。全局样式层负责主题 token、light/dark 结构、字体、radius、spacing、shadow 和 semantic colors；组件样式层负责受控组件视觉映射。
+独立配置层必须细分为全局样式层和组件样式层。全局样式层负责主题 token、light/dark 结构、字体、radius、spacing、shadow 和 semantic colors，并遵循 shadcn 官方 theming token convention；组件样式层负责受控组件视觉映射。
 
-全局样式层应以 `tweakcn` 生态为基础，复用其主题 token 模型和生成逻辑，而不是维护另一套平行全局主题体系。
+全局样式层可参考 `tweakcn` 的主题 token 建模与生成逻辑，但不维护另一套独立于 shadcn 官方 theming convention 的平行全局主题体系。
 
 agent-facing 主接口默认只暴露 style config reference，而不是完整视觉参数集、全局主题 token 或组件样式细节。
 
