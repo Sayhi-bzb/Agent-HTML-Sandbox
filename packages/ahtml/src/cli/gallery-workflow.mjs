@@ -2,10 +2,14 @@ import path from "node:path"
 
 import { createRenderConfigFromStyleProfile } from "../config/internal-core-bridge.mjs"
 import { buildRuntimeArtifact } from "./runtime-build.mjs"
-import { writeGeneratedDocument } from "./runtime-status.mjs"
+import {
+  writeGeneratedDocument,
+  writeGeneratedRuntimeState,
+} from "./runtime-status.mjs"
 import { getRuntimeRenderDiagnostics } from "./runtime-renderability.mjs"
 import { getCliSchemaOutput } from "./schema.mjs"
 import {
+  getStyleProfileSource,
   listStyleProfileReferences,
   resolveStyleProfileByReference,
 } from "./style-profile-storage.mjs"
@@ -57,6 +61,12 @@ export function createGalleryWorkflow({
     await ensureManagedRuntime(packageVersion, schema)
 
     const document = createStyleGalleryDocument(styleProfile)
+    const runtimeState = createGalleryRuntimeState({
+      styleProfile,
+      styleReference,
+      availableStyleReferences: await listStyleProfileReferences(runtimePaths),
+      profileSource: getStyleProfileSource(styleReference),
+    })
     const runtimeDiagnostics = await getRuntimeRenderDiagnostics({
       document,
       runtimePaths,
@@ -78,6 +88,7 @@ export function createGalleryWorkflow({
     }
 
     await writeGeneratedDocument(document, runtimePaths)
+    await writeGeneratedRuntimeState(runtimeState, runtimePaths)
     await buildRuntimeArtifact({
       outputDir,
       packageRoot,
@@ -93,6 +104,7 @@ export function createGalleryWorkflow({
       inspectionPath,
       ok: true,
       outputDir,
+      runtimeState,
       styleReference,
     })
   }
@@ -336,6 +348,25 @@ export function createStyleGalleryDocument(styleProfile) {
         ]),
       ]),
     ],
+  }
+}
+
+export function createGalleryRuntimeState({
+  availableStyleReferences,
+  profileSource,
+  styleProfile,
+  styleReference,
+}) {
+  return {
+    kind: "ahtml-runtime-state",
+    version: 1,
+    mode: "gallery",
+    gallery: {
+      availableStyleReferences,
+      profileSource,
+      styleReference,
+      styleProfile,
+    },
   }
 }
 

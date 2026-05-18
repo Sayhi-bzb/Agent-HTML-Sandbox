@@ -72,5 +72,10 @@ export function getRuntimePaths(env = process.env) {
       "runtime",
       "document.generated.json",
     ),
+    generatedRuntimeStatePath: path.join(
+      runtimeRoot,
+      "runtime",
+      "runtime-state.generated.json",
+    ),
   }
 }

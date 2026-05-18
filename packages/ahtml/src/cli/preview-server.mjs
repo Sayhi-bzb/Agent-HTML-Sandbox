@@ -14,9 +14,22 @@ export function parsePort(value, commandName = "preview") {
   return port
 }
 
-export async function serveDirectory(directory, port) {
+export async function serveDirectory(directory, port, options = {}) {
   const root = path.resolve(directory)
+  const requestHandler = options.requestHandler
   const server = http.createServer(async (request, response) => {
+    if (requestHandler) {
+      const handled = await requestHandler({
+        request,
+        response,
+        root,
+      })
+
+      if (handled) {
+        return
+      }
+    }
+
     try {
       const requestUrl = new URL(request.url ?? "/", "http://localhost")
       const pathname = decodeURIComponent(requestUrl.pathname)
@@ -86,4 +99,23 @@ function getContentType(filePath) {
   }
 
   return "application/octet-stream"
+}
+
+export async function readJsonBody(request) {
+  const chunks = []
+
+  for await (const chunk of request) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+  }
+
+  const source = Buffer.concat(chunks).toString("utf8").trim()
+  return source ? JSON.parse(source) : {}
+}
+
+export function writeJsonResponse(response, statusCode, value) {
+  response.writeHead(statusCode, {
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "no-store",
+  })
+  response.end(`${JSON.stringify(value, null, 2)}\n`)
 }

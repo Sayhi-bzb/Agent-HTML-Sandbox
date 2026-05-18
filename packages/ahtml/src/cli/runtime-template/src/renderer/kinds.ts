@@ -9,6 +9,7 @@ export const runtimeRendererKinds = [
   "primitive",
   "range-field",
   "select-overlay",
+  "slider-field",
   "table",
   "tabs",
   "text-field",

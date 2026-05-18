@@ -39,6 +39,13 @@ export const rendererKindDefinitions = {
       fallback: ["valueProp"],
     },
   },
+  "slider-field": {
+    requiredFields: ["root", "label", "control", "labelProp", "valueProp"],
+    requiredWhenPresent: {
+      description: ["descriptionProp"],
+      fallback: ["valueProp"],
+    },
+  },
   "choice-group": {
     requiredFields: [
       "root",

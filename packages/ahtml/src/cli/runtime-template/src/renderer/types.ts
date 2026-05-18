@@ -131,6 +131,8 @@ export type RendererRootByProp = {
   default: string
 }
 
+export type RendererTextMode = "prose" | "preformatted"
+
 export type RendererSpecComponent = {
   name: string
   source?: string
@@ -144,6 +146,7 @@ export type RendererSpecComponent = {
   requiredExports?: string[]
   slots: RendererSlot[]
   childMode?: "block" | "inline" | "none"
+  textMode?: RendererTextMode
   component?: string
   control?: string
   controlRoot?: string

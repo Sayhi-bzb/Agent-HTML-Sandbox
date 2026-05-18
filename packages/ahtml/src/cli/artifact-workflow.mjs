@@ -8,6 +8,7 @@ import {
   bootstrapManagedRuntime,
   getRuntimeStatus,
   writeGeneratedDocument,
+  writeGeneratedRuntimeState,
 } from "./runtime-status.mjs"
 import { nativeRuntimeSetup, resolveRuntimeSetup } from "./runtime-setup.mjs"
 import { getRuntimeRenderDiagnostics } from "./runtime-renderability.mjs"
@@ -71,6 +72,14 @@ export function createArtifactWorkflow({
     }
 
     await writeGeneratedDocument(validation.document, runtimePaths)
+    await writeGeneratedRuntimeState(
+      {
+        kind: "ahtml-runtime-state",
+        version: 1,
+        mode: "document",
+      },
+      runtimePaths,
+    )
 
     await buildRuntimeArtifact({
       outputDir,

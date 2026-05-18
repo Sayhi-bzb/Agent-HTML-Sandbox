@@ -120,7 +120,7 @@ describe("standard component schema", () => {
       badge: "primitive",
       card: "compound",
       checkbox: "toggle-field",
-      slider: "range-field",
+      slider: "slider-field",
       combobox: "combobox-input",
       input: "text-field",
       list: "collection",
@@ -152,6 +152,12 @@ describe("standard component schema", () => {
       },
       progress: {
         model: "determinate-progress",
+        runtimeOwner: "managed-ui",
+        forwardedProps: ["value"],
+        visualStateProp: "value",
+      },
+      slider: {
+        model: "single-thumb-slider",
         runtimeOwner: "managed-ui",
         forwardedProps: ["value"],
         visualStateProp: "value",

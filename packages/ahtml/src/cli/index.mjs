@@ -9,6 +9,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 import { cliDefaults } from "../config/defaults.mjs"
+import { StyleProfileSchema } from "../config/internal-core-bridge.mjs"
 import {
   ArtifactWorkflowValidationError,
   createArtifactWorkflow,
@@ -38,7 +39,18 @@ import {
   RuntimeSetupCancelledError,
 } from "./runtime-setup.mjs"
 import { bootstrapManagedRuntime, getRuntimeStatus } from "./runtime-status.mjs"
-import { parsePort, serveDirectory } from "./preview-server.mjs"
+import {
+  parsePort,
+  readJsonBody,
+  serveDirectory,
+  writeJsonResponse,
+} from "./preview-server.mjs"
+import {
+  getStyleProfileSource,
+  listStyleProfileReferences,
+  resolveStyleProfileByReference,
+  saveUserStyleProfile,
+} from "./style-profile-storage.mjs"
 
 const packageRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -348,7 +360,11 @@ async function galleryCommand(commandArgs, definition) {
     return
   }
 
-  await serveDirectory(result.outputDir, port)
+  await serveDirectory(result.outputDir, port, {
+    requestHandler: createGalleryRequestHandler({
+      styleReference: options["style-ref"],
+    }),
+  })
 }
 
 async function inspectCommand(commandArgs, definition) {
@@ -414,6 +430,104 @@ async function doctorCommand(commandArgs, definition) {
 
   if (report.status === "fail") {
     process.exitCode = 1
+  }
+}
+
+function createGalleryRequestHandler({ styleReference }) {
+  let currentStyleReference = styleReference
+  let currentStyleProfilePromise = loadGalleryStyleProfile(styleReference)
+
+  return async ({ request, response }) => {
+    const requestUrl = new URL(request.url ?? "/", "http://localhost")
+
+    if (
+      request.method === "GET" &&
+      requestUrl.pathname === "/__ahtml/gallery/state"
+    ) {
+      const styleProfile = await currentStyleProfilePromise
+
+      writeJsonResponse(response, 200, {
+        ok: true,
+        availableStyleReferences: await listStyleProfileReferences(runtimePaths),
+        profileSource: styleProfile.source,
+        styleReference: currentStyleReference,
+        styleProfile: styleProfile.profile,
+      })
+      return true
+    }
+
+    if (
+      request.method === "POST" &&
+      requestUrl.pathname === "/__ahtml/gallery/save"
+    ) {
+      try {
+        const body = await readJsonBody(request)
+        const profileInput = StyleProfileSchema.parse(body.styleProfile)
+        const saveMode = body.mode === "save-as" ? "save-as" : "save"
+        const targetId =
+          saveMode === "save-as"
+            ? String(body.targetId ?? "").trim()
+            : profileInput.id
+        const profile = { ...profileInput, id: targetId }
+        const source = body.profileSource === "builtin" ? "builtin" : "user"
+
+        if (!targetId) {
+          writeJsonResponse(response, 400, {
+            ok: false,
+            error: "save target id is required.",
+          })
+          return true
+        }
+
+        if (saveMode === "save" && source === "builtin") {
+          writeJsonResponse(response, 400, {
+            ok: false,
+            error:
+              "Built-in style profiles cannot be overwritten. Use Save As.",
+          })
+          return true
+        }
+
+        const saved = await saveUserStyleProfile(runtimePaths, profile, {
+          overwrite: saveMode === "save",
+        })
+        currentStyleReference = saved.id
+        currentStyleProfilePromise = Promise.resolve({
+          profile: saved.profile,
+          source: saved.source,
+        })
+
+        writeJsonResponse(response, 200, {
+          ok: true,
+          profileSource: saved.source,
+          styleReference: saved.id,
+          styleProfile: saved.profile,
+          overwritten: saved.overwritten,
+        })
+      } catch (error) {
+        writeJsonResponse(response, 400, {
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        })
+      }
+
+      return true
+    }
+
+    return false
+  }
+}
+
+async function loadGalleryStyleProfile(styleReference) {
+  const profile = await resolveStyleProfileByReference(runtimePaths, styleReference)
+
+  if (!profile) {
+    fail(`Unable to load style profile "${styleReference}".`)
+  }
+
+  return {
+    profile,
+    source: getStyleProfileSource(styleReference),
   }
 }
 

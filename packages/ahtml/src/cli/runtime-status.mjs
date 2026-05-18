@@ -241,6 +241,16 @@ export async function writeGeneratedDocument(
   await writeJsonFile(paths.generatedDocumentPath, document)
 }
 
+export async function writeGeneratedRuntimeState(
+  runtimeState,
+  paths = getRuntimePaths(),
+) {
+  await mkdir(path.dirname(paths.generatedRuntimeStatePath), {
+    recursive: true,
+  })
+  await writeJsonFile(paths.generatedRuntimeStatePath, runtimeState)
+}
+
 async function probeWritableDirectory(directory) {
   try {
     await mkdir(directory, { recursive: true })

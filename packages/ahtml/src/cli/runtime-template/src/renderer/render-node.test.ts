@@ -47,7 +47,25 @@ vi.mock("./elements", () => {
     }
 
     if (name === "Slider") {
-      return "input"
+      return ({
+        controlId,
+        defaultValue,
+        descriptionId,
+        labelId,
+      }: Record<string, unknown>) =>
+        React.createElement(
+          "div",
+          {
+            "data-slot": "slider",
+            "data-default-value": JSON.stringify(defaultValue),
+          },
+          React.createElement("span", {
+            id: controlId,
+            role: "slider",
+            "aria-labelledby": labelId,
+            "aria-describedby": descriptionId,
+          }),
+        )
     }
 
     if (name === "Field") {
@@ -482,8 +500,8 @@ describe("createRendererNode", () => {
         "slider",
         {
           name: "slider",
-          kind: "range-field",
-          renderKind: "range-field",
+          kind: "slider-field",
+          renderKind: "slider-field",
           slots: [{ name: "children", children: [] }],
           root: "Field",
           label: "FieldLabel",
@@ -493,10 +511,7 @@ describe("createRendererNode", () => {
           descriptionProp: "description",
           valueProp: "value",
           fallback: true,
-          propMappings: [
-            { prop: "value", target: "defaultValue", coerce: "number-array" },
-            { prop: "label", target: "aria-label" },
-          ],
+          propMappings: [{ prop: "value", target: "defaultValue", coerce: "number-array" }],
         },
       ],
     ])
@@ -518,14 +533,14 @@ describe("createRendererNode", () => {
     )
 
     expect(markup).toContain(
-      '<label id="ahtml-slider-0-label" for="ahtml-slider-0-control">Review strictness</label>',
+      '<label id="ahtml-slider-0-label">Review strictness</label>',
     )
-    expect(markup).toContain("<input")
+    expect(markup).toContain('data-slot="slider"')
+    expect(markup).toContain('data-default-value="[70]"')
+    expect(markup).toContain('role="slider"')
     expect(markup).toContain('id="ahtml-slider-0-control"')
     expect(markup).toContain('aria-labelledby="ahtml-slider-0-label"')
     expect(markup).toContain('aria-describedby="ahtml-slider-0-description"')
-    expect(markup).toContain('aria-label="Review strictness"')
-    expect(markup).toContain('value="70"')
     expect(markup).toContain("<noscript>")
     expect(markup).toContain(">70</p>")
   })

@@ -8,6 +8,7 @@ import type {
   RendererPropMapping,
   RendererPropValue,
   RendererSpecComponent,
+  RendererTextMode,
 } from "./types"
 
 type RendererPathSegment = number | string
@@ -23,9 +24,10 @@ export function createRendererNode(
   }: {
     node: AgentNode
     path?: RendererPath
+    textMode?: RendererTextMode
   }) {
     if (node.type === "text") {
-      return <p className="m-0 whitespace-pre-wrap">{node.value}</p>
+      return renderTextNode(node, textMode)
     }
 
     const rendererSpec = rendererSpecByName.get(node.name)
@@ -58,6 +60,17 @@ export function createRendererNode(
     )
   }
 
+  function renderTextNode(
+    node: Extract<AgentNode, { type: "text" }>,
+    textMode: RendererTextMode = "prose",
+  ) {
+    return textMode === "preformatted" ? (
+      <p className="m-0 whitespace-pre-wrap">{node.value}</p>
+    ) : (
+      <p className="m-0 whitespace-normal">{collapseTextNodeWhitespace(node.value)}</p>
+    )
+  }
+
   function getComponentMetadataProps(
     node: AgentComponentNode,
     rendererSpec: RendererSpecComponent,
@@ -87,9 +100,9 @@ export function createRendererNode(
     }
     const children =
       rendererSpec.childMode === "inline"
-        ? renderInlineChildren(node, path)
+        ? renderInlineChildren(node, path, rendererSpec.textMode)
         : rendererSpec.childMode === "block"
-          ? renderChildren(node, path)
+          ? renderChildren(node, path, rendererSpec.textMode)
           : undefined
 
     return <Component {...props}>{children}</Component>
@@ -111,8 +124,8 @@ export function createRendererNode(
     const title = renderCompoundTitle(node, rendererSpec, Title)
     const content =
       rendererSpec.childMode === "inline"
-        ? renderInlineChildren(node, path)
-        : renderChildren(node, path)
+        ? renderInlineChildren(node, path, rendererSpec.textMode)
+        : renderChildren(node, path, rendererSpec.textMode)
 
     return (
       <Root {...props}>
@@ -256,6 +269,70 @@ export function createRendererNode(
     return renderTextFieldComponent(node, rendererSpec, path)
   }
 
+  function renderSliderFieldComponent(
+    node: AgentComponentNode,
+    rendererSpec: RendererSpecComponent,
+    path: RendererPath,
+  ) {
+    const Root = resolveElement(rendererSpec.root)
+    const Label = resolveElement(rendererSpec.label)
+    const Control = resolveElement(rendererSpec.control)
+    const Description = resolveElement(rendererSpec.description)
+    const labelProp = requireRendererSpecField(rendererSpec, "labelProp")
+    const valueProp = requireRendererSpecField(rendererSpec, "valueProp")
+    const descriptionProp = rendererSpec.description
+      ? requireRendererSpecField(rendererSpec, "descriptionProp")
+      : undefined
+    const label = node.props[labelProp]
+    const description = descriptionProp
+      ? node.props[descriptionProp]
+      : undefined
+    const fieldSemantics = createFieldSemantics({
+      description,
+      label,
+      name: node.name,
+      path,
+    })
+    const controlProps = {
+      ...rendererSpec.staticProps,
+      ...applyPropMappings(node.props, rendererSpec.propMappings),
+      controlId: fieldSemantics.controlId,
+      labelId: fieldSemantics.labelId,
+      descriptionId: fieldSemantics.descriptionId,
+    }
+
+    return (
+      <>
+        <Root {...getComponentMetadataProps(node, rendererSpec)}>
+          {label ? (
+            <Label
+              {...getFieldLabelProps(fieldSemantics, false)}
+              className={rendererSpec.labelClassName}
+            >
+              {label}
+            </Label>
+          ) : null}
+          <Control {...controlProps} />
+          {description && Description ? (
+            <Description
+              {...getFieldDescriptionProps(fieldSemantics)}
+              className={rendererSpec.descriptionClassName}
+            >
+              {description}
+            </Description>
+          ) : null}
+        </Root>
+        {rendererSpec.fallback
+          ? renderNoScriptFieldControlFallback({
+              description,
+              label,
+              value: node.props[valueProp],
+            })
+          : null}
+      </>
+    )
+  }
+
   function renderChoiceGroupComponent(
     node: AgentComponentNode,
     rendererSpec: RendererSpecComponent,
@@ -338,7 +415,7 @@ export function createRendererNode(
                       {...getFieldDescriptionProps(itemSemantics)}
                       className={rendererSpec.descriptionClassName}
                     >
-                      {renderInlineChildren(item, itemPath)}
+                      {renderInlineChildren(item, itemPath, "prose")}
                     </Description>
                   ) : null}
                 </FieldContent>
@@ -665,8 +742,16 @@ export function createRendererNode(
         {getSlotChildren(node, rendererSpec.itemSlot).map((item, index) => (
           <Item key={index}>
             {rendererSpec.childMode === "inline"
-              ? renderInlineChildren(item, appendRendererPath(path, index))
-              : renderChildren(item, appendRendererPath(path, index))}
+              ? renderInlineChildren(
+                  item,
+                  appendRendererPath(path, index),
+                  rendererSpec.textMode,
+                )
+              : renderChildren(
+                  item,
+                  appendRendererPath(path, index),
+                  rendererSpec.textMode,
+                )}
           </Item>
         ))}
       </Root>
@@ -742,7 +827,7 @@ export function createRendererNode(
       <Row key={index} data-agent-html-component={row.name}>
         {getSlotChildren(row, cellSlot).map((cell, cellIndex) => (
           <Cell key={cellIndex} data-agent-html-component={cell.name}>
-            {renderInlineChildren(cell, appendRendererPath(path, cellIndex))}
+            {renderInlineChildren(cell, appendRendererPath(path, cellIndex), "prose")}
           </Cell>
         ))}
       </Row>
@@ -795,7 +880,9 @@ export function createRendererNode(
               <Trigger>
                 {getStructuredItemHeading(item, itemHeadingProp)}
               </Trigger>
-              <Content>{renderChildren(item, appendRendererPath(path, index))}</Content>
+              <Content>
+                {renderChildren(item, appendRendererPath(path, index), "prose")}
+              </Content>
             </Item>
           ))}
         </Root>
@@ -863,7 +950,7 @@ export function createRendererNode(
               key={getStructuredItemValue(tab, itemValueProp)}
               value={getStructuredItemValue(tab, itemValueProp)}
             >
-              {renderChildren(tab, appendRendererPath(path, index))}
+              {renderChildren(tab, appendRendererPath(path, index), "prose")}
             </Content>
           ))}
         </Root>
@@ -896,7 +983,7 @@ export function createRendererNode(
               <h2 className="m-0 text-lg font-medium leading-7">
                 {getConfiguredPropValue(item, itemHeadingProp)}
               </h2>
-              {renderChildren(item, appendRendererPath(path, index))}
+              {renderChildren(item, appendRendererPath(path, index), "prose")}
             </section>
           ))}
         </section>
@@ -934,7 +1021,7 @@ export function createRendererNode(
                   {selected ? " (selected)" : ""}
                 </Label>
                 {item.children.length > 0 ? (
-                  <Description>{renderInlineChildren(item, ["noscript"])}</Description>
+                  <Description>{renderInlineChildren(item, ["noscript"], "prose")}</Description>
                 ) : null}
               </Field>
             )
@@ -966,7 +1053,7 @@ export function createRendererNode(
         {item.children.length > 0 ? (
           <>
             {": "}
-            {renderInlineChildren(item, path)}
+            {renderInlineChildren(item, path, "prose")}
           </>
         ) : null}
       </Item>
@@ -1031,20 +1118,35 @@ export function createRendererNode(
     return renderedItems
   }
 
-  function renderChildren(node: AgentComponentNode, path: RendererPath) {
+  function renderChildren(
+    node: AgentComponentNode,
+    path: RendererPath,
+    textMode: RendererTextMode = "prose",
+  ) {
     return node.children.map((child, index) => (
       <RendererNode
         key={index}
         node={child}
         path={appendRendererPath(path, index)}
+        textMode={textMode}
       />
     ))
   }
 
-  function renderInlineChildren(node: AgentComponentNode, path: RendererPath) {
+  function renderInlineChildren(
+    node: AgentComponentNode,
+    path: RendererPath,
+    textMode: RendererTextMode = "prose",
+  ) {
     return node.children.map((child, index) => {
       if (child.type === "text") {
-        return <React.Fragment key={index}>{child.value}</React.Fragment>
+        return (
+          <React.Fragment key={index}>
+            {textMode === "preformatted"
+              ? child.value
+              : collapseTextNodeWhitespace(child.value)}
+          </React.Fragment>
+        )
       }
 
       return (
@@ -1052,6 +1154,7 @@ export function createRendererNode(
           key={index}
           node={child}
           path={appendRendererPath(path, index)}
+          textMode={textMode}
         />
       )
     })
@@ -1095,6 +1198,7 @@ export function createRendererNode(
     "text-field": renderTextFieldComponent,
     "toggle-field": renderToggleFieldComponent,
     "range-field": renderRangeFieldComponent,
+    "slider-field": renderSliderFieldComponent,
     "choice-group": renderChoiceGroupComponent,
     "choice-inline": renderChoiceInlineComponent,
     "combobox-input": renderComboboxInputComponent,
@@ -1149,6 +1253,10 @@ type ComboboxRendererItem = {
 
 function mergeClassNames(...values: Array<string | undefined>) {
   return values.filter(Boolean).join(" ") || undefined
+}
+
+function collapseTextNodeWhitespace(value: string) {
+  return value.replace(/\s+/g, " ").trim()
 }
 
 function appendRendererPath(

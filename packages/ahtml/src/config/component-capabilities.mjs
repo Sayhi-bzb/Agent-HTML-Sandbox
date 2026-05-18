@@ -200,6 +200,7 @@ export const componentCapabilityDefinitions = {
         "text-3xl font-semibold tracking-normal text-foreground sm:text-4xl",
       rootClassName: "grid gap-5",
       childMode: "block",
+      textMode: "prose",
     },
   },
   alert: {
@@ -215,6 +216,7 @@ export const componentCapabilityDefinitions = {
       content: "AlertDescription",
       titleProp: "title",
       childMode: "block",
+      textMode: "prose",
       propMappings: [
         {
           prop: "tone",
@@ -241,6 +243,7 @@ export const componentCapabilityDefinitions = {
       content: "CardContent",
       titleProp: "title",
       childMode: "block",
+      textMode: "prose",
     },
   },
   separator: {
@@ -265,6 +268,7 @@ export const componentCapabilityDefinitions = {
       kind: "primitive",
       component: "Badge",
       childMode: "inline",
+      textMode: "prose",
       propMappings: [
         {
           prop: "tone",
@@ -396,7 +400,13 @@ export const componentCapabilityDefinitions = {
   },
   slider: {
     source: "shadcn",
-    renderKind: "range-field",
+    renderKind: "slider-field",
+    behavior: {
+      model: "single-thumb-slider",
+      runtimeOwner: "managed-ui",
+      forwardedProps: ["value"],
+      visualStateProp: "value",
+    },
     uiProtocol: uiProtocolDefinitions.slider,
     requiredRegistryModules: [
       ...fieldRegistryModules,
@@ -408,7 +418,7 @@ export const componentCapabilityDefinitions = {
     requiredRegistryItem: "slider",
     requiredExports: ["Slider"],
     renderer: {
-      kind: "range-field",
+      kind: "slider-field",
       root: "Field",
       label: "FieldLabel",
       control: "Slider",
@@ -417,10 +427,7 @@ export const componentCapabilityDefinitions = {
       descriptionProp: "description",
       valueProp: "value",
       fallback: true,
-      propMappings: [
-        { prop: "value", target: "defaultValue", coerce: "number-array" },
-        { prop: "label", target: "aria-label" },
-      ],
+      propMappings: [{ prop: "value", target: "defaultValue", coerce: "number-array" }],
     },
   },
   "radio-group": {
@@ -625,6 +632,7 @@ export const componentCapabilityDefinitions = {
       item: "li",
       itemSlot: "item",
       childMode: "inline",
+      textMode: "prose",
     },
   },
   tabs: {

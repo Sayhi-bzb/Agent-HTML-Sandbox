@@ -566,7 +566,7 @@ async function createRuntimeFixture({
   )
   await writeFile(
     path.join(runtimePaths.runtimeSrcDir, "renderer", "kinds.ts"),
-    'export const runtimeRendererKinds = ["accordion","choice-group","choice-inline","combobox-input","collection","compound","primitive","range-field","select-overlay","table","tabs","text-field","toggle-field"] as const\nexport type RendererKind = (typeof runtimeRendererKinds)[number]\n',
+    'export const runtimeRendererKinds = ["accordion","choice-group","choice-inline","combobox-input","collection","compound","primitive","range-field","select-overlay","slider-field","table","tabs","text-field","toggle-field"] as const\nexport type RendererKind = (typeof runtimeRendererKinds)[number]\n',
   )
   await writeFile(
     path.join(runtimePaths.runtimeSrcDir, "renderer", "parity.ts"),

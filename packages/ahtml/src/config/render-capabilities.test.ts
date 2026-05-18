@@ -57,7 +57,7 @@ describe("createRuntimeElementRegistrySpec", () => {
         },
         {
           name: "slider",
-          kind: "range-field",
+          kind: "slider-field",
           requiredRegistryModules: [
             {
               registryItem: "field",
@@ -79,6 +79,7 @@ describe("createRuntimeElementRegistrySpec", () => {
           label: "FieldLabel",
           control: "Slider",
           description: "FieldDescription",
+          valueProp: "value",
         },
         {
           name: "list",

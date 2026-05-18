@@ -10,6 +10,7 @@ import {
 
 export const styleProfileManifestKind = "ahtml-style-profile-manifest"
 export const styleProfileGeneratorKind = "ahtml-style-profile-registry"
+const styleProfileIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 export function createStyleProfileStorageManifest(paths) {
   return {
@@ -101,6 +102,16 @@ export async function resolveStyleProfileByReference(paths, styleReference) {
   return userProfilesById.get(styleReference)
 }
 
+export function getStyleProfileSource(styleReference) {
+  return BUILTIN_STYLE_PROFILES_BY_REFERENCE[styleReference]
+    ? "builtin"
+    : "user"
+}
+
+export function isBuiltinStyleProfileReference(styleReference) {
+  return Boolean(BUILTIN_STYLE_PROFILES_BY_REFERENCE[styleReference])
+}
+
 export async function listStyleProfileReferences(paths) {
   const userProfilesById = await loadUserStyleProfilesById(paths)
 
@@ -143,6 +154,43 @@ export async function loadUserStyleProfilesById(paths) {
   }
 
   return userProfilesById
+}
+
+export async function saveUserStyleProfile(paths, profile, options = {}) {
+  const profileId = profile?.id
+
+  if (!styleProfileIdPattern.test(profileId ?? "")) {
+    throw new Error(
+      "style profile ids must use lowercase kebab-case, for example team-ops.",
+    )
+  }
+
+  if (isBuiltinStyleProfileReference(profileId)) {
+    throw new Error(
+      `Cannot overwrite built-in style profile "${profileId}". Save as a new user profile id instead.`,
+    )
+  }
+
+  const parsedProfile = StyleProfileSchema.parse(profile)
+  const userProfilesById = await loadUserStyleProfilesById(paths)
+  const exists = userProfilesById.has(profileId)
+
+  if (exists && options.overwrite !== true) {
+    throw new Error(
+      `User style profile "${profileId}" already exists. Pass overwrite to replace it.`,
+    )
+  }
+
+  const targetPath = path.join(paths.userStyleProfilesDir, `${profileId}.json`)
+  await writeJsonFile(targetPath, parsedProfile)
+
+  return {
+    id: profileId,
+    path: targetPath,
+    source: "user",
+    overwritten: exists,
+    profile: parsedProfile,
+  }
 }
 
 async function pathExists(filePath) {

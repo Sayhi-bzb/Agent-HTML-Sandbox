@@ -1,0 +1,225 @@
+<meta-agent style-ref="report-default" />
+
+<page title="阿尔伯特·爱因斯坦：思想实验、争议与遗产">
+  <card title="一份比 Markdown 更会讲故事的语义页面">
+    <alert tone="neutral" title="为什么这页适合用 agent-html 来展示">
+      同样是人物专题，Markdown 往往只能把信息排成长长的段落；而这里可以把导语、
+      章节、对照表、可折叠注释、阅读偏好和进度感知组织成一个稳定、可分享的阅读
+      artifact。
+    </alert>
+    <badge tone="neutral">Physics</badge>
+    <badge tone="success">Thought Experiments</badge>
+    <badge tone="warning">Public Myth</badge>
+    <badge tone="neutral">Semantic Artifact</badge>
+    <separator />
+    <list variant="unordered">
+      <item>你会看到强开场、分章节 Tabs、知识对照表和可折叠注释如何一起工作。</item>
+      <item>你也会看到表单类组件不只适合“填表”，也能承载读者视角和理解路径。</item>
+      <item>重点不是把页面堆得花哨，而是让结构、层次和节奏明显优于一篇普通长文。</item>
+    </list>
+  </card>
+
+  <tabs default="overview">
+    <tab value="overview" label="Overview">
+      <card title="一眼看懂爱因斯坦">
+        <alert title="编者按">
+          爱因斯坦之所以持续吸引人，不只是因为他提出了改变物理学的理论，更因为他
+          把抽象问题说成了人人都能想象的场景：电梯、火车、光束、钟表、指南针。
+        </alert>
+        <separator />
+        <table>
+          <row kind="header">
+            <cell>维度</cell>
+            <cell>关键词</cell>
+            <cell>为什么重要</cell>
+          </row>
+          <row>
+            <cell>科学突破</cell>
+            <cell>光电效应、相对论</cell>
+            <cell>既改变了现代物理，也改变了公众想象科学家的方式。</cell>
+          </row>
+          <row>
+            <cell>方法风格</cell>
+            <cell>思想实验</cell>
+            <cell>他擅长用简洁场景逼近本质，而不是先堆复杂公式。</cell>
+          </row>
+          <row>
+            <cell>公众形象</cell>
+            <cell>天才、白发、名言</cell>
+            <cell>这层形象极强，却常常遮住了他真实的研究脉络与晚年困境。</cell>
+          </row>
+        </table>
+      </card>
+
+      <card title="这份专题的三条阅读线索">
+        <list variant="ordered">
+          <item>先看他如何把物理问题变成可想象的画面。</item>
+          <item>再看他最著名的理论之外，真正拿到诺奖的是哪项工作。</item>
+          <item>最后回到他作为公众人物的复杂性：和平主义、名望与误读并存。</item>
+        </list>
+      </card>
+    </tab>
+
+    <tab value="ideas" label="Ideas">
+      <card title="思想实验不是装饰，而是方法">
+        <alert title="阅读提示">
+          如果只记住“相对论很复杂”，会错过爱因斯坦最迷人的地方：
+          他总能先把问题压缩到一个几乎任何人都能进入的场景。
+        </alert>
+        <separator />
+        <badge tone="neutral">起步阅读</badge>
+        <accordion>
+          <accordion-item value="compass" title="指南针：看不见的作用也可以真实存在">
+            幼年时对指南针的惊讶，让他很早就意识到：世界并不只由眼前看得见的东西
+            组成，隐藏的规律同样值得追问。
+          </accordion-item>
+          <accordion-item value="violin" title="小提琴：整理思路的另一种语言">
+            对他来说，音乐不是研究之外的消遣，而是让抽象问题重新变得流动的方式。
+          </accordion-item>
+        </accordion>
+        <separator />
+        <badge tone="warning">核心主题</badge>
+        <accordion mode="single" default="light">
+          <accordion-item value="light" title="追一束光：相对论的直觉起点">
+            想象自己追上一束光，会看到什么？这类问题听上去像小说设定，却逼出了时间
+            与空间不能再被当作绝对舞台的结论。
+          </accordion-item>
+          <accordion-item value="photoelectric" title="光电效应：诺奖真正指向的工作">
+            大众最熟悉的是相对论，但 1921 年诺奖更直接表彰的是光电效应研究，这提醒
+            我们“最有名”与“当时最被正式认可”并不总是同一件事。
+          </accordion-item>
+          <accordion-item value="brownian" title="布朗运动：把原子的存在拉近到可见证据">
+            这项工作不像相对论那样浪漫，却让微观世界的真实性更容易被实验理解与接受。
+          </accordion-item>
+        </accordion>
+        <separator />
+        <badge tone="success">并行延伸</badge>
+        <accordion mode="multiple" default="gravity, cosmos">
+          <accordion-item value="gravity" title="广义相对论：引力更像几何，而非普通作用力">
+            在这里，引力不再只是“物体之间互相拉扯”，而变成了质量让时空本身弯曲的
+            效果。这个视角改变了人类理解宇宙的大框架。
+          </accordion-item>
+          <accordion-item value="cosmos" title="宇宙学：宇宙常数的反复回归">
+            他曾把宇宙常数称作“最大错误”，但后来现代宇宙学又重新赋予它意义。这种
+            反转也说明科学史不是一条永远单向前进的直线。
+          </accordion-item>
+          <accordion-item value="letters" title="书信与草稿：理论之外的犹豫和修正">
+            真正的思想形成过程常常比教科书版本更曲折，而这些书信正好把曲折保存下来。
+          </accordion-item>
+        </accordion>
+      </card>
+    </tab>
+
+    <tab value="life" label="Life & Tensions">
+      <card title="名望、误读与晚年困境">
+        <alert title="不是只有“天才”两个字">
+          公众喜欢把爱因斯坦压缩成一个符号：爆炸头、吐舌照、相对论。但他真正的人生
+          更像一条不断摆动的曲线，既有理论胜利，也有长期未竟的执念。
+        </alert>
+        <separator />
+        <table>
+          <row kind="header">
+            <cell>主题</cell>
+            <cell>表面印象</cell>
+            <cell>更真实的一面</cell>
+          </row>
+          <row>
+            <cell>专利局岁月</cell>
+            <cell>边缘岗位上的天才神话</cell>
+            <cell>那段经历固然传奇，但更重要的是他如何保持长时间独立思考。</cell>
+          </row>
+          <row>
+            <cell>公众名望</cell>
+            <cell>最著名的科学家</cell>
+            <cell>名望让他的观点更易传播，也让误读和标签化来得更快。</cell>
+          </row>
+          <row>
+            <cell>晚年研究</cell>
+            <cell>继续统一世界图景</cell>
+            <cell>统一场论没有获得决定性突破，却暴露出他对“完整解释”的强烈执念。</cell>
+          </row>
+        </table>
+      </card>
+
+      <card title="几条常被忽略的小事实">
+        <list variant="unordered">
+          <item>他拿诺奖并不是因为相对论本身，而是因为光电效应研究。</item>
+          <item>他经常被塑造成“不修边幅的天才”，但这种形象会掩盖其写作与思考的严谨。</item>
+          <item>和平主义、犹太难民处境与核时代焦虑，共同塑造了他晚年的公共角色。</item>
+        </list>
+      </card>
+    </tab>
+
+    <tab value="reader" label="Reader Lens">
+      <card title="把专题变成一块可交互的阅读面板">
+        <alert title="这里展示的不是表单工程，而是阅读表达">
+          当语义文档拥有字段、选择器和状态组件后，读者不只是被动滚动页面，也可以在
+          页面里形成自己的理解路径、兴趣偏好和阅读节奏。
+        </alert>
+        <separator />
+        <input label="你首先想到的爱因斯坦关键词" value="相对论" description="一个词就能暴露你的第一印象。" />
+        <separator />
+        <textarea label="如果只用一句话介绍他，你会怎么说？" value="他把最难的物理问题先变成可想象的场景，再把这些场景推向改变世界的理论。" description="这块文本域像一张读者批注卡，而不是普通备注框。" />
+        <separator />
+        <badge tone="neutral">阅读倾向</badge>
+        <checkbox label="我更想先看思想实验" checked="true" description="偏向从问题和直觉进入，而不是从生平时间线进入。" />
+        <checkbox label="我更想先看逸闻轶事" checked="false" description="如果你更在意人物趣闻，这一项会更先被勾选。" />
+        <separator />
+        <badge tone="neutral">辅助开关</badge>
+        <switch label="展开注释模式" checked="true" description="更适合想把争议、术语和背景一起读进去的读者。" />
+        <switch label="只保留极简摘要" checked="false" description="关闭时，页面会更像一篇带注脚的专题，而不是速读卡片。" />
+        <separator />
+        <badge tone="warning">理解曲线</badge>
+        <slider label="对狭义相对论的直觉熟悉度" value="0" description="从完全陌生开始，也可以进入这篇页面。" />
+        <slider label="对思想实验的兴趣指数" value="42" description="中间值最能体现“正在被说服，但还没完全掌握”的感觉。" />
+        <slider label="对人物复杂性的关注度" value="100" description="如果你已经不满足于名言与海报，这一项通常会很高。" />
+      </card>
+
+      <card title="选择一条自己的阅读路径">
+        <radio-group label="你会从哪个入口先读这页？" value="思想实验" description="单选最适合表达“此刻最优先的入口”。">
+          <option value="生平节点" label="生平节点">先建立时代背景，再回到理论本身。</option>
+          <option value="思想实验" label="思想实验">从最能体现他方法论魅力的部分切入。</option>
+          <option value="公众形象" label="公众形象">先拆掉神话，再回头重看理论与人格。</option>
+        </radio-group>
+        <separator />
+        <toggle-group label="你更喜欢哪种阅读节奏？" value="深读" description="同样的信息，节奏不同，页面体验也会不同。">
+          <option value="速览" label="速览">先抓大意，适合第一次接触。</option>
+          <option value="深读" label="深读">逐段推进，更适合停下来理解细部。</option>
+          <option value="旁注" label="旁注">边看边比对背景和注释。</option>
+        </toggle-group>
+        <separator />
+        <select label="如果只能先读一个主题" value="光电效应" description="Select 更像一句被正式做出的优先级判断。">
+          <option value="相对论" label="相对论">名气最大，但并非唯一入口。</option>
+          <option value="光电效应" label="光电效应">它提醒我们，爱因斯坦不只属于相对论叙事。</option>
+          <option value="统一场论" label="统一场论">更适合从晚年执念和未完成感进入。</option>
+        </select>
+        <separator />
+        <combobox label="你最容易把他和谁一起联想到？" value="Niels Bohr" description="Combobox 适合承载“脑海里会自动跳出的关联对象”。">
+          <option value="Mileva Maric" label="Mileva Maric">把视线带向早年的学习、婚姻与合作争议。</option>
+          <option value="Niels Bohr" label="Niels Bohr">最能带出量子论时代的关键争辩与相互定义。</option>
+          <option value="Max Planck" label="Max Planck">让你回到更广阔的现代物理共同体中看他。</option>
+        </combobox>
+      </card>
+
+      <card title="阅读进度不是装饰，它能制造节奏">
+        <badge tone="neutral">刚进入主题</badge>
+        <progress value="0" />
+        <alert title="0%">
+          这时你可能只记得他的头像和一句“相对论很难”，页面的任务是先把入口变得友好。
+        </alert>
+        <separator />
+        <badge tone="warning">正在建立直觉</badge>
+        <progress value="50" />
+        <alert title="50%">
+          当思想实验、人物经历和理论影响开始接上，你会感觉这不再是一篇平铺直叙的长文。
+        </alert>
+        <separator />
+        <badge tone="success">准备继续深读</badge>
+        <progress value="100" />
+        <alert title="100%">
+          到这里，读者不只接受了几个事实，更开始把贡献、争议和公众神话一起放进同一个画面。
+        </alert>
+      </card>
+    </tab>
+  </tabs>
+</page>
