@@ -2,54 +2,6 @@
 
 本索引用于路由 agent-html architecture contracts。
 
-## Main Chain
-
-```txt
-user installs ahtml
-        ↓
-agent writes standard document
-        ↓
-CLI schema / validate / build
-        ↓
-ahtml core parse / sanitize
-        ↓
-SanitizedAgentHtml { meta, components }
-        ↓
-managed runtime under ~/.ahtml
-        ↓
-renderer adapter
-        ↓
-React output + HTML output
-        ↓
-portable output
-```
-
-## Public Contract Chain
-
-```txt
-semantic component declaration
-        +
-document style config reference
-        ↓
-ComponentSchema + approved visual config entry
-        ↓
-CLI schema output
-        ↓
-agent-facing authoring contract
-```
-
-## Runtime Verification Chain
-
-```txt
-managed runtime shadcn/ui implementation
-        ↓
-runtime verification facts
-        ↓
-drift checks + renderer registry inputs
-        ↓
-contract verification
-```
-
 ## Contracts
 
 - `cli-to-managed-runtime.md`: CLI 到 managed runtime、template 和 renderer adapter。

@@ -14,7 +14,7 @@ import { afterAll, afterEach, beforeAll, expect } from "vitest"
 const execFileAsync = promisify(execFile)
 
 export const root = process.cwd()
-export const cliPath = path.join(root, "bin", "ahtml.mjs")
+export const cliPath = path.join(root, "packages", "ahtml", "bin", "ahtml.mjs")
 export const shadcnTemplateFixtureDir = path.join(
   root,
   "scripts",

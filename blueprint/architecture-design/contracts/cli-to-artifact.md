@@ -19,7 +19,6 @@ agent、developer 和 artifact delivery flow 消费 CLI。
 - `preview` 必须复用 build artifact 或同一 managed runtime renderer adapter。
 - `config get` 只读取 schema 派生的默认视觉配置视图，不写入独立配置状态。
 - `.agent.html` 是唯一 agent-facing document 输入和可检查中间表示。
-- file document 必须进入同一 sanitize path。
 - CLI 不改变 ComponentSchema、RenderConfig、renderer adapter 和 artifact 的权威边界。
 - 默认 `build` / `preview` 不要求当前工作目录存在 `components.json`、Vite config 或 shadcn components。
 

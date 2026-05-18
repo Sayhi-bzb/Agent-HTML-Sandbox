@@ -21,7 +21,6 @@ portable output 层消费 renderer 产物，并生成可打开、可分享、可
 - static artifact directory 必须包含 `index.html`、CSS / JS bundle 和声明过的 assets。
 - dev preview 和 final artifact 必须共用同一 renderer adapter、ComponentSchema、RenderConfig 和样式系统。
 - dev preview 与 final artifact 的视觉目标一致。
-- 允许视觉差异只能来自 viewport / container、字体 / 网络资源策略、asset path、dev-only tooling 和显式 single-file mode。
 - artifact 优先面向静态分享。
 - dev preview 不作为最终交付形态。
 - portable output 不得绕过 parse / sanitize。

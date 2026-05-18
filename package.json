@@ -36,7 +36,7 @@
     "docs:web:lint": "npm --prefix docs-web run lint",
     "docs:web:preview": "npm --prefix docs-web run start",
     "docs:web:check": "npm run docs:web:typecheck && npm run docs:web:lint && npm run docs:web:build",
-    "agent": "node bin/ahtml.mjs",
+    "agent": "node packages/ahtml/bin/ahtml.mjs",
     "verify:pack": "node scripts/verify-packed-ahtml.mjs",
     "dev:check": "npm run check:commit",
     "release:metadata": "node scripts/release-metadata.mjs json",

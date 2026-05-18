@@ -1,6 +1,6 @@
 # agent-html Type Surface
 
-本文记录 agent-html 的公共类型表面。它不定义完整 schema，只标记不能随手改的边界对象。
+本文记录 agent-html 的公共类型表面。它不定义完整 schema，只标记当前不应随手改动的边界对象。
 
 ## Change Rules
 
@@ -13,13 +13,13 @@
 
 Ownership: runtime verification
 
-Purpose: 表示从 shadcn registry、组件源码和 `components.json` 自动抽取的内部 runtime verification facts。
+Purpose: 表示从 shadcn registry、组件源码和 `components.json` 抽取的内部 runtime verification facts。
 
 Consumers: contract verification, renderer capability checks, drift check
 
 Change rule: GeneratedShadcnIntrospection 不得直接成为 agent-facing 协议。
 
-Note: 可包含 exports、`data-slot`、dependencies、registry metadata、required files、required exports、docs links、CSS/base surface identity 和 blocked/internal prop candidates。必要时也可带 `cva` variants、literal union props 或其他实现细节作为审查材料，但它们不决定最终开放面。
+Note: 它服务于 contract verification、renderer capability checks 和 drift check，不直接成为 agent-facing 协议。
 
 ## 2. ComponentSchemaOverlay
 
@@ -31,19 +31,19 @@ Consumers: contract mapper, parse / sanitize, renderer
 
 Change rule: overlay 变化必须同步示例、contract 和 tests。
 
-Note: overlay 决定组件是否 expose、语义 prop 命名、允许 values、slot 合法结构、children 边界、隐藏 props、style config 兼容性和 shadcn internal mapping。
+Note: overlay 决定 expose 范围、语义 prop 命名、slot 结构、children 边界和 style config 兼容性。
 
 ## 3. ComponentSchema
 
 Ownership: standardized component contract
 
-Purpose: 表示一个 agent-facing 标准组件，可由通用 ui / slot capability 包装成便捷语法。
+Purpose: 表示一个 agent-facing 标准组件。
 
 Consumers: agent, parse / sanitize, renderer
 
 Change rule: 新增、删除或重命名 ComponentSchema 必须同步示例、contract 和 renderer 注册。
 
-Note: ComponentSchema 由显式语义声明收束，并经过 GeneratedShadcnIntrospection 校验。它描述组件用途、固定结构、允许语义 props、允许 slots、style config 兼容性和使用禁忌。它不等于 shadcn/ui props，也不暴露 Tailwind class 或内部 React 实现。shadcn-backed ComponentSchema 应能归一到 UiComponentSchema / UiSlotSchema。
+Note: 它描述组件用途、固定结构、允许语义 props、允许 slots、style config 兼容性和使用禁忌；不等于 shadcn/ui props，也不暴露内部实现。
 
 ## 3.1. UiComponentSchema
 
@@ -55,7 +55,7 @@ Consumers: contract mapper, parse / sanitize, generic renderer resolver, CLI sta
 
 Change rule: UiComponentSchema 变化必须同步 ComponentSchema、UiSlotSchema、renderer registry 和 tests。
 
-Note: UiComponentSchema 应表达 stable component id、source registry item、root export、required dependencies、safe prop mapping、allowed slots 和 diagnostics policy。它不是完整 shadcn props，也不是手写 adapter。
+Note: 它表达通用 renderer 需要的 component id、source registry item、safe prop mapping 和 diagnostics policy；不是完整 shadcn props，也不是手写 adapter。
 
 ## 3.2. UiSlotSchema
 
@@ -67,7 +67,7 @@ Consumers: contract mapper, parse / sanitize, generic renderer resolver
 
 Change rule: UiSlotSchema 变化必须同步 slot validation、prompt schema 和 renderer registry。
 
-Note: UiSlotSchema 应来自 `data-slot`、exports 和 overlay 合成，描述 slot name、对应 export、允许 children、required parent / grouping 和 safe prop mapping。
+Note: 它描述 slot name、对应 export、允许 children 和 safe prop mapping。
 
 ## 4. ComponentPropSchema
 
@@ -79,7 +79,7 @@ Consumers: agent, parse / sanitize
 
 Change rule: ComponentPropSchema 不得暴露内部 props、Tailwind class、`className`、Radix props 或完整 shadcn/ui props。
 
-Note: 常见公开字段应是 `title`、`description`、`value`、`status`、`intent`、`priority`、`href`、`label`、`columns`、`rows`、`items`、`disabled` 这类语义字段，而不是默认暴露 `variant`、`size`、`surface`、`radius`、`spacing` 这类视觉实现字段。若少量组件保留 `tone` 之类受控语义强调词，也必须由显式声明收束，而不是回退成通用视觉参数包。
+Note: 应优先表达语义字段，而不是视觉实现字段。
 
 ## 5. ComponentToken
 
@@ -101,7 +101,7 @@ Consumers: none in the active public contract
 
 Change rule: 不得在没有新的产品决策的情况下恢复该兼容语法。
 
-Note: 公开文档级视觉入口现在只通过 `<meta-agent style-ref="...">` 暴露。旧 `profile` syntax 只应出现在迁移测试或历史记录中。
+Note: 公开文档级视觉入口现在只通过 `<meta-agent style-ref="...">` 暴露。
 
 ## 7. Legacy Profile Registry (Removed)
 
@@ -125,19 +125,19 @@ Consumers: agent, parse / sanitize, CLI schema output
 
 Change rule: 引用 identity、允许值或解析规则变化必须同步 schema、sanitize schema、配置解析和 tests。
 
-Note: 在目标架构里，DocumentStyleConfigReference 是文档级视觉配置入口。它通过 `style-ref` 被 agent-facing syntax 选择，只选择已批准配置，不内联具体组件样式规则，不等于 CSS、Tailwind class 或 shadcn props。
+Note: 它通过 `style-ref` 被选择，只选择已批准配置。它是配置层入口，不等于 CSS、Tailwind class、shadcn props、全局主题 token 或组件样式细节。
 
 ## 7.2. DocumentStyleConfig
 
 Ownership: configuration contract / renderer adapter
 
-Purpose: 表示独立配置层中的受控组件样式映射。
+Purpose: 表示独立配置层中的受控样式配置对象，内部包含全局样式层与组件样式层。
 
 Consumers: parse / sanitize, renderer adapter, CLI inspect/config view
 
 Change rule: 配置结构变化必须同步配置解析、renderer 解析、schema 文案和 tests。
 
-Note: DocumentStyleConfig 可以描述全局 theme/density/width 等视觉策略，也可以描述标准积木的组件级视觉映射；它不得改变 ComponentSchema 语义、allowed children、slot 结构、renderer kind 或 fallback 行为，也不得退化为任意 CSS、Tailwind class、完整 shadcn props 或外部资源 passthrough。
+Note: 它描述受控视觉映射，不得改变 ComponentSchema 语义，也不得退化为任意 CSS、完整 shadcn props、外部资源 passthrough 或与 `tweakcn` 平行的全局主题体系。
 
 ## 8. AgentHtmlDocument
 
@@ -147,7 +147,7 @@ Purpose: 表示 agent 输出的完整标准 agent-html 文档。
 
 Consumers: parse / sanitize
 
-Note: renderer 不直接消费 AgentHtmlDocument；renderer 只消费 sanitized structure。
+Note: renderer 不直接消费 AgentHtmlDocument。
 
 Change rule: 文档级结构变更必须同步 `agent-html-to-renderer` contract。
 
@@ -159,7 +159,7 @@ Purpose: 表示 agent-html 中的标准组件节点。
 
 Consumers: parse / sanitize
 
-Note: renderer 不直接消费 StandardAgentNode；节点通过 parse / sanitize 后进入 sanitized structure。
+Note: renderer 不直接消费 StandardAgentNode。
 
 Change rule: 节点能力变更必须同步 ComponentSchema 和 renderer 注册规则。
 
@@ -173,7 +173,7 @@ Consumers: agent, parse / sanitize, renderer adapter
 
 Change rule: RenderConfig key / value 变化必须同步 schema、sanitize schema、renderer adapter 配置解析和 tests。
 
-Note: 在目标架构里，RenderConfig 默认应优先从 DocumentStyleConfigReference 解析得到。core 负责把 `style-ref` 选择解析为 checked RenderConfig，再交给 renderer。它不是 CSS、style、className、Tailwind class、shadcn props、script 或外部资源入口。
+Note: 它默认从 DocumentStyleConfigReference 解析得到，并承接配置层的全局样式层与组件样式层结果。它不是 CSS、style、className、Tailwind class、shadcn props、script 或外部资源入口。
 
 ## 11. AhtmlRuntimeConfig
 
@@ -185,7 +185,7 @@ Consumers: CLI, renderer adapter, managed runtime
 
 Change rule: 配置变化必须同步 `cli-to-managed-runtime` contract、CLI checks 和 templates。
 
-Note: `AhtmlRuntimeConfig` 可记录 renderer adapter、shadcn template identity、shadcn preset、style、base、iconLibrary、Tailwind version、CSS entry、ComponentSchema source 和 output target。它不得保存 agent-facing CSS、Tailwind class 或完整 shadcn props。project-local config 已删除，不属于兼容表面。
+Note: 它记录 managed runtime 的必要配置，不保存 agent-facing CSS、Tailwind class 或完整 shadcn props。project-local config 不属于兼容表面。
 
 ## 11.1. ShadcnRuntimeSurface
 
@@ -197,7 +197,7 @@ Consumers: CLI setup, status, doctor, renderer capability checks, tests
 
 Change rule: ShadcnRuntimeSurface 变化必须同步 `cli-to-managed-runtime` contract、runtime bootstrap、doctor 和 build artifact tests。
 
-Note: ShadcnRuntimeSurface 应至少记录 shadcn template/init source、preset、style、base、iconLibrary、Tailwind version、CSS entry、base layer expectation、`components.json` path、aliases、required registry item ids、required files 和 required exports。它是 runtime 完整性的检查表，不是 agent-facing schema。ahtml 不得用 package-local component copies、截断 CSS 或 pseudo template 伪造这个 surface。
+Note: 它是 runtime 完整性的检查表，不是 agent-facing schema。
 
 ## 12. RendererAdapter
 
@@ -209,7 +209,7 @@ Consumers: CLI, templates, managed runtime
 
 Change rule: RendererAdapter 变化必须同步 `engine-to-renderer-adapter` contract、templates 和 runtime checks。
 
-Note: RendererAdapter 可依赖 shadcn-native managed runtime 中的 React、shadcn/ui、Tailwind 或 Vite build target，但这些依赖不得反向进入 core。RendererAdapter 的主路径应调用 GenericRendererResolver，而不是内联逐组件特殊分支。RendererAdapter 可以被 ahtml 注入到 shadcn-template-derived runtime，但不得替换 shadcn UI surface。
+Note: 它可依赖 managed runtime 中的 React、shadcn/ui、Tailwind 或 Vite，但这些依赖不得反向进入 core。
 
 ## 13. UiRegistry
 
@@ -221,7 +221,7 @@ Consumers: generic renderer resolver, CLI status / doctor, tests
 
 Change rule: UiRegistry 必须由 ComponentSchema、UiComponentSchema、UiSlotSchema 和 managed runtime installed components 校验生成。安装状态不能单独成为 registry truth。
 
-Note: UiRegistry 应记录 component id、slot id、React export、source registry item、required files、required exports、required CSS/base surface、safe prop mapping、render kind 和 diagnostics policy。它不得保存 agent-facing CSS、Tailwind class 或完整 shadcn props。
+Note: 它记录通用 renderer 需要的 component/slot/export/mapping 信息，不保存 agent-facing CSS、Tailwind class 或完整 shadcn props。
 
 ## 14. GenericRendererResolver
 
@@ -233,7 +233,7 @@ Consumers: RendererAdapter
 
 Change rule: GenericRendererResolver 变化必须同步 `agent-html-to-renderer`、`engine-to-renderer-adapter`、runtime checks 和 build artifact tests。
 
-Note: GenericRendererResolver 不应包含 `if tabs then Tabs` 这类逐组件主路径。组件差异应来自 UiRegistry、UiSlotSchema、safe prop mapping、DocumentStyleConfig 与 overlay。
+Note: 组件差异应来自 UiRegistry、UiSlotSchema、safe prop mapping、DocumentStyleConfig 与 overlay，而不是逐组件主路径分支。
 
 ## 15. RendererCapability
 
@@ -245,7 +245,7 @@ Consumers: renderer adapter, CLI status / doctor, tests
 
 Change rule: ComponentSchema 新增、删除或修改时，必须同步 RendererCapability。没有 RendererCapability 的默认组件不得进入 agent-facing schema。
 
-Note: RendererCapability 应至少表达 component name、render kind（`shadcn`、`native`、`composite` 或 unsupported）、required shadcn registry items、required runtime surface、ui / slot coverage、safe prop mapping coverage、style config support 和 diagnostics policy。它不暴露 Tailwind class、完整 shadcn props 或 Radix props 给 agent，也不表示必须存在逐组件手写 adapter。
+Note: 它表达 component name、render kind、required runtime surface、ui / slot coverage 和 diagnostics policy；不暴露内部实现给 agent。
 
 ## 16. SanitizedAgentHtml
 
@@ -257,7 +257,7 @@ Consumers: renderer adapter
 
 Change rule: 任何进入 renderer adapter 的 agent-html 必须先成为 SanitizedAgentHtml。
 
-Note: SanitizedAgentHtml 来自 parse / validate / sanitize 后的结构转换，不是 cleaned HTML string。未知标签、危险属性、未注册组件、非法 props、非法 slot 结构和非法 RenderConfig 不得进入该表面。
+Note: 它来自 parse / validate / sanitize 后的结构转换，不是 cleaned HTML string。
 
 ## 17. RenderedArtifact
 
@@ -269,7 +269,7 @@ Consumers: portable output, user, sharing flow
 
 Change rule: RenderedArtifact 不得依赖未声明运行环境或绕过安全边界。
 
-Note: RenderedArtifact 可继续进入目录式 static artifact 或显式单文件 export。目录式 artifact 是默认交付形态，单文件 export 不应成为隐式默认。
+Note: 目录式 static artifact 是默认交付形态。
 
 ## 18. CliSchemaOutput
 
@@ -281,7 +281,7 @@ Consumers: agent
 
 Change rule: CliSchemaOutput 必须来自 ComponentSchema、DocumentStyleConfigReference 和 RenderConfig，不得暴露 renderer props、Tailwind class、shadcn props 或源码结构。
 
-Note: CliSchemaOutput 中的公开 visual config syntax 必须使用 `style-ref`，不得恢复 `profile` 兼容字段。
+Note: 公开 visual config syntax 必须使用 `style-ref`。
 
 ## 19. CliConfigView
 
@@ -293,4 +293,4 @@ Consumers: agent, developer
 
 Change rule: CliConfigView 不得成为独立配置状态源，不得映射为任意 CSS、Tailwind class、inline style、script、HTML attribute passthrough 或外部资源。
 
-Note: CliConfigView 应只表达 document-level style config model，不得保留 compatibility `profile` wording。
+Note: 它只表达 document-level style config model，不直接暴露全局主题 token 编辑面或组件样式实现细节。
