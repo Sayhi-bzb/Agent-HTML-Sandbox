@@ -29,6 +29,10 @@ import {
   assertRuntimeTemplateViteConfig,
   assertRuntimeSurface,
 } from "./runtime-surface.mjs"
+import {
+  assertStyleProfileStorage,
+  writeStyleProfileStorage,
+} from "./style-profile-storage.mjs"
 import { writeRuntimeTemplate } from "./runtime-template.mjs"
 
 export async function bootstrapManagedRuntime({
@@ -42,6 +46,7 @@ export async function bootstrapManagedRuntime({
   await mkdir(paths.cacheDir, { recursive: true })
   await mkdir(paths.logsDir, { recursive: true })
   await mkdir(paths.configDir, { recursive: true })
+  await writeStyleProfileStorage(paths)
   const shadcnRuntimeSurface = await writeRuntimeTemplate({
     packageRoot,
     paths,
@@ -115,6 +120,8 @@ export async function getRuntimeStatus({
     logs: await pathExists(paths.logsDir),
     config: await pathExists(paths.configDir),
     manifest: false,
+    styleProfileManifest: await pathExists(paths.styleProfileManifestPath),
+    styleProfiles: await pathExists(paths.styleProfilesDir),
     rendererAdapter: await pathExists(
       path.join(paths.runtimeSrcDir, "main.tsx"),
     ),
@@ -146,6 +153,12 @@ export async function getRuntimeStatus({
   }
 
   if (manifest) {
+    checks.styleProfiles = await evaluateStatusCheck(
+      async () => assertStyleProfileStorage(paths),
+      (detail) => {
+        runtimeDetail ||= detail
+      },
+    )
     checks.componentsJson = await evaluateStatusCheck(
       async () => assertRuntimeComponentsJson({ manifest, paths }),
       (detail) => {
@@ -195,6 +208,8 @@ export async function getRuntimeStatus({
     checks.logs &&
     checks.config &&
     checks.manifest &&
+    checks.styleProfileManifest &&
+    checks.styleProfiles &&
     checks.rendererAdapter &&
     checks.shadcnComponents &&
     checks.shadcnTemplateViteConfig &&

@@ -40,6 +40,7 @@ describe("agent-html CLI heavy runtime flows", () => {
       `ok runtime:shadcn-components ${requiredShadcnRuntimeComponents.join(", ")}`,
     )
     expect(doctor.stdout).toContain("ok runtime:shadcn-template-vite-config")
+    expect(doctor.stdout).toContain("ok runtime:style-profile-manifest")
     expect(doctor.stdout).toContain("ok runtime:prompt-ui-manifest")
     expect(doctor.stdout).toContain("ok runtime:verification-data")
     await expectFile(
@@ -51,8 +52,30 @@ describe("agent-html CLI heavy runtime flows", () => {
       "shadcn-template-override",
     )
     await expectFile(
+      path.join(runtimeHome, "config", "runtime.json"),
+      '"styleProfileManifest"',
+    )
+    await expectFile(
+      path.join(runtimeHome, "config", "runtime.json"),
+      '"builtinStyleProfiles"',
+    )
+    await expectFile(
       path.join(runtimeHome, "config", "prompt-ui.manifest.json"),
       "ahtml-prompt-ui-manifest",
+    )
+    await expectFile(
+      path.join(runtimeHome, "config", "style-profiles.manifest.json"),
+      "ahtml-style-profile-manifest",
+    )
+    await expectFile(
+      path.join(
+        runtimeHome,
+        "config",
+        "style-profiles",
+        "builtin",
+        "ops-compact.json",
+      ),
+      '"id": "ops-compact"',
     )
     await expectFile(
       path.join(runtimeHome, "runtime", "render-verification.generated.json"),
@@ -196,6 +219,7 @@ describe("agent-html CLI heavy runtime flows", () => {
     expect(stdout).toContain("ok runtime:shadcn-provenance")
     expect(stdout).toContain("ok runtime:shadcn-components")
     expect(stdout).toContain("ok runtime:shadcn-template-vite-config")
+    expect(stdout).toContain("ok runtime:style-profile-manifest")
     expect(stdout).toContain("ok runtime:prompt-ui-manifest")
     expect(stdout).toContain("ok runtime:verification-data")
     expect(stdout).toContain("ok runtime:verification-data-parity")
@@ -238,6 +262,12 @@ describe("agent-html CLI heavy runtime flows", () => {
     expect(report.status).toBe("ok")
     expect(report.counts.fail).toBe(0)
     expect(report.checks.some((check) => check.name === "manifest")).toBe(true)
+    expect(
+      report.checks.some(
+        (check) =>
+          check.category === "runtime" && check.name === "style-profile-manifest",
+      ),
+    ).toBe(true)
     expect(
       report.checks.some(
         (check) => check.category === "artifact" && check.name === "output-dir",

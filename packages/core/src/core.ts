@@ -16,6 +16,8 @@ export {
   formatForbiddenPolicy,
 } from "./public-agent-contract"
 export {
+  BUILTIN_STYLE_PROFILES_BY_REFERENCE,
+  DEFAULT_STYLE_PROFILE_REFERENCE,
   DEFAULT_RENDER_CONFIG,
   getLegacyResolvedDocumentStyleTokens,
   parseRenderConfig,
@@ -26,6 +28,7 @@ export {
   RENDER_CONFIG_KEYS,
   RENDER_CONFIG_VALUES,
   RenderConfigSchema,
+  STYLE_PROFILE_STORAGE_VERSION,
 } from "./render-config"
 export { sanitizeAgentHtml } from "./parse/sanitize-agent-html"
 export type {

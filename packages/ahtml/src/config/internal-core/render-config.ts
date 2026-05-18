@@ -13,6 +13,7 @@ import type {
 } from "./types"
 
 export const PUBLIC_RENDER_CONFIG_MODEL = "document-style-config-reference"
+export const STYLE_PROFILE_STORAGE_VERSION = 1
 
 export const PUBLIC_RENDER_CONFIG_KEY = "style-ref" as const
 
@@ -135,7 +136,7 @@ const BUILTIN_COMPONENT_TREATMENTS_BY_REFERENCE = {
   },
 } as const
 
-const BUILTIN_STYLE_PROFILES_BY_REFERENCE = {
+export const BUILTIN_STYLE_PROFILES_BY_REFERENCE = {
   "report-default": createStyleProfile("report-default", {
     theme: "neutral",
     density: "comfortable",
@@ -203,6 +204,9 @@ export const RENDER_CONFIG_VALUES = {
 export const PUBLIC_RENDER_CONFIG_DEFAULTS = {
   [PUBLIC_RENDER_CONFIG_KEY]: "report-default",
 } as const
+
+export const DEFAULT_STYLE_PROFILE_REFERENCE =
+  PUBLIC_RENDER_CONFIG_DEFAULTS[PUBLIC_RENDER_CONFIG_KEY]
 
 const resolvedRenderConfigSchemas = [
   createResolvedRenderConfigSchema("report-default"),

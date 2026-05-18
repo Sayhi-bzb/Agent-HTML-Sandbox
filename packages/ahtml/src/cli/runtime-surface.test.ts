@@ -23,7 +23,11 @@ type RuntimePaths = {
   readonly cacheDir: string
   readonly logsDir: string
   readonly configDir: string
+  readonly styleProfilesDir: string
+  readonly builtinStyleProfilesDir: string
+  readonly userStyleProfilesDir: string
   readonly manifestPath: string
+  readonly styleProfileManifestPath: string
   readonly promptUiManifestPath: string
   readonly runtimeVerificationPath: string
   readonly runtimeViteConfigPath: string
@@ -124,6 +128,7 @@ type LoadedModules = {
     readonly rendererMapping: unknown
   }
   readonly getCliSchemaOutput: (root?: string) => Promise<CliSchemaOutput>
+  readonly writeStyleProfileStorage: (paths: RuntimePaths) => Promise<unknown>
 }
 
 type NativeRuntimeSetup = {
@@ -360,6 +365,7 @@ async function createRuntimeFixture({
     nativeRuntimeSetup,
     runtimeRenderer,
     runtimeVersion,
+    writeStyleProfileStorage,
   } = await loadModules()
   const runtimeRoot = await temporaryDirectories.create("ahtml-runtime-")
   const runtimePaths = getRuntimePaths({ AHTML_HOME: runtimeRoot })
@@ -442,6 +448,7 @@ async function createRuntimeFixture({
     path.join(runtimePaths.runtimeDir, "components.json"),
     `${JSON.stringify(componentsJson, null, 2)}\n`,
   )
+  await writeStyleProfileStorage(runtimePaths)
   await writeFile(
     path.join(runtimePaths.runtimeDir, "package.json"),
     `${JSON.stringify(
@@ -682,6 +689,7 @@ async function loadModules(): Promise<LoadedModules> {
     runtimeSurfaceModule,
     runtimeStatusModule,
     schemaModule,
+    styleProfileStorageModule,
   ] = await Promise.all([
     import(
       pathToFileURL(
@@ -751,6 +759,18 @@ async function loadModules(): Promise<LoadedModules> {
         path.join(root, "packages", "ahtml", "src", "cli", "schema.mjs"),
       ).href
     ),
+    import(
+      pathToFileURL(
+        path.join(
+          root,
+          "packages",
+          "ahtml",
+          "src",
+          "cli",
+          "style-profile-storage.mjs",
+        ),
+      ).href
+    ),
   ])
 
   return {
@@ -777,5 +797,6 @@ async function loadModules(): Promise<LoadedModules> {
       runtimeSurfaceModule.getShadcnRuntimeProvenanceState,
     getRuntimeStatus: runtimeStatusModule.getRuntimeStatus,
     getCliSchemaOutput: schemaModule.getCliSchemaOutput,
+    writeStyleProfileStorage: styleProfileStorageModule.writeStyleProfileStorage,
   }
 }

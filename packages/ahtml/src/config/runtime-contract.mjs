@@ -62,6 +62,10 @@ export function createManagedRuntimeManifest({
       cache: paths.cacheDir,
       logs: paths.logsDir,
       config: paths.configDir,
+      styleProfiles: paths.styleProfilesDir,
+      builtinStyleProfiles: paths.builtinStyleProfilesDir,
+      userStyleProfiles: paths.userStyleProfilesDir,
+      styleProfileManifest: paths.styleProfileManifestPath,
     },
   }
 }
