@@ -1,12 +1,11 @@
-import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises"
-import path from "node:path"
-
 import {
   BUILTIN_STYLE_PROFILES_BY_REFERENCE,
   DEFAULT_STYLE_PROFILE_REFERENCE,
   StyleProfileSchema,
   STYLE_PROFILE_STORAGE_VERSION,
-} from "../config/internal-core-bridge.mjs"
+} from "@agent-html/core"
+import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises"
+import path from "node:path"
 
 export const styleProfileManifestKind = "ahtml-style-profile-manifest"
 export const styleProfileGeneratorKind = "ahtml-style-profile-registry"

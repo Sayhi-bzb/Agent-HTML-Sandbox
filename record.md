@@ -24,19 +24,18 @@
 - 页面边距
 - section 间距
 - 栅格列数规则
-- 响应式断点下怎么收缩
+- 
+
 2.组件 layout 配置层：每个标准组件内部怎么排
 - card 的 header / body / footer 间距
 - tabs 的 trigger 区和 content 区关系
 - table 的密度、列间距、对齐策略
 - form 组件是 label 在上还是在左
+
 3.语义 layout 使用层：作者/agent 用什么布局语义去组织内容
-- page
-- section
 - stack
-- grid
+- cluster
 - split
-- aside
 
 ### style 架构
 1.全局样式-配置层：整篇文档的视觉基线

@@ -8,7 +8,10 @@
     "access": "public"
   },
   "exports": {
-    ".": "./index.mjs"
+    ".": {
+      "types": "./src/core.ts",
+      "default": "./index.mjs"
+    }
   },
   "types": "./src/core.ts",
   "files": [

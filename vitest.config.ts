@@ -14,6 +14,7 @@ export default defineConfig({
       "packages/**/*.test.ts",
       "apps/**/*.test.ts",
       "scripts/**/*.test.ts",
+      "tests/**/*.test.ts",
     ],
     exclude: [...configDefaults.exclude, "packages/**/*.heavy.test.ts"],
     testTimeout: 15000,

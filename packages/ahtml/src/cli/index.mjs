@@ -5,11 +5,11 @@ import {
   select,
   spinner,
 } from "@clack/prompts"
+import { StyleProfileSchema } from "@agent-html/core"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 import { cliDefaults } from "../config/defaults.mjs"
-import { StyleProfileSchema } from "../config/internal-core-bridge.mjs"
 import {
   ArtifactWorkflowValidationError,
   createArtifactWorkflow,

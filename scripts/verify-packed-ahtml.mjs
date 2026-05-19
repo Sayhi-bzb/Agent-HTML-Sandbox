@@ -5,12 +5,18 @@ import path from "node:path"
 import { pathToFileURL } from "node:url"
 import { promisify } from "node:util"
 
+import {
+  assertConformanceResultMatchesFixture,
+  createConformanceFixtures,
+  normalizeConformanceResult,
+} from "./agent-html-conformance.mjs"
 import { assertPackBoundary } from "./package-boundaries.mjs"
 import { startShadcnTestServer } from "./shadcn-test-server.mjs"
 
 const execFileAsync = promisify(execFile)
 const root = process.cwd()
 const ahtmlPackageDir = path.join(root, "packages", "ahtml")
+const corePackageDir = path.join(root, "packages", "core")
 const npmCommand = "npm"
 const windowsShellOptions =
   process.platform === "win32" ? { shell: true } : undefined
@@ -32,6 +38,15 @@ try {
   )
   assertPackBoundary("ahtml", parsePackFiles(ahtmlDryRun.stdout))
 
+  const corePacked = await runNpm(
+    ["pack", "--json", "--pack-destination", packDir],
+    corePackageDir,
+  )
+  const coreTarball = path.join(
+    packDir,
+    JSON.parse(corePacked.stdout)[0].filename,
+  )
+
   const ahtmlPacked = await runNpm(
     ["pack", "--json", "--pack-destination", packDir],
     ahtmlPackageDir,
@@ -42,6 +57,7 @@ try {
   )
 
   await runNpm(["init", "-y"], consumerDir)
+  await runNpm(["install", coreTarball], consumerDir)
   await runNpm(["install", ahtmlTarball], consumerDir)
 
   ahtmlCommand = path.join(
@@ -79,15 +95,6 @@ try {
     "config",
     "runtime-contract.mjs",
   )
-  const internalCoreBridgePath = path.join(
-    consumerDir,
-    "node_modules",
-    "@agent-html",
-    "ahtml",
-    "src",
-    "config",
-    "internal-core-bridge.mjs",
-  )
   const installedCorePackagePath = path.join(
     consumerDir,
     "node_modules",
@@ -95,7 +102,7 @@ try {
     "core",
   )
   const [coreModule, runtimeContractModule] = await Promise.all([
-    import(pathToFileURL(internalCoreBridgePath).href),
+    import(pathToFileURL(path.join(installedCorePackagePath, "index.mjs")).href),
     import(pathToFileURL(runtimeContractPath).href),
   ])
 
@@ -105,7 +112,7 @@ try {
     typeof coreModule.createPublicAgentContract !== "function"
   ) {
     throw new Error(
-      "Installed @agent-html/ahtml package is missing internal core exports.",
+      "Installed @agent-html/ahtml package cannot consume @agent-html/core exports.",
     )
   }
 
@@ -118,7 +125,7 @@ try {
     )
   }
 
-  await expectPathMissing(installedCorePackagePath)
+  await expectPathPresent(installedCorePackagePath)
 
   await expectStdout(["prompt", "--format", "prompt"], "Write agent-html only.")
   await expectStdout(["--help"], "Main workflow:")
@@ -240,6 +247,8 @@ try {
     "unknown-attr",
   )
 
+  await expectInstalledConformance(coreModule)
+
   console.log("Packed ahtml verification passed.")
 } finally {
   await shadcnTestServer.close()
@@ -296,6 +305,10 @@ async function expectPathMissing(filePath) {
   throw new Error(`Expected path to be absent: ${filePath}`)
 }
 
+async function expectPathPresent(filePath) {
+  await stat(filePath)
+}
+
 async function assertNoProjectScaffold(directory) {
   await expectPathMissing(path.join(directory, "src"))
   await expectPathMissing(path.join(directory, "vite.config.ts"))
@@ -349,6 +362,82 @@ async function expectPreview(inputPath, outputDir) {
     child.kill("SIGTERM")
     await waitForProcessExit(child)
   }
+}
+
+async function expectInstalledConformance(coreModule) {
+  for (const fixture of createConformanceFixtures()) {
+    const inputPath = await writeTempFile(
+      consumerDir,
+      `${fixture.name.replaceAll(/[^a-z0-9]+/gi, "-").toLowerCase()}.agent.html`,
+      fixture.source,
+    )
+    const coreResult = normalizeConformanceResult({
+      ok: true,
+      ...toCoreConformanceResult(coreModule.sanitizeAgentHtml(fixture.source)),
+    })
+    const cliResult = await runInstalledValidateJson(inputPath)
+
+    assertConformanceResultMatchesFixture(fixture.expect, coreResult)
+    assertConformanceResultMatchesFixture(fixture.expect, cliResult)
+
+    if (JSON.stringify(cliResult) !== JSON.stringify(coreResult)) {
+      throw new Error(
+        `Installed conformance mismatch for "${fixture.name}": ${JSON.stringify({ coreResult, cliResult })}`,
+      )
+    }
+  }
+}
+
+function toCoreConformanceResult(result) {
+  return {
+    ok: result.diagnostics.length === 0,
+    documentStyleConfigReference:
+      result.document?.meta.documentStyleConfigReference,
+    components: createInspectionCounts(result.document?.components ?? []),
+    diagnosticCodes: result.diagnostics.map((diagnostic) => diagnostic.code),
+  }
+}
+
+async function runInstalledValidateJson(inputPath) {
+  try {
+    const result = await runAhtml([
+      "validate",
+      "--input",
+      inputPath,
+      "--format",
+      "json",
+    ])
+    const parsed = JSON.parse(result.stdout)
+    return normalizeConformanceResult({
+      ok: parsed.ok,
+      documentStyleConfigReference:
+        parsed.inspection?.config?.documentStyleConfigReference,
+      components: parsed.inspection?.components ?? [],
+      diagnosticCodes: (parsed.diagnostics ?? []).map((diagnostic) => diagnostic.code),
+    })
+  } catch (error) {
+    const parsed = JSON.parse(String(error.stdout ?? "{}"))
+    return normalizeConformanceResult({
+      ok: parsed.ok,
+      documentStyleConfigReference:
+        parsed.inspection?.config?.documentStyleConfigReference,
+      components: parsed.inspection?.components ?? [],
+      diagnosticCodes: (parsed.diagnostics ?? []).map((diagnostic) => diagnostic.code),
+    })
+  }
+}
+
+function createInspectionCounts(nodes, counts = {}) {
+  for (const node of nodes) {
+    if (node.type !== "component") {
+      continue
+    }
+
+    counts[node.name] = (counts[node.name] ?? 0) + 1
+    createInspectionCounts(node.children ?? [], counts)
+  }
+
+  return Object.entries(counts).map(([name, count]) => ({ name, count }))
 }
 
 async function waitForPreviewUrl(child) {

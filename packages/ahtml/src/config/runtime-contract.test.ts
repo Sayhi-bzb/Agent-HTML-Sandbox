@@ -5,6 +5,7 @@ import path from "node:path"
 import { pathToFileURL } from "node:url"
 
 import { describe, expect, it } from "vitest"
+import { VALIDATED_STANDARD_COMPONENT_SCHEMAS } from "@agent-html/core"
 
 describe("runtime contract", () => {
   it("derives verification, mapping, and renderer registry views from one source", async () => {
@@ -101,20 +102,7 @@ async function importRuntimeContract() {
       "runtime-contract.mjs",
     ),
   ).href
-  const coreModuleUrl = pathToFileURL(
-    path.join(
-      process.cwd(),
-      "packages",
-      "ahtml",
-      "src",
-      "config",
-      "internal-core-bridge.mjs",
-    ),
-  ).href
-  const [runtimeContractModule, coreModule] = await Promise.all([
-    import(runtimeContractUrl),
-    import(coreModuleUrl),
-  ])
+  const runtimeContractModule = await import(runtimeContractUrl)
 
   return {
     createManagedRuntimeManifest:
@@ -174,9 +162,6 @@ async function importRuntimeContract() {
         readonly verificationData: unknown
         readonly rendererMapping: unknown
       },
-    VALIDATED_STANDARD_COMPONENT_SCHEMAS:
-      coreModule.VALIDATED_STANDARD_COMPONENT_SCHEMAS as readonly {
-        readonly name: string
-      }[],
+    VALIDATED_STANDARD_COMPONENT_SCHEMAS,
   }
 }

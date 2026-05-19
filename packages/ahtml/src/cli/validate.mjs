@@ -1,4 +1,4 @@
-import { sanitizeAgentHtml } from "../config/internal-core-bridge.mjs"
+import { sanitizeAgentHtml } from "@agent-html/core"
 import {
   createStyleProfileResolver,
   readCurrentStyleProfileReference,

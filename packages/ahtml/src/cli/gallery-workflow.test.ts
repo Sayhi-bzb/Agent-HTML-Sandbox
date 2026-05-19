@@ -4,12 +4,12 @@
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 
+import { parseRenderConfig } from "@agent-html/core"
 import { describe, expect, it } from "vitest"
 
 describe("gallery workflow", () => {
   it("creates a continuous showcase document from a style profile", async () => {
     const { createStyleGalleryDocument } = await importGalleryWorkflowModule()
-    const { parseRenderConfig } = await importInternalCoreBridge()
     const styleProfile = parseRenderConfig({
       "style-ref": "ops-compact",
     }).styleProfile
@@ -79,39 +79,6 @@ async function importGalleryWorkflowModule() {
         readonly name: string
         readonly props: Record<string, string>
       }[]
-    }
-  }>
-}
-
-async function importInternalCoreBridge() {
-  const moduleUrl = pathToFileURL(
-    path.join(
-      process.cwd(),
-      "packages",
-      "ahtml",
-      "src",
-      "config",
-      "internal-core-bridge.mjs",
-    ),
-  ).href
-
-  return import(moduleUrl) as Promise<{
-    readonly parseRenderConfig: (input: {
-      readonly "style-ref": string
-    }) => {
-      readonly styleProfile: {
-        readonly id: string
-        readonly globalStyle: {
-          readonly tokenSets: {
-            readonly light: {
-              readonly background: string
-            }
-          }
-        }
-        readonly componentStyle: {
-          readonly treatments: Readonly<Record<string, string>>
-        }
-      }
     }
   }>
 }

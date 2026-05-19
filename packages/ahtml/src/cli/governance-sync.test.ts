@@ -27,15 +27,15 @@ const forbiddenCoreBoundaryPatterns = [
 ]
 
 describe("code governance sync blocks", () => {
-  it("keeps schema and validate on the vendored internal core boundary", async () => {
+  it("keeps schema and validate on the published core boundary", async () => {
     for (const relativePath of coreBoundaryEntrypoints) {
       const source = await readFile(
         path.join(process.cwd(), relativePath),
         "utf8",
       )
 
-      expect(source).toContain("../config/internal-core-bridge.mjs")
-      expect(source).not.toContain("@agent-html/core")
+      expect(source).toContain("@agent-html/core")
+      expect(source).not.toContain("../config/internal-core-bridge.mjs")
       expect(source).not.toContain("module-loader.mjs")
       expect(source).not.toContain("loadCoreModule")
 

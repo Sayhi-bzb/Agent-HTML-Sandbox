@@ -37,6 +37,12 @@ export const createPublicAgentContract = core.createPublicAgentContract
 export const createPublicRenderConfigContract =
   core.createPublicRenderConfigContract
 export const createPublicSafetyPolicy = core.createPublicSafetyPolicy
+export const BUILTIN_STYLE_PROFILES_BY_REFERENCE =
+  core.BUILTIN_STYLE_PROFILES_BY_REFERENCE
+export const createRenderConfigFromStyleProfile =
+  core.createRenderConfigFromStyleProfile
+export const DEFAULT_STYLE_PROFILE_REFERENCE =
+  core.DEFAULT_STYLE_PROFILE_REFERENCE
 export const DEFAULT_RENDER_CONFIG = core.DEFAULT_RENDER_CONFIG
 export const formatForbiddenPolicy = core.formatForbiddenPolicy
 export const parseRenderConfig = core.parseRenderConfig
@@ -48,6 +54,9 @@ export const PUBLIC_RENDER_CONFIG_MODEL = core.PUBLIC_RENDER_CONFIG_MODEL
 export const RENDER_CONFIG_KEYS = core.RENDER_CONFIG_KEYS
 export const RENDER_CONFIG_VALUES = core.RENDER_CONFIG_VALUES
 export const RenderConfigSchema = core.RenderConfigSchema
+export const StyleProfileSchema = core.StyleProfileSchema
+export const STYLE_PROFILE_STORAGE_VERSION =
+  core.STYLE_PROFILE_STORAGE_VERSION
 export const sanitizeAgentHtml = core.sanitizeAgentHtml
 
 async function loadCoreModule() {

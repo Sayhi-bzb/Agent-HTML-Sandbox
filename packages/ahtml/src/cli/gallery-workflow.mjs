@@ -1,6 +1,5 @@
+import { createRenderConfigFromStyleProfile } from "@agent-html/core"
 import path from "node:path"
-
-import { createRenderConfigFromStyleProfile } from "../config/internal-core-bridge.mjs"
 import { buildRuntimeArtifact } from "./runtime-build.mjs"
 import {
   writeGeneratedDocument,

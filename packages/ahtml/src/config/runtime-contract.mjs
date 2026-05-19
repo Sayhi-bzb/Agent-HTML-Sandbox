@@ -1,4 +1,4 @@
-import { VALIDATED_STANDARD_COMPONENT_SCHEMAS } from "./internal-core-bridge.mjs"
+import { VALIDATED_STANDARD_COMPONENT_SCHEMAS } from "@agent-html/core"
 
 import {
   createRendererMapping,

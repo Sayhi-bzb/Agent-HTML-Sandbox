@@ -18,7 +18,6 @@ describe("package boundaries", () => {
     expect(checks.ahtml.requiredFiles).toEqual([
       "bin/ahtml.mjs",
       "src/cli/command-contract.mjs",
-      "src/config/internal-core-bridge.mjs",
       "package.json",
       "README.md",
     ])
@@ -29,7 +28,6 @@ describe("package boundaries", () => {
       assertPackBoundary("ahtml", [
         "bin/ahtml.mjs",
         "src/cli/command-contract.mjs",
-        "src/config/internal-core-bridge.mjs",
         "package.json",
         "README.md",
       ]),
